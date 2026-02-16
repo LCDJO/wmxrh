@@ -124,3 +124,14 @@ export type {
   UserInvitedPayload, UserRoleAssignedPayload, UserRoleRemovedPayload,
   RolePermissionsUpdatedPayload, AccessGraphRebuiltPayload,
 } from '@/domains/iam/iam.events';
+
+// ── Identity Intelligence Layer ────────────────────────────
+export { IdentityIntelligenceService, identityIntelligence, onIILEvent, getIILEventLog } from './identity-intelligence';
+export type {
+  IdentityPhase, IdentityTrigger, IdentityTransition,
+  RiskLevel, RiskSignal, RiskAssessment,
+  IdentitySnapshot, DecisionAction, IntelligenceDecision,
+  IILEventType, IILEvent,
+  IILPhaseTransitionEvent, IILRiskEscalationEvent,
+  IILAnomalyDetectedEvent, IILDecisionIssuedEvent,
+} from './identity-intelligence';
