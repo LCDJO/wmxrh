@@ -359,6 +359,178 @@ export type Database = {
           },
         ]
       }
+      salary_additionals: {
+        Row: {
+          additional_type: Database["public"]["Enums"]["salary_additional_type"]
+          amount: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          employee_id: string
+          end_date: string | null
+          id: string
+          is_recurring: boolean
+          start_date: string
+          tenant_id: string
+        }
+        Insert: {
+          additional_type: Database["public"]["Enums"]["salary_additional_type"]
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          employee_id: string
+          end_date?: string | null
+          id?: string
+          is_recurring?: boolean
+          start_date?: string
+          tenant_id: string
+        }
+        Update: {
+          additional_type?: Database["public"]["Enums"]["salary_additional_type"]
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          employee_id?: string
+          end_date?: string | null
+          id?: string
+          is_recurring?: boolean
+          start_date?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_additionals_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_additionals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_adjustments: {
+        Row: {
+          adjustment_type: Database["public"]["Enums"]["salary_adjustment_type"]
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          new_salary: number
+          percentage: number | null
+          previous_salary: number
+          reason: string | null
+          tenant_id: string
+        }
+        Insert: {
+          adjustment_type: Database["public"]["Enums"]["salary_adjustment_type"]
+          contract_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          new_salary: number
+          percentage?: number | null
+          previous_salary: number
+          reason?: string | null
+          tenant_id: string
+        }
+        Update: {
+          adjustment_type?: Database["public"]["Enums"]["salary_adjustment_type"]
+          contract_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          new_salary?: number
+          percentage?: number | null
+          previous_salary?: number
+          reason?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_adjustments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "salary_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_adjustments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_adjustments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_contracts: {
+        Row: {
+          base_salary: number
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          start_date: string
+          tenant_id: string
+        }
+        Insert: {
+          base_salary: number
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          start_date?: string
+          tenant_id: string
+        }
+        Update: {
+          base_salary?: number
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          start_date?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_contracts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_contracts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salary_history: {
         Row: {
           approved_by: string | null
@@ -555,7 +727,25 @@ export type Database = {
         | "status_change"
         | "manager_change"
         | "salary_change"
+        | "employee_hired"
+        | "salary_contract_started"
+        | "salary_adjusted"
+        | "additional_added"
+        | "job_changed"
       employee_status: "active" | "inactive" | "on_leave"
+      salary_additional_type:
+        | "bonus"
+        | "commission"
+        | "allowance"
+        | "hazard_pay"
+        | "overtime"
+        | "other"
+      salary_adjustment_type:
+        | "annual"
+        | "promotion"
+        | "adjustment"
+        | "merit"
+        | "correction"
       tenant_role: "owner" | "admin" | "manager" | "viewer"
     }
     CompositeTypes: {
@@ -691,8 +881,28 @@ export const Constants = {
         "status_change",
         "manager_change",
         "salary_change",
+        "employee_hired",
+        "salary_contract_started",
+        "salary_adjusted",
+        "additional_added",
+        "job_changed",
       ],
       employee_status: ["active", "inactive", "on_leave"],
+      salary_additional_type: [
+        "bonus",
+        "commission",
+        "allowance",
+        "hazard_pay",
+        "overtime",
+        "other",
+      ],
+      salary_adjustment_type: [
+        "annual",
+        "promotion",
+        "adjustment",
+        "merit",
+        "correction",
+      ],
       tenant_role: ["owner", "admin", "manager", "viewer"],
     },
   },

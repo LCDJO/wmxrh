@@ -11,7 +11,9 @@
 
 export type EmployeeStatus = 'active' | 'inactive' | 'on_leave';
 export type TenantRole = 'owner' | 'admin' | 'manager' | 'viewer';
-export type EmployeeEventType = 'company_transfer' | 'position_change' | 'department_change' | 'status_change' | 'manager_change' | 'salary_change';
+export type EmployeeEventType = 'company_transfer' | 'position_change' | 'department_change' | 'status_change' | 'manager_change' | 'salary_change' | 'employee_hired' | 'salary_contract_started' | 'salary_adjusted' | 'additional_added' | 'job_changed';
+export type SalaryAdjustmentType = 'annual' | 'promotion' | 'adjustment' | 'merit' | 'correction';
+export type SalaryAdditionalType = 'bonus' | 'commission' | 'allowance' | 'hazard_pay' | 'overtime' | 'other';
 
 // ========================
 // ENTITIES
@@ -142,6 +144,58 @@ export interface SalaryHistory {
 }
 
 // ========================
+// COMPENSATION ENGINE ENTITIES
+// ========================
+
+export interface SalaryContract {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  base_salary: number;
+  start_date: string;
+  end_date: string | null;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface SalaryAdjustment {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  contract_id: string;
+  adjustment_type: SalaryAdjustmentType;
+  percentage: number | null;
+  previous_salary: number;
+  new_salary: number;
+  reason: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface SalaryAdditional {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  additional_type: SalaryAdditionalType;
+  amount: number;
+  is_recurring: boolean;
+  start_date: string;
+  end_date: string | null;
+  description: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface SalaryContractWithRelations extends SalaryContract {
+  employees?: { name: string } | null;
+}
+
+export interface SalaryAdjustmentWithRelations extends SalaryAdjustment {
+  employees?: { name: string } | null;
+}
+
+// ========================
 // AGGREGATE VIEWS (with joined data)
 // ========================
 
@@ -230,4 +284,36 @@ export interface CreateSalaryHistoryDTO {
   reason?: string | null;
   effective_date: string;
   approved_by?: string | null;
+}
+
+export interface CreateSalaryContractDTO {
+  tenant_id: string;
+  employee_id: string;
+  base_salary: number;
+  start_date: string;
+  created_by?: string | null;
+}
+
+export interface CreateSalaryAdjustmentDTO {
+  tenant_id: string;
+  employee_id: string;
+  contract_id: string;
+  adjustment_type: SalaryAdjustmentType;
+  percentage?: number | null;
+  previous_salary: number;
+  new_salary: number;
+  reason?: string | null;
+  created_by?: string | null;
+}
+
+export interface CreateSalaryAdditionalDTO {
+  tenant_id: string;
+  employee_id: string;
+  additional_type: SalaryAdditionalType;
+  amount: number;
+  is_recurring?: boolean;
+  start_date: string;
+  end_date?: string | null;
+  description?: string | null;
+  created_by?: string | null;
 }
