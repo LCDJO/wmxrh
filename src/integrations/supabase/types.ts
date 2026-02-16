@@ -895,8 +895,26 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      can_manage_employees_scoped: {
+        Args: {
+          _company_group_id?: string
+          _company_id?: string
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       can_view_compensation: {
         Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_view_compensation_scoped: {
+        Args: {
+          _company_group_id?: string
+          _company_id?: string
+          _tenant_id: string
+          _user_id: string
+        }
         Returns: boolean
       }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
