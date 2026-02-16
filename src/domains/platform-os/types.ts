@@ -301,7 +301,7 @@ export interface NavigationState {
 // Feature Lifecycle Manager
 // ══════════════════════════════════════════════════════════════════
 
-export type FeaturePhase = 'alpha' | 'beta' | 'ga' | 'deprecated' | 'sunset';
+export type FeaturePhase = 'experimental' | 'alpha' | 'beta' | 'active' | 'ga' | 'deprecated' | 'sunset';
 
 export interface FeatureDescriptor {
   key: string;
@@ -312,8 +312,20 @@ export interface FeatureDescriptor {
   module?: ModuleKey | string;
   /** When the feature was last toggled */
   toggled_at: number | null;
+  /** When the phase was last transitioned */
+  phase_changed_at: number | null;
+  /** Previous phase (for audit trail) */
+  previous_phase: FeaturePhase | null;
   /** Rollout percentage (0-100) for gradual releases */
   rollout_pct: number;
+  /** Tenant allow-list (empty = all) */
+  allowed_tenants: string[];
+  /** Tenant deny-list */
+  denied_tenants: string[];
+  /** Sunset date — auto-disable after this timestamp */
+  sunset_at: number | null;
+  /** Human-readable description */
+  description?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -424,11 +436,21 @@ export interface NavigationOrchestratorAPI {
 }
 
 export interface FeatureLifecycleAPI {
-  register(feature: Omit<FeatureDescriptor, 'toggled_at'>): void;
+  register(feature: Omit<FeatureDescriptor, 'toggled_at' | 'phase_changed_at' | 'previous_phase'>): void;
   isEnabled(key: string, ctx?: { tenantId?: string }): boolean;
   toggle(key: string, enabled: boolean): void;
-  list(): FeatureDescriptor[];
+  /** Transition a feature to a new phase */
+  transitionPhase(key: string, newPhase: FeaturePhase): void;
+  /** List all features, optionally filtered by phase */
+  list(filter?: { phase?: FeaturePhase; module?: string; enabledOnly?: boolean }): FeatureDescriptor[];
   getPhase(key: string): FeaturePhase | null;
+  get(key: string): FeatureDescriptor | null;
+  /** List features nearing sunset */
+  listSunsetting(): FeatureDescriptor[];
+  /** Enable feature for specific tenant */
+  enableForTenant(key: string, tenantId: string): void;
+  /** Disable feature for specific tenant */
+  disableForTenant(key: string, tenantId: string): void;
 }
 
 export interface CognitiveOrchestratorAPI {
