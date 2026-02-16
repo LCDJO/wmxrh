@@ -99,9 +99,27 @@ export function simulatePayroll(
 
   // Add base salary to proventos (engine only calculates additionals)
   const totalProventos = summary.totalProventos + input.salario_base;
-  const baseInss = summary.baseInss + input.salario_base;
-  const baseIrrf = summary.baseIrrf + input.salario_base;
-  const baseFgts = summary.baseFgts + input.salario_base;
+  let baseInss = summary.baseInss + input.salario_base;
+  let baseIrrf = summary.baseIrrf + input.salario_base;
+  let baseFgts = summary.baseFgts + input.salario_base;
+
+  // Benefits marked as salarial integrate encargos bases
+  // (default: indenizatório = NÃO integra INSS/FGTS/IRRF)
+  if (input.vale_alimentacao_salarial && input.vale_alimentacao) {
+    baseInss += input.vale_alimentacao;
+    baseIrrf += input.vale_alimentacao;
+    baseFgts += input.vale_alimentacao;
+  }
+  if (input.vale_refeicao_salarial && input.vale_refeicao) {
+    baseInss += input.vale_refeicao;
+    baseIrrf += input.vale_refeicao;
+    baseFgts += input.vale_refeicao;
+  }
+  if (input.vale_transporte_salarial && input.vale_transporte_valor) {
+    baseInss += input.vale_transporte_valor;
+    baseIrrf += input.vale_transporte_valor;
+    baseFgts += input.vale_transporte_valor;
+  }
 
   const fullSummary = {
     totalProventos: round(totalProventos),
