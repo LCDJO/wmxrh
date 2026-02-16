@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Briefcase, TrendingUp, Building2,
   ChevronLeft, ChevronRight, ChevronDown, LogOut, FileText, Heart,
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
-  Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog,
+  Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -111,6 +111,7 @@ const navStructure: NavEntry[] = [
     label: 'Integrações',
     children: [
       { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' },
+      { to: '/document-signature', icon: FileSignature, label: 'Assinatura de Documentos', key: 'esocial' },
     ],
   },
 ];
