@@ -12,11 +12,9 @@ export type AgreementEventType =
   | 'agreement.template.updated'
   | 'agreement.template.version_published'
   | 'agreement.sent_for_signature'
-  | 'agreement.viewed'
   | 'agreement.signed'
-  | 'agreement.refused'
+  | 'agreement.rejected'
   | 'agreement.expired'
-  | 'agreement.cancelled'
   | 'agreement.auto_dispatch_triggered';
 
 export interface AgreementDomainEvent {
