@@ -113,6 +113,7 @@ export const queryKeys = {
   collectiveAgreements: (tenantId?: string) => ['collective_agreements', tenantId] as const,
   // Salary Rubric Templates
   salaryRubricTemplates: (tenantId?: string) => ['salary_rubric_templates', tenantId] as const,
+  documentVault: (empId: string) => ['document_vault', empId] as const,
 };
 
 // ========================
@@ -918,5 +919,21 @@ export function useSalaryRubricTemplates() {
       return (data || []) as any[];
     },
     enabled: !!qs,
+  });
+}
+
+// ========================
+// DOCUMENT VAULT
+// ========================
+
+import { documentVaultService } from '@/domains/employee-agreement/document-vault.service';
+import type { DocumentVaultRecord } from '@/domains/employee-agreement/document-vault.service';
+
+export function useDocumentVault(employeeId: string) {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.documentVault(employeeId),
+    queryFn: () => documentVaultService.listByEmployee(employeeId, qs!),
+    enabled: !!employeeId && !!qs,
   });
 }

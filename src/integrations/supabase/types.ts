@@ -755,6 +755,90 @@ export type Database = {
           },
         ]
       }
+      document_vault: {
+        Row: {
+          agreement_id: string | null
+          assinatura_valida: boolean
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          employee_id: string
+          hash_documento: string | null
+          id: string
+          nome_documento: string
+          tenant_id: string
+          tipo_documento: string
+          updated_at: string
+          url_arquivo: string
+        }
+        Insert: {
+          agreement_id?: string | null
+          assinatura_valida?: boolean
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          employee_id: string
+          hash_documento?: string | null
+          id?: string
+          nome_documento: string
+          tenant_id: string
+          tipo_documento?: string
+          updated_at?: string
+          url_arquivo: string
+        }
+        Update: {
+          agreement_id?: string | null
+          assinatura_valida?: boolean
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          employee_id?: string
+          hash_documento?: string | null
+          id?: string
+          nome_documento?: string
+          tenant_id?: string
+          tipo_documento?: string
+          updated_at?: string
+          url_arquivo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_vault_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "employee_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_vault_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_vault_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_vault_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_vault_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_agreements: {
         Row: {
           cancelled_at: string | null
