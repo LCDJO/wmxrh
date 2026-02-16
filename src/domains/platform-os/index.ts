@@ -34,6 +34,9 @@ export { createNavigationOrchestrator } from './navigation-orchestrator';
 export { createFeatureLifecycleManager } from './feature-lifecycle-manager';
 export { createCognitiveOrchestrator } from './cognitive-orchestrator';
 
+// ── Event Bridges (domain → kernel) ──────────────────────────
+export { installEventBridges } from './event-bridges';
+
 // ── Types ─────────────────────────────────────────────────────
 export type {
   // Runtime
