@@ -169,6 +169,43 @@ export function generateInsights(input: InsightInput): InsightGenerationOutput {
     });
   }
 
+  // ── Occupational compliance insights ──
+
+  if (riskDetection.risks.some(r => r.category === 'occupational_training')) {
+    const trainingRisk = riskDetection.risks.find(r => r.category === 'occupational_training')!;
+    insights.push({
+      insight_id: iid(), category: 'compliance_alert', priority: 'high',
+      title: 'Treinamentos NR obrigatórios em atraso',
+      summary: `${trainingRisk.affected_count} colaborador(es) em empresas com treinamentos NR pendentes.`,
+      detail: `A não realização de treinamentos NR obrigatórios expõe a organização a multas do MTE e riscos de acidentes. ${trainingRisk.description}`,
+      impact_estimate: trainingRisk.financial_exposure,
+      recommended_actions: [
+        'Levantar treinamentos pendentes por NR e empresa',
+        'Contratar prestadores de treinamento NR credenciados',
+        'Definir cronograma de regularização em até 30 dias',
+      ],
+      data_points: { affected: trainingRisk.affected_count, exposure: trainingRisk.financial_exposure },
+      audience: ['hr', 'legal'],
+    });
+  }
+
+  if (riskDetection.risks.some(r => r.category === 'cbo_gap')) {
+    const cboRisk = riskDetection.risks.find(r => r.category === 'cbo_gap')!;
+    insights.push({
+      insight_id: iid(), category: 'compliance_alert', priority: 'medium',
+      title: 'Cargos sem classificação CBO',
+      summary: `${cboRisk.affected_count} colaborador(es) sem CBO definido — impacto em eSocial e compliance.`,
+      detail: 'A ausência de CBO impede a correta transmissão de eventos eSocial (S-2200) e dificulta a gestão ocupacional. Regularize para evitar rejeições no eSocial.',
+      recommended_actions: [
+        'Mapear todos os cargos sem CBO',
+        'Consultar tabela CBO do MTE para classificação correta',
+        'Atualizar cadastro de cargos e reenviar eventos eSocial',
+      ],
+      data_points: { without_cbo: cboRisk.affected_count },
+      audience: ['hr'],
+    });
+  }
+
   // ── Executive summary ──
   const urgentCount = insights.filter(i => i.priority === 'urgent').length;
   const summaryParts: string[] = [];

@@ -185,6 +185,55 @@ export function detectRisks(input: RiskDetectionInput): RiskDetectionOutput {
     );
   }
 
+  // ── 10. Empresa sem treinamento NR obrigatório ──
+  if (dataset.occupational && dataset.occupational.length > 0) {
+    const pendingTraining = dataset.occupational.filter(o => o.has_pending_trainings && o.pending_training_count > 0);
+    if (pendingTraining.length > 0) {
+      const totalPending = pendingTraining.reduce((s, o) => s + o.pending_training_count, 0);
+      const affectedEmps = dataset.employees
+        .filter(e => e.status === 'active' && pendingTraining.some(o => o.company_id === e.company_id))
+        .map(e => e.id);
+      push('occupational_training', 'COMPLIANCE_WARNING', 'high',
+        'Treinamentos NR obrigatórios pendentes',
+        `${pendingTraining.length} empresa(s) com ${totalPending} treinamento(s) NR obrigatório(s) não realizados, afetando ${affectedEmps.length} colaborador(es).`,
+        affectedEmps, pendingTraining.length * 5000,
+        'Agendar treinamentos NR obrigatórios pendentes com urgência.',
+        'NR-1 / CLT Art. 157',
+      );
+    }
+  }
+
+  // ── 11. Cargos sem CBO definido ──
+  if (dataset.cbo_assignments && dataset.cbo_assignments.length > 0) {
+    const noCbo = dataset.cbo_assignments.filter(c => !c.has_cbo_defined);
+    if (noCbo.length > 0) {
+      push('cbo_gap', 'COMPLIANCE_WARNING', 'medium',
+        'Cargos sem CBO definido',
+        `${noCbo.length} colaborador(es) sem código CBO atribuído ao cargo, prejudicando conformidade eSocial e relatórios ocupacionais.`,
+        noCbo.map(c => c.employee_id), noCbo.length * 1000,
+        'Definir CBO para todos os cargos ativos conforme tabela CBO do MTE.',
+        'eSocial S-2200 / Portaria MTE',
+      );
+    }
+  }
+
+  // ── 12. Risco alto sem PGR ativo ──
+  if (dataset.occupational && dataset.occupational.length > 0) {
+    const highRiskNoPgr = dataset.occupational.filter(o => o.grau_risco >= 3 && !o.has_active_pgr);
+    if (highRiskNoPgr.length > 0) {
+      const affectedEmps = dataset.employees
+        .filter(e => e.status === 'active' && highRiskNoPgr.some(o => o.company_id === e.company_id))
+        .map(e => e.id);
+      push('health_safety', 'LEGAL_RISK', 'critical',
+        'Risco ocupacional alto sem PGR ativo',
+        `${highRiskNoPgr.length} empresa(s) com grau de risco ≥ 3 sem Programa de Gerenciamento de Riscos ativo, afetando ${affectedEmps.length} colaborador(es).`,
+        affectedEmps, highRiskNoPgr.length * 80000,
+        'Elaborar PGR imediatamente — obrigatório para atividades de alto risco.',
+        'NR-1 / NR-9 / CLT Art. 157',
+      );
+    }
+  }
+
   // ── Score calculation ──
   const severityWeight = { critical: 25, high: 15, medium: 8, low: 3 };
   const rawScore = risks.reduce((s, r) => s + (severityWeight[r.severity] || 0), 0);
