@@ -6,6 +6,7 @@
  */
 
 import type { TenantRole, UserRole, ScopeType } from '@/domains/shared/types';
+import type { FeatureKey } from '../feature-flags';
 
 // ════════════════════════════════════
 // IDENTITY SESSION — immutable per auth session
@@ -16,9 +17,47 @@ export interface IdentitySession {
   readonly email: string | null;
   readonly sessionFingerprint: string | null;
   readonly authenticatedAt: number;
+
+  /** All tenants the user has membership in */
   readonly tenantScopes: ReadonlyArray<TenantScope>;
+  /** All user_roles across tenants */
   readonly allUserRoles: ReadonlyArray<UserRole>;
+  /** Auth provider info */
   readonly provider: IdentityProvider;
+
+  /** Precomputed tenant IDs for quick lookup */
+  readonly tenantIds: ReadonlyArray<string>;
+  /** Merged roles across all scopes */
+  readonly roles: ReadonlyArray<TenantRole>;
+  /** AccessGraph snapshot reference (graph version + precomputed sets) */
+  readonly accessGraphSnapshot: AccessGraphSnapshot | null;
+  /** Active feature flags resolved at session establishment */
+  readonly featureFlags: ReadonlyArray<FeatureKey>;
+  /** Precomputed allowed scopes from AccessGraph */
+  readonly allowedScopes: AllowedScopes;
+}
+
+/**
+ * Lightweight snapshot of the AccessGraph state at session time.
+ * Avoids coupling IdentitySession to the full AccessGraph class.
+ */
+export interface AccessGraphSnapshot {
+  readonly version: number;
+  readonly builtAt: number;
+  readonly hasTenantScope: boolean;
+  readonly reachableGroupIds: ReadonlyArray<string>;
+  readonly reachableCompanyIds: ReadonlyArray<string>;
+}
+
+/**
+ * Precomputed allowed scopes derived from AccessGraph + user_roles.
+ * Used by query builders and guard middleware for O(1) checks.
+ */
+export interface AllowedScopes {
+  readonly tenantIds: ReadonlyArray<string>;
+  readonly groupIds: ReadonlyArray<string>;
+  readonly companyIds: ReadonlyArray<string>;
+  readonly hasTenantWideAccess: boolean;
 }
 
 export interface TenantScope {
@@ -81,6 +120,11 @@ export interface IdentityBoundarySnapshot {
   provider: IdentityProvider | null;
   authenticatedAt: number | null;
   tenantCount: number;
+  tenantIds: string[];
+  roles: TenantRole[];
+  featureFlagCount: number;
+  hasAccessGraph: boolean;
+  allowedScopes: AllowedScopes | null;
   activeTenantId: string | null;
   scopeLevel: ScopeType | null;
   effectiveRoles: TenantRole[];

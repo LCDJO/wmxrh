@@ -39,6 +39,7 @@ export type AuditAction =
   | 'mutation_blocked'
   | 'unauthorized_access'
   | 'identity_cleared'
+  | 'identity_established'
   | 'tenant_switched'
   | 'scope_switched';
 
@@ -131,6 +132,7 @@ const ACTION_TO_EVENT: Record<AuditAction, SecurityEventType> = {
   login_attempt: 'UnauthorizedAccessAttempt',
   mutation_blocked: 'MutationBlocked',
   identity_cleared: 'UnauthorizedAccessAttempt',
+  identity_established: 'UnauthorizedAccessAttempt',
   tenant_switched: 'ScopeMismatchDetected',
   scope_switched: 'ScopeMismatchDetected',
 };

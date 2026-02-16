@@ -30,4 +30,6 @@ export type {
   ContextSwitchRequest,
   ContextSwitchResult,
   IdentityBoundarySnapshot,
+  AccessGraphSnapshot,
+  AllowedScopes,
 } from '../identity-boundary.types';

@@ -28,6 +28,8 @@ export type {
   ContextSwitchRequest,
   ContextSwitchResult,
   IdentityBoundarySnapshot,
+  AccessGraphSnapshot,
+  AllowedScopes,
 } from './identity-boundary.types';
 
 // ── Re-export components ──
@@ -164,6 +166,11 @@ export class IdentityBoundaryLayer {
       provider: session?.provider ?? null,
       authenticatedAt: session?.authenticatedAt ?? null,
       tenantCount: session?.tenantScopes.length ?? 0,
+      tenantIds: session?.tenantIds ? [...session.tenantIds] : [],
+      roles: session?.roles ? [...session.roles] : [],
+      featureFlagCount: session?.featureFlags.length ?? 0,
+      hasAccessGraph: !!session?.accessGraphSnapshot,
+      allowedScopes: session?.allowedScopes ?? null,
       activeTenantId: context?.activeTenantId ?? null,
       scopeLevel: context?.scopeLevel ?? null,
       effectiveRoles: context?.effectiveRoles ? [...context.effectiveRoles] : [],

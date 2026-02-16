@@ -88,6 +88,7 @@ export type {
   IdentityProvider, ContextSwitchRequest, ContextSwitchResult,
   EstablishIdentityInput, IdentityBoundarySnapshot,
   RefreshScopesInput,
+  AccessGraphSnapshot, AllowedScopes,
   ResolvedContext, ScopeValidation,
   ScopeToken, QueryFilterSet,
   GuardResult, GuardTarget, GuardCheckName,
