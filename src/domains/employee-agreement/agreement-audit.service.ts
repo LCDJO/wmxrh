@@ -4,13 +4,37 @@
  * Maintains a legal audit trail for all agreement lifecycle events.
  * Persists to the existing audit_logs table for unified compliance.
  *
- * Listens to domain events and automatically logs them.
+ * AgreementAuditLog shape:
+ *   - agreement_id
+ *   - employee_id
+ *   - ação (enviado, assinado, rejeitado)
+ *   - provider
+ *   - timestamp
+ *   - ip_address
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { onAgreementEvent, type AgreementDomainEvent } from './events';
 
 const ENTITY_TYPE = 'employee_agreement';
+
+// ── Public read-model ──
+
+export interface AgreementAuditLog {
+  id: string;
+  agreement_id: string | null;
+  employee_id: string | null;
+  acao: string;
+  provider: string | null;
+  timestamp: string;
+  ip_address: string | null;
+  // extras from audit_logs
+  tenant_id: string;
+  company_id: string | null;
+  raw_payload: Record<string, unknown> | null;
+}
+
+// ── Internal audit entry for persistence ──
 
 interface AuditEntry {
   tenant_id: string;
@@ -21,6 +45,21 @@ interface AuditEntry {
   company_id?: string | null;
   metadata?: Record<string, unknown> | null;
 }
+
+// ── Action label mapping ──
+
+const ACTION_LABELS: Record<string, string> = {
+  'agreement.sent_for_signature': 'enviado',
+  'agreement.signed': 'assinado',
+  'agreement.rejected': 'rejeitado',
+  'agreement.expired': 'expirado',
+  'agreement.template.created': 'modelo_criado',
+  'agreement.template.updated': 'modelo_atualizado',
+  'agreement.template.version_published': 'versao_publicada',
+  'agreement.auto_dispatch_triggered': 'envio_automatico',
+};
+
+// ── Persistence ──
 
 async function persistAuditLog(entry: AuditEntry): Promise<void> {
   const { error } = await supabase
@@ -42,8 +81,30 @@ function mapEventToAudit(event: AgreementDomainEvent): AuditEntry {
     company_id: event.company_id ?? null,
     metadata: {
       employee_id: event.employee_id,
+      provider: event.payload?.provider ?? null,
+      ip_address: event.payload?.ip_address ?? null,
       timestamp: event.timestamp,
+      acao: ACTION_LABELS[event.type] ?? event.type,
     },
+  };
+}
+
+// ── Row → AgreementAuditLog mapper ──
+
+function toAuditLog(row: any): AgreementAuditLog {
+  const meta = row.metadata ?? {};
+  const payload = row.new_value ?? {};
+  return {
+    id: row.id,
+    agreement_id: row.entity_id,
+    employee_id: meta.employee_id ?? payload.employee_id ?? null,
+    acao: meta.acao ?? ACTION_LABELS[row.action] ?? row.action,
+    provider: meta.provider ?? payload.provider ?? null,
+    timestamp: meta.timestamp ?? row.created_at,
+    ip_address: meta.ip_address ?? payload.ip_address ?? null,
+    tenant_id: row.tenant_id,
+    company_id: row.company_id,
+    raw_payload: payload,
   };
 }
 
@@ -83,8 +144,9 @@ export const agreementAuditService = {
 
   /**
    * Query audit trail for a specific agreement.
+   * Returns AgreementAuditLog[] with agreement_id, employee_id, ação, provider, timestamp, ip_address.
    */
-  async getAuditTrail(agreementId: string, tenantId: string) {
+  async getAuditTrail(agreementId: string, tenantId: string): Promise<AgreementAuditLog[]> {
     const { data, error } = await supabase
       .from('audit_logs')
       .select('*')
@@ -94,13 +156,13 @@ export const agreementAuditService = {
       .order('created_at', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(toAuditLog);
   },
 
   /**
    * Query all agreement audit events for a tenant.
    */
-  async getRecentActivity(tenantId: string, limit = 50) {
+  async getRecentActivity(tenantId: string, limit = 50): Promise<AgreementAuditLog[]> {
     const { data, error } = await supabase
       .from('audit_logs')
       .select('*')
@@ -110,6 +172,25 @@ export const agreementAuditService = {
       .limit(limit);
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(toAuditLog);
+  },
+
+  /**
+   * Query audit trail for a specific employee across all agreements.
+   */
+  async getByEmployee(employeeId: string, tenantId: string): Promise<AgreementAuditLog[]> {
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('entity_type', ENTITY_TYPE)
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (error) throw error;
+    // Filter by employee_id stored in metadata
+    return (data || [])
+      .map(toAuditLog)
+      .filter(log => log.employee_id === employeeId);
   },
 };
