@@ -2930,6 +2930,69 @@ export type Database = {
           },
         ]
       }
+      payment_policies: {
+        Row: {
+          allow_installments: boolean
+          allowed_methods: string[]
+          auto_cancel_after_days: number
+          auto_suspend_after_days: number
+          created_at: string
+          id: string
+          late_payment_grace_days: number
+          max_installments: number
+          min_commitment_months: number
+          plan_id: string
+          requires_contract: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          allow_installments?: boolean
+          allowed_methods?: string[]
+          auto_cancel_after_days?: number
+          auto_suspend_after_days?: number
+          created_at?: string
+          id?: string
+          late_payment_grace_days?: number
+          max_installments?: number
+          min_commitment_months?: number
+          plan_id: string
+          requires_contract?: boolean
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          allow_installments?: boolean
+          allowed_methods?: string[]
+          auto_cancel_after_days?: number
+          auto_suspend_after_days?: number
+          created_at?: string
+          id?: string
+          late_payment_grace_days?: number
+          max_installments?: number
+          min_commitment_months?: number
+          plan_id?: string
+          requires_contract?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_policies_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: true
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payroll_item_catalog: {
         Row: {
           code: string
