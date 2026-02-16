@@ -1,13 +1,32 @@
+/**
+ * App Sidebar
+ * 
+ * Filtered by SecurityKernel:
+ *   - FeatureFlags: hides modules not enabled for tenant
+ *   - Permissions: hides nav items user can't access
+ */
+
 import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Briefcase, TrendingUp, Building2, ChevronLeft, ChevronRight, Layers, LogOut, DollarSign } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useScope } from '@/contexts/ScopeContext';
+import { useSecurityKernel } from '@/domains/security/use-security-kernel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { NavKey } from '@/domains/security/permissions';
+import type { FeatureKey } from '@/domains/security/feature-flags';
 
-const allNavItems = [
+interface NavItem {
+  to: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  key: NavKey;
+  /** If set, item is only shown when this feature flag is enabled */
+  featureFlag?: FeatureKey;
+}
+
+const allNavItems: NavItem[] = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', key: 'dashboard' },
   { to: '/employees', icon: Users, label: 'Funcionários', key: 'employees' },
   { to: '/companies', icon: Building2, label: 'Empresas', key: 'companies' },
@@ -22,12 +41,19 @@ export function AppSidebar() {
   const location = useLocation();
   const { currentTenant, tenants, setCurrentTenant } = useTenant();
   const { signOut } = useAuth();
-  const { canAccessNav, effectiveRoles, rolesLoading } = useScope();
+  const { canNav, isFeatureEnabled, effectiveRoles, loading } = useSecurityKernel();
 
-  // Filter nav items based on user roles
-  const navItems = rolesLoading
+  // Filter nav items: FeatureFlags first, then Permissions
+  const navItems = loading
     ? allNavItems // show all while loading to prevent flash
-    : allNavItems.filter(item => canAccessNav(item.key));
+    : allNavItems.filter(item => {
+        // 1. Check feature flag (if item is gated)
+        if (item.featureFlag && !isFeatureEnabled(item.featureFlag)) {
+          return false;
+        }
+        // 2. Check permission (RBAC)
+        return canNav(item.key);
+      });
 
   return (
     <aside className={cn("gradient-sidebar flex flex-col border-r border-sidebar-border transition-all duration-300 h-screen sticky top-0", collapsed ? "w-[72px]" : "w-[260px]")}>
