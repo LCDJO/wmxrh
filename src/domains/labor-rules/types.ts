@@ -103,6 +103,8 @@ export interface CollectiveAgreement {
   document_url: string | null;
   status: CollectiveAgreementStatus;
   notes: string | null;
+  jornada_semanal: number | null;
+  regras_extras: Record<string, unknown>;
   metadata: Record<string, unknown>;
   created_by: string | null;
   created_at: string;
@@ -198,6 +200,8 @@ export interface CreateCollectiveAgreementDTO {
   annual_readjustment_pct?: number | null;
   document_url?: string | null;
   notes?: string | null;
+  jornada_semanal?: number | null;
+  regras_extras?: Record<string, unknown>;
   created_by?: string | null;
 }
 
