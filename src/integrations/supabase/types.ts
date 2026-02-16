@@ -2407,6 +2407,68 @@ export type Database = {
           },
         ]
       }
+      nr_training_catalog: {
+        Row: {
+          base_legal: string | null
+          carga_horaria: number
+          created_at: string
+          descricao: string | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          nome: string
+          nr_codigo: number
+          obrigatoria_para_grau_risco: number[]
+          periodicidade: string
+          target_cbos: string[]
+          tenant_id: string
+          updated_at: string
+          validade_meses: number | null
+        }
+        Insert: {
+          base_legal?: string | null
+          carga_horaria?: number
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          nome: string
+          nr_codigo: number
+          obrigatoria_para_grau_risco?: number[]
+          periodicidade?: string
+          target_cbos?: string[]
+          tenant_id: string
+          updated_at?: string
+          validade_meses?: number | null
+        }
+        Update: {
+          base_legal?: string | null
+          carga_horaria?: number
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          nome?: string
+          nr_codigo?: number
+          obrigatoria_para_grau_risco?: number[]
+          periodicidade?: string
+          target_cbos?: string[]
+          tenant_id?: string
+          updated_at?: string
+          validade_meses?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nr_training_catalog_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       occupational_risk_factors: {
         Row: {
           category: Database["public"]["Enums"]["risk_category"]
@@ -3412,6 +3474,80 @@ export type Database = {
         }
         Relationships: []
       }
+      training_requirements: {
+        Row: {
+          catalog_item_id: string
+          cbo_codigo: string
+          company_group_id: string | null
+          company_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          nr_codigo: number
+          obrigatorio: boolean
+          source: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          catalog_item_id: string
+          cbo_codigo: string
+          company_group_id?: string | null
+          company_id: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          nr_codigo: number
+          obrigatorio?: boolean
+          source?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          catalog_item_id?: string
+          cbo_codigo?: string
+          company_group_id?: string | null
+          company_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          nr_codigo?: number
+          obrigatorio?: boolean
+          source?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_requirements_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "nr_training_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_requirements_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_requirements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -3624,6 +3760,10 @@ export type Database = {
       }
       seed_default_rubrics: { Args: { _tenant_id: string }; Returns: undefined }
       seed_esocial_mappings: {
+        Args: { _tenant_id: string }
+        Returns: undefined
+      }
+      seed_nr_training_catalog: {
         Args: { _tenant_id: string }
         Returns: undefined
       }
