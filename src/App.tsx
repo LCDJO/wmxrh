@@ -8,6 +8,7 @@ import { TenantProvider, useTenant } from "./contexts/TenantContext";
 import { ScopeProvider } from "./contexts/ScopeContext";
 import { ProtectedRoute } from "./domains/security";
 import { PlatformGuard } from "./domains/platform/PlatformGuard";
+import { useAdaptiveUserType } from "./components/layout/AdaptiveSidebar";
 import { AppLayout } from "./components/layout/AppLayout";
 import PlatformLayout from "./components/platform/PlatformLayout";
 import Auth from "./pages/Auth";
@@ -52,8 +53,9 @@ const queryClient = new QueryClient();
 function AppRoutes() {
   const { user, loading: authLoading } = useAuth();
   const { currentTenant, loading: tenantLoading } = useTenant();
+  const { userType, isPlatformUser, loading: platformLoading } = useAdaptiveUserType();
 
-  if (authLoading || (user && tenantLoading)) {
+  if (authLoading || (user && tenantLoading) || (user && platformLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-3">
@@ -95,8 +97,11 @@ function AppRoutes() {
       </Route>
 
       {/* ═══ TENANT ROUTES ═══ */}
-      {!currentTenant ? (
+      {!currentTenant && !isPlatformUser ? (
         <Route path="*" element={<TenantOnboarding />} />
+      ) : !currentTenant && isPlatformUser ? (
+        /* Platform user with no tenant → redirect to platform */
+        <Route path="*" element={<Navigate to="/platform/dashboard" replace />} />
       ) : (
         <Route element={<AppLayout />}>
           <Route path="/" element={
