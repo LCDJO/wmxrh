@@ -640,6 +640,59 @@ export interface CreateHealthExamDTO {
 }
 
 // ========================
+// RISK EXPOSURE ENGINE
+// ========================
+
+export type RiskLevel = 'baixo' | 'medio' | 'alto' | 'critico';
+export type HazardPayType = 'insalubridade' | 'periculosidade';
+
+export interface EmployeeRiskExposure {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  risk_factor_id: string;
+  exposure_group_id: string | null;
+  company_id: string | null;
+  company_group_id: string | null;
+  risk_level: RiskLevel;
+  requires_epi: boolean;
+  epi_description: string | null;
+  epi_ca_number: string | null;
+  start_date: string;
+  end_date: string | null;
+  is_active: boolean;
+  generates_hazard_pay: boolean;
+  hazard_pay_type: HazardPayType | null;
+  hazard_pay_percentage: number | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  occupational_risk_factors?: OccupationalRiskFactor | null;
+  exposure_groups?: ExposureGroup | null;
+}
+
+export interface CreateEmployeeRiskExposureDTO {
+  tenant_id: string;
+  employee_id: string;
+  risk_factor_id: string;
+  exposure_group_id?: string | null;
+  company_id?: string | null;
+  company_group_id?: string | null;
+  risk_level?: RiskLevel;
+  requires_epi?: boolean;
+  epi_description?: string | null;
+  epi_ca_number?: string | null;
+  start_date?: string;
+  generates_hazard_pay?: boolean;
+  hazard_pay_type?: HazardPayType | null;
+  hazard_pay_percentage?: number | null;
+  notes?: string | null;
+  created_by?: string | null;
+}
+
+// ========================
 // SALARY COMPOSITION ENGINE
 // ========================
 

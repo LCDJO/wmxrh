@@ -682,6 +682,124 @@ export type Database = {
           },
         ]
       }
+      employee_risk_exposures: {
+        Row: {
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          employee_id: string
+          end_date: string | null
+          epi_ca_number: string | null
+          epi_description: string | null
+          exposure_group_id: string | null
+          generates_hazard_pay: boolean
+          hazard_pay_percentage: number | null
+          hazard_pay_type: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          requires_epi: boolean
+          risk_factor_id: string
+          risk_level: string
+          start_date: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id: string
+          end_date?: string | null
+          epi_ca_number?: string | null
+          epi_description?: string | null
+          exposure_group_id?: string | null
+          generates_hazard_pay?: boolean
+          hazard_pay_percentage?: number | null
+          hazard_pay_type?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          requires_epi?: boolean
+          risk_factor_id: string
+          risk_level?: string
+          start_date?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id?: string
+          end_date?: string | null
+          epi_ca_number?: string | null
+          epi_description?: string | null
+          exposure_group_id?: string | null
+          generates_hazard_pay?: boolean
+          hazard_pay_percentage?: number | null
+          hazard_pay_type?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          requires_epi?: boolean
+          risk_factor_id?: string
+          risk_level?: string
+          start_date?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_risk_exposures_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_risk_exposures_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_risk_exposures_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_risk_exposures_exposure_group_id_fkey"
+            columns: ["exposure_group_id"]
+            isOneToOne: false
+            referencedRelation: "exposure_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_risk_exposures_risk_factor_id_fkey"
+            columns: ["risk_factor_id"]
+            isOneToOne: false
+            referencedRelation: "occupational_risk_factors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_risk_exposures_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           base_salary: number | null
@@ -805,28 +923,37 @@ export type Database = {
         Row: {
           control_measures: string | null
           created_at: string
+          epi_ca_number: string | null
+          epi_description: string | null
           exposure_group_id: string
           id: string
           intensity: string | null
           measurement_date: string | null
+          requires_epi: boolean
           risk_factor_id: string
         }
         Insert: {
           control_measures?: string | null
           created_at?: string
+          epi_ca_number?: string | null
+          epi_description?: string | null
           exposure_group_id: string
           id?: string
           intensity?: string | null
           measurement_date?: string | null
+          requires_epi?: boolean
           risk_factor_id: string
         }
         Update: {
           control_measures?: string | null
           created_at?: string
+          epi_ca_number?: string | null
+          epi_description?: string | null
           exposure_group_id?: string
           id?: string
           intensity?: string | null
           measurement_date?: string | null
+          requires_epi?: boolean
           risk_factor_id?: string
         }
         Relationships: [
@@ -981,6 +1108,8 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           document_url: string | null
+          generates_hazard_pay: boolean
+          hazard_pay_type: string | null
           id: string
           name: string
           notes: string | null
@@ -999,6 +1128,8 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           document_url?: string | null
+          generates_hazard_pay?: boolean
+          hazard_pay_type?: string | null
           id?: string
           name: string
           notes?: string | null
@@ -1017,6 +1148,8 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           document_url?: string | null
+          generates_hazard_pay?: boolean
+          hazard_pay_type?: string | null
           id?: string
           name?: string
           notes?: string | null
