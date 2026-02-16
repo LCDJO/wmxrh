@@ -129,12 +129,131 @@ export interface RiskAssessment {
 }
 
 // ════════════════════════════════════
-// UNIFIED IDENTITY READ-MODEL
+// UNIFIED IDENTITY SESSION
+// ════════════════════════════════════
+
+/**
+ * UnifiedIdentitySession — the top-level session object.
+ *
+ * ╔═══════════════════════════════════════════════════════════╗
+ * ║  {                                                         ║
+ * ║    session_id,                                             ║
+ * ║    real_identity,                                          ║
+ * ║    available_tenants[],                                    ║
+ * ║    available_groups[],                                     ║
+ * ║    recent_contexts[],                                      ║
+ * ║    active_context,                                         ║
+ * ║    impersonation_state?                                    ║
+ * ║  }                                                         ║
+ * ╚═══════════════════════════════════════════════════════════╝
+ */
+export interface UnifiedIdentitySession {
+  /** Stable session identifier (fingerprint from IBL) */
+  readonly session_id: string;
+
+  /** Phase in the identity lifecycle */
+  readonly phase: IdentityPhase;
+
+  /** The real identity — WHO actually logged in (immutable) */
+  readonly real_identity: UnifiedRealIdentity;
+
+  /** All tenants the user has membership in */
+  readonly available_tenants: readonly TenantWorkspace[];
+
+  /** All groups reachable via AccessGraph */
+  readonly available_groups: readonly GroupEntry[];
+
+  /** Recent context visits for quick switch back */
+  readonly recent_contexts: readonly RecentContext[];
+
+  /** The currently active operational context (null if phase < scoped) */
+  readonly active_context: ActiveContext | null;
+
+  /** Impersonation state (null if not impersonating) */
+  readonly impersonation_state: ImpersonationState | null;
+
+  /** Risk assessment */
+  readonly risk: RiskAssessment;
+
+  /** Timestamp of session creation */
+  readonly established_at: number;
+
+  /** Timestamp of last projection */
+  readonly resolved_at: number;
+}
+
+/**
+ * The real identity — immutable per auth session.
+ */
+export interface UnifiedRealIdentity {
+  readonly user_id: string;
+  readonly email: string | null;
+  readonly user_type: DetectedUserType;
+  readonly platform_role: PlatformRoleType | null;
+  readonly detection: UserTypeDetection | null;
+  readonly authenticated_at: number;
+}
+
+/**
+ * A tenant workspace available for switching.
+ */
+export interface TenantWorkspace {
+  readonly tenant_id: string;
+  readonly tenant_name: string;
+  readonly role: TenantRole;
+  readonly is_active: boolean;
+}
+
+/**
+ * A group reachable via AccessGraph.
+ */
+export interface GroupEntry {
+  readonly group_id: string;
+  readonly tenant_id: string;
+  readonly inherited_from: 'tenant' | 'direct';
+}
+
+/**
+ * The currently active context — WHERE the user is operating.
+ */
+export interface ActiveContext {
+  readonly tenant_id: string;
+  readonly tenant_name: string;
+  readonly membership_role: TenantRole;
+  readonly effective_roles: readonly TenantRole[];
+  readonly scope_level: ScopeType;
+  readonly group_id: string | null;
+  readonly company_id: string | null;
+  readonly activated_at: number;
+}
+
+/**
+ * Impersonation state — only present when a platform user
+ * is operating as a tenant user.
+ */
+export interface ImpersonationState {
+  readonly session_id: string;
+  readonly real_user_id: string;
+  readonly target_tenant_id: string;
+  readonly target_tenant_name: string;
+  readonly simulated_role: TenantRole;
+  readonly reason: string;
+  readonly started_at: number;
+  readonly expires_at: number;
+  readonly remaining_ms: number;
+  readonly operation_count: number;
+}
+
+// ════════════════════════════════════
+// UNIFIED IDENTITY READ-MODEL (full diagnostic snapshot)
 // ════════════════════════════════════
 
 /**
  * The single source of truth for identity state.
  * Projected from all subsystems into one consumable snapshot.
+ *
+ * For simpler consumption, prefer `UnifiedIdentitySession`.
+ * IdentitySnapshot adds diagnostic/graph/IBL metadata.
  */
 export interface IdentitySnapshot {
   // ── Phase ──

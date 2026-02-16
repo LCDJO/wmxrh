@@ -115,6 +115,8 @@ export { identityIntelligence, onIILEvent, getIILEventLog } from './kernel';
 export { useIdentityIntelligence } from './kernel';
 export type { UseIdentityIntelligenceReturn } from './kernel';
 export type {
+  UnifiedIdentitySession, UnifiedRealIdentity, TenantWorkspace,
+  GroupEntry, ActiveContext, ImpersonationState,
   IdentityPhase, IdentityTrigger, IdentitySnapshot,
   DetectedUserType, UserTypeDetection, WorkspaceEntry, RecentContext,
   RiskLevel, RiskAssessment, IntelligenceDecision,

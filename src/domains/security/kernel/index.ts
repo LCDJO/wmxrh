@@ -130,10 +130,20 @@ export { IdentityIntelligenceService, identityIntelligence, onIILEvent, getIILEv
 export { useIdentityIntelligence } from './identity-intelligence';
 export type { UseIdentityIntelligenceReturn } from './identity-intelligence';
 export type {
+  // Core session
+  UnifiedIdentitySession, UnifiedRealIdentity, TenantWorkspace,
+  GroupEntry, ActiveContext, ImpersonationState,
+  // FSM
   IdentityPhase, IdentityTrigger, IdentityTransition,
-  DetectedUserType, UserTypeDetection, WorkspaceEntry, RecentContext,
+  // Detection
+  DetectedUserType, UserTypeDetection,
+  // Workspace
+  WorkspaceEntry, RecentContext,
+  // Risk
   RiskLevel, RiskSignal, RiskAssessment,
+  // Snapshot
   IdentitySnapshot, DecisionAction, IntelligenceDecision,
+  // Events
   IILEventType, IILEvent,
   IILPhaseTransitionEvent, IILRiskEscalationEvent,
   IILAnomalyDetectedEvent, IILDecisionIssuedEvent,

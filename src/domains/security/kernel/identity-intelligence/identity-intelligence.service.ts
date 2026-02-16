@@ -24,6 +24,7 @@ import type {
   IdentityPhase,
   IdentityTrigger,
   IdentitySnapshot,
+  UnifiedIdentitySession,
   RiskAssessment,
   RiskLevel,
   RiskSignal,
@@ -521,6 +522,96 @@ export class IdentityIntelligenceService {
 
       // Meta
       resolvedAt: now,
+    };
+  }
+
+  // ══════════════════════════════════
+  // UNIFIED IDENTITY SESSION
+  // ══════════════════════════════════
+
+  /**
+   * Build the UnifiedIdentitySession — the primary API surface
+   * for consumers who need a clean, focused session object.
+   */
+  unifiedSession(): UnifiedIdentitySession {
+    const iblSession = identityBoundary.identity;
+    const dual = dualIdentityEngine;
+    const graph = getAccessGraph();
+    const context = identityBoundary.operationalContext;
+    const impersonation = dual.currentSession;
+    const now = Date.now();
+
+    // ── Real Identity ──
+    const realUserId = iblSession?.userId ?? dual.realIdentity?.userId ?? '';
+    const realEmail = iblSession?.email ?? dual.realIdentity?.email ?? null;
+
+    // ── Available tenants ──
+    const activeTenantId = context?.activeTenantId ?? null;
+    const availableTenants = (iblSession?.tenantScopes ?? []).map(scope => ({
+      tenant_id: scope.tenantId,
+      tenant_name: scope.tenantName,
+      role: scope.role,
+      is_active: scope.tenantId === activeTenantId,
+    }));
+
+    // ── Available groups from AccessGraph ──
+    const availableGroups: Array<{ group_id: string; tenant_id: string; inherited_from: 'tenant' | 'direct' }> = [];
+    if (graph && activeTenantId) {
+      const reachableGroups = graph.getReachableGroups();
+      for (const groupId of reachableGroups) {
+        availableGroups.push({
+          group_id: groupId,
+          tenant_id: activeTenantId,
+          inherited_from: 'tenant',
+        });
+      }
+    }
+
+    // ── Active context ──
+    const activeContext = context ? {
+      tenant_id: context.activeTenantId,
+      tenant_name: context.activeTenantName,
+      membership_role: context.membershipRole,
+      effective_roles: context.effectiveRoles,
+      scope_level: context.scopeLevel,
+      group_id: context.activeGroupId,
+      company_id: context.activeCompanyId,
+      activated_at: context.activatedAt,
+    } : null;
+
+    // ── Impersonation state ──
+    const impersonationState = impersonation ? {
+      session_id: impersonation.id,
+      real_user_id: impersonation.realIdentity.userId,
+      target_tenant_id: impersonation.targetTenantId,
+      target_tenant_name: impersonation.targetTenantName,
+      simulated_role: impersonation.simulatedRole,
+      reason: impersonation.reason,
+      started_at: impersonation.startedAt,
+      expires_at: impersonation.expiresAt,
+      remaining_ms: dual.getRemainingMs(),
+      operation_count: impersonation.operationCount,
+    } : null;
+
+    return {
+      session_id: iblSession?.sessionFingerprint ?? `anon_${now}`,
+      phase: this._phase,
+      real_identity: {
+        user_id: realUserId,
+        email: realEmail,
+        user_type: this._userTypeDetection?.detectedType ?? 'unknown',
+        platform_role: this._userTypeDetection?.platformRole ?? dual.realIdentity?.platformRole ?? null,
+        detection: this._userTypeDetection,
+        authenticated_at: iblSession?.authenticatedAt ?? dual.realIdentity?.authenticatedAt ?? 0,
+      },
+      available_tenants: availableTenants,
+      available_groups: availableGroups,
+      recent_contexts: this._recentContexts,
+      active_context: activeContext,
+      impersonation_state: impersonationState,
+      risk: this._lastRisk,
+      established_at: iblSession?.authenticatedAt ?? 0,
+      resolved_at: now,
     };
   }
 

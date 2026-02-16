@@ -16,19 +16,33 @@ export type { UseIdentityIntelligenceReturn } from './use-identity-intelligence'
 
 // ── Types ──
 export type {
+  // Core session object
+  UnifiedIdentitySession,
+  UnifiedRealIdentity,
+  TenantWorkspace,
+  GroupEntry,
+  ActiveContext,
+  ImpersonationState,
+  // FSM
   IdentityPhase,
   IdentityTrigger,
   IdentityTransition,
+  // Detection
   DetectedUserType,
   UserTypeDetection,
+  // Workspace
   WorkspaceEntry,
   RecentContext,
+  // Risk
   RiskLevel,
   RiskSignal,
   RiskAssessment,
+  // Snapshot (diagnostic)
   IdentitySnapshot,
+  // Decision
   DecisionAction,
   IntelligenceDecision,
+  // Events
   IILEventType,
   IILEvent,
   IILPhaseTransitionEvent,
