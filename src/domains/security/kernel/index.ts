@@ -78,6 +78,7 @@ export type {
 // ── Identity Boundary Layer ────────────────────────────────
 export { IdentityBoundaryLayer, identityBoundary } from './identity-boundary';
 export type {
+  IdentitySession, TenantScope,
   BoundaryIdentity, OperationalContext, TenantMembership,
   IdentityProvider, ContextSwitchRequest, ContextSwitchResult,
   EstablishIdentityInput, IdentityBoundarySnapshot,

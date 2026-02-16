@@ -4,33 +4,41 @@
  * ╔══════════════════════════════════════════════════════════════════════╗
  * ║  IDENTITY BOUNDARY LAYER                                            ║
  * ║                                                                      ║
- * ║  Separates:                                                          ║
- * ║    Identity        → WHO the user is (immutable per session)         ║
- * ║    OperationalCtx  → WHERE the user is operating (mutable)           ║
+ * ║  CONCEITO CENTRAL:                                                   ║
+ * ║                                                                      ║
+ * ║  IdentitySession (imutável por sessão):                              ║
+ * ║    user_id = 123                                                     ║
+ * ║    tenant_scopes = [T1, T2]                                          ║
+ * ║                                                                      ║
+ * ║  OperationalContext (mutável, validado):                              ║
+ * ║    active_tenant_id = T1                                             ║
+ * ║    active_group_id  = G3                                             ║
+ * ║    active_company_id = C9                                            ║
  * ║                                                                      ║
  * ║  ┌──────────────────────────────────────────────────────────────┐    ║
- * ║  │                    Identity (frozen)                         │    ║
- * ║  │  userId, email, sessionId, authenticatedAt                  │    ║
- * ║  │  allTenantMemberships, allUserRoles                         │    ║
+ * ║  │              IdentitySession (frozen)                       │    ║
+ * ║  │  userId, email, sessionFingerprint, authenticatedAt         │    ║
+ * ║  │  tenantScopes: [{ tenantId, tenantName, role }]             │    ║
+ * ║  │  allUserRoles: across ALL tenants (preloaded)               │    ║
  * ║  ├──────────────────────────────────────────────────────────────┤    ║
- * ║  │              Operational Context (switchable)                │    ║
+ * ║  │            OperationalContext (switchable)                   │    ║
  * ║  │  activeTenantId, activeGroupId, activeCompanyId             │    ║
- * ║  │  effectiveRoles (computed from identity + context)          │    ║
- * ║  │  accessGraph (rebuilt on context switch)                    │    ║
+ * ║  │  effectiveRoles (computed: membership + user_roles)         │    ║
+ * ║  │  scopeLevel: 'tenant' | 'company_group' | 'company'        │    ║
  * ║  └──────────────────────────────────────────────────────────────┘    ║
  * ║                                                                      ║
  * ║  INVARIANTS:                                                         ║
- * ║    1. Identity never changes without re-authentication               ║
- * ║    2. Context switches are validated against Identity grants          ║
+ * ║    1. IdentitySession never changes without re-authentication        ║
+ * ║    2. Context switches validate against tenantScopes                 ║
  * ║    3. Every switch emits an audit event                              ║
  * ║    4. SecurityContext is rebuilt atomically on switch                 ║
+ * ║                                                                      ║
+ * ║  FUTURE-READY:                                                       ║
+ * ║    - Delegated Access: switchContext validates delegation grants      ║
+ * ║    - Temporary Permissions: expiresAt on OperationalContext           ║
+ * ║    - Access Expiration: TTL-based auto-revocation                    ║
+ * ║    - External IdP: IdentitySession populated from SAML/OIDC claims   ║
  * ╚══════════════════════════════════════════════════════════════════════╝
- * 
- * FUTURE-READY:
- *   - Delegated Access: switchContext validates delegation grants
- *   - Temporary Permissions: expiration checked at switch time
- *   - Access Expiration: TTL on OperationalContext
- *   - External IdP: Identity populated from SAML/OIDC claims
  */
 
 import type { Session, User } from '@supabase/supabase-js';
@@ -38,10 +46,23 @@ import type { TenantRole, UserRole, ScopeType } from '@/domains/shared/types';
 import { auditSecurity } from './audit-security.service';
 
 // ════════════════════════════════════
-// IDENTITY — immutable per session
+// IDENTITY SESSION — immutable per auth session
 // ════════════════════════════════════
 
-export interface BoundaryIdentity {
+/**
+ * IdentitySession: WHO the user is.
+ * Frozen on establish(), never mutated until sign-out.
+ * 
+ * @example
+ * {
+ *   userId: '123',
+ *   tenantScopes: [
+ *     { tenantId: 'T1', tenantName: 'Acme Corp', role: 'admin' },
+ *     { tenantId: 'T2', tenantName: 'Beta Inc', role: 'viewer' },
+ *   ]
+ * }
+ */
+export interface IdentitySession {
   /** Supabase auth user ID */
   readonly userId: string;
   /** User email from JWT */
@@ -50,37 +71,56 @@ export interface BoundaryIdentity {
   readonly sessionFingerprint: string | null;
   /** When this identity was established */
   readonly authenticatedAt: number;
-  /** All tenant memberships this user has (across all tenants) */
-  readonly tenantMemberships: ReadonlyArray<TenantMembership>;
-  /** All user_roles across all tenants (preloaded) */
+  /** Tenants this user can operate in (immutable list of grants) */
+  readonly tenantScopes: ReadonlyArray<TenantScope>;
+  /** All user_roles across ALL tenants (preloaded for instant switching) */
   readonly allUserRoles: ReadonlyArray<UserRole>;
   /** Identity provider source (for future external IdP) */
   readonly provider: IdentityProvider;
 }
 
-export interface TenantMembership {
+/** A single tenant grant: the user's membership in one tenant */
+export interface TenantScope {
   readonly tenantId: string;
   readonly tenantName: string;
   readonly role: TenantRole;
 }
+
+/** @deprecated Use IdentitySession instead */
+export type BoundaryIdentity = IdentitySession;
+/** @deprecated Use TenantScope instead */
+export type TenantMembership = TenantScope;
 
 export type IdentityProvider = 
   | { type: 'supabase'; method: 'email' | 'oauth' }
   | { type: 'external'; providerId: string; method: 'saml' | 'oidc' };
 
 // ════════════════════════════════════
-// OPERATIONAL CONTEXT — mutable, validated
+// OPERATIONAL CONTEXT — WHERE the user is operating
 // ════════════════════════════════════
 
+/**
+ * OperationalContext: WHERE the user is operating right now.
+ * Rebuilt on every tenant/scope switch. Always validated against IdentitySession.
+ * 
+ * @example
+ * {
+ *   activeTenantId: 'T1',
+ *   activeGroupId: 'G3',
+ *   activeCompanyId: 'C9',
+ *   effectiveRoles: ['admin', 'rh'],
+ *   scopeLevel: 'company',
+ * }
+ */
 export interface OperationalContext {
   /** Currently active tenant */
   readonly activeTenantId: string;
   readonly activeTenantName: string;
   /** Active membership role for this tenant */
   readonly membershipRole: TenantRole;
-  /** Scoped user_roles for the active tenant */
+  /** Scoped user_roles for the active tenant only */
   readonly activeUserRoles: ReadonlyArray<UserRole>;
-  /** Effective roles = membership + user_roles */
+  /** Effective roles = membership + tenant-scoped user_roles */
   readonly effectiveRoles: ReadonlyArray<TenantRole>;
   /** Current scope drill-down */
   readonly scopeLevel: ScopeType;
@@ -130,16 +170,16 @@ export class IdentityBoundaryLayer {
    * Establish identity from authentication state.
    * Called once on login / session restore. Identity is frozen until sign-out.
    */
-  establish(input: EstablishIdentityInput): BoundaryIdentity {
+  establish(input: EstablishIdentityInput): IdentitySession {
     this._identity = Object.freeze({
       userId: input.user.id,
       email: input.user.email ?? null,
       sessionFingerprint: input.session.access_token?.slice(-8) ?? null,
       authenticatedAt: Date.now(),
-      tenantMemberships: Object.freeze(input.tenantMemberships.map(m => Object.freeze(m))),
+      tenantScopes: Object.freeze(input.tenantMemberships.map(m => Object.freeze(m))),
       allUserRoles: Object.freeze([...input.allUserRoles]),
       provider: input.provider ?? { type: 'supabase', method: 'email' },
-    }) as BoundaryIdentity;
+    }) as IdentitySession;
 
     return this._identity;
   }
@@ -199,7 +239,7 @@ export class IdentityBoundaryLayer {
     }
 
     // ── Validation 2: User must have membership in target tenant ──
-    const membership = identity.tenantMemberships.find(m => m.tenantId === targetTenantId);
+    const membership = identity.tenantScopes.find(m => m.tenantId === targetTenantId);
     if (!membership) {
       auditSecurity.logAccessDenied({
         resource: `tenant:${targetTenantId}`,
@@ -324,15 +364,15 @@ export class IdentityBoundaryLayer {
   /**
    * Get available tenants for context switching.
    */
-  getAvailableTenants(): ReadonlyArray<TenantMembership> {
-    return this._identity?.tenantMemberships ?? [];
+  getAvailableTenants(): ReadonlyArray<TenantScope> {
+    return this._identity?.tenantScopes ?? [];
   }
 
   /**
    * Check if user can switch to a specific tenant (O(1)).
    */
   canSwitchToTenant(tenantId: string): boolean {
-    return this._identity?.tenantMemberships.some(m => m.tenantId === tenantId) ?? false;
+    return this._identity?.tenantScopes.some(m => m.tenantId === tenantId) ?? false;
   }
 
   /**
@@ -344,7 +384,7 @@ export class IdentityBoundaryLayer {
       userId: this._identity?.userId ?? null,
       provider: this._identity?.provider ?? null,
       authenticatedAt: this._identity?.authenticatedAt ?? null,
-      tenantCount: this._identity?.tenantMemberships.length ?? 0,
+      tenantCount: this._identity?.tenantScopes.length ?? 0,
       activeTenantId: this._operationalContext?.activeTenantId ?? null,
       scopeLevel: this._operationalContext?.scopeLevel ?? null,
       effectiveRoles: this._operationalContext?.effectiveRoles
