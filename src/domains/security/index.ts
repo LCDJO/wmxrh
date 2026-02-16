@@ -112,13 +112,14 @@ export type { UseFeatureFlagsReturn } from './use-feature-flags';
 
 // ── Identity Intelligence Layer ──
 export { identityIntelligence, onIILEvent, getIILEventLog } from './kernel';
+export { useIdentityIntelligence } from './kernel';
+export type { UseIdentityIntelligenceReturn } from './kernel';
 export type {
   IdentityPhase, IdentityTrigger, IdentitySnapshot,
+  DetectedUserType, UserTypeDetection, WorkspaceEntry, RecentContext,
   RiskLevel, RiskAssessment, IntelligenceDecision,
-  IILEvent,
+  IILEvent, IILUserTypeDetectedEvent, IILWorkspaceSwitchedEvent,
 } from './kernel';
-export { useIdentityIntelligence } from './kernel/identity-intelligence/use-identity-intelligence';
-export type { UseIdentityIntelligenceReturn } from './kernel/identity-intelligence/use-identity-intelligence';
 
 // ── Kernel Hook ──
 export { useSecurityKernel } from './use-security-kernel';

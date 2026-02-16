@@ -4,13 +4,13 @@
  * ╔══════════════════════════════════════════════════════════════════════╗
  * ║  ORCHESTRATOR + STATE MACHINE + DECISION ENGINE + READ-MODEL        ║
  * ║                                                                      ║
- * ║  Sits ABOVE all identity subsystems:                                 ║
- * ║    • Platform Identity Layer (PlatformGuard / usePlatformIdentity)   ║
- * ║    • Tenant Identity (TenantContext / tenant_memberships)            ║
- * ║    • Identity Boundary Layer (IBL)                                   ║
- * ║    • Dual Identity Engine (impersonation)                            ║
- * ║    • Access Graph (scope reachability)                               ║
- * ║    • Navigation Intelligence (AdaptiveSidebar / AppBreadcrumbs)      ║
+ * ║  CAPABILITIES:                                                       ║
+ * ║    1. Auto-detect PlatformUser vs TenantUser (JWT → DB → fallback)  ║
+ * ║    2. Multi-tenant session with workspace switching                  ║
+ * ║    3. Active context management without logout                       ║
+ * ║    4. Recent context history for quick workspace switch              ║
+ * ║    5. Risk assessment & anomaly detection                            ║
+ * ║    6. Decision engine for access control                             ║
  * ║                                                                      ║
  * ║  SINGLETON — no React dependency.                                    ║
  * ╚══════════════════════════════════════════════════════════════════════╝
@@ -34,7 +34,21 @@ import type {
   IILRiskEscalationEvent,
   IILAnomalyDetectedEvent,
   IILDecisionIssuedEvent,
+  IILUserTypeDetectedEvent,
+  IILWorkspaceSwitchedEvent,
+  UserTypeDetection,
+  DetectedUserType,
+  WorkspaceEntry,
+  RecentContext,
 } from './types';
+
+// ════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════
+
+const MAX_RECENT_CONTEXTS = 10;
+const RECENT_CONTEXTS_KEY = 'iil:recent_contexts';
+const LAST_WORKSPACE_KEY = 'iil:last_workspace';
 
 // ════════════════════════════════════
 // EVENT BUS
@@ -92,6 +106,17 @@ export class IdentityIntelligenceService {
   private _lastTransitionTimestamps: number[] = [];
   private _snapshotListeners = new Set<() => void>();
 
+  // ── User type detection ──
+  private _userTypeDetection: UserTypeDetection | null = null;
+
+  // ── Workspace & context history ──
+  private _recentContexts: RecentContext[] = [];
+  private _contextEnteredAt: number | null = null;
+
+  constructor() {
+    this._loadRecentContexts();
+  }
+
   // ══════════════════════════════════
   // STATE MACHINE
   // ══════════════════════════════════
@@ -143,14 +168,24 @@ export class IdentityIntelligenceService {
 
     // Re-assess risk on every transition
     this._assessRisk();
-    this._notifySnapshotListeners();
 
+    // On LOGOUT, clear user type detection
+    if (trigger === 'LOGOUT') {
+      this._userTypeDetection = null;
+      this._contextEnteredAt = null;
+    }
+
+    // On SCOPE_RESOLVED, mark context entry
+    if (trigger === 'SCOPE_RESOLVED' || trigger === 'SCOPE_SWITCH') {
+      this._contextEnteredAt = now;
+    }
+
+    this._notifySnapshotListeners();
     return true;
   }
 
   /**
    * Auto-resolve phase from current subsystem state.
-   * Called when subsystems change externally (e.g. IBL establish).
    */
   syncPhase(): IdentityPhase {
     const resolved = this._resolveCurrentPhase();
@@ -159,7 +194,6 @@ export class IdentityIntelligenceService {
       if (trigger) {
         this.transition(trigger);
       } else {
-        // Force-set if no clean trigger (e.g. external state change)
         this._previousPhase = this._phase;
         this._phase = resolved;
         this._phaseChangedAt = Date.now();
@@ -170,33 +204,241 @@ export class IdentityIntelligenceService {
   }
 
   // ══════════════════════════════════
+  // USER TYPE AUTO-DETECTION
+  // ══════════════════════════════════
+
+  /**
+   * Detect user type from JWT claim.
+   * Called during login/session restore with the access token.
+   */
+  detectUserTypeFromJwt(accessToken: string | undefined): UserTypeDetection {
+    let detectedType: DetectedUserType = 'unknown';
+    let platformRole = null;
+
+    if (accessToken) {
+      try {
+        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+        if (payload.user_type === 'platform' || payload.user_type === 'tenant') {
+          detectedType = payload.user_type;
+        }
+        if (payload.platform_role) {
+          platformRole = payload.platform_role;
+        }
+      } catch { /* malformed token */ }
+    }
+
+    const detection: UserTypeDetection = {
+      detectedType,
+      confidence: detectedType !== 'unknown' ? 'jwt_claim' : 'unknown',
+      platformRole,
+      tenantCount: identityBoundary.identity?.tenantScopes.length ?? 0,
+      detectedAt: Date.now(),
+    };
+
+    this._userTypeDetection = detection;
+
+    emit({
+      type: 'UserTypeDetected',
+      timestamp: Date.now(),
+      userId: this._resolveUserId(),
+      detection,
+    } satisfies IILUserTypeDetectedEvent);
+
+    this._notifySnapshotListeners();
+    return detection;
+  }
+
+  /**
+   * Set user type from DB lookup (platform_users table or tenant_memberships).
+   * Called as fallback when JWT claim is not available.
+   */
+  setDetectedUserType(
+    type: DetectedUserType,
+    confidence: UserTypeDetection['confidence'],
+    platformRole: string | null = null,
+  ): void {
+    // Don't downgrade from jwt_claim confidence
+    if (this._userTypeDetection?.confidence === 'jwt_claim' && confidence !== 'jwt_claim') {
+      return;
+    }
+
+    const tenantCount = identityBoundary.identity?.tenantScopes.length ?? 0;
+
+    this._userTypeDetection = {
+      detectedType: type,
+      confidence,
+      platformRole: platformRole as any,
+      tenantCount,
+      detectedAt: Date.now(),
+    };
+
+    emit({
+      type: 'UserTypeDetected',
+      timestamp: Date.now(),
+      userId: this._resolveUserId(),
+      detection: this._userTypeDetection,
+    } satisfies IILUserTypeDetectedEvent);
+
+    this._notifySnapshotListeners();
+  }
+
+  get userTypeDetection(): UserTypeDetection | null {
+    return this._userTypeDetection;
+  }
+
+  get isPlatformUser(): boolean {
+    return this._userTypeDetection?.detectedType === 'platform';
+  }
+
+  get isTenantUser(): boolean {
+    return this._userTypeDetection?.detectedType === 'tenant';
+  }
+
+  // ══════════════════════════════════
+  // WORKSPACE MANAGEMENT
+  // ══════════════════════════════════
+
+  /**
+   * Get all available workspaces the user can switch to.
+   */
+  getAvailableWorkspaces(): WorkspaceEntry[] {
+    const session = identityBoundary.identity;
+    if (!session) return [];
+
+    return session.tenantScopes.map(scope => ({
+      tenantId: scope.tenantId,
+      tenantName: scope.tenantName,
+      role: scope.role,
+      scopeLevel: null,
+      groupId: null,
+      companyId: null,
+    }));
+  }
+
+  /**
+   * Switch to a different workspace (tenant) without logout.
+   * Records the previous context in history before switching.
+   */
+  switchWorkspace(
+    tenantId: string,
+    method: 'explicit' | 'auto_restore' | 'initial' = 'explicit',
+  ): boolean {
+    const session = identityBoundary.identity;
+    if (!session) return false;
+
+    // Validate membership
+    if (!identityBoundary.canSwitchToTenant(tenantId)) {
+      emit({
+        type: 'AnomalyDetected',
+        timestamp: Date.now(),
+        userId: this._resolveUserId(),
+        anomaly: 'WORKSPACE_SWITCH_DENIED',
+        detail: `No membership for tenant ${tenantId}`,
+      });
+      return false;
+    }
+
+    // Record current context in history before leaving
+    this._recordCurrentContextInHistory();
+
+    const previousTenantId = identityBoundary.operationalContext?.activeTenantId ?? null;
+
+    // Perform the actual switch via IBL
+    const result = identityBoundary.switchContext({ targetTenantId: tenantId });
+    if (!result.success) return false;
+
+    // Persist last workspace
+    this._persistLastWorkspace(tenantId);
+
+    // Mark context entry time
+    this._contextEnteredAt = Date.now();
+
+    // Emit workspace switched event
+    const targetScope = session.tenantScopes.find(s => s.tenantId === tenantId);
+    emit({
+      type: 'WorkspaceSwitched',
+      timestamp: Date.now(),
+      userId: this._resolveUserId(),
+      fromTenantId: previousTenantId,
+      toTenantId: tenantId,
+      toTenantName: targetScope?.tenantName ?? tenantId,
+      switchMethod: method,
+    } satisfies IILWorkspaceSwitchedEvent);
+
+    // Transition FSM if needed
+    if (this._phase === 'authenticated') {
+      this.transition('SCOPE_RESOLVED');
+    } else if (this._phase === 'scoped') {
+      this.transition('SCOPE_SWITCH');
+    }
+
+    auditSecurity.log({
+      action: 'workspace_switched',
+      resource: 'identity_intelligence',
+      result: 'success',
+      reason: `Workspace switched to ${targetScope?.tenantName ?? tenantId}`,
+      user_id: session.userId,
+      tenant_id: tenantId,
+      metadata: { method, fromTenantId: previousTenantId },
+    });
+
+    this._notifySnapshotListeners();
+    return true;
+  }
+
+  /**
+   * Restore the last workspace from localStorage on session restore.
+   * Returns the restored tenant ID, or null if none found.
+   */
+  restoreLastWorkspace(): string | null {
+    try {
+      const saved = localStorage.getItem(LAST_WORKSPACE_KEY);
+      if (!saved) return null;
+
+      const { tenantId } = JSON.parse(saved);
+      if (!tenantId) return null;
+
+      // Validate the user still has membership
+      if (!identityBoundary.canSwitchToTenant(tenantId)) return null;
+
+      // Restore
+      if (this.switchWorkspace(tenantId, 'auto_restore')) {
+        return tenantId;
+      }
+    } catch { /* corrupted storage */ }
+    return null;
+  }
+
+  /**
+   * Get recent context history for quick workspace switching.
+   */
+  getRecentContexts(): readonly RecentContext[] {
+    return this._recentContexts;
+  }
+
+  // ══════════════════════════════════
   // DECISION ENGINE
   // ══════════════════════════════════
 
   /**
    * Evaluate the current identity context and return an intelligent decision.
-   * Used by SecurityPipeline and UI guards.
    */
   evaluate(action?: string, resource?: string): IntelligenceDecision {
     const risk = this._lastRisk;
     const snapshot = this.snapshot();
 
-    // ── Critical risk → force logout ──
     if (risk.level === 'critical') {
       return this._issueDecision('FORCE_LOGOUT', 'Risk level critical — session terminated', { risk });
     }
 
-    // ── Anonymous → require auth ──
     if (snapshot.phase === 'anonymous') {
       return this._issueDecision('REQUIRE_SCOPE', 'User not authenticated', { phase: snapshot.phase });
     }
 
-    // ── Authenticated but not scoped → require scope ──
     if (snapshot.phase === 'authenticated') {
       return this._issueDecision('REQUIRE_SCOPE', 'Tenant/scope not resolved', { phase: snapshot.phase });
     }
 
-    // ── Impersonating + financial action → block ──
     if (snapshot.isImpersonating && resource) {
       const financialResources = ['salary_adjustments', 'salary_contracts', 'compensation', 'benefit_plans', 'employee_benefits'];
       if (financialResources.includes(resource) && action && ['create', 'update', 'delete'].includes(action)) {
@@ -204,7 +446,6 @@ export class IdentityIntelligenceService {
       }
     }
 
-    // ── High risk → rate limit ──
     if (risk.level === 'high') {
       return this._issueDecision('RATE_LIMIT', 'Elevated risk — applying rate limiting', { risk });
     }
@@ -225,6 +466,8 @@ export class IdentityIntelligenceService {
     const dualIdentity = dualIdentityEngine;
     const graph = getAccessGraph();
     const session = dualIdentity.currentSession;
+    const context = identityBoundary.operationalContext;
+    const workspaces = this.getAvailableWorkspaces();
 
     const now = Date.now();
 
@@ -237,16 +480,24 @@ export class IdentityIntelligenceService {
       // Who
       userId: iblSnapshot.userId ?? dualIdentity.realIdentity?.userId ?? null,
       email: dualIdentity.realIdentity?.email ?? null,
-      userType: dualIdentity.activeIdentity.userType ?? null,
-      platformRole: dualIdentity.realIdentity?.platformRole ?? null,
+      userType: this._userTypeDetection?.detectedType === 'unknown'
+        ? null
+        : (this._userTypeDetection?.detectedType ?? dualIdentity.activeIdentity.userType ?? null),
+      platformRole: this._userTypeDetection?.platformRole ?? dualIdentity.realIdentity?.platformRole ?? null,
+      userTypeDetection: this._userTypeDetection,
 
       // Where
-      tenantId: iblSnapshot.activeTenantId ?? dualIdentity.activeIdentity.tenantId ?? null,
-      tenantName: session?.targetTenantName ?? null,
-      scopeLevel: iblSnapshot.scopeLevel ?? null,
-      groupId: null, // resolved from operational context
-      companyId: null,
-      effectiveRoles: iblSnapshot.effectiveRoles,
+      tenantId: context?.activeTenantId ?? iblSnapshot.activeTenantId ?? dualIdentity.activeIdentity.tenantId ?? null,
+      tenantName: context?.activeTenantName ?? session?.targetTenantName ?? null,
+      scopeLevel: context?.scopeLevel ?? iblSnapshot.scopeLevel ?? null,
+      groupId: context?.activeGroupId ?? null,
+      companyId: context?.activeCompanyId ?? null,
+      effectiveRoles: context?.effectiveRoles ?? iblSnapshot.effectiveRoles,
+
+      // Workspaces
+      availableWorkspaces: workspaces,
+      recentContexts: this._recentContexts,
+      canSwitchWorkspace: workspaces.length > 1,
 
       // Dual Identity
       isImpersonating: dualIdentity.isImpersonating,
@@ -318,6 +569,11 @@ export class IdentityIntelligenceService {
       signals.push({ signal: 'IBL_DESYNC', weight: 30, detail: 'Phase is scoped but IBL session not established' });
     }
 
+    // ── Unknown user type when scoped ──
+    if (this._phase === 'scoped' && (!this._userTypeDetection || this._userTypeDetection.detectedType === 'unknown')) {
+      signals.push({ signal: 'UNKNOWN_USER_TYPE', weight: 5, detail: 'User type not yet resolved' });
+    }
+
     // ── Score ──
     const score = Math.min(100, signals.reduce((sum, s) => sum + s.weight, 0));
     const level: RiskLevel =
@@ -330,7 +586,6 @@ export class IdentityIntelligenceService {
 
     this._lastRisk = { level, score, signals, assessedAt: Date.now() };
 
-    // Emit escalation event if risk increased
     if (this._riskOrdinal(level) > this._riskOrdinal(previousLevel)) {
       emit({
         type: 'RiskEscalation',
@@ -342,7 +597,6 @@ export class IdentityIntelligenceService {
         signals,
       } satisfies IILRiskEscalationEvent);
 
-      // Audit high+ risk
       if (level === 'high' || level === 'critical') {
         auditSecurity.log({
           action: 'unauthorized_access',
@@ -353,6 +607,64 @@ export class IdentityIntelligenceService {
         });
       }
     }
+  }
+
+  // ══════════════════════════════════
+  // PRIVATE — CONTEXT HISTORY
+  // ══════════════════════════════════
+
+  private _recordCurrentContextInHistory(): void {
+    const context = identityBoundary.operationalContext;
+    if (!context) return;
+
+    const durationMs = this._contextEnteredAt ? Date.now() - this._contextEnteredAt : 0;
+
+    const entry: RecentContext = {
+      tenantId: context.activeTenantId,
+      tenantName: context.activeTenantName,
+      role: context.membershipRole,
+      scopeLevel: context.scopeLevel,
+      groupId: context.activeGroupId,
+      companyId: context.activeCompanyId,
+      visitedAt: this._contextEnteredAt ?? Date.now(),
+      durationMs,
+    };
+
+    // Remove duplicate (same tenant)
+    this._recentContexts = this._recentContexts.filter(
+      c => c.tenantId !== entry.tenantId,
+    );
+
+    // Add to front
+    this._recentContexts.unshift(entry);
+
+    // Trim
+    if (this._recentContexts.length > MAX_RECENT_CONTEXTS) {
+      this._recentContexts = this._recentContexts.slice(0, MAX_RECENT_CONTEXTS);
+    }
+
+    this._persistRecentContexts();
+  }
+
+  private _loadRecentContexts(): void {
+    try {
+      const raw = localStorage.getItem(RECENT_CONTEXTS_KEY);
+      if (raw) {
+        this._recentContexts = JSON.parse(raw);
+      }
+    } catch { /* corrupted */ }
+  }
+
+  private _persistRecentContexts(): void {
+    try {
+      localStorage.setItem(RECENT_CONTEXTS_KEY, JSON.stringify(this._recentContexts));
+    } catch { /* storage full */ }
+  }
+
+  private _persistLastWorkspace(tenantId: string): void {
+    try {
+      localStorage.setItem(LAST_WORKSPACE_KEY, JSON.stringify({ tenantId, savedAt: Date.now() }));
+    } catch { /* storage full */ }
   }
 
   // ══════════════════════════════════
@@ -415,6 +727,9 @@ export class IdentityIntelligenceService {
       isImpersonating: dualIdentityEngine.isImpersonating,
       hasAccessGraph: !!getAccessGraph(),
       eventLogSize: eventLog.length,
+      userTypeDetection: this._userTypeDetection,
+      recentContextsCount: this._recentContexts.length,
+      availableWorkspaces: this.getAvailableWorkspaces().length,
     };
   }
 }

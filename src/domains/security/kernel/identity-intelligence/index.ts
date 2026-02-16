@@ -10,11 +10,19 @@ export {
   getIILEventLog,
 } from './identity-intelligence.service';
 
+// ── Hook ──
+export { useIdentityIntelligence } from './use-identity-intelligence';
+export type { UseIdentityIntelligenceReturn } from './use-identity-intelligence';
+
 // ── Types ──
 export type {
   IdentityPhase,
   IdentityTrigger,
   IdentityTransition,
+  DetectedUserType,
+  UserTypeDetection,
+  WorkspaceEntry,
+  RecentContext,
   RiskLevel,
   RiskSignal,
   RiskAssessment,
@@ -27,4 +35,6 @@ export type {
   IILRiskEscalationEvent,
   IILAnomalyDetectedEvent,
   IILDecisionIssuedEvent,
+  IILUserTypeDetectedEvent,
+  IILWorkspaceSwitchedEvent,
 } from './types';

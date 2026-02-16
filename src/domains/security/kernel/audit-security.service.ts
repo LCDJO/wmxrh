@@ -44,7 +44,8 @@ export type AuditAction =
   | 'scope_switched'
   | 'impersonation_started'
   | 'impersonation_ended'
-  | 'impersonated_action';
+  | 'impersonated_action'
+  | 'workspace_switched';
 
 export type AuditResult = 'allowed' | 'blocked' | 'success';
 
@@ -153,6 +154,7 @@ const ACTION_TO_EVENT: Record<AuditAction, SecurityEventType> = {
   impersonation_started: 'ImpersonationStarted',
   impersonation_ended: 'ImpersonationEnded',
   impersonated_action: 'ImpersonatedActionExecuted',
+  workspace_switched: 'ScopeMismatchDetected',
 };
 
 function buildEntry(
