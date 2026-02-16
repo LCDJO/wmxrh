@@ -16,11 +16,15 @@ import type {
   Tenant, TenantMembership, TenantRole, UserRole, ScopeType,
   CompanyGroup, Company, Department, Position,
   Employee, EmployeeWithRelations, EmployeeEvent, SalaryHistory,
+  SalaryContract, SalaryContractWithRelations,
+  SalaryAdjustment, SalaryAdjustmentWithRelations,
+  SalaryAdditional,
   CompanyWithRelations, PositionWithRelations, DepartmentWithRelations,
   SalaryHistoryWithRelations,
   CreateTenantDTO, CreateCompanyDTO, CreateCompanyGroupDTO,
   CreateDepartmentDTO, CreatePositionDTO, CreateEmployeeDTO,
-  CreateSalaryHistoryDTO,
+  CreateSalaryHistoryDTO, CreateSalaryContractDTO,
+  CreateSalaryAdjustmentDTO, CreateSalaryAdditionalDTO,
 } from './types';
 
 export interface ITenantService {
@@ -72,4 +76,21 @@ export interface ISalaryHistoryService {
   listByTenant(tenantId: string): Promise<SalaryHistoryWithRelations[]>;
   listByEmployee(employeeId: string): Promise<SalaryHistory[]>;
   create(data: CreateSalaryHistoryDTO): Promise<SalaryHistory>;
+}
+
+export interface ISalaryContractService {
+  listByEmployee(employeeId: string): Promise<SalaryContract[]>;
+  getActive(employeeId: string): Promise<SalaryContract | null>;
+  create(data: CreateSalaryContractDTO): Promise<SalaryContract>;
+}
+
+export interface ISalaryAdjustmentService {
+  listByEmployee(employeeId: string): Promise<SalaryAdjustment[]>;
+  listByTenant(tenantId: string): Promise<SalaryAdjustmentWithRelations[]>;
+  create(data: CreateSalaryAdjustmentDTO): Promise<SalaryAdjustment>;
+}
+
+export interface ISalaryAdditionalService {
+  listByEmployee(employeeId: string): Promise<SalaryAdditional[]>;
+  create(data: CreateSalaryAdditionalDTO): Promise<SalaryAdditional>;
 }
