@@ -41,18 +41,46 @@ const DATASET: WorkforceDataset = {
 
 describe('Workforce Intelligence Engine', () => {
   describe('Cost Projection', () => {
-    it('projects costs over 12 months', () => {
+    it('projects costs over 12 months with summary', () => {
       const result = projectCosts({ dataset: DATASET, horizon_months: 12, salary_adjustment_rate: 0.05 });
       expect(result.is_projection).toBe(true);
       expect(result.monthly_projections).toHaveLength(12);
       expect(result.baseline_monthly_cost).toBeGreaterThan(0);
       expect(result.projected_monthly_avg).toBeGreaterThan(0);
+      // New summary fields
+      expect(result.summary.custo_atual).toBe(result.baseline_monthly_cost);
+      expect(result.summary.custo_projetado_3_meses).toBeGreaterThan(0);
+      expect(result.summary.custo_projetado_12_meses).toBeGreaterThan(0);
+    });
+
+    it('applies scheduled salary adjustments', () => {
+      const result = projectCosts({
+        dataset: DATASET,
+        horizon_months: 6,
+        scheduled_adjustments: [
+          { employee_id: 'e1', adjustment_type: 'merit', previous_salary: 12000, new_salary: 13000, effective_date: '2026-04-01' },
+        ],
+      });
+      expect(result.cost_drivers.some(d => d.category === 'adjustment')).toBe(true);
+      expect(result.summary.impacto_aumentos).toBeGreaterThan(0);
+    });
+
+    it('applies CCT readjustment on base date month', () => {
+      const result = projectCosts({
+        dataset: DATASET,
+        horizon_months: 12,
+        active_cct: { annual_readjustment_pct: 6, base_date_month: 5, valid_from: '2026-01-01', valid_until: '2027-01-01' },
+      });
+      expect(result.cost_drivers.some(d => d.category === 'cct')).toBe(true);
+      expect(result.summary.impacto_cct).toBeGreaterThan(0);
+      expect(result.monthly_projections.some(p => p.cct_readjustment_applied)).toBe(true);
     });
 
     it('handles empty dataset', () => {
       const empty = { ...DATASET, simulations: [] };
       const result = projectCosts({ dataset: empty, horizon_months: 6 });
       expect(result.baseline_monthly_cost).toBe(0);
+      expect(result.summary.custo_atual).toBe(0);
     });
   });
 

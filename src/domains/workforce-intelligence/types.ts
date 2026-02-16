@@ -91,15 +91,39 @@ export interface WorkforceDataset {
 
 export type ProjectionHorizon = 3 | 6 | 12 | 24;
 
+/** A scheduled salary adjustment from the compensation engine */
+export interface ScheduledAdjustment {
+  employee_id: string;
+  adjustment_type: string;
+  previous_salary: number;
+  new_salary: number;
+  effective_date: string; // YYYY-MM-DD
+  percentage?: number;
+}
+
+/** Active CCT (Convenção Coletiva de Trabalho) data */
+export interface ActiveCCT {
+  salary_floor?: number;
+  salary_ceiling?: number;
+  annual_readjustment_pct?: number;
+  base_date_month?: number; // 1-12, month when readjustment applies
+  valid_from: string;
+  valid_until: string;
+}
+
 export interface CostProjectionInput {
   dataset: WorkforceDataset;
   horizon_months: ProjectionHorizon;
-  /** Annual salary adjustment rate (e.g., 0.05 = 5%) */
+  /** Annual salary adjustment rate (e.g., 0.05 = 5%) — fallback if no CCT */
   salary_adjustment_rate?: number;
   /** Projected headcount changes per month */
   headcount_delta?: number;
   /** Inflation rate for benefit costs */
   benefit_inflation_rate?: number;
+  /** Scheduled salary adjustments from Compensation Engine */
+  scheduled_adjustments?: ScheduledAdjustment[];
+  /** Active CCT providing readjustment rate and base date */
+  active_cct?: ActiveCCT;
 }
 
 export interface MonthlyCostProjection {
@@ -113,6 +137,21 @@ export interface MonthlyCostProjection {
   custo_total_empregador: number;
   delta_vs_current: number;
   delta_pct: number;
+  /** Scheduled adjustments applied in this month */
+  adjustments_applied: number;
+  /** Whether CCT readjustment was applied in this month */
+  cct_readjustment_applied: boolean;
+}
+
+/** Convenience summary for quick dashboard consumption */
+export interface CostProjectionSummary {
+  custo_atual: number;
+  custo_projetado_3_meses: number;
+  custo_projetado_12_meses: number;
+  impacto_aumentos: number;
+  impacto_beneficios: number;
+  impacto_cct: number;
+  impacto_headcount: number;
 }
 
 export interface CostProjectionOutput {
@@ -123,6 +162,8 @@ export interface CostProjectionOutput {
   monthly_projections: MonthlyCostProjection[];
   cost_drivers: CostDriver[];
   assumptions: string[];
+  /** Quick-access summary */
+  summary: CostProjectionSummary;
   is_projection: true;
 }
 
@@ -130,7 +171,7 @@ export interface CostDriver {
   driver: string;
   impact_monthly: number;
   impact_pct: number;
-  category: 'salary' | 'headcount' | 'encargo' | 'benefit' | 'provision';
+  category: 'salary' | 'headcount' | 'encargo' | 'benefit' | 'provision' | 'cct' | 'adjustment';
 }
 
 // ══════════════════════════════════════════════════════════════
