@@ -43,6 +43,8 @@ export interface TrainingRequirementRecord {
   cbo_codigo: string;
   nr_codigo: number;
   obrigatorio: boolean;
+  condicional_por_risco: boolean;
+  grau_risco_minimo: number;
   source: string;
   created_at: string;
   updated_at: string;
@@ -102,16 +104,24 @@ export const nrTrainingRequirementService = {
     if (applicable.length === 0) return [];
 
     // 3. Upsert training requirements
-    const payloads = applicable.map(c => ({
-      tenant_id: tenantId,
-      company_id: companyId,
-      company_group_id: companyGroupId,
-      catalog_item_id: c.id,
-      cbo_codigo: cboCodigo,
-      nr_codigo: c.nr_codigo,
-      obrigatorio: true,
-      source: 'engine',
-    }));
+    const payloads = applicable.map(c => {
+      // Determine if this is conditional based on risk grade
+      const isUniversal = (c.obrigatoria_para_grau_risco as number[]).length === 4;
+      const minGrau = Math.min(...(c.obrigatoria_para_grau_risco as number[]));
+
+      return {
+        tenant_id: tenantId,
+        company_id: companyId,
+        company_group_id: companyGroupId,
+        catalog_item_id: c.id,
+        cbo_codigo: cboCodigo,
+        nr_codigo: c.nr_codigo,
+        obrigatorio: true,
+        condicional_por_risco: !isUniversal,
+        grau_risco_minimo: minGrau,
+        source: 'engine',
+      };
+    });
 
     const { data, error } = await supabase
       .from('training_requirements')
