@@ -35,6 +35,7 @@ import AgreementManagement from "./pages/AgreementManagement";
 import DocumentSignatureIntegrations from "./pages/DocumentSignatureIntegrations";
 import OccupationalCompliance from "./pages/OccupationalCompliance";
 import NrComplianceDashboard from "./pages/NrComplianceDashboard";
+import IAMManagement from "./pages/IAMManagement";
 const queryClient = new QueryClient();
 
 function AppRoutes() {
@@ -176,6 +177,11 @@ function AppRoutes() {
         <Route path="/nr-compliance" element={
           <ProtectedRoute navKey="health">
             <NrComplianceDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/iam" element={
+          <ProtectedRoute navKey="audit">
+            <IAMManagement />
           </ProtectedRoute>
         } />
       </Route>

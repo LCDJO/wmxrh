@@ -117,6 +117,16 @@ const navStructure: NavEntry[] = [
       { to: '/document-signature', icon: FileSignature, label: 'Assinatura de Documentos', key: 'esocial' },
     ],
   },
+
+  // ── Administração ──
+  {
+    id: 'admin',
+    icon: UserCog,
+    label: 'Administração',
+    children: [
+      { to: '/iam', icon: UserCog, label: 'Gestão de Acesso', key: 'audit' },
+    ],
+  },
 ];
 
 // ════════════════════════════════════
