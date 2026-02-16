@@ -1,5 +1,10 @@
 /**
  * App Sidebar — Grouped navigation with collapsible parent menus
+ *
+ * Reacts to UnifiedIdentitySession.active_context:
+ *   - Shows active tenant/scope info in header
+ *   - Filters navigation by active_context.effective_roles
+ *   - Visual indicator for scope level (tenant/group/company)
  */
 
 import { NavLink, useLocation } from 'react-router-dom';
@@ -8,12 +13,13 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, LogOut, FileText, Heart,
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
-  GraduationCap, ShieldAlert,
+  GraduationCap, ShieldAlert, Globe, Layers,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
+import { useIdentityIntelligence } from '@/domains/security/kernel/identity-intelligence';
 import { ContextSelector } from './ContextSelector';
 import type { NavKey } from '@/domains/security/permissions';
 import type { FeatureKey } from '@/domains/security/feature-flags';
@@ -140,6 +146,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { signOut } = useAuth();
   const { canNav, isFeatureEnabled, effectiveRoles, loading } = useSecurityKernel();
+  const { activeContext, isImpersonating, session } = useIdentityIntelligence();
 
   const isVisible = (item: NavChild) => {
     if (loading) return true;
@@ -248,14 +255,31 @@ export function AppSidebar() {
       "gradient-sidebar flex flex-col border-r border-sidebar-border transition-all duration-300 h-screen sticky top-0",
       collapsed ? "w-[72px]" : "w-[260px]"
     )}>
-      {/* ── Header ── */}
-      <div className="flex items-center gap-3 px-5 py-6 border-b border-sidebar-border">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-primary">
+      {/* ── Header with active_context indicator ── */}
+      <div className={cn(
+        "flex items-center gap-3 px-5 py-6 border-b",
+        isImpersonating
+          ? "border-[hsl(var(--impersonation-border))] bg-[hsl(var(--impersonation-muted))]/20"
+          : "border-sidebar-border"
+      )}>
+        <div className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+          isImpersonating ? "bg-[hsl(var(--impersonation))]" : "gradient-primary"
+        )}>
           <Users className="h-5 w-5 text-primary-foreground" />
         </div>
         {!collapsed && (
-          <div className="animate-fade-in overflow-hidden">
+          <div className="animate-fade-in overflow-hidden min-w-0">
             <h1 className="font-display text-base font-bold text-sidebar-primary-foreground">RH Gestão</h1>
+            {/* Active context summary from IIL */}
+            {activeContext && (
+              <p className="text-[10px] text-sidebar-foreground/50 truncate flex items-center gap-1 mt-0.5">
+                {activeContext.scope_level === 'company' && <Building2 className="h-2.5 w-2.5 shrink-0" />}
+                {activeContext.scope_level === 'company_group' && <Layers className="h-2.5 w-2.5 shrink-0" />}
+                {activeContext.scope_level === 'tenant' && <Globe className="h-2.5 w-2.5 shrink-0" />}
+                <span className="truncate">{activeContext.tenant_name}</span>
+              </p>
+            )}
           </div>
         )}
       </div>
