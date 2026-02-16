@@ -13,6 +13,13 @@
  * ║   └── CognitiveOrchestrator    (AI + behavior tracking)         ║
  * ╚══════════════════════════════════════════════════════════════════╝
  *
+ * Boot sequence initialises:
+ *   1. SecurityKernel services (permissionEngine, policyEngine, etc.)
+ *   2. IdentityIntelligence (FSM, workspace resolver, risk engine)
+ *   3. AccessGraph service + cache
+ *   4. Module Federation (ModuleOrchestrator)
+ *   5. Navigation Intelligence (NavigationOrchestrator + cognitive)
+ *
  * SECURITY CONTRACT:
  *   The POSL does NOT replace the Security Kernel. All permission
  *   checks, scope resolution, and policy evaluation still flow
@@ -30,9 +37,28 @@ import { createFeatureLifecycleManager } from './feature-lifecycle-manager';
 import { createCognitiveOrchestrator } from './cognitive-orchestrator';
 import { CognitiveInsightsService } from '@/domains/platform-cognitive/cognitive-insights.service';
 
+// ── Security Kernel imports ──────────────────────────────────────
+import {
+  permissionEngine,
+  policyEngine,
+  featureFlagEngine,
+  auditSecurity,
+  accessGraphService,
+  accessGraphCache,
+  identityBoundary,
+  dualIdentityEngine,
+} from '@/domains/security/kernel';
+
+// ── Identity Intelligence ────────────────────────────────────────
+import { identityIntelligence, onIILEvent } from '@/domains/security/kernel/identity-intelligence';
+
+// ── Platform Events (bridge into EventKernel) ────────────────────
+import { onPlatformEvent } from '@/domains/platform/platform-events';
+
 export function createPlatformRuntime(): PlatformRuntimeAPI {
   let phase: RuntimePhase = 'idle';
   let bootedAt: number | null = null;
+  const disposers: Array<() => void> = [];
 
   // ── Sub-systems ──────────────────────────────────────────────
   const events = createGlobalEventKernel();
@@ -55,14 +81,60 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
     events.emit('runtime:booting', 'PlatformRuntime', {});
 
     try {
-      // Register core services
+      // ── 1. Register Security Kernel services ──────────────────
+      services.register('SecurityKernel.PermissionEngine', permissionEngine, { version: '1.0.0' });
+      services.register('SecurityKernel.PolicyEngine', policyEngine, { version: '1.0.0' });
+      services.register('SecurityKernel.FeatureFlagEngine', featureFlagEngine, { version: '1.0.0' });
+      services.register('SecurityKernel.AuditSecurity', auditSecurity, { version: '1.0.0' });
+      services.register('SecurityKernel.IdentityBoundary', identityBoundary, { version: '1.0.0' });
+      services.register('SecurityKernel.DualIdentityEngine', dualIdentityEngine, { version: '1.0.0' });
+
+      // ── 2. Register Identity Intelligence ─────────────────────
+      services.register('IdentityIntelligence', identityIntelligence, {
+        version: '1.0.0',
+        dependencies: ['SecurityKernel.IdentityBoundary', 'SecurityKernel.DualIdentityEngine'],
+      });
+
+      // ── 3. Register AccessGraph service + cache ───────────────
+      services.register('SecurityKernel.AccessGraphService', accessGraphService, { version: '1.0.0' });
+      services.register('SecurityKernel.AccessGraphCache', accessGraphCache, { version: '1.0.0' });
+
+      // ── 4. Register POSL orchestrators ────────────────────────
       services.register('EventKernel', events, { version: '1.0.0' });
       services.register('ModuleOrchestrator', modules, { version: '1.0.0' });
-      services.register('IdentityOrchestrator', identity, { version: '1.0.0' });
+      services.register('IdentityOrchestrator', identity, {
+        version: '1.0.0',
+        dependencies: ['SecurityKernel.IdentityBoundary', 'IdentityIntelligence'],
+      });
       services.register('NavigationOrchestrator', navigation, { version: '1.0.0' });
-      services.register('FeatureLifecycleManager', features, { version: '1.0.0' });
+      services.register('FeatureLifecycleManager', features, {
+        version: '1.0.0',
+        dependencies: ['SecurityKernel.FeatureFlagEngine'],
+      });
       services.register('CognitiveOrchestrator', cognitive, { version: '1.0.0' });
       services.register('CognitiveInsightsService', cognitiveService, { version: '1.0.0' });
+
+      // ── 5. Bridge legacy PlatformEvents → GlobalEventKernel ───
+      const unbridgePlatformEvents = onPlatformEvent((evt) => {
+        events.emit(
+          `platform:${evt.type}`,
+          'PlatformEventsBridge',
+          evt,
+          { priority: evt.type.includes('Risk') ? 'high' : 'normal' },
+        );
+      });
+      disposers.push(unbridgePlatformEvents);
+
+      // ── 6. Bridge IdentityIntelligence events ─────────────────
+      const unbridgeIIL = onIILEvent((evt) => {
+        events.emit(
+          `iil:${evt.type}`,
+          'IdentityIntelligenceBridge',
+          evt,
+          { priority: evt.type.includes('Risk') || evt.type.includes('Anomaly') ? 'high' : 'normal' },
+        );
+      });
+      disposers.push(unbridgeIIL);
 
       bootedAt = Date.now();
       phase = 'ready';
@@ -70,7 +142,11 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
 
       console.info('[PlatformOS] Runtime ready', {
         services: services.list().length,
-        uptime: 0,
+        securityKernel: 'initialized',
+        identityIntelligence: 'initialized',
+        accessGraph: 'initialized',
+        moduleFederation: `${modules.list().length} modules`,
+        navigationIntelligence: 'initialized',
       });
     } catch (err) {
       phase = 'degraded';
@@ -84,6 +160,10 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
     phase = 'shutting_down';
     events.emit('runtime:shutdown', 'PlatformRuntime', {});
 
+    // Tear down event bridges
+    disposers.forEach(fn => fn());
+    disposers.length = 0;
+
     // Dispose all services
     for (const svc of services.list()) {
       services.dispose(svc.name);
@@ -96,19 +176,41 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
   function status(): RuntimeStatus {
     const healthChecks: RuntimeHealthCheck[] = [
       {
+        name: 'SecurityKernel',
+        status: services.has('SecurityKernel.PermissionEngine') ? 'ok' : 'fail',
+        checked_at: Date.now(),
+      },
+      {
+        name: 'IdentityIntelligence',
+        status: services.has('IdentityIntelligence') ? 'ok' : 'warn',
+        checked_at: Date.now(),
+      },
+      {
+        name: 'AccessGraph',
+        status: services.has('SecurityKernel.AccessGraphService') ? 'ok' : 'warn',
+        checked_at: Date.now(),
+      },
+      {
         name: 'EventKernel',
         status: events.stats().active_subscriptions >= 0 ? 'ok' : 'warn',
+        message: `${events.stats().total_emitted} emitted, ${events.stats().active_subscriptions} subs`,
         checked_at: Date.now(),
       },
       {
         name: 'ServiceRegistry',
         status: services.list().every(s => s.status === 'ready' || s.status === 'registered') ? 'ok' : 'warn',
+        message: `${services.list().length} services`,
         checked_at: Date.now(),
       },
       {
-        name: 'Modules',
+        name: 'ModuleFederation',
         status: modules.list().every(m => m.status !== 'error') ? 'ok' : 'warn',
         message: `${modules.listActive().length} active / ${modules.list().length} total`,
+        checked_at: Date.now(),
+      },
+      {
+        name: 'NavigationIntelligence',
+        status: services.has('NavigationOrchestrator') ? 'ok' : 'warn',
         checked_at: Date.now(),
       },
     ];
