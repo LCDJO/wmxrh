@@ -8,49 +8,75 @@ import {
 import { StatsCard } from '@/components/shared/StatsCard';
 import { useTenant } from '@/contexts/TenantContext';
 import { useScope } from '@/contexts/ScopeContext';
-import { useCompanies, useEmployeesSimple } from '@/domains/hooks';
+import { useCompanies, useEmployeesSimple, useQueryScope } from '@/domains/hooks';
 import { supabase } from '@/integrations/supabase/client';
+import { applyScope, type QueryScope } from '@/domains/shared/scoped-query';
+import { useSecurityKernel } from '@/domains/security/use-security-kernel';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   RadialBarChart, RadialBar, LineChart, Line, CartesianGrid,
   PieChart as RePieChart, Pie, Cell,
 } from 'recharts';
 
-// Fetch workforce insights from DB
-function useWorkforceInsights(tenantId: string | undefined) {
+/**
+ * Fetch workforce insights using scoped query (applyScope).
+ * RLS enforces tenant access; applyScope adds ABAC group/company filtering.
+ */
+function useWorkforceInsights(qs: QueryScope | null) {
   return useQuery({
-    queryKey: ['workforce-insights', tenantId],
+    queryKey: ['workforce-insights', qs?.tenantId, qs?.scopeLevel, qs?.groupId, qs?.companyId],
     queryFn: async () => {
-      if (!tenantId) return [];
-      const { data, error } = await supabase
+      if (!qs) return [];
+      const base = supabase
         .from('workforce_insights')
         .select('*')
-        .eq('tenant_id', tenantId)
         .order('criado_em', { ascending: false })
         .limit(100);
+      const scoped = applyScope(base, qs, { softDeleteColumn: 'criado_em', skipSoftDelete: true });
+      const { data, error } = await scoped;
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!tenantId,
+    enabled: !!qs,
   });
 }
 
 export default function WorkforceIntelligenceDashboard() {
   const { currentTenant } = useTenant();
   const { scope } = useScope();
-  const { data: insights = [] } = useWorkforceInsights(currentTenant?.id);
+  const qs = useQueryScope();
+  const { accessGraph } = useSecurityKernel();
+  const { data: insights = [] } = useWorkforceInsights(qs);
   const { data: companies = [] } = useCompanies();
   const { data: employees = [] } = useEmployeesSimple();
 
+  // Access Graph filtering: only show insights for reachable companies/groups
+  const securedInsights = useMemo(() => {
+    if (!accessGraph) return insights;
+    if (accessGraph.hasTenantScope()) return insights;
+
+    const reachableCompanies = accessGraph.getReachableCompanies();
+    const reachableGroups = accessGraph.getReachableGroups();
+
+    return insights.filter((i: any) => {
+      if (i.company_id && reachableCompanies.has(i.company_id)) return true;
+      if (i.company_group_id && reachableGroups.has(i.company_group_id)) return true;
+      // Tenant-level insights only visible with tenant scope
+      if (!i.company_id && !i.company_group_id) return false;
+      return false;
+    });
+  }, [insights, accessGraph]);
+
+  // UI scope narrowing (on top of Access Graph filter)
   const scopedInsights = useMemo(() => {
     if (scope.level === 'company' && scope.companyId) {
-      return insights.filter((i: any) => i.company_id === scope.companyId);
+      return securedInsights.filter((i: any) => i.company_id === scope.companyId);
     }
     if (scope.level === 'group' && scope.groupId) {
-      return insights.filter((i: any) => i.group_id === scope.groupId);
+      return securedInsights.filter((i: any) => i.company_group_id === scope.groupId);
     }
-    return insights;
-  }, [insights, scope]);
+    return securedInsights;
+  }, [securedInsights, scope]);
 
   const scopedEmployees = useMemo(() => {
     if (scope.level === 'company' && scope.companyId) {
