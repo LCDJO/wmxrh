@@ -113,7 +113,6 @@ export interface EndImpersonationResult {
 /** Platform roles allowed to impersonate into tenant contexts */
 export const IMPERSONATION_ALLOWED_ROLES: readonly PlatformRoleType[] = [
   'platform_super_admin',
-  'platform_operations',
   'platform_support',
 ] as const;
 
