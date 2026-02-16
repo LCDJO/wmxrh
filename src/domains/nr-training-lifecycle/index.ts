@@ -58,6 +58,18 @@ export type {
   BlockedTrainingSummary,
 } from './functional-block.engine';
 
+// Training Provider Integration (future)
+export {
+  trainingProviderRegistry,
+  trainingProviderService,
+} from './training-provider.adapter';
+export type {
+  TrainingProviderAdapter,
+  ExternalCourse,
+  ImportedCertificate,
+  CertificateValidationResult,
+} from './training-provider.adapter';
+
 // Types
 export type {
   TrainingLifecycleStatus,
