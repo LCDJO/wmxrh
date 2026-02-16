@@ -22,7 +22,12 @@ export type PlatformEventType =
   | 'TenantCreated'
   | 'TenantSuspended'
   | 'TenantReactivated'
-  | 'PlatformPermissionChanged';
+  | 'PlatformPermissionChanged'
+  // Cognitive Layer events
+  | 'UserBehaviorTracked'
+  | 'RoleSuggestionGenerated'
+  | 'PermissionRiskDetected'
+  | 'NavigationHintCreated';
 
 export interface PlatformEventPayload {
   type: PlatformEventType;
@@ -31,7 +36,7 @@ export interface PlatformEventPayload {
   actorId: string;
   actorEmail?: string;
   /** Target entity */
-  targetType: 'platform_user' | 'tenant' | 'platform_role';
+  targetType: 'platform_user' | 'tenant' | 'platform_role' | 'cognitive_layer';
   targetId: string;
   /** Extra context */
   metadata?: Record<string, unknown>;
@@ -146,6 +151,67 @@ export const platformEvents = {
       actorId,
       targetType: 'platform_role',
       targetId: targetUserId,
+      metadata: opts,
+    });
+  },
+
+  // ═══════════════════════════════════
+  // Cognitive Layer Events
+  // ═══════════════════════════════════
+
+  /**
+   * Emitted when user behavioral metadata is tracked (navigation, module use).
+   * PRIVACY: only contains route/module keys — never PII.
+   */
+  userBehaviorTracked(actorId: string, opts: { route: string; eventType: string; moduleId?: string }) {
+    emit({
+      type: 'UserBehaviorTracked',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'cognitive_layer',
+      targetId: 'behavior',
+      metadata: { route: opts.route, eventType: opts.eventType, moduleId: opts.moduleId },
+    });
+  },
+
+  /**
+   * Emitted when the cognitive layer generates role suggestions from behavior patterns.
+   */
+  roleSuggestionGenerated(actorId: string, opts: { suggestedRoles: string[]; confidence: number[]; signalCount: number }) {
+    emit({
+      type: 'RoleSuggestionGenerated',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'cognitive_layer',
+      targetId: 'role_suggestion',
+      metadata: opts,
+    });
+  },
+
+  /**
+   * Emitted when a permission risk is detected (excessive access, sensitive combos).
+   */
+  permissionRiskDetected(actorId: string, opts: { riskType: string; role: string; details: string; severity: 'low' | 'medium' | 'high' }) {
+    emit({
+      type: 'PermissionRiskDetected',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'cognitive_layer',
+      targetId: `risk:${opts.role}`,
+      metadata: opts,
+    });
+  },
+
+  /**
+   * Emitted when a navigation hint/shortcut is created from AI suggestions.
+   */
+  navigationHintCreated(actorId: string, opts: { route: string; label: string; source: 'ai' | 'behavior' | 'manual' }) {
+    emit({
+      type: 'NavigationHintCreated',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'cognitive_layer',
+      targetId: `hint:${opts.route}`,
       metadata: opts,
     });
   },
