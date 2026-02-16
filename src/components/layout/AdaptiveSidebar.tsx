@@ -15,6 +15,7 @@
  *   isPlatformUser + /platform/* → Platform AppShell
  *   isTenantUser / scoped     → Tenant AppShell
  */
+import { useEffect } from 'react';
 import { useIdentityIntelligence } from '@/domains/security/kernel/identity-intelligence';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
 import { useLocation, Navigate } from 'react-router-dom';
@@ -37,8 +38,10 @@ export function useAdaptiveUserType() {
     syncPhase,
   } = useIdentityIntelligence();
 
-  // Sync IIL phase on every render (lightweight — just compares states)
-  syncPhase();
+  // Sync IIL phase in an effect — NOT during render — to avoid infinite loops
+  useEffect(() => {
+    syncPhase();
+  }, [syncPhase, phase]);
 
   // ── Active context from UnifiedIdentitySession ──
   const ctx = activeContext;
