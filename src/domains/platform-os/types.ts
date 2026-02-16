@@ -333,12 +333,43 @@ export interface FeatureDescriptor {
 // Cognitive Orchestrator
 // ══════════════════════════════════════════════════════════════════
 
+export type CognitiveSignalKind =
+  | 'layout_suggestion'
+  | 'permission_suggestion'
+  | 'shortcut_suggestion'
+  | 'pattern_detection'
+  | 'dashboard_recommendation'
+  | 'quick_setup'
+  | 'role_suggestion'
+  | 'risk_alert';
+
+export interface CognitiveSignal {
+  id: string;
+  kind: CognitiveSignalKind;
+  title: string;
+  description: string;
+  confidence: number;
+  /** Where this signal came from */
+  source: 'behavior_analyzer' | 'permission_advisor' | 'navigation_advisor' | 'role_engine' | 'external';
+  /** Action label for UI (e.g. "Aplicar layout", "Adicionar atalho") */
+  action_label?: string;
+  /** Whether the user has dismissed this signal */
+  dismissed: boolean;
+  /** Whether the user has accepted/applied this signal */
+  accepted: boolean;
+  created_at: number;
+  expires_at: number | null;
+  metadata?: Record<string, unknown>;
+}
+
 export interface CognitiveState {
   is_active: boolean;
   last_query_at: number | null;
   pending_suggestions: number;
   active_signals: number;
   behavior_session_count: number;
+  /** Active (non-dismissed, non-expired) signals grouped by kind */
+  signals_by_kind: Partial<Record<CognitiveSignalKind, number>>;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -458,4 +489,24 @@ export interface CognitiveOrchestratorAPI {
   trackNavigation(route: string, userId?: string): void;
   trackModuleUse(moduleKey: string): void;
   isActive(): boolean;
+
+  // ── Signal management ─────────────────────────────────────
+  /** Push a cognitive signal (from any advisor/analyzer) */
+  pushSignal(signal: Omit<CognitiveSignal, 'id' | 'dismissed' | 'accepted' | 'created_at'>): string;
+  /** Get active signals (non-dismissed, non-expired) */
+  activeSignals(filter?: { kind?: CognitiveSignalKind; minConfidence?: number }): CognitiveSignal[];
+  /** Dismiss a signal (user rejected) */
+  dismissSignal(signalId: string): void;
+  /** Accept a signal (user confirmed — orchestrator emits event, does NOT mutate) */
+  acceptSignal(signalId: string): void;
+  /** Clear all signals */
+  clearSignals(): void;
+
+  // ── Query helpers (delegate to CognitiveInsightsService) ──
+  /** Request layout suggestions based on behavior */
+  suggestLayout(caller: { role: string; email: string }): Promise<CognitiveSignal[]>;
+  /** Request permission suggestions for a role */
+  suggestPermissions(caller: { role: string; email: string }, targetRole?: string): Promise<CognitiveSignal[]>;
+  /** Request shortcut suggestions based on navigation patterns */
+  suggestShortcuts(caller: { role: string; email: string }): Promise<CognitiveSignal[]>;
 }
