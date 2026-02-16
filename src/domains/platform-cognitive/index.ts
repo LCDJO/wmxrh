@@ -10,7 +10,8 @@
  *   ├── RoleSuggestionEngine
  *   └── CognitiveInsightsService  (orchestrator)
  */
-export { CognitiveContextCollector } from './cognitive-context-collector';
+export { CognitiveContextCollector, registerCognitiveSignal, registerCognitiveSignals, onCognitiveSignal } from './cognitive-context-collector';
+export type { CognitiveSignal } from './cognitive-context-collector';
 export { BehaviorAnalyzer, ROLE_FINGERPRINTS } from './behavior-analyzer';
 export type { RoleFingerprint, RoleSuggestionMatch } from './behavior-analyzer';
 export { PermissionAdvisor } from './permission-advisor';

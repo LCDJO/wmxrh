@@ -53,12 +53,82 @@ function sanitiseMetadata(raw?: Record<string, unknown>): Record<string, unknown
   return clean;
 }
 
-export type EventType = 'page_view' | 'module_use' | 'command_exec' | 'role_switch';
+export type EventType = 'page_view' | 'module_use' | 'command_exec' | 'role_switch' | 'module_signal';
 
+// ── Cognitive Signal (Module Federation) ──────────────────────────
+export interface CognitiveSignal {
+  module_id: string;
+  event_type: string;
+  resource: string;
+  metadata?: Record<string, unknown>;
+}
+
+/** Global registry — modules call registerCognitiveSignal() at bootstrap. */
+const _signalHandlers = new Map<string, (signal: CognitiveSignal) => void>();
+let _collectorInstance: CognitiveContextCollector | null = null;
+
+/**
+ * Register a cognitive signal from any module.
+ * Modules call this at init time so the Cognitive Layer
+ * tracks their domain-specific events.
+ *
+ * PRIVACY: all signals pass through BLOCKED_PATTERNS + sanitisation.
+ *
+ * @example
+ * registerCognitiveSignal({
+ *   module_id: 'payroll',
+ *   event_type: 'simulation_run',
+ *   resource: 'payroll-simulation',
+ * });
+ */
+export function registerCognitiveSignal(signal: CognitiveSignal): void {
+  if (!isSafe(signal.module_id) || !isSafe(signal.event_type) || !isSafe(signal.resource)) {
+    console.warn('[Cognitive] Signal blocked by privacy filter:', signal.module_id);
+    return;
+  }
+
+  if (_collectorInstance) {
+    _collectorInstance.trackModuleSignal(signal);
+  } else {
+    // Queue until collector is instantiated
+    _pendingSignals.push(signal);
+  }
+}
+
+const _pendingSignals: CognitiveSignal[] = [];
+
+/**
+ * Bulk-register multiple signals (useful for module bootstrap).
+ */
+export function registerCognitiveSignals(signals: CognitiveSignal[]): void {
+  signals.forEach(registerCognitiveSignal);
+}
+
+/**
+ * Subscribe to signals from a specific module.
+ * Returns unsubscribe function.
+ */
+export function onCognitiveSignal(
+  moduleId: string,
+  handler: (signal: CognitiveSignal) => void,
+): () => void {
+  _signalHandlers.set(moduleId, handler);
+  return () => { _signalHandlers.delete(moduleId); };
+}
 export class CognitiveContextCollector {
   private snapshotCache: PlatformSnapshot | null = null;
   private snapshotTs = 0;
   private readonly TTL_MS = 60_000;
+  private moduleSignalLog: CognitiveSignal[] = [];
+
+  constructor() {
+    // Register singleton for signal routing
+    _collectorInstance = this;
+    // Flush any signals queued before instantiation
+    if (_pendingSignals.length > 0) {
+      _pendingSignals.splice(0).forEach(s => this.trackModuleSignal(s));
+    }
+  }
 
   // ── Event tracking (persisted) ─────────────────────────────────
 
@@ -92,6 +162,31 @@ export class CognitiveContextCollector {
 
   trackRoleSwitch(role: string) {
     this.trackEvent('role_switch', role);
+  }
+
+  // ── Module Signal (Federation) ────────────────────────────────
+
+  /**
+   * Track a signal emitted by a federated module.
+   * PRIVACY: signal passes through isSafe + sanitiseMetadata.
+   */
+  trackModuleSignal(signal: CognitiveSignal) {
+    this.moduleSignalLog.push(signal);
+    if (this.moduleSignalLog.length > 200) this.moduleSignalLog.shift();
+
+    // Persist as module_signal event
+    const eventKey = `${signal.module_id}::${signal.event_type}::${signal.resource}`;
+    this.trackEvent('module_signal', eventKey, sanitiseMetadata(signal.metadata));
+
+    // Notify subscribers
+    const handler = _signalHandlers.get(signal.module_id);
+    if (handler) handler(signal);
+  }
+
+  /** Get recent module signals (in-memory only). */
+  getModuleSignals(moduleId?: string): CognitiveSignal[] {
+    if (!moduleId) return [...this.moduleSignalLog];
+    return this.moduleSignalLog.filter(s => s.module_id === moduleId);
   }
 
   // ── Aggregated stats (from DB) ─────────────────────────────────
