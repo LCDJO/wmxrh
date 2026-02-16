@@ -10,12 +10,13 @@
  */
 
 import { useMemo } from 'react';
-import { Building2, Layers, Globe, ChevronDown, Monitor } from 'lucide-react';
+import { Building2, Layers, Globe, ChevronDown, Monitor, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTenant } from '@/contexts/TenantContext';
 import { useScope } from '@/contexts/ScopeContext';
 import { useCompanyGroups, useCompanies } from '@/domains/hooks';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
+import { useIdentityIntelligence } from '@/domains/security/kernel/identity-intelligence';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +33,7 @@ interface WorkspaceSwitcherProps {
 }
 
 export function WorkspaceSwitcher({ showPlatformChip = false }: WorkspaceSwitcherProps) {
+  const { isImpersonating, session } = useIdentityIntelligence();
   const { currentTenant, tenants, setCurrentTenant } = useTenant();
   const { scope, setGroupScope, setCompanyScope, resetToTenant, resetToGroup } = useScope();
   const { accessGraph } = useSecurityKernel();
@@ -77,6 +79,32 @@ export function WorkspaceSwitcher({ showPlatformChip = false }: WorkspaceSwitche
     if (company) setCompanyScope(company.id, company.name);
   };
 
+  // ── Impersonation mode: show support badge, lock selectors ──
+  if (isImpersonating) {
+    const imp = session.impersonation_state;
+    return (
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[hsl(var(--impersonation))]/15 border border-[hsl(var(--impersonation-border))] text-xs font-semibold text-[hsl(var(--impersonation))]">
+          <ShieldAlert className="h-3.5 w-3.5" />
+          <span>Modo Suporte Ativo</span>
+        </div>
+        {imp && (
+          <>
+            <Divider />
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-[hsl(var(--impersonation))]">
+              <Globe className="h-3.5 w-3.5" />
+              <span className="max-w-[140px] truncate">{imp.target_tenant_name}</span>
+            </div>
+            <Divider />
+            <span className="text-[10px] text-muted-foreground italic">
+              {imp.simulated_role}
+            </span>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-1">
       {/* Platform chip (optional, shown for platform users) */}
@@ -99,10 +127,8 @@ export function WorkspaceSwitcher({ showPlatformChip = false }: WorkspaceSwitche
         disabled={tenants.length <= 1}
       />
 
-      {/* Separator */}
       {groups.length > 0 && <Divider />}
 
-      {/* ── Group Selector ── */}
       {groups.length > 0 && (
         <SwitcherDropdown
           icon={Layers}
@@ -118,10 +144,8 @@ export function WorkspaceSwitcher({ showPlatformChip = false }: WorkspaceSwitche
         />
       )}
 
-      {/* Separator */}
       {filteredCompanies.length > 0 && <Divider />}
 
-      {/* ── Company Selector ── */}
       {filteredCompanies.length > 0 && (
         <SwitcherDropdown
           icon={Building2}
