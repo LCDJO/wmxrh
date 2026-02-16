@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Search, ShieldCheck, AlertTriangle, BookOpen, Loader2 } from 'lucide-react';
+import { Search, ShieldCheck, AlertTriangle, BookOpen, Loader2, Lock } from 'lucide-react';
+import { usePermissions } from '@/domains/security';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -35,8 +36,13 @@ export function CnpjConsultaPanel({ cnpj, onCnpjChange, onResultReady }: CnpjCon
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CnaeConsultResult | null>(null);
+  const { isTenantAdmin } = usePermissions();
 
   const handleConsultar = async () => {
+    if (!isTenantAdmin) {
+      setError('Permissão negada. Somente administradores do tenant podem consultar CNAE externo.');
+      return;
+    }
     const cleaned = cnpj.replace(/\D/g, '');
     if (cleaned.length !== 14) {
       setError('CNPJ deve ter 14 dígitos.');
@@ -91,13 +97,20 @@ export function CnpjConsultaPanel({ cnpj, onCnpjChange, onResultReady }: CnpjCon
           type="button"
           variant="outline"
           onClick={handleConsultar}
-          disabled={loading || cnpj.replace(/\D/g, '').length < 14}
+          disabled={loading || cnpj.replace(/\D/g, '').length < 14 || !isTenantAdmin}
           className="gap-2 shrink-0"
+          title={!isTenantAdmin ? 'Somente administradores podem consultar CNAE' : undefined}
         >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : !isTenantAdmin ? <Lock className="h-4 w-4" /> : <Search className="h-4 w-4" />}
           Consultar CNAE
         </Button>
       </div>
+
+      {!isTenantAdmin && (
+        <p className="text-xs text-muted-foreground flex items-center gap-1">
+          <Lock className="h-3 w-3" /> Somente administradores do tenant podem consultar CNAE externo.
+        </p>
+      )}
 
       {error && (
         <p className="text-sm text-destructive flex items-center gap-1">
