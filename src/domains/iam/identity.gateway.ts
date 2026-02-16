@@ -14,6 +14,33 @@ import { iamService, type CustomRole, type PermissionDefinition, type RolePermis
 import { emitIAMEvent, type IAMDomainEvent } from '@/domains/iam/iam.events';
 import { graphEvents } from '@/domains/security/kernel/access-graph.events';
 import { accessGraphService } from '@/domains/security/kernel/access-graph.service';
+import { auditSecurity } from '@/domains/security/kernel/audit-security.service';
+
+// ═══════════════════════════════════
+// SECURITY ERRORS
+// ═══════════════════════════════════
+
+export class IAMAuthorizationError extends Error {
+  constructor(action: string, reason: string) {
+    super(`[IAM] ${action}: ${reason}`);
+    this.name = 'IAMAuthorizationError';
+  }
+}
+
+/**
+ * Validate that the caller is a TenantAdmin.
+ * This is a gateway-level guard — SecurityKernel stays UI-free.
+ */
+function requireTenantAdmin(isTenantAdmin: boolean, action: string, tenantId?: string): void {
+  if (!isTenantAdmin) {
+    auditSecurity.logAccessDenied({
+      resource: 'iam',
+      reason: `Tentativa de ${action} sem permissão TenantAdmin`,
+      metadata: { tenant_id: tenantId },
+    });
+    throw new IAMAuthorizationError(action, 'Apenas TenantAdmin pode executar esta ação');
+  }
+}
 
 // ═══════════════════════════════════
 // COMMAND TYPES
@@ -48,6 +75,8 @@ export interface CreateRoleCommand {
   name: string;
   description?: string;
   created_by?: string;
+  /** Caller must pass this — gateway enforces TenantAdmin */
+  is_tenant_admin: boolean;
 }
 
 export interface CloneRoleCommand {
@@ -55,11 +84,13 @@ export interface CloneRoleCommand {
   tenant_id: string;
   new_name: string;
   created_by?: string;
+  is_tenant_admin: boolean;
 }
 
 export interface DeleteRoleCommand {
   role_id: string;
   tenant_id?: string;
+  is_tenant_admin: boolean;
 }
 
 export interface UpdateRolePermissionsCommand {
@@ -68,6 +99,7 @@ export interface UpdateRolePermissionsCommand {
   scope_type?: 'tenant' | 'company_group' | 'company';
   granted_by?: string;
   tenant_id?: string;
+  is_tenant_admin: boolean;
 }
 
 // ═══════════════════════════════════
@@ -201,6 +233,7 @@ export const identityGateway = {
   },
 
   async createRole(cmd: CreateRoleCommand): Promise<CustomRole> {
+    requireTenantAdmin(cmd.is_tenant_admin, 'createRole', cmd.tenant_id);
     const slug = cmd.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '');
     return iamService.createRole({
       tenant_id: cmd.tenant_id,
@@ -212,19 +245,29 @@ export const identityGateway = {
   },
 
   async cloneRole(cmd: CloneRoleCommand): Promise<CustomRole> {
+    requireTenantAdmin(cmd.is_tenant_admin, 'cloneRole', cmd.tenant_id);
     return iamService.cloneRole(cmd.source_role_id, cmd.tenant_id, cmd.new_name, cmd.created_by);
   },
 
   async deleteRole(cmd: DeleteRoleCommand): Promise<void> {
+    requireTenantAdmin(cmd.is_tenant_admin, 'deleteRole', cmd.tenant_id);
+
+    // Fetch role to check is_system
+    const roles = await iamService.listRoles(cmd.tenant_id || '');
+    const target = roles.find(r => r.id === cmd.role_id);
+    if (target?.is_system) {
+      throw new IAMAuthorizationError('deleteRole', 'Cargos de sistema (is_system) não podem ser deletados');
+    }
+
     await iamService.deleteRole(cmd.role_id);
 
-    // Invalidate entire tenant — any user with this role is affected
     if (cmd.tenant_id) {
       accessGraphService.invalidateTenant(cmd.tenant_id, 'ROLE_CHANGED' as any);
     }
   },
 
   async updateRolePermissions(cmd: UpdateRolePermissionsCommand): Promise<void> {
+    requireTenantAdmin(cmd.is_tenant_admin, 'updateRolePermissions', cmd.tenant_id);
     await iamService.setRolePermissions(
       cmd.role_id,
       cmd.permission_ids,
