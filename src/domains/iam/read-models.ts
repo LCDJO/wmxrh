@@ -205,6 +205,84 @@ export function useAccessGraphSummaryView(): AccessGraphSummaryViewResult {
 }
 
 // ══════════════════════════════════════
+// RolePermissionGraphView
+// ══════════════════════════════════════
+
+export interface RolePermissionGraphViewResult {
+  graph: { roleId: string; perms: RolePermission[] }[];
+  isLoading: boolean;
+}
+
+export function useRolePermissionGraphView(roleIds: string[]): RolePermissionGraphViewResult {
+  const sk = useScopeKey();
+  const stableKey = useMemo(() => [...roleIds].sort().join(','), [roleIds]);
+
+  const { data: graph = [], isLoading } = useQuery({
+    queryKey: buildScopedKey('iam_perm_graph', { ...sk, extra: stableKey } as any),
+    queryFn: () => identityGateway.getPermissionGraph({ tenant_id: sk.tenantId!, role_ids: roleIds }),
+    enabled: !!sk.tenantId && roleIds.length > 0,
+    staleTime: 3 * 60 * 1000,
+  });
+
+  return { graph, isLoading };
+}
+
+// ══════════════════════════════════════
+// RoleInheritanceGraphView
+// ══════════════════════════════════════
+
+export interface RoleInheritanceGraphViewResult {
+  roles: CustomRole[];
+  inheritances: { id: string; parent_role_id: string; child_role_id: string; tenant_id: string }[];
+  isLoading: boolean;
+}
+
+export function useRoleInheritanceGraphView(): RoleInheritanceGraphViewResult {
+  const sk = useScopeKey();
+
+  const { data, isLoading } = useQuery({
+    queryKey: buildScopedKey('iam_role_graph', sk),
+    queryFn: () => identityGateway.getRoleGraph({ tenant_id: sk.tenantId! }),
+    enabled: !!sk.tenantId,
+    staleTime: 3 * 60 * 1000,
+  });
+
+  return {
+    roles: data?.roles ?? [],
+    inheritances: data?.inheritances ?? [],
+    isLoading,
+  };
+}
+
+// ══════════════════════════════════════
+// AccessPreviewView
+// ══════════════════════════════════════
+
+export interface AccessPreviewViewResult {
+  permissions: PermissionDefinition[];
+  inheritedFrom: string[];
+  isLoading: boolean;
+}
+
+export function useAccessPreviewView(roleId: string | null): AccessPreviewViewResult {
+  const sk = useScopeKey();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['iam_access_preview', roleId, sk.tenantId],
+    queryFn: () => identityGateway.previewRoleAccess({ role_id: roleId!, tenant_id: sk.tenantId! }),
+    enabled: !!roleId && !!sk.tenantId,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+  });
+
+  return {
+    permissions: data?.permissions ?? [],
+    inheritedFrom: data?.inheritedFrom ?? [],
+    isLoading,
+  };
+}
+
+// ══════════════════════════════════════
 // SCOPE-AWARE INVALIDATION HOOK
 // ══════════════════════════════════════
 
@@ -220,6 +298,9 @@ export function useIAMScopeInvalidation() {
     qc.invalidateQueries({ queryKey: ['iam_roles'] });
     qc.invalidateQueries({ queryKey: ['iam_assignments'] });
     qc.invalidateQueries({ queryKey: ['iam_members'] });
+    qc.invalidateQueries({ queryKey: ['iam_perm_graph'] });
+    qc.invalidateQueries({ queryKey: ['iam_role_graph'] });
+    qc.invalidateQueries({ queryKey: ['iam_access_preview'] });
   }, [qc]);
 
   // Listen to AccessGraph cache invalidations for proactive refetch
