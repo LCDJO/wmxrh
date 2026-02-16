@@ -1,13 +1,21 @@
 /**
- * Permission Graph Builder — Interactive node-based graph visualization
+ * Permission Graph Builder — Interactive node-based graph with drag-and-drop
  *
  * Nodes: RoleNode, PermissionNode, ScopeNode, ResourceNode
  * Edges: grants_access, inherits_role, scoped_to
  *
+ * Features:
+ *   - Drag-and-drop node repositioning
+ *   - Animated edge flow particles
+ *   - Hover highlighting with connection tracing
+ *   - Zoom/pan canvas controls
+ *   - Click to inspect node details
+ *   - Role-based focus filtering
+ *   - Grid snapping on drop
+ *
  * Pure visualization — no security logic lives here.
- * Data flows from IdentityGateway → read-models → this component.
  */
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { identityGateway } from '@/domains/iam/identity.gateway';
 import { type CustomRole, type PermissionDefinition, type UserCustomRole, type TenantUser } from '@/domains/iam/iam.service';
@@ -15,13 +23,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import {
   Shield, Users, Building2, Key, Network, Eye, Layers,
-  ZoomIn, ZoomOut, Maximize2, Lock, ChevronRight,
+  ZoomIn, ZoomOut, Maximize2, Lock, Move, GripVertical,
   Briefcase, DollarSign, ShieldCheck, Heart, Send, ScrollText,
-  Brain, GraduationCap, AlertTriangle, Calculator, Settings,
+  Brain, GraduationCap, AlertTriangle, Calculator,
 } from 'lucide-react';
 
 // ══════════════════════════════════
@@ -49,36 +56,30 @@ interface GraphEdge {
   label?: string;
 }
 
-interface SelectedNode {
-  node: GraphNode;
-  edges: GraphEdge[];
-  connectedNodes: GraphNode[];
-}
-
 // ══════════════════════════════════
 // CONSTANTS
 // ══════════════════════════════════
 
-const NODE_COLORS: Record<GraphNodeType, { bg: string; border: string; text: string; icon: string }> = {
-  role: { bg: 'hsl(var(--primary) / 0.1)', border: 'hsl(var(--primary) / 0.4)', text: 'hsl(var(--primary))', icon: 'text-primary' },
-  permission: { bg: 'hsl(var(--info) / 0.08)', border: 'hsl(var(--info) / 0.3)', text: 'hsl(var(--info))', icon: 'text-info' },
-  scope: { bg: 'hsl(var(--warning) / 0.08)', border: 'hsl(var(--warning) / 0.3)', text: 'hsl(var(--warning))', icon: 'text-warning' },
-  resource: { bg: 'hsl(var(--accent-foreground) / 0.08)', border: 'hsl(var(--accent-foreground) / 0.25)', text: 'hsl(var(--accent-foreground))', icon: 'text-accent-foreground' },
+const NODE_STYLES: Record<GraphNodeType, { bg: string; border: string; text: string; icon: string; hoverBorder: string; glow: string }> = {
+  role:       { bg: 'hsl(var(--primary)/0.08)',           border: 'hsl(var(--primary)/0.25)',           text: 'hsl(var(--primary))',           icon: 'text-primary',           hoverBorder: 'hsl(var(--primary)/0.7)',    glow: 'hsl(var(--primary)/0.15)' },
+  permission: { bg: 'hsl(var(--info)/0.06)',              border: 'hsl(var(--info)/0.2)',               text: 'hsl(var(--info))',              icon: 'text-info',              hoverBorder: 'hsl(var(--info)/0.6)',       glow: 'hsl(var(--info)/0.12)' },
+  scope:      { bg: 'hsl(var(--warning)/0.06)',           border: 'hsl(var(--warning)/0.2)',            text: 'hsl(var(--warning))',           icon: 'text-warning',           hoverBorder: 'hsl(var(--warning)/0.6)',    glow: 'hsl(var(--warning)/0.12)' },
+  resource:   { bg: 'hsl(var(--accent-foreground)/0.06)', border: 'hsl(var(--accent-foreground)/0.18)', text: 'hsl(var(--accent-foreground))', icon: 'text-accent-foreground', hoverBorder: 'hsl(var(--accent-foreground)/0.5)', glow: 'hsl(var(--accent-foreground)/0.1)' },
 };
 
-const EDGE_COLORS: Record<EdgeType, string> = {
-  grants_access: 'hsl(var(--primary) / 0.5)',
-  inherits_role: 'hsl(var(--warning) / 0.5)',
-  scoped_to: 'hsl(var(--info) / 0.4)',
+const EDGE_STYLES: Record<EdgeType, { color: string; dash?: string; width: number }> = {
+  grants_access: { color: 'hsl(var(--primary)/0.45)', width: 1.8 },
+  inherits_role: { color: 'hsl(var(--warning)/0.45)', width: 1.8 },
+  scoped_to:     { color: 'hsl(var(--info)/0.35)',    width: 1.5, dash: '6,4' },
 };
 
 const EDGE_LABELS: Record<EdgeType, string> = {
-  grants_access: 'concede',
-  inherits_role: 'herda',
+  grants_access: 'concede acesso',
+  inherits_role: 'herda papel',
   scoped_to: 'escopo',
 };
 
-const RESOURCE_ICON_MAP: Record<string, typeof Users> = {
+const RES_ICONS: Record<string, typeof Users> = {
   employees: Users, companies: Building2, company: Building2,
   departments: Briefcase, positions: Briefcase, salary: DollarSign,
   benefits: ShieldCheck, health: Heart, esocial: Send, audit: ScrollText,
@@ -86,7 +87,7 @@ const RESOURCE_ICON_MAP: Record<string, typeof Users> = {
   training: GraduationCap, risk: AlertTriangle, payroll: Calculator, user: Users,
 };
 
-const RESOURCE_LABELS: Record<string, string> = {
+const RES_LABELS: Record<string, string> = {
   employees: 'Funcionários', companies: 'Empresas', company: 'Empresa',
   departments: 'Departamentos', positions: 'Cargos', salary: 'Salário',
   benefits: 'Benefícios', health: 'Saúde', esocial: 'eSocial',
@@ -95,13 +96,101 @@ const RESOURCE_LABELS: Record<string, string> = {
   payroll: 'Folha', user: 'Usuários',
 };
 
-const SCOPE_LABELS: Record<string, string> = { tenant: 'Tenant', company_group: 'Grupo', company: 'Empresa' };
+const SCOPE_LBL: Record<string, string> = { tenant: 'Tenant', company_group: 'Grupo', company: 'Empresa' };
 
-const NODE_W = 180;
-const NODE_H = 56;
+const NODE_W = 190;
+const NODE_H = 60;
+const GRID = 10;
+
+const snap = (v: number) => Math.round(v / GRID) * GRID;
 
 // ══════════════════════════════════
-// PROPS
+// GRAPH BUILD
+// ══════════════════════════════════
+
+function buildGraph(
+  roles: CustomRole[],
+  permissions: PermissionDefinition[],
+  assignments: UserCustomRole[],
+  rolePermMap: Map<string, string[]>,
+  focusRoleId: string | null,
+): { nodes: GraphNode[]; edges: GraphEdge[] } {
+  const nodes: GraphNode[] = [];
+  const edges: GraphEdge[] = [];
+  const seen = new Set<string>();
+
+  const add = (n: GraphNode) => { if (!seen.has(n.id)) { nodes.push(n); seen.add(n.id); } };
+
+  const visibleRoles = focusRoleId ? roles.filter(r => r.id === focusRoleId) : roles;
+
+  // Roles — center
+  visibleRoles.forEach((role, i) => {
+    add({ id: `role:${role.id}`, type: 'role', label: role.name, sublabel: role.is_system ? 'Sistema' : 'Custom', x: 420, y: 60 + i * 110, meta: { roleId: role.id, isSystem: role.is_system } });
+  });
+
+  // Scopes — left
+  const scopeSet = new Map<string, { type: string; id: string | null }>();
+  assignments.forEach(a => {
+    if (focusRoleId && a.role_id !== focusRoleId) return;
+    const key = `${a.scope_type}:${a.scope_id || 'all'}`;
+    scopeSet.set(key, { type: a.scope_type, id: a.scope_id });
+    edges.push({ id: `se:${a.role_id}:${key}`, from: `role:${a.role_id}`, to: `scope:${key}`, type: 'scoped_to' });
+  });
+
+  let si = 0;
+  scopeSet.forEach((scope, key) => {
+    add({ id: `scope:${key}`, type: 'scope', label: SCOPE_LBL[scope.type] || scope.type, sublabel: scope.id ? scope.id.slice(0, 8) + '…' : 'Global', x: 60, y: 60 + si * 100, meta: { scopeType: scope.type, scopeId: scope.id } });
+    si++;
+  });
+
+  // Resources & Permissions — right
+  const resSet = new Set<string>();
+  const permSet = new Set<string>();
+
+  visibleRoles.forEach(role => {
+    const pids = rolePermMap.get(role.id) || [];
+    const rPerms = permissions.filter(p => pids.includes(p.id));
+    const byRes = new Map<string, PermissionDefinition[]>();
+    rPerms.forEach(p => { if (!byRes.has(p.resource)) byRes.set(p.resource, []); byRes.get(p.resource)!.push(p); });
+
+    byRes.forEach((perms, resource) => {
+      resSet.add(resource);
+      edges.push({ id: `ga:${role.id}:${resource}`, from: `role:${role.id}`, to: `resource:${resource}`, type: 'grants_access', label: `${perms.length} ações` });
+
+      if (focusRoleId) {
+        perms.forEach(p => {
+          const pid = `perm:${p.id}`;
+          permSet.add(pid);
+          edges.push({ id: `pe:${resource}:${p.id}`, from: `resource:${resource}`, to: pid, type: 'grants_access' });
+        });
+      }
+    });
+  });
+
+  let ri = 0;
+  resSet.forEach(resource => {
+    add({ id: `resource:${resource}`, type: 'resource', label: RES_LABELS[resource] || resource, sublabel: resource, x: 760, y: 40 + ri * 72, meta: { resource } });
+    ri++;
+  });
+
+  if (focusRoleId) {
+    let pi = 0;
+    permSet.forEach(pid => {
+      const id = pid.replace('perm:', '');
+      const perm = permissions.find(p => p.id === id);
+      if (!perm) return;
+      add({ id: pid, type: 'permission', label: perm.name, sublabel: `${perm.resource}.${perm.action}`, x: 1080, y: 40 + pi * 52, meta: { permId: id, action: perm.action, resource: perm.resource } });
+      pi++;
+    });
+  }
+
+  // Deduplicate edges
+  const eSet = new Set<string>();
+  return { nodes, edges: edges.filter(e => { if (eSet.has(e.id)) return false; eSet.add(e.id); return true; }) };
+}
+
+// ══════════════════════════════════
+// COMPONENT
 // ══════════════════════════════════
 
 interface Props {
@@ -112,185 +201,26 @@ interface Props {
   tenantId: string;
 }
 
-// ══════════════════════════════════
-// GRAPH BUILDER LOGIC
-// ══════════════════════════════════
-
-function buildGraph(
-  roles: CustomRole[],
-  permissions: PermissionDefinition[],
-  assignments: UserCustomRole[],
-  rolePermMap: Map<string, string[]>,
-  selectedRoleId: string | null,
-): { nodes: GraphNode[]; edges: GraphEdge[] } {
-  const nodes: GraphNode[] = [];
-  const edges: GraphEdge[] = [];
-  const nodeIds = new Set<string>();
-
-  const addNode = (n: GraphNode) => {
-    if (!nodeIds.has(n.id)) { nodes.push(n); nodeIds.add(n.id); }
-  };
-
-  // Determine which roles to show
-  const visibleRoles = selectedRoleId ? roles.filter(r => r.id === selectedRoleId) : roles;
-
-  // 1. Role nodes (center column)
-  visibleRoles.forEach((role, i) => {
-    addNode({
-      id: `role:${role.id}`,
-      type: 'role',
-      label: role.name,
-      sublabel: role.is_system ? 'Sistema' : 'Custom',
-      x: 400,
-      y: 80 + i * 100,
-      meta: { roleId: role.id, isSystem: role.is_system },
-    });
-  });
-
-  // 2. Scope nodes from assignments (left column)
-  const scopeSet = new Map<string, { type: string; id: string | null }>();
-  assignments.forEach(a => {
-    if (selectedRoleId && a.role_id !== selectedRoleId) return;
-    const key = `${a.scope_type}:${a.scope_id || 'all'}`;
-    if (!scopeSet.has(key)) {
-      scopeSet.set(key, { type: a.scope_type, id: a.scope_id });
-    }
-    // Edge: role → scope (scoped_to)
-    edges.push({
-      id: `scope_edge:${a.role_id}:${key}`,
-      from: `role:${a.role_id}`,
-      to: `scope:${key}`,
-      type: 'scoped_to',
-    });
-  });
-
-  let scopeIdx = 0;
-  scopeSet.forEach((scope, key) => {
-    addNode({
-      id: `scope:${key}`,
-      type: 'scope',
-      label: SCOPE_LABELS[scope.type] || scope.type,
-      sublabel: scope.id ? scope.id.slice(0, 8) + '…' : 'Global',
-      x: 80,
-      y: 80 + scopeIdx * 90,
-      meta: { scopeType: scope.type, scopeId: scope.id },
-    });
-    scopeIdx++;
-  });
-
-  // 3. Resource + Permission nodes from role permissions (right columns)
-  const resourceSet = new Set<string>();
-  const permNodeSet = new Set<string>();
-
-  visibleRoles.forEach(role => {
-    const permIds = rolePermMap.get(role.id) || [];
-    const rolePerms = permissions.filter(p => permIds.includes(p.id));
-
-    // Group by resource
-    const byResource = new Map<string, PermissionDefinition[]>();
-    rolePerms.forEach(p => {
-      if (!byResource.has(p.resource)) byResource.set(p.resource, []);
-      byResource.get(p.resource)!.push(p);
-    });
-
-    byResource.forEach((perms, resource) => {
-      // Resource node
-      if (!resourceSet.has(resource)) {
-        resourceSet.add(resource);
-      }
-
-      // Edge: role → resource (grants_access)
-      edges.push({
-        id: `grant:${role.id}:${resource}`,
-        from: `role:${role.id}`,
-        to: `resource:${resource}`,
-        type: 'grants_access',
-        label: `${perms.length} ações`,
-      });
-
-      // Permission nodes (only in detail mode)
-      if (selectedRoleId) {
-        perms.forEach(p => {
-          const permNodeId = `perm:${p.id}`;
-          if (!permNodeSet.has(permNodeId)) {
-            permNodeSet.add(permNodeId);
-          }
-
-          // Edge: resource → permission
-          edges.push({
-            id: `perm_edge:${resource}:${p.id}`,
-            from: `resource:${resource}`,
-            to: permNodeId,
-            type: 'grants_access',
-          });
-        });
-      }
-    });
-  });
-
-  // Layout resource nodes
-  let resIdx = 0;
-  resourceSet.forEach(resource => {
-    addNode({
-      id: `resource:${resource}`,
-      type: 'resource',
-      label: RESOURCE_LABELS[resource] || resource,
-      sublabel: resource,
-      x: 720,
-      y: 60 + resIdx * 70,
-      meta: { resource },
-    });
-    resIdx++;
-  });
-
-  // Layout permission nodes (rightmost)
-  if (selectedRoleId) {
-    let permIdx = 0;
-    permNodeSet.forEach(permNodeId => {
-      const permId = permNodeId.replace('perm:', '');
-      const perm = permissions.find(p => p.id === permId);
-      if (!perm) return;
-      addNode({
-        id: permNodeId,
-        type: 'permission',
-        label: perm.name,
-        sublabel: `${perm.resource}.${perm.action}`,
-        x: 1020,
-        y: 60 + permIdx * 50,
-        meta: { permId: perm.id, action: perm.action, resource: perm.resource },
-      });
-      permIdx++;
-    });
-  }
-
-  // Deduplicate edges
-  const edgeKeys = new Set<string>();
-  const dedupedEdges = edges.filter(e => {
-    if (edgeKeys.has(e.id)) return false;
-    edgeKeys.add(e.id);
-    return true;
-  });
-
-  return { nodes, edges: dedupedEdges };
-}
-
-// ══════════════════════════════════
-// COMPONENT
-// ══════════════════════════════════
-
 export function PermissionGraphBuilder({ members, assignments, roles, permissions, tenantId }: Props) {
-  const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Canvas state
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [focusRoleId, setFocusRoleId] = useState<string | null>(null);
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const panStartRef = useRef({ x: 0, y: 0 });
 
-  // Load all role permissions
+  // Drag state
+  const [dragNodeId, setDragNodeId] = useState<string | null>(null);
+  const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+
+  // Interaction state
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [focusRoleId, setFocusRoleId] = useState<string | null>(null);
+
+  // Load role permissions
   const roleIds = roles.map(r => r.id);
   const { data: allRolePerms = [] } = useQuery({
     queryKey: ['iam_graph_role_perms', tenantId],
@@ -307,83 +237,126 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
     return map;
   }, [allRolePerms]);
 
-  // Build graph
-  const { nodes, edges } = useMemo(
+  // Build graph (base positions)
+  const baseGraph = useMemo(
     () => buildGraph(roles, permissions, assignments, rolePermMap, focusRoleId),
     [roles, permissions, assignments, rolePermMap, focusRoleId]
   );
 
-  // Connected edges for hover highlighting
-  const connectedEdges = useMemo(() => {
-    if (!hoveredNodeId && !selectedNodeId) return new Set<string>();
-    const targetId = hoveredNodeId || selectedNodeId;
-    return new Set(
-      edges.filter(e => e.from === targetId || e.to === targetId).map(e => e.id)
-    );
-  }, [hoveredNodeId, selectedNodeId, edges]);
+  // Apply drag offsets to nodes
+  const nodes = useMemo(() => baseGraph.nodes.map(n => {
+    const pos = nodePositions.get(n.id);
+    return pos ? { ...n, x: pos.x, y: pos.y } : n;
+  }), [baseGraph.nodes, nodePositions]);
+
+  const edges = baseGraph.edges;
+
+  // Connected sets for highlighting
+  const activeId = hoveredNodeId || selectedNodeId;
+
+  const connectedEdgeIds = useMemo(() => {
+    if (!activeId) return new Set<string>();
+    return new Set(edges.filter(e => e.from === activeId || e.to === activeId).map(e => e.id));
+  }, [activeId, edges]);
 
   const connectedNodeIds = useMemo(() => {
-    if (!hoveredNodeId && !selectedNodeId) return new Set<string>();
-    const targetId = hoveredNodeId || selectedNodeId;
-    const ids = new Set<string>();
-    ids.add(targetId!);
-    edges.forEach(e => {
-      if (e.from === targetId) ids.add(e.to);
-      if (e.to === targetId) ids.add(e.from);
-    });
+    if (!activeId) return new Set<string>();
+    const ids = new Set<string>([activeId]);
+    edges.forEach(e => { if (e.from === activeId) ids.add(e.to); if (e.to === activeId) ids.add(e.from); });
     return ids;
-  }, [hoveredNodeId, selectedNodeId, edges]);
+  }, [activeId, edges]);
 
-  // Selected node info panel
-  const selectedInfo = useMemo<SelectedNode | null>(() => {
+  // Selected node detail
+  const selectedInfo = useMemo(() => {
     if (!selectedNodeId) return null;
     const node = nodes.find(n => n.id === selectedNodeId);
     if (!node) return null;
     const nodeEdges = edges.filter(e => e.from === node.id || e.to === node.id);
     const connIds = new Set<string>();
-    nodeEdges.forEach(e => {
-      connIds.add(e.from === node.id ? e.to : e.from);
-    });
-    return {
-      node,
-      edges: nodeEdges,
-      connectedNodes: nodes.filter(n => connIds.has(n.id)),
-    };
+    nodeEdges.forEach(e => connIds.add(e.from === node.id ? e.to : e.from));
+    return { node, edges: nodeEdges, connectedNodes: nodes.filter(n => connIds.has(n.id)) };
   }, [selectedNodeId, nodes, edges]);
 
-  // SVG viewport bounds
+  // Viewport
   const viewBox = useMemo(() => {
     if (nodes.length === 0) return '0 0 1200 600';
-    const maxX = Math.max(...nodes.map(n => n.x)) + NODE_W + 60;
-    const maxY = Math.max(...nodes.map(n => n.y)) + NODE_H + 60;
+    const maxX = Math.max(...nodes.map(n => n.x)) + NODE_W + 80;
+    const maxY = Math.max(...nodes.map(n => n.y)) + NODE_H + 80;
     return `0 0 ${Math.max(maxX, 1200)} ${Math.max(maxY, 600)}`;
   }, [nodes]);
 
-  // Pan handlers
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0 || (e.target as HTMLElement).closest('[data-node]')) return;
-    setIsPanning(true);
-    setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-  }, [pan]);
+  // ── Canvas Handlers ──
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isPanning) return;
-    setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
-  }, [isPanning, panStart]);
+  const getSvgPoint = useCallback((clientX: number, clientY: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return { x: clientX, y: clientY };
+    return {
+      x: (clientX - rect.left - pan.x) / zoom,
+      y: (clientY - rect.top - pan.y) / zoom,
+    };
+  }, [pan, zoom]);
 
-  const handleMouseUp = useCallback(() => setIsPanning(false), []);
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    // Check if over a drag handle
+    const handle = (e.target as HTMLElement).closest('[data-drag-handle]');
+    if (handle) {
+      const nodeId = handle.getAttribute('data-drag-handle')!;
+      const node = nodes.find(n => n.id === nodeId);
+      if (!node) return;
+      const svgPt = getSvgPoint(e.clientX, e.clientY);
+      dragOffsetRef.current = { x: svgPt.x - node.x, y: svgPt.y - node.y };
+      setDragNodeId(nodeId);
+      e.preventDefault();
+      return;
+    }
+    // Otherwise start panning
+    if (!(e.target as HTMLElement).closest('[data-node]')) {
+      setIsPanning(true);
+      panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+    }
+  }, [nodes, getSvgPoint, pan]);
+
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    if (dragNodeId) {
+      const svgPt = getSvgPoint(e.clientX, e.clientY);
+      const newX = snap(svgPt.x - dragOffsetRef.current.x);
+      const newY = snap(svgPt.y - dragOffsetRef.current.y);
+      setNodePositions(prev => {
+        const next = new Map(prev);
+        next.set(dragNodeId, { x: Math.max(0, newX), y: Math.max(0, newY) });
+        return next;
+      });
+      return;
+    }
+    if (isPanning) {
+      setPan({ x: e.clientX - panStartRef.current.x, y: e.clientY - panStartRef.current.y });
+    }
+  }, [dragNodeId, isPanning, getSvgPoint]);
+
+  const handleCanvasMouseUp = useCallback(() => {
+    setDragNodeId(null);
+    setIsPanning(false);
+  }, []);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.08 : 0.08;
+    setZoom(z => Math.min(Math.max(z + delta, 0.25), 3));
+  }, []);
 
   const resetView = useCallback(() => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
+    setNodePositions(new Map());
   }, []);
 
-  // Node icon
-  const getNodeIcon = (node: GraphNode) => {
+  // Node icon helper
+  const getIcon = (node: GraphNode) => {
     switch (node.type) {
       case 'role': return node.meta?.isSystem ? Lock : Shield;
       case 'scope': return Building2;
-      case 'resource': return RESOURCE_ICON_MAP[node.meta?.resource as string] || Layers;
+      case 'resource': return RES_ICONS[node.meta?.resource as string] || Layers;
       case 'permission': return Key;
       default: return Layers;
     }
@@ -400,6 +373,7 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -407,31 +381,30 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
             Permission Graph
           </h2>
           <p className="text-sm text-muted-foreground">
-            Visualize nós de Cargo → Recurso → Permissão e suas conexões de acesso.
+            Arraste os nós para reorganizar • Clique para inspecionar • Scroll para zoom
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setZoom(z => Math.min(z + 0.15, 2.5))}>
-            <ZoomIn className="h-4 w-4" />
+        <div className="flex items-center gap-1.5">
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoom(z => Math.min(z + 0.15, 3))}>
+            <ZoomIn className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setZoom(z => Math.max(z - 0.15, 0.3))}>
-            <ZoomOut className="h-4 w-4" />
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoom(z => Math.max(z - 0.15, 0.25))}>
+            <ZoomOut className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="outline" size="sm" onClick={resetView}>
-            <Maximize2 className="h-4 w-4" />
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={resetView}>
+            <Maximize2 className="h-3.5 w-3.5" />
           </Button>
+          <Badge variant="outline" className="text-[10px] font-mono ml-1">{Math.round(zoom * 100)}%</Badge>
         </div>
       </div>
 
-      {/* Role focus selector */}
+      {/* Role filter */}
       <div className="flex flex-wrap gap-1.5">
         <button
-          onClick={() => setFocusRoleId(null)}
+          onClick={() => { setFocusRoleId(null); setNodePositions(new Map()); setSelectedNodeId(null); }}
           className={cn(
-            "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-            !focusRoleId
-              ? "bg-primary/10 border-primary/30 text-primary"
-              : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+            "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+            !focusRoleId ? "bg-primary/10 border-primary/30 text-primary shadow-sm" : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
           )}
         >
           Todos os cargos
@@ -439,12 +412,10 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         {roles.map(r => (
           <button
             key={r.id}
-            onClick={() => setFocusRoleId(prev => prev === r.id ? null : r.id)}
+            onClick={() => { setFocusRoleId(prev => prev === r.id ? null : r.id); setNodePositions(new Map()); setSelectedNodeId(null); }}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5",
-              focusRoleId === r.id
-                ? "bg-primary/10 border-primary/30 text-primary"
-                : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+              "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5",
+              focusRoleId === r.id ? "bg-primary/10 border-primary/30 text-primary shadow-sm" : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
             )}
           >
             {r.is_system ? <Lock className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
@@ -453,21 +424,23 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         ))}
       </div>
 
-      {/* Graph Canvas + Detail Panel */}
+      {/* Canvas + Panel */}
       <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
-        {/* SVG Canvas */}
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-border/50">
           <div
             ref={containerRef}
-            className="relative bg-muted/10 cursor-grab active:cursor-grabbing"
-            style={{ height: '65vh', minHeight: 420 }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            className={cn(
+              "relative select-none",
+              dragNodeId ? "cursor-grabbing" : isPanning ? "cursor-grabbing" : "cursor-grab"
+            )}
+            style={{ height: '68vh', minHeight: 460, background: 'repeating-conic-gradient(hsl(var(--muted)/0.15) 0% 25%, transparent 0% 50%) 0 0 / 20px 20px' }}
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
+            onMouseLeave={handleCanvasMouseUp}
+            onWheel={handleWheel}
           >
             <svg
-              ref={svgRef}
               viewBox={viewBox}
               className="w-full h-full"
               style={{
@@ -476,63 +449,117 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
               }}
             >
               <defs>
-                <marker id="arrow-grants" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-                  <path d="M0,0 L8,3 L0,6 Z" fill={EDGE_COLORS.grants_access} />
+                {/* Animated flow gradient */}
+                <linearGradient id="flow-primary" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="hsl(var(--primary)/0.1)" />
+                  <stop offset="50%" stopColor="hsl(var(--primary)/0.6)">
+                    <animate attributeName="offset" values="0;1;0" dur="3s" repeatCount="indefinite" />
+                  </stop>
+                  <stop offset="100%" stopColor="hsl(var(--primary)/0.1)" />
+                </linearGradient>
+                <linearGradient id="flow-warning" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="hsl(var(--warning)/0.1)" />
+                  <stop offset="50%" stopColor="hsl(var(--warning)/0.6)">
+                    <animate attributeName="offset" values="0;1;0" dur="3s" repeatCount="indefinite" />
+                  </stop>
+                  <stop offset="100%" stopColor="hsl(var(--warning)/0.1)" />
+                </linearGradient>
+                <linearGradient id="flow-info" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="hsl(var(--info)/0.1)" />
+                  <stop offset="50%" stopColor="hsl(var(--info)/0.5)">
+                    <animate attributeName="offset" values="0;1;0" dur="3s" repeatCount="indefinite" />
+                  </stop>
+                  <stop offset="100%" stopColor="hsl(var(--info)/0.1)" />
+                </linearGradient>
+                {/* Arrowheads */}
+                <marker id="ah-ga" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <path d="M0,0 L10,3.5 L0,7 Z" fill="hsl(var(--primary)/0.5)" />
                 </marker>
-                <marker id="arrow-inherits" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-                  <path d="M0,0 L8,3 L0,6 Z" fill={EDGE_COLORS.inherits_role} />
+                <marker id="ah-ir" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <path d="M0,0 L10,3.5 L0,7 Z" fill="hsl(var(--warning)/0.5)" />
                 </marker>
-                <marker id="arrow-scoped" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-                  <path d="M0,0 L8,3 L0,6 Z" fill={EDGE_COLORS.scoped_to} />
+                <marker id="ah-st" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <path d="M0,0 L10,3.5 L0,7 Z" fill="hsl(var(--info)/0.4)" />
                 </marker>
+                {/* Glow filters */}
+                <filter id="glow-primary" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
               </defs>
 
-              {/* Edges */}
+              {/* Column labels */}
+              {nodes.length > 0 && (
+                <g className="select-none" opacity={0.4}>
+                  {[
+                    { x: 60, label: 'ESCOPO' },
+                    { x: 420, label: 'CARGO' },
+                    { x: 760, label: 'RECURSO' },
+                    ...(focusRoleId ? [{ x: 1080, label: 'PERMISSÃO' }] : []),
+                  ].map(col => (
+                    <text key={col.label} x={col.x + NODE_W / 2} y={24} textAnchor="middle" fontSize="10" fontWeight="700" fontFamily="var(--font-display)" fill="hsl(var(--muted-foreground))" letterSpacing="1.5">
+                      {col.label}
+                    </text>
+                  ))}
+                </g>
+              )}
+
+              {/* ── EDGES ── */}
               {edges.map(edge => {
                 const fromNode = nodes.find(n => n.id === edge.from);
                 const toNode = nodes.find(n => n.id === edge.to);
                 if (!fromNode || !toNode) return null;
 
-                const fromX = fromNode.x + NODE_W;
+                const style = EDGE_STYLES[edge.type];
+                const isHighlighted = connectedEdgeIds.has(edge.id);
+                const isDimmed = activeId && !isHighlighted;
+
+                // Compute connection points (right side → left side)
+                const fromRight = fromNode.x + NODE_W;
                 const fromY = fromNode.y + NODE_H / 2;
-                const toX = toNode.x;
+                const toLeft = toNode.x;
                 const toY = toNode.y + NODE_H / 2;
 
-                // Determine if left-to-right or right-to-left
-                const dx = toX - fromX;
-                const adjustedFromX = dx < 0 ? fromNode.x : fromX;
-                const adjustedToX = dx < 0 ? toNode.x + NODE_W : toX;
+                const dx = toLeft - fromRight;
+                const fX = dx < 0 ? fromNode.x : fromRight;
+                const tX = dx < 0 ? toNode.x + NODE_W : toLeft;
+                const cpOff = Math.max(Math.abs(tX - fX) * 0.35, 40);
 
-                const cpOffset = Math.abs(adjustedToX - adjustedFromX) * 0.4;
-
-                const isHighlighted = connectedEdges.has(edge.id);
-                const isDimmed = (hoveredNodeId || selectedNodeId) && !isHighlighted;
-
-                const markerId = edge.type === 'grants_access' ? 'arrow-grants'
-                  : edge.type === 'inherits_role' ? 'arrow-inherits'
-                  : 'arrow-scoped';
+                const pathD = `M ${fX} ${fromY} C ${fX + cpOff} ${fromY}, ${tX - cpOff} ${toY}, ${tX} ${toY}`;
+                const markerId = edge.type === 'grants_access' ? 'ah-ga' : edge.type === 'inherits_role' ? 'ah-ir' : 'ah-st';
+                const flowId = edge.type === 'grants_access' ? 'flow-primary' : edge.type === 'inherits_role' ? 'flow-warning' : 'flow-info';
 
                 return (
-                  <g key={edge.id}>
+                  <g key={edge.id} style={{ transition: 'opacity 200ms' }} opacity={isDimmed ? 0.08 : 1}>
+                    {/* Base edge */}
                     <path
-                      d={`M ${adjustedFromX} ${fromY} C ${adjustedFromX + cpOffset} ${fromY}, ${adjustedToX - cpOffset} ${toY}, ${adjustedToX} ${toY}`}
+                      d={pathD}
                       fill="none"
-                      stroke={EDGE_COLORS[edge.type]}
-                      strokeWidth={isHighlighted ? 2.5 : 1.5}
-                      strokeDasharray={edge.type === 'scoped_to' ? '6,4' : undefined}
-                      opacity={isDimmed ? 0.15 : isHighlighted ? 1 : 0.6}
+                      stroke={style.color}
+                      strokeWidth={isHighlighted ? style.width + 1.2 : style.width}
+                      strokeDasharray={style.dash}
                       markerEnd={`url(#${markerId})`}
-                      className="transition-all duration-200"
                     />
+                    {/* Animated flow overlay (only highlighted) */}
+                    {isHighlighted && (
+                      <path
+                        d={pathD}
+                        fill="none"
+                        stroke={`url(#${flowId})`}
+                        strokeWidth={style.width + 2}
+                        strokeLinecap="round"
+                        opacity={0.6}
+                      />
+                    )}
+                    {/* Flow particle */}
+                    {isHighlighted && (
+                      <circle r="3.5" fill={style.color} opacity={0.9}>
+                        <animateMotion dur="2s" repeatCount="indefinite" path={pathD} />
+                      </circle>
+                    )}
+                    {/* Edge label */}
                     {edge.label && !isDimmed && (
-                      <text
-                        x={(adjustedFromX + adjustedToX) / 2}
-                        y={(fromY + toY) / 2 - 8}
-                        textAnchor="middle"
-                        className="fill-muted-foreground"
-                        fontSize="9"
-                        fontFamily="var(--font-body)"
-                      >
+                      <text x={(fX + tX) / 2} y={(fromY + toY) / 2 - 10} textAnchor="middle" fontSize="9" fontFamily="var(--font-body)" fill="hsl(var(--muted-foreground))" opacity={0.8}>
                         {edge.label}
                       </text>
                     )}
@@ -540,93 +567,120 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
                 );
               })}
 
-              {/* Nodes */}
+              {/* ── NODES ── */}
               {nodes.map(node => {
-                const colors = NODE_COLORS[node.type];
+                const s = NODE_STYLES[node.type];
                 const isSelected = selectedNodeId === node.id;
                 const isHovered = hoveredNodeId === node.id;
                 const isConnected = connectedNodeIds.has(node.id);
-                const isDimmed = (hoveredNodeId || selectedNodeId) && !isConnected;
-                const NodeIcon = getNodeIcon(node);
+                const isDimmed = activeId && !isConnected;
+                const isDragging = dragNodeId === node.id;
+                const NodeIcon = getIcon(node);
 
                 return (
                   <g
                     key={node.id}
                     data-node={node.id}
-                    className="cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedNodeId(prev => prev === node.id ? null : node.id);
-                    }}
-                    onMouseEnter={() => setHoveredNodeId(node.id)}
+                    style={{ transition: isDragging ? 'none' : 'opacity 200ms, filter 200ms' }}
+                    opacity={isDimmed ? 0.18 : 1}
+                    filter={isSelected ? 'url(#glow-primary)' : undefined}
+                    onClick={(e) => { e.stopPropagation(); setSelectedNodeId(prev => prev === node.id ? null : node.id); }}
+                    onMouseEnter={() => !dragNodeId && setHoveredNodeId(node.id)}
                     onMouseLeave={() => setHoveredNodeId(null)}
-                    opacity={isDimmed ? 0.25 : 1}
-                    style={{ transition: 'opacity 200ms' }}
                   >
-                    {/* Node background */}
+                    {/* Drop shadow */}
+                    <rect
+                      x={node.x + 2}
+                      y={node.y + 3}
+                      width={NODE_W}
+                      height={NODE_H}
+                      rx={14}
+                      fill="hsl(var(--foreground)/0.04)"
+                    />
+                    {/* Node body */}
                     <rect
                       x={node.x}
                       y={node.y}
                       width={NODE_W}
                       height={NODE_H}
-                      rx={12}
-                      fill={colors.bg}
-                      stroke={isSelected || isHovered ? colors.text : colors.border}
+                      rx={14}
+                      fill={s.bg}
+                      stroke={isSelected || isHovered ? s.hoverBorder : s.border}
                       strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1}
-                      className="transition-all duration-150"
+                      className="transition-colors"
                     />
-                    {/* Icon circle */}
-                    <circle
-                      cx={node.x + 26}
-                      cy={node.y + NODE_H / 2}
-                      r={14}
-                      fill={isSelected ? colors.text : colors.border}
-                      opacity={isSelected ? 0.2 : 0.3}
+                    {/* Left accent bar */}
+                    <rect
+                      x={node.x}
+                      y={node.y + 8}
+                      width={3.5}
+                      height={NODE_H - 16}
+                      rx={2}
+                      fill={s.text}
+                      opacity={isSelected ? 1 : 0.5}
                     />
-                    {/* Icon (using foreignObject) */}
-                    <foreignObject x={node.x + 14} y={node.y + NODE_H / 2 - 10} width={24} height={20}>
-                      <div className={cn("flex items-center justify-center w-full h-full", colors.icon)}>
+                    {/* Icon bg */}
+                    <rect
+                      x={node.x + 14}
+                      y={node.y + (NODE_H - 30) / 2}
+                      width={30}
+                      height={30}
+                      rx={8}
+                      fill={isSelected ? s.text : s.border}
+                      opacity={isSelected ? 0.15 : 0.3}
+                    />
+                    {/* Icon */}
+                    <foreignObject x={node.x + 17} y={node.y + (NODE_H - 24) / 2} width={24} height={24}>
+                      <div className={cn("flex items-center justify-center w-full h-full", s.icon)}>
                         <NodeIcon size={14} />
                       </div>
                     </foreignObject>
                     {/* Label */}
                     <text
-                      x={node.x + 48}
-                      y={node.y + (node.sublabel ? 22 : NODE_H / 2 + 4)}
+                      x={node.x + 52}
+                      y={node.y + (node.sublabel ? 24 : NODE_H / 2 + 4)}
                       fontSize="12"
                       fontWeight="600"
                       fontFamily="var(--font-display)"
-                      fill={colors.text}
+                      fill={s.text}
                       className="select-none"
                     >
-                      {node.label.length > 16 ? node.label.slice(0, 15) + '…' : node.label}
+                      {node.label.length > 15 ? node.label.slice(0, 14) + '…' : node.label}
                     </text>
                     {node.sublabel && (
-                      <text
-                        x={node.x + 48}
-                        y={node.y + 38}
-                        fontSize="9"
-                        fontFamily="var(--font-body)"
-                        fill="hsl(var(--muted-foreground))"
-                        className="select-none"
-                      >
-                        {node.sublabel.length > 20 ? node.sublabel.slice(0, 19) + '…' : node.sublabel}
+                      <text x={node.x + 52} y={node.y + 40} fontSize="9" fontFamily="var(--font-body)" fill="hsl(var(--muted-foreground))" className="select-none">
+                        {node.sublabel.length > 18 ? node.sublabel.slice(0, 17) + '…' : node.sublabel}
                       </text>
                     )}
-                    {/* Selection ring */}
+                    {/* Drag handle */}
+                    <foreignObject
+                      x={node.x + NODE_W - 28}
+                      y={node.y + (NODE_H - 20) / 2}
+                      width={20}
+                      height={20}
+                      data-drag-handle={node.id}
+                      className={cn("cursor-grab", isDragging && "cursor-grabbing")}
+                    >
+                      <div className="flex items-center justify-center w-full h-full text-muted-foreground/40 hover:text-muted-foreground/80 transition-colors">
+                        <GripVertical size={12} />
+                      </div>
+                    </foreignObject>
+                    {/* Selection indicator */}
                     {isSelected && (
                       <rect
-                        x={node.x - 3}
-                        y={node.y - 3}
-                        width={NODE_W + 6}
-                        height={NODE_H + 6}
-                        rx={14}
+                        x={node.x - 4}
+                        y={node.y - 4}
+                        width={NODE_W + 8}
+                        height={NODE_H + 8}
+                        rx={16}
                         fill="none"
-                        stroke={colors.text}
+                        stroke={s.text}
                         strokeWidth={1.5}
-                        strokeDasharray="4,3"
-                        opacity={0.5}
-                      />
+                        strokeDasharray="5,4"
+                        opacity={0.4}
+                      >
+                        <animate attributeName="stroke-dashoffset" values="0;18" dur="1.5s" repeatCount="indefinite" />
+                      </rect>
                     )}
                   </g>
                 );
@@ -634,71 +688,95 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
             </svg>
 
             {/* Legend overlay */}
-            <div className="absolute bottom-3 left-3 bg-card/90 backdrop-blur-sm border border-border/40 rounded-xl px-3.5 py-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-[10px]">
-              <span className="text-muted-foreground font-semibold uppercase tracking-wider w-full mb-0.5">Nós</span>
-              <LegendItem color="bg-primary/20 border-primary/40" label="Cargo (Role)" />
-              <LegendItem color="bg-[hsl(var(--info)/0.15)] border-[hsl(var(--info)/0.3)]" label="Permissão" />
-              <LegendItem color="bg-[hsl(var(--warning)/0.15)] border-[hsl(var(--warning)/0.3)]" label="Escopo" />
-              <LegendItem color="bg-accent border-accent-foreground/25" label="Recurso" />
-              <span className="text-muted-foreground font-semibold uppercase tracking-wider w-full mt-1 mb-0.5">Arestas</span>
-              <EdgeLegendItem color="hsl(var(--primary) / 0.5)" label="grants_access" solid />
-              <EdgeLegendItem color="hsl(var(--warning) / 0.5)" label="inherits_role" solid />
-              <EdgeLegendItem color="hsl(var(--info) / 0.4)" label="scoped_to" dashed />
+            <div className="absolute bottom-3 left-3 bg-card/95 backdrop-blur-sm border border-border/40 rounded-xl px-3.5 py-2.5 space-y-1 text-[10px] shadow-sm">
+              <p className="text-muted-foreground font-semibold uppercase tracking-wider">Nós</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                <LegendDot color="bg-primary/30" label="Cargo" />
+                <LegendDot color="bg-info/30" label="Permissão" />
+                <LegendDot color="bg-warning/30" label="Escopo" />
+                <LegendDot color="bg-accent-foreground/20" label="Recurso" />
+              </div>
+              <p className="text-muted-foreground font-semibold uppercase tracking-wider pt-0.5">Arestas</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                <EdgeLeg color="hsl(var(--primary)/0.5)" label="grants_access" />
+                <EdgeLeg color="hsl(var(--warning)/0.5)" label="inherits_role" />
+                <EdgeLeg color="hsl(var(--info)/0.4)" label="scoped_to" dashed />
+              </div>
+              <p className="text-muted-foreground pt-1 flex items-center gap-1">
+                <Move className="h-3 w-3" /> Arraste o <GripVertical className="h-3 w-3 inline" /> para mover nós
+              </p>
             </div>
+
+            {/* Dragging indicator */}
+            {dragNodeId && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-primary/10 border border-primary/30 text-primary text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                <Move className="h-3 w-3" />
+                Arrastando nó… solte para fixar
+              </div>
+            )}
           </div>
         </Card>
 
         {/* Detail Panel */}
         <div className="space-y-4">
           {selectedInfo ? (
-            <Card>
+            <Card className="animate-in fade-in slide-in-from-right-2 duration-200">
               <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <div className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-lg",
+                    "flex h-9 w-9 items-center justify-center rounded-xl",
                     selectedInfo.node.type === 'role' ? "bg-primary/10" :
                     selectedInfo.node.type === 'permission' ? "bg-info/10" :
                     selectedInfo.node.type === 'scope' ? "bg-warning/10" :
                     "bg-accent"
                   )}>
-                    {(() => { const Icon = getNodeIcon(selectedInfo.node); return <Icon className="h-4 w-4" />; })()}
+                    {(() => { const I = getIcon(selectedInfo.node); return <I className="h-4 w-4" />; })()}
                   </div>
                   <div>
                     <CardTitle className="text-sm">{selectedInfo.node.label}</CardTitle>
-                    <p className="text-[11px] text-muted-foreground capitalize">{selectedInfo.node.type} Node</p>
+                    <Badge variant="outline" className="text-[9px] mt-0.5 capitalize">{selectedInfo.node.type} node</Badge>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-0 space-y-3">
                 {selectedInfo.node.sublabel && (
-                  <div className="text-xs text-muted-foreground font-mono bg-muted/30 px-2 py-1 rounded">
+                  <div className="text-xs text-muted-foreground font-mono bg-muted/30 px-2.5 py-1.5 rounded-lg border border-border/30">
                     {selectedInfo.node.sublabel}
                   </div>
                 )}
 
+                {/* Position info */}
+                <div className="flex gap-2 text-[10px] text-muted-foreground">
+                  <span className="font-mono">x: {selectedInfo.node.x}</span>
+                  <span className="font-mono">y: {selectedInfo.node.y}</span>
+                </div>
+
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">
+                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
                     Conexões ({selectedInfo.edges.length})
                   </p>
-                  <ScrollArea className="max-h-[30vh]">
-                    <div className="space-y-1.5">
-                      {selectedInfo.connectedNodes.map(cn_node => {
-                        const edge = selectedInfo.edges.find(e => e.from === cn_node.id || e.to === cn_node.id);
-                        const ConnIcon = getNodeIcon(cn_node);
+                  <ScrollArea className="max-h-[35vh]">
+                    <div className="space-y-1">
+                      {selectedInfo.connectedNodes.map(cNode => {
+                        const edge = selectedInfo.edges.find(e => e.from === cNode.id || e.to === cNode.id);
+                        const CIcon = getIcon(cNode);
+                        const isOutgoing = edge && edge.from === selectedInfo.node.id;
                         return (
                           <button
-                            key={cn_node.id}
-                            onClick={() => setSelectedNodeId(cn_node.id)}
-                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-muted/40 transition-colors"
+                            key={cNode.id}
+                            onClick={() => setSelectedNodeId(cNode.id)}
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left hover:bg-muted/40 transition-colors group"
                           >
-                            <ConnIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <CIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-foreground truncate">{cn_node.label}</p>
+                              <p className="text-xs font-medium text-foreground truncate">{cNode.label}</p>
                               {edge && (
-                                <p className="text-[10px] text-muted-foreground">{EDGE_LABELS[edge.type]}</p>
+                                <p className="text-[10px] text-muted-foreground">
+                                  {isOutgoing ? '→' : '←'} {EDGE_LABELS[edge.type]}
+                                </p>
                               )}
                             </div>
-                            <Badge variant="secondary" className="text-[9px] shrink-0 capitalize">{cn_node.type}</Badge>
+                            <Badge variant="secondary" className="text-[9px] shrink-0 capitalize">{cNode.type}</Badge>
                           </button>
                         );
                       })}
@@ -708,9 +786,9 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
               </CardContent>
             </Card>
           ) : (
-            <Card className="border-dashed">
-              <CardContent className="py-8 text-center">
-                <Eye className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+            <Card className="border-dashed border-border/50">
+              <CardContent className="py-10 text-center">
+                <Eye className="h-8 w-8 mx-auto mb-3 text-muted-foreground/25" />
                 <p className="text-xs text-muted-foreground">Clique em um nó para ver detalhes e conexões.</p>
               </CardContent>
             </Card>
@@ -720,10 +798,10 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
           <Card>
             <CardContent className="py-4">
               <div className="grid grid-cols-2 gap-3">
-                <StatMini label="Nós" value={nodes.length} />
-                <StatMini label="Arestas" value={edges.length} />
-                <StatMini label="Cargos" value={roles.length} />
-                <StatMini label="Permissões" value={permissions.length} />
+                <StatBox label="Nós" value={nodes.length} />
+                <StatBox label="Arestas" value={edges.length} />
+                <StatBox label="Cargos" value={roles.length} />
+                <StatBox label="Permissões" value={permissions.length} />
               </div>
             </CardContent>
           </Card>
@@ -734,30 +812,28 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
 }
 
 // ══════════════════════════════════
-// SUB-COMPONENTS
+// HELPERS
 // ══════════════════════════════════
 
-function LegendItem({ color, label }: { color: string; label: string }) {
+function LegendDot({ color, label }: { color: string; label: string }) {
   return (
-    <span className="flex items-center gap-1.5">
-      <span className={cn("h-3 w-5 rounded border inline-block", color)} />
+    <span className="flex items-center gap-1">
+      <span className={cn("h-2.5 w-2.5 rounded-full border inline-block", color)} />
       <span className="text-foreground">{label}</span>
     </span>
   );
 }
 
-function EdgeLegendItem({ color, label, solid, dashed }: { color: string; label: string; solid?: boolean; dashed?: boolean }) {
+function EdgeLeg({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {
   return (
-    <span className="flex items-center gap-1.5">
-      <svg width="20" height="8">
-        <line x1="0" y1="4" x2="20" y2="4" stroke={color} strokeWidth="2" strokeDasharray={dashed ? '4,3' : undefined} />
-      </svg>
+    <span className="flex items-center gap-1">
+      <svg width="16" height="6"><line x1="0" y1="3" x2="16" y2="3" stroke={color} strokeWidth="2" strokeDasharray={dashed ? '3,2' : undefined} /></svg>
       <span className="text-foreground font-mono">{label}</span>
     </span>
   );
 }
 
-function StatMini({ label, value }: { label: string; value: number }) {
+function StatBox({ label, value }: { label: string; value: number }) {
   return (
     <div className="text-center">
       <p className="text-lg font-bold font-mono tabular-nums text-foreground">{value}</p>
