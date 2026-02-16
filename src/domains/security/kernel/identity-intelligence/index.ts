@@ -26,6 +26,7 @@ export type {
   // Core session object
   UnifiedIdentitySession,
   UnifiedRealIdentity,
+  UnifiedActiveIdentity,
   TenantWorkspace,
   GroupEntry,
   ActiveContext,

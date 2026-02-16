@@ -154,8 +154,18 @@ export interface UnifiedIdentitySession {
   /** Phase in the identity lifecycle */
   readonly phase: IdentityPhase;
 
-  /** The real identity — WHO actually logged in (immutable) */
+  /** The real identity — WHO actually logged in (IMMUTABLE per auth session) */
   readonly real_identity: UnifiedRealIdentity;
+
+  /**
+   * The active identity — WHO is currently operating (MUTABLE).
+   *
+   * - Normal mode:  active_identity mirrors real_identity
+   * - Impersonation: active_identity reflects the simulated tenant user
+   *
+   * Consumers should always check active_identity for authorization decisions.
+   */
+  readonly active_identity: UnifiedActiveIdentity;
 
   /** All tenants the user has membership in */
   readonly available_tenants: readonly TenantWorkspace[];
@@ -184,6 +194,7 @@ export interface UnifiedIdentitySession {
 
 /**
  * The real identity — immutable per auth session.
+ * Represents WHO physically authenticated (keyboard, biometric, etc.).
  */
 export interface UnifiedRealIdentity {
   readonly user_id: string;
@@ -192,6 +203,28 @@ export interface UnifiedRealIdentity {
   readonly platform_role: PlatformRoleType | null;
   readonly detection: UserTypeDetection | null;
   readonly authenticated_at: number;
+}
+
+/**
+ * The active identity — mutable.
+ * In normal mode, mirrors real_identity.
+ * During impersonation, reflects the simulated tenant persona.
+ *
+ * SECURITY INVARIANT:
+ *   - active_identity.user_type === 'tenant' during impersonation
+ *   - A tenant active_identity can NEVER access platform routes
+ */
+export interface UnifiedActiveIdentity {
+  readonly user_id: string;
+  readonly email: string | null;
+  readonly user_type: DetectedUserType;
+  readonly platform_role: PlatformRoleType | null;
+  /** True when active_identity differs from real_identity */
+  readonly is_impersonated: boolean;
+  /** Tenant ID of the active context (if scoped) */
+  readonly tenant_id: string | null;
+  /** Role in the active tenant context */
+  readonly tenant_role: TenantRole | null;
 }
 
 /**

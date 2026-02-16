@@ -79,7 +79,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* ═══ PLATFORM ROUTES (isolated from tenant) ═══ */}
+      {/* ═══ PLATFORM ROUTES — SECURITY: tenant active_identity blocked ═══ */}
       <Route
         path="/platform"
         element={
