@@ -8,6 +8,7 @@ import {
   useSalaryContracts, useSalaryAdjustments, useSalaryAdditionals,
   useCreateSalaryContract, useCreateSalaryAdjustment, useCreateSalaryAdditional,
   useEmployeeBenefits, useHealthExams, useEmployeeRiskExposures,
+  useNrTrainingByEmployee,
 } from '@/domains/hooks';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -19,11 +20,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, Mail, Phone, Calendar, TrendingUp, Building2, FileText,
-  Plus, Clock, Heart, ShieldAlert, Gift, Activity, Calculator,
+  Plus, Clock, Heart, ShieldAlert, Gift, Activity, Calculator, GraduationCap,
 } from 'lucide-react';
 import { SimulacaoTrabalhistaTab } from '@/components/employee/SimulacaoTrabalhistaTab';
 import { DocumentosTab } from '@/components/employee/DocumentosTab';
 import { TermosDocumentosTab } from '@/components/employee/TermosDocumentosTab';
+import { TreinamentosNrTab } from '@/components/employee/TreinamentosNrTab';
 import { useToast } from '@/hooks/use-toast';
 
 // ── Labels ──
@@ -222,6 +224,7 @@ export default function EmployeeDetail() {
               <TabsTrigger value="documentos" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" />Documentos</TabsTrigger>
               <TabsTrigger value="termos" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" />Termos e Acordos</TabsTrigger>
               <TabsTrigger value="simulacao" className="gap-1.5 text-xs"><Calculator className="h-3.5 w-3.5" />Simulação Trabalhista</TabsTrigger>
+              <TabsTrigger value="nr_trainings" className="gap-1.5 text-xs"><GraduationCap className="h-3.5 w-3.5" />Treinamentos NR</TabsTrigger>
               <TabsTrigger value="timeline" className="gap-1.5 text-xs"><Clock className="h-3.5 w-3.5" />Timeline</TabsTrigger>
             </TabsList>
 
@@ -557,6 +560,11 @@ export default function EmployeeDetail() {
             {/* ── TAB: Simulação Trabalhista ── */}
             <TabsContent value="simulacao">
               <SimulacaoTrabalhistaTab employee={employee} />
+            </TabsContent>
+
+            {/* ── TAB: Treinamentos NR ── */}
+            <TabsContent value="nr_trainings">
+              <TreinamentosNrTab employeeId={id!} />
             </TabsContent>
 
             {/* ── TAB: Timeline Unificada ── */}

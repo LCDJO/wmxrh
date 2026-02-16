@@ -118,6 +118,7 @@ export const queryKeys = {
   nrTrainingAssignments: (tenantId?: string) => ['nr_training_assignments', tenantId] as const,
   nrTrainingByEmployee: (empId: string) => ['nr_training_employee', empId] as const,
   restrictedEmployees: (tenantId?: string) => ['restricted_employees', tenantId] as const,
+  companyCnaeProfiles: (tenantId?: string) => ['company_cnae_profiles', tenantId] as const,
 };
 
 // ========================
@@ -995,6 +996,22 @@ export function useRestrictedEmployees() {
         .eq('operacao_restrita', true);
       if (qs!.companyId) q = q.eq('company_id', qs!.companyId);
       const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!qs,
+  });
+}
+
+export function useCompanyCnaeProfiles() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.companyCnaeProfiles(qs?.tenantId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_cnae_profiles')
+        .select('company_id, cnae_principal, descricao_atividade, grau_risco_sugerido')
+        .eq('tenant_id', qs!.tenantId);
       if (error) throw error;
       return data ?? [];
     },
