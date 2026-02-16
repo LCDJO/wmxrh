@@ -30,6 +30,12 @@ export {
   setAccessGraph,
   clearAccessGraph,
   accessGraphService,
+  accessGraphCache,
+  emitGraphEvent,
+  onGraphEvent,
+  getGraphEventLog,
+  clearGraphEventLog,
+  graphEvents,
   requireAtLeastOneRole,
   requireValidScope,
   preventCrossTenantAccess,
@@ -76,6 +82,11 @@ export type {
   InheritedScopes,
   InheritanceEntry,
   AccessCheckResult,
+  AccessGraphCacheEntry,
+  CacheInvalidationReason,
+  CacheInvalidationEvent,
+  GraphEventType,
+  GraphEvent,
 } from './kernel';
 
 // ── Feature Flags Hook ──
