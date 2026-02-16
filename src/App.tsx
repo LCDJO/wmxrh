@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TenantProvider, useTenant } from "./contexts/TenantContext";
 import { ScopeProvider } from "./contexts/ScopeContext";
+import { ProtectedRoute } from "./domains/security";
 import { AppLayout } from "./components/layout/AppLayout";
 import Auth from "./pages/Auth";
 import TenantOnboarding from "./pages/TenantOnboarding";
@@ -42,14 +43,46 @@ function AppRoutes() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/employees" element={<Employees />} />
-        <Route path="/employees/:id" element={<EmployeeDetail />} />
-        <Route path="/companies" element={<Companies />} />
-        <Route path="/groups" element={<CompanyGroups />} />
-        <Route path="/positions" element={<Positions />} />
-        <Route path="/compensation" element={<Compensation />} />
-        <Route path="/departments" element={<Departments />} />
+        <Route path="/" element={
+          <ProtectedRoute navKey="dashboard">
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/employees" element={
+          <ProtectedRoute navKey="employees">
+            <Employees />
+          </ProtectedRoute>
+        } />
+        <Route path="/employees/:id" element={
+          <ProtectedRoute navKey="employees">
+            <EmployeeDetail />
+          </ProtectedRoute>
+        } />
+        <Route path="/companies" element={
+          <ProtectedRoute navKey="companies">
+            <Companies />
+          </ProtectedRoute>
+        } />
+        <Route path="/groups" element={
+          <ProtectedRoute navKey="groups">
+            <CompanyGroups />
+          </ProtectedRoute>
+        } />
+        <Route path="/positions" element={
+          <ProtectedRoute navKey="positions">
+            <Positions />
+          </ProtectedRoute>
+        } />
+        <Route path="/compensation" element={
+          <ProtectedRoute navKey="compensation">
+            <Compensation />
+          </ProtectedRoute>
+        } />
+        <Route path="/departments" element={
+          <ProtectedRoute navKey="departments">
+            <Departments />
+          </ProtectedRoute>
+        } />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
