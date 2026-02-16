@@ -3764,6 +3764,54 @@ export type Database = {
         }
         Relationships: []
       }
+      training_audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          employee_id: string
+          id: string
+          metadata: Json | null
+          nr_codigo: number
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          metadata?: Json | null
+          nr_codigo: number
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          metadata?: Json | null
+          nr_codigo?: number
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_audit_logs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_audit_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_requirements: {
         Row: {
           catalog_item_id: string
