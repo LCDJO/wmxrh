@@ -19,3 +19,6 @@ export { NavigationAdvisor } from './navigation-advisor';
 export { RoleSuggestionEngine } from './role-suggestion-engine';
 export { CognitiveInsightsService } from './cognitive-insights.service';
 export type * from './types';
+
+// ── Future features (stubs) ──────────────────────────────────────
+export { permissionBuilderAssistant, dashboardAutoConfig, workspaceOnboarding } from './future';
