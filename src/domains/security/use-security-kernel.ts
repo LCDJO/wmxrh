@@ -30,6 +30,8 @@ import {
   featureFlagEngine,
   auditSecurity,
   executeSecurityPipeline,
+  buildAccessGraph,
+  setAccessGraph,
   type Identity,
   type SecurityContext,
   type PolicyResult,
@@ -37,6 +39,7 @@ import {
   type PermissionResult,
   type ResourceTarget,
   type PipelineResult,
+  type AccessGraph,
 } from './kernel';
 
 import type { PermissionAction, PermissionEntity, NavKey } from './permissions';
@@ -72,6 +75,10 @@ export interface UseSecurityKernelReturn {
   // ── Pipeline ──
   /** Execute the full security pipeline: Auth → Scope → Permission → Policy → Audit */
   executePipeline: (action: PermissionAction, resource: PermissionEntity, target?: ResourceTarget) => PipelineResult;
+
+  // ── Access Graph ──
+  /** The precomputed access graph for O(1) authorization checks */
+  accessGraph: AccessGraph | null;
 
   // ── Audit ──
   audit: typeof auditSecurity;
@@ -124,6 +131,21 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
       uiCompanyId: uiScope.companyId,
     });
   }, [user, session, currentTenant, effectiveRoles, userRoles, membershipRole, uiScope]);
+
+  // ── Access Graph (precomputed O(1) authorization) ──
+  const accessGraph = useMemo((): AccessGraph | null => {
+    if (!user || !currentTenant) return null;
+
+    const graph = buildAccessGraph({
+      userId: user.id,
+      tenantId: currentTenant.id,
+      userRoles,
+      membershipRole,
+      companyGroupMap: {}, // populated by caller if needed
+    });
+    setAccessGraph(graph);
+    return graph;
+  }, [user, currentTenant, userRoles, membershipRole]);
 
   // ── Permissions (RBAC + ABAC) ──
   const checkPerm = useCallback(
@@ -239,6 +261,7 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     evaluatePolicy,
     isFeatureEnabled,
     executePipeline,
+    accessGraph,
     audit: auditSecurity,
     loading: rolesLoading,
     isTenantAdmin,
