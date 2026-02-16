@@ -1934,6 +1934,125 @@ export type Database = {
           },
         ]
       }
+      payroll_simulations: {
+        Row: {
+          beneficios: number
+          company_group_id: string | null
+          company_id: string | null
+          competencia: string
+          created_at: string
+          created_by: string | null
+          custo_total_empresa: number
+          employee_id: string
+          encargos_estimados: number
+          fator_custo: number
+          fgts: number
+          id: string
+          input_snapshot: Json
+          inss_empregado: number
+          inss_patronal: number
+          irrf: number
+          provisao_13: number
+          provisao_ferias: number
+          provisao_multa_fgts: number
+          rat: number
+          rubrics_snapshot: Json
+          salario_base: number
+          salario_liquido: number
+          tenant_id: string
+          terceiros: number
+          total_descontos: number
+          total_proventos: number
+        }
+        Insert: {
+          beneficios?: number
+          company_group_id?: string | null
+          company_id?: string | null
+          competencia: string
+          created_at?: string
+          created_by?: string | null
+          custo_total_empresa?: number
+          employee_id: string
+          encargos_estimados?: number
+          fator_custo?: number
+          fgts?: number
+          id?: string
+          input_snapshot?: Json
+          inss_empregado?: number
+          inss_patronal?: number
+          irrf?: number
+          provisao_13?: number
+          provisao_ferias?: number
+          provisao_multa_fgts?: number
+          rat?: number
+          rubrics_snapshot?: Json
+          salario_base?: number
+          salario_liquido?: number
+          tenant_id: string
+          terceiros?: number
+          total_descontos?: number
+          total_proventos?: number
+        }
+        Update: {
+          beneficios?: number
+          company_group_id?: string | null
+          company_id?: string | null
+          competencia?: string
+          created_at?: string
+          created_by?: string | null
+          custo_total_empresa?: number
+          employee_id?: string
+          encargos_estimados?: number
+          fator_custo?: number
+          fgts?: number
+          id?: string
+          input_snapshot?: Json
+          inss_empregado?: number
+          inss_patronal?: number
+          irrf?: number
+          provisao_13?: number
+          provisao_ferias?: number
+          provisao_multa_fgts?: number
+          rat?: number
+          rubrics_snapshot?: Json
+          salario_base?: number
+          salario_liquido?: number
+          tenant_id?: string
+          terceiros?: number
+          total_descontos?: number
+          total_proventos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_simulations_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_simulations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_simulations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_simulations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       positions: {
         Row: {
           base_salary: number | null
