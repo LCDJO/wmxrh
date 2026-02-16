@@ -36,6 +36,7 @@ import { createNavigationOrchestrator } from './navigation-orchestrator';
 import { createFeatureLifecycleManager } from './feature-lifecycle-manager';
 import { createCognitiveOrchestrator } from './cognitive-orchestrator';
 import { CognitiveInsightsService } from '@/domains/platform-cognitive/cognitive-insights.service';
+import { installEventBridges } from './event-bridges';
 
 // ── Security Kernel imports ──────────────────────────────────────
 import {
@@ -50,10 +51,7 @@ import {
 } from '@/domains/security/kernel';
 
 // ── Identity Intelligence ────────────────────────────────────────
-import { identityIntelligence, onIILEvent } from '@/domains/security/kernel/identity-intelligence';
-
-// ── Platform Events (bridge into EventKernel) ────────────────────
-import { onPlatformEvent } from '@/domains/platform/platform-events';
+import { identityIntelligence } from '@/domains/security/kernel/identity-intelligence';
 
 export function createPlatformRuntime(): PlatformRuntimeAPI {
   let phase: RuntimePhase = 'idle';
@@ -114,27 +112,9 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
       services.register('CognitiveOrchestrator', cognitive, { version: '1.0.0' });
       services.register('CognitiveInsightsService', cognitiveService, { version: '1.0.0' });
 
-      // ── 5. Bridge legacy PlatformEvents → GlobalEventKernel ───
-      const unbridgePlatformEvents = onPlatformEvent((evt) => {
-        events.emit(
-          `platform:${evt.type}`,
-          'PlatformEventsBridge',
-          evt,
-          { priority: evt.type.includes('Risk') ? 'high' : 'normal' },
-        );
-      });
-      disposers.push(unbridgePlatformEvents);
-
-      // ── 6. Bridge IdentityIntelligence events ─────────────────
-      const unbridgeIIL = onIILEvent((evt) => {
-        events.emit(
-          `iil:${evt.type}`,
-          'IdentityIntelligenceBridge',
-          evt,
-          { priority: evt.type.includes('Risk') || evt.type.includes('Anomaly') ? 'high' : 'normal' },
-        );
-      });
-      disposers.push(unbridgeIIL);
+      // ── 5. Install ALL domain event bridges → GlobalEventKernel
+      const teardownBridges = installEventBridges(events);
+      disposers.push(teardownBridges);
 
       bootedAt = Date.now();
       phase = 'ready';
