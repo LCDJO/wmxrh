@@ -2,17 +2,29 @@
  * Employee Agreement Engine — Bounded Context
  *
  * Manages employee terms, policies, and digital signature lifecycle.
- * Integrates with HR Core, Security Kernel, and external signature providers.
  *
- * Architecture (Hexagonal):
- *   1. Ports (ISignatureProvider, IDocumentStorage) — contracts
- *   2. Adapters (OpenSign, Simulation, Cloud Storage) — implementations
- *   3. Service (agreementEngineService) — orchestration
- *   4. Events — domain event bus for integration
+ * ┌─────────────────────────────────────────────────────┐
+ * │              EmployeeAgreementEngine                │
+ * ├─────────────────────────────────────────────────────┤
+ * │  AgreementTemplateService     — CRUD + versioning   │
+ * │  AgreementAssignmentService   — dispatch + lifecycle│
+ * │  DigitalSignatureProviderAdapter — provider facade  │
+ * │  DocumentVault                — signed doc storage  │
+ * │  AgreementAuditService        — legal audit trail   │
+ * └─────────────────────────────────────────────────────┘
+ *
+ * Integrations:
+ *   - HR Core (auto-dispatch on admission via domain events)
+ *   - Security Kernel (tenant_id + company scope)
+ *   - Government Integration Gateway (eSocial if needed)
  */
 
-// ── Service ──
-export { agreementEngineService, setDocumentStorage } from './agreement-engine.service';
+// ── Services ──
+export { agreementTemplateService } from './agreement-template.service';
+export { agreementAssignmentService } from './agreement-assignment.service';
+export { digitalSignatureAdapter } from './digital-signature-adapter';
+export { documentVault } from './document-vault';
+export { agreementAuditService, initAgreementAudit } from './agreement-audit.service';
 
 // ── Types ──
 export type {
