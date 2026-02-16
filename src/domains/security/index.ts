@@ -26,3 +26,6 @@ export {
 export type { SecurityEventType, SecurityEventPayload } from './security-events';
 
 export { useSecurityMonitor } from './useSecurityMonitor';
+
+export { securityLogService } from './security-log.service';
+export type { SecurityLog } from './security-log.service';

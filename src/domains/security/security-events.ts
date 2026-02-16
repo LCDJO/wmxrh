@@ -5,9 +5,11 @@
  * Events: UnauthorizedAccessAttempt, ScopeViolationDetected, RateLimitTriggered
  *
  * Dual-layer:
- *   - Client-side: emits via EventTarget for UI reactions (toasts, redirects)
- *   - Backend-side: logged to audit_logs with security metadata
+ *   - Client-side: emits via listener set for UI reactions (toasts, redirects)
+ *   - Backend-side: logged to security_logs table with full metadata
  */
+
+import { supabase } from '@/integrations/supabase/client';
 
 // ═══════════════════════════════════
 // Event Types
@@ -45,12 +47,26 @@ export function onSecurityEvent(listener: SecurityEventListener): () => void {
   return () => listeners.delete(listener);
 }
 
-/** Emit a security event to all listeners */
+/** Emit a security event to all listeners and log to security_logs */
 export function emitSecurityEvent(event: SecurityEventPayload): void {
   console.warn(`[SecurityEvent] ${event.type}: ${event.reason}`, {
     resource: event.resource,
     metadata: event.metadata,
   });
+
+  // Persist to security_logs (fire-and-forget)
+  supabase.from('security_logs').insert({
+    user_id: event.userId || null,
+    tenant_id: event.tenantId || null,
+    action: event.type,
+    resource: event.resource,
+    result: 'blocked',
+    ip_address: null,
+    user_agent: navigator.userAgent || null,
+  }).then(({ error }) => {
+    if (error) console.error('[SecurityEvent] Failed to persist:', error.message);
+  });
+
   listeners.forEach(fn => {
     try { fn(event); } catch (err) { console.error('[SecurityEvent] Listener error:', err); }
   });
