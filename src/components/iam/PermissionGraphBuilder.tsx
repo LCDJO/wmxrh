@@ -723,116 +723,102 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Network className="h-5 w-5 text-primary" />
-            Permission Graph
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Arraste permissões da Library para atribuir • Clique em recurso para CRUD toggle • Scroll para zoom
-          </p>
+    <div className="space-y-3 animate-fade-in">
+      {/* ─── Premium Toolbar ─── */}
+      <div className="flex items-center justify-between bg-card/80 backdrop-blur-sm border border-border/40 rounded-2xl px-5 py-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20">
+            <Network className="h-4.5 w-4.5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold font-display text-foreground tracking-tight">Permission Graph</h2>
+            <p className="text-[10px] text-muted-foreground leading-tight">
+              Arraste permissões da Library • Clique recurso para CRUD • Scroll para zoom
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoom(z => Math.min(z + 0.15, 3))}>
-            <ZoomIn className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoom(z => Math.max(z - 0.15, 0.25))}>
-            <ZoomOut className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={resetView}>
-            <Maximize2 className="h-3.5 w-3.5" />
-          </Button>
-          <Badge variant="outline" className="text-[10px] font-mono ml-1">{Math.round(zoom * 100)}%</Badge>
-        </div>
-      </div>
 
-      {/* Filters: Role chips + Scope selector + Inheritance toggle */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Role filter chips */}
-        <div className="flex flex-wrap gap-1.5 flex-1">
-          <button
-            onClick={() => { setFocusRoleId(null); setNodePositions(new Map()); setSelectedNodeId(null); setCrudResource(null); }}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
-              !focusRoleId ? "bg-primary/10 border-primary/30 text-primary shadow-sm" : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
-            )}
-          >
-            Todos os cargos
-          </button>
-          {roles.map(r => (
+        <div className="flex items-center gap-4">
+          {/* Role chips */}
+          <div className="flex items-center gap-1 max-w-[400px] overflow-x-auto scrollbar-none">
             <button
-              key={r.id}
-              onClick={() => { setFocusRoleId(prev => prev === r.id ? null : r.id); setNodePositions(new Map()); setSelectedNodeId(null); setCrudResource(null); }}
+              onClick={() => { setFocusRoleId(null); setNodePositions(new Map()); setSelectedNodeId(null); setCrudResource(null); }}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5",
-                focusRoleId === r.id ? "bg-primary/10 border-primary/30 text-primary shadow-sm" : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+                "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all whitespace-nowrap",
+                !focusRoleId
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/25"
+                  : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border/60 bg-muted/30"
               )}
             >
-              {r.is_system ? <Lock className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
-              {r.name}
-              {/* Show inheritance badge */}
-              {inheritances.some(inh => inh.child_role_id === r.id || inh.parent_role_id === r.id) && (
-                <GitBranch className="h-3 w-3 text-warning" />
-              )}
+              Todos
             </button>
-          ))}
-        </div>
+            {roles.map(r => (
+              <button
+                key={r.id}
+                onClick={() => { setFocusRoleId(prev => prev === r.id ? null : r.id); setNodePositions(new Map()); setSelectedNodeId(null); setCrudResource(null); }}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all flex items-center gap-1 whitespace-nowrap",
+                  focusRoleId === r.id
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/25"
+                    : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border/60 bg-muted/30"
+                )}
+              >
+                {r.is_system ? <Lock className="h-2.5 w-2.5" /> : <Shield className="h-2.5 w-2.5" />}
+                {r.name}
+                {inheritances.some(inh => inh.child_role_id === r.id || inh.parent_role_id === r.id) && (
+                  <GitBranch className="h-2.5 w-2.5 text-warning" />
+                )}
+              </button>
+            ))}
+          </div>
 
-        {/* Inheritance button */}
-        {focusRoleId && kernel.isTenantAdmin && (
-          <Button
-            variant={showInheritanceSelector ? "default" : "outline"}
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => setShowInheritanceSelector(v => !v)}
-          >
-            <GitBranch className="h-3.5 w-3.5" />
-            Herança
-          </Button>
-        )}
+          {/* Divider */}
+          <div className="h-6 w-px bg-border/40" />
 
-        {/* Scope Selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider whitespace-nowrap">Escopo:</span>
-          <Select value={scopeFilter} onValueChange={(v) => { setScopeFilter(v as typeof scopeFilter); setNodePositions(new Map()); }}>
-            <SelectTrigger className="h-8 w-[160px] text-xs bg-card border-border/50">
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground mr-1.5 shrink-0" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border-border shadow-lg z-50">
-              <SelectItem value="all" className="text-xs">
-                <div className="flex items-center gap-2">
-                  <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>Todos os escopos</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="tenant" className="text-xs">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-3.5 w-3.5 text-warning" />
-                  <span>Tenant</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="company_group" className="text-xs">
-                <div className="flex items-center gap-2">
-                  <Users className="h-3.5 w-3.5 text-info" />
-                  <span>Group</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="company" className="text-xs">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-3.5 w-3.5 text-primary" />
-                  <span>Company</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Controls cluster */}
+          <div className="flex items-center gap-1">
+            {focusRoleId && kernel.isTenantAdmin && (
+              <Button
+                variant={showInheritanceSelector ? "default" : "ghost"}
+                size="sm"
+                className="h-7 gap-1 text-[10px] px-2"
+                onClick={() => setShowInheritanceSelector(v => !v)}
+              >
+                <GitBranch className="h-3 w-3" />
+                Herança
+              </Button>
+            )}
+
+            <Select value={scopeFilter} onValueChange={(v) => { setScopeFilter(v as typeof scopeFilter); setNodePositions(new Map()); }}>
+              <SelectTrigger className="h-7 w-[120px] text-[10px] bg-muted/20 border-border/40 rounded-lg">
+                <Building2 className="h-3 w-3 text-muted-foreground mr-1 shrink-0" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border-border shadow-lg z-50">
+                <SelectItem value="all" className="text-xs">Todos escopos</SelectItem>
+                <SelectItem value="tenant" className="text-xs">Tenant</SelectItem>
+                <SelectItem value="company_group" className="text-xs">Grupo</SelectItem>
+                <SelectItem value="company" className="text-xs">Empresa</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="h-5 w-px bg-border/30" />
+
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.min(z + 0.15, 3))}>
+              <ZoomIn className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.max(z - 0.15, 0.25))}>
+              <ZoomOut className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={resetView}>
+              <Maximize2 className="h-3.5 w-3.5" />
+            </Button>
+            <span className="text-[9px] text-muted-foreground font-mono tabular-nums w-8 text-center">{Math.round(zoom * 100)}%</span>
+          </div>
         </div>
       </div>
 
-      {/* Inheritance selector panel */}
+      {/* ─── Inheritance Panel (conditional) ─── */}
       {showInheritanceSelector && focusRoleId && (
         <InheritancePanel
           roles={roles}
@@ -844,26 +830,32 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         />
       )}
 
-      {/* Permission Library + Canvas + Panel */}
-      <div className="grid gap-4 lg:grid-cols-[260px_1fr_280px]">
-        {/* ── Permission Library ── */}
-        <PermissionLibraryPanel
-          permissions={permissions}
-          rolePermMap={rolePermMap}
-          focusRoleId={focusRoleId}
-          onSelectPermission={(permId) => setSelectedNodeId(`perm:${permId}`)}
-          canDrag={!!focusRoleId && kernel.isTenantAdmin}
-        />
+      {/* ─── 3-Column Layout ─── */}
+      <div className="grid gap-3 lg:grid-cols-[260px_1fr_300px]" style={{ height: '72vh', minHeight: 520 }}>
 
-        {/* ── Canvas ── */}
-        <Card className={cn("overflow-hidden border-border/50", isDragOverCanvas && "ring-2 ring-primary/40 ring-inset")}>
+        {/* ══ LEFT: Permission Library ══ */}
+        <div className="flex flex-col gap-3 overflow-hidden">
+          <PermissionLibraryPanel
+            permissions={permissions}
+            rolePermMap={rolePermMap}
+            focusRoleId={focusRoleId}
+            onSelectPermission={(permId) => setSelectedNodeId(`perm:${permId}`)}
+            canDrag={!!focusRoleId && kernel.isTenantAdmin}
+          />
+        </div>
+
+        {/* ══ CENTER: Canvas ══ */}
+        <Card className={cn(
+          "overflow-hidden border-border/30 rounded-2xl shadow-sm",
+          isDragOverCanvas && "ring-2 ring-primary/40 ring-inset"
+        )}>
           <div
             ref={containerRef}
             className={cn(
-              "relative select-none",
+              "relative select-none h-full",
               dragNodeId ? "cursor-grabbing" : isPanning ? "cursor-grabbing" : "cursor-grab"
             )}
-            style={{ height: '68vh', minHeight: 460, background: 'repeating-conic-gradient(hsl(var(--muted)/0.15) 0% 25%, transparent 0% 50%) 0 0 / 20px 20px' }}
+            style={{ background: 'repeating-conic-gradient(hsl(var(--muted)/0.1) 0% 25%, transparent 0% 50%) 0 0 / 24px 24px' }}
             onMouseDown={handleCanvasMouseDown}
             onMouseMove={handleCanvasMouseMove}
             onMouseUp={handleCanvasMouseUp}
@@ -873,13 +865,13 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
             onDragLeave={handleCanvasDragLeave}
             onDrop={handleCanvasDrop}
           >
-            {/* Drop indicator overlay */}
+            {/* Drop overlay */}
             {isDragOverCanvas && (
               <div className="absolute inset-0 bg-primary/5 z-10 flex items-center justify-center pointer-events-none">
-                <div className="bg-card/95 backdrop-blur-sm border border-primary/30 rounded-xl px-6 py-3 shadow-lg">
+                <div className="bg-card/95 backdrop-blur-md border border-primary/30 rounded-2xl px-6 py-3 shadow-lg">
                   <p className="text-sm font-medium text-primary flex items-center gap-2">
                     <Plus className="h-4 w-4" />
-                    Solte para atribuir permissão ao cargo
+                    Solte para atribuir ao cargo
                   </p>
                 </div>
               </div>
@@ -894,7 +886,6 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
               }}
             >
               <defs>
-                {/* Animated flow gradient */}
                 <linearGradient id="flow-primary" x1="0" y1="0" x2="1" y2="0">
                   <stop offset="0%" stopColor="hsl(var(--primary)/0.1)" />
                   <stop offset="50%" stopColor="hsl(var(--primary)/0.6)">
@@ -916,7 +907,6 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
                   </stop>
                   <stop offset="100%" stopColor="hsl(var(--info)/0.1)" />
                 </linearGradient>
-                {/* Arrowheads */}
                 <marker id="ah-ga" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
                   <path d="M0,0 L10,3.5 L0,7 Z" fill="hsl(var(--primary)/0.5)" />
                 </marker>
@@ -926,7 +916,6 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
                 <marker id="ah-st" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
                   <path d="M0,0 L10,3.5 L0,7 Z" fill="hsl(var(--info)/0.4)" />
                 </marker>
-                {/* Glow filters */}
                 <filter id="glow-primary" x="-20%" y="-20%" width="140%" height="140%">
                   <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
                   <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
@@ -935,21 +924,21 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
 
               {/* Column labels */}
               {nodes.length > 0 && (
-                <g className="select-none" opacity={0.4}>
+                <g className="select-none" opacity={0.35}>
                   {[
                     { x: 60, label: 'ESCOPO' },
                     { x: 420, label: 'CARGO' },
                     { x: 760, label: 'RECURSO' },
                     ...(focusRoleId ? [{ x: 1080, label: 'PERMISSÃO' }] : []),
                   ].map(col => (
-                    <text key={col.label} x={col.x + NODE_W / 2} y={24} textAnchor="middle" fontSize="10" fontWeight="700" fontFamily="var(--font-display)" fill="hsl(var(--muted-foreground))" letterSpacing="1.5">
+                    <text key={col.label} x={col.x + NODE_W / 2} y={24} textAnchor="middle" fontSize="9" fontWeight="700" fontFamily="var(--font-display)" fill="hsl(var(--muted-foreground))" letterSpacing="2">
                       {col.label}
                     </text>
                   ))}
                 </g>
               )}
 
-              {/* ── EDGES ── */}
+              {/* Edges */}
               {edges.map(edge => {
                 const fromNode = nodes.find(n => n.id === edge.from);
                 const toNode = nodes.find(n => n.id === edge.to);
@@ -985,7 +974,7 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
                       </circle>
                     )}
                     {edge.label && !isDimmed && (
-                      <text x={(fX + tX) / 2} y={(fromY + toY) / 2 - 10} textAnchor="middle" fontSize="9" fontFamily="var(--font-body)" fill="hsl(var(--muted-foreground))" opacity={0.8}>
+                      <text x={(fX + tX) / 2} y={(fromY + toY) / 2 - 10} textAnchor="middle" fontSize="9" fontFamily="var(--font-body)" fill="hsl(var(--muted-foreground))" opacity={0.7}>
                         {edge.label}
                       </text>
                     )}
@@ -993,7 +982,7 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
                 );
               })}
 
-              {/* ── NODES ── */}
+              {/* Nodes */}
               {nodes.map(node => {
                 const s = NODE_STYLES[node.type];
                 const isSelected = selectedNodeId === node.id;
@@ -1015,38 +1004,30 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
                     onMouseEnter={() => !dragNodeId && setHoveredNodeId(node.id)}
                     onMouseLeave={() => setHoveredNodeId(null)}
                   >
-                    {/* Drop shadow */}
-                    <rect x={node.x + 2} y={node.y + 3} width={NODE_W} height={NODE_H} rx={14} fill="hsl(var(--foreground)/0.04)" />
-                    {/* Node body */}
+                    <rect x={node.x + 2} y={node.y + 3} width={NODE_W} height={NODE_H} rx={14} fill="hsl(var(--foreground)/0.03)" />
                     <rect x={node.x} y={node.y} width={NODE_W} height={NODE_H} rx={14} fill={s.bg} stroke={isSelected || isHovered ? s.hoverBorder : s.border} strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1} className="transition-colors" />
-                    {/* Left accent bar */}
-                    <rect x={node.x} y={node.y + 8} width={3.5} height={NODE_H - 16} rx={2} fill={s.text} opacity={isSelected ? 1 : 0.5} />
-                    {/* Icon bg */}
-                    <rect x={node.x + 14} y={node.y + (NODE_H - 30) / 2} width={30} height={30} rx={8} fill={isSelected ? s.text : s.border} opacity={isSelected ? 0.15 : 0.3} />
-                    {/* Icon */}
-                    <foreignObject x={node.x + 17} y={node.y + (NODE_H - 24) / 2} width={24} height={24}>
+                    <rect x={node.x} y={node.y + 8} width={3} height={NODE_H - 16} rx={1.5} fill={s.text} opacity={isSelected ? 1 : 0.4} />
+                    <rect x={node.x + 14} y={node.y + (NODE_H - 28) / 2} width={28} height={28} rx={8} fill={isSelected ? s.text : s.border} opacity={isSelected ? 0.15 : 0.25} />
+                    <foreignObject x={node.x + 17} y={node.y + (NODE_H - 22) / 2} width={22} height={22}>
                       <div className={cn("flex items-center justify-center w-full h-full", s.icon)}>
-                        <NodeIcon size={14} />
+                        <NodeIcon size={13} />
                       </div>
                     </foreignObject>
-                    {/* Label */}
-                    <text x={node.x + 52} y={node.y + (node.sublabel ? 24 : NODE_H / 2 + 4)} fontSize="12" fontWeight="600" fontFamily="var(--font-display)" fill={s.text} className="select-none">
-                      {node.label.length > 15 ? node.label.slice(0, 14) + '…' : node.label}
+                    <text x={node.x + 50} y={node.y + (node.sublabel ? 24 : NODE_H / 2 + 4)} fontSize="11" fontWeight="600" fontFamily="var(--font-display)" fill={s.text} className="select-none">
+                      {node.label.length > 16 ? node.label.slice(0, 15) + '…' : node.label}
                     </text>
                     {node.sublabel && (
-                      <text x={node.x + 52} y={node.y + 40} fontSize="9" fontFamily="var(--font-body)" fill="hsl(var(--muted-foreground))" className="select-none">
+                      <text x={node.x + 50} y={node.y + 39} fontSize="9" fontFamily="var(--font-body)" fill="hsl(var(--muted-foreground))" opacity={0.7} className="select-none">
                         {node.sublabel.length > 18 ? node.sublabel.slice(0, 17) + '…' : node.sublabel}
                       </text>
                     )}
-                    {/* Drag handle */}
-                    <foreignObject x={node.x + NODE_W - 28} y={node.y + (NODE_H - 20) / 2} width={20} height={20} data-drag-handle={node.id} className={cn("cursor-grab", isDragging && "cursor-grabbing")}>
-                      <div className="flex items-center justify-center w-full h-full text-muted-foreground/40 hover:text-muted-foreground/80 transition-colors">
-                        <GripVertical size={12} />
+                    <foreignObject x={node.x + NODE_W - 26} y={node.y + (NODE_H - 18) / 2} width={18} height={18} data-drag-handle={node.id} className={cn("cursor-grab", isDragging && "cursor-grabbing")}>
+                      <div className="flex items-center justify-center w-full h-full text-muted-foreground/30 hover:text-muted-foreground/70 transition-colors">
+                        <GripVertical size={11} />
                       </div>
                     </foreignObject>
-                    {/* Selection indicator */}
                     {isSelected && (
-                      <rect x={node.x - 4} y={node.y - 4} width={NODE_W + 8} height={NODE_H + 8} rx={16} fill="none" stroke={s.text} strokeWidth={1.5} strokeDasharray="5,4" opacity={0.4}>
+                      <rect x={node.x - 4} y={node.y - 4} width={NODE_W + 8} height={NODE_H + 8} rx={16} fill="none" stroke={s.text} strokeWidth={1.5} strokeDasharray="5,4" opacity={0.35}>
                         <animate attributeName="stroke-dashoffset" values="0;18" dur="1.5s" repeatCount="indefinite" />
                       </rect>
                     )}
@@ -1055,38 +1036,44 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
               })}
             </svg>
 
-            {/* Legend overlay */}
-            <div className="absolute bottom-3 left-3 bg-card/95 backdrop-blur-sm border border-border/40 rounded-xl px-3.5 py-2.5 space-y-1 text-[10px] shadow-sm">
-              <p className="text-muted-foreground font-semibold uppercase tracking-wider">Nós</p>
-              <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {/* Floating legend */}
+            <div className="absolute bottom-3 left-3 bg-card/90 backdrop-blur-md border border-border/30 rounded-xl px-3 py-2 space-y-0.5 text-[9px] shadow-sm">
+              <div className="flex flex-wrap gap-x-2.5 gap-y-0.5">
                 <LegendDot color="bg-primary/30" label="Cargo" />
                 <LegendDot color="bg-info/30" label="Permissão" />
                 <LegendDot color="bg-warning/30" label="Escopo" />
                 <LegendDot color="bg-accent-foreground/20" label="Recurso" />
               </div>
-              <p className="text-muted-foreground font-semibold uppercase tracking-wider pt-0.5">Arestas</p>
-              <div className="flex flex-wrap gap-x-3 gap-y-1">
-                <EdgeLeg color="hsl(var(--primary)/0.5)" label="grants_access" />
-                <EdgeLeg color="hsl(var(--warning)/0.5)" label="inherits_role" />
-                <EdgeLeg color="hsl(var(--info)/0.4)" label="scoped_to" dashed />
+              <div className="flex flex-wrap gap-x-2.5 gap-y-0.5">
+                <EdgeLeg color="hsl(var(--primary)/0.5)" label="grants" />
+                <EdgeLeg color="hsl(var(--warning)/0.5)" label="inherits" />
+                <EdgeLeg color="hsl(var(--info)/0.4)" label="scope" dashed />
               </div>
-              <p className="text-muted-foreground pt-1 flex items-center gap-1">
-                <Move className="h-3 w-3" /> Arraste o <GripVertical className="h-3 w-3 inline" /> para mover nós
-              </p>
             </div>
 
-            {/* Dragging indicator */}
+            {/* Floating stats bar */}
+            <div className="absolute bottom-3 right-3 flex items-center gap-3 bg-card/90 backdrop-blur-md border border-border/30 rounded-xl px-3.5 py-2 shadow-sm">
+              <MiniStat label="Nós" value={nodes.length} />
+              <div className="h-4 w-px bg-border/30" />
+              <MiniStat label="Arestas" value={edges.length} />
+              <div className="h-4 w-px bg-border/30" />
+              <MiniStat label="Cargos" value={roles.length} />
+              <div className="h-4 w-px bg-border/30" />
+              <MiniStat label="Perms" value={permissions.length} />
+            </div>
+
+            {/* Drag indicator */}
             {dragNodeId && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-card/90 backdrop-blur-sm border border-border/40 rounded-lg px-3 py-1.5 text-[10px] text-muted-foreground shadow-sm pointer-events-none">
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-card/90 backdrop-blur-md border border-border/30 rounded-lg px-3 py-1.5 text-[10px] text-muted-foreground shadow-sm pointer-events-none animate-fade-in">
                 <Move className="h-3 w-3 inline mr-1 text-primary" /> Arrastando…
               </div>
             )}
           </div>
         </Card>
 
-        {/* Right Panel: Validations + CRUD Toggle + Live Access Preview + Node Detail + Stats */}
-        <div className="space-y-3 flex flex-col overflow-hidden" style={{ height: '68vh', minHeight: 460 }}>
-          {/* ── Validation Alerts ── */}
+        {/* ══ RIGHT: Access Preview ══ */}
+        <div className="flex flex-col gap-3 overflow-hidden">
+          {/* Validation alerts */}
           <ValidationAlerts
             focusRoleId={focusRoleId}
             roles={roles}
@@ -1094,7 +1081,7 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
             rolePermMap={rolePermMap}
           />
 
-          {/* CRUD Toggle Panel */}
+          {/* CRUD Toggle */}
           {crudResource && focusRoleId && (
             <CrudTogglePanel
               resource={crudResource}
@@ -1107,7 +1094,7 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
             />
           )}
 
-          {/* Live Access Preview */}
+          {/* Live Access Preview — fills remaining space */}
           <LiveAccessPreview
             focusRoleId={focusRoleId}
             roles={roles}
@@ -1115,9 +1102,9 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
             rolePermMap={rolePermMap}
           />
 
-          {/* Node detail (compact) */}
+          {/* Node detail */}
           {selectedInfo && (
-            <Card className="animate-in fade-in slide-in-from-right-2 duration-200 shrink-0">
+            <Card className="animate-fade-in shrink-0 border-border/30 rounded-xl">
               <CardHeader className="pb-2 pt-3 px-3">
                 <div className="flex items-center gap-2">
                   <div className={cn(
@@ -1136,7 +1123,7 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
                 </div>
               </CardHeader>
               <CardContent className="pt-0 pb-3 px-3">
-                <ScrollArea className="max-h-[18vh]">
+                <ScrollArea className="max-h-[14vh]">
                   <div className="space-y-0.5">
                     {selectedInfo.connectedNodes.slice(0, 8).map(cNode => {
                       const edge = selectedInfo.edges.find(e => e.from === cNode.id || e.to === cNode.id);
@@ -1146,34 +1133,22 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
                         <button
                           key={cNode.id}
                           onClick={() => setSelectedNodeId(cNode.id)}
-                          className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-left hover:bg-muted/40 transition-colors"
+                          className="w-full flex items-center gap-1.5 px-2 py-1 rounded-md text-left hover:bg-muted/40 transition-colors"
                         >
                           <CIcon className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span className="text-[11px] text-foreground truncate flex-1">{cNode.label}</span>
+                          <span className="text-[10px] text-foreground truncate flex-1">{cNode.label}</span>
                           <span className="text-[9px] text-muted-foreground">{isOutgoing ? '→' : '←'}</span>
                         </button>
                       );
                     })}
                     {selectedInfo.connectedNodes.length > 8 && (
-                      <p className="text-[10px] text-muted-foreground text-center py-1">+{selectedInfo.connectedNodes.length - 8} mais</p>
+                      <p className="text-[9px] text-muted-foreground text-center py-1">+{selectedInfo.connectedNodes.length - 8} mais</p>
                     )}
                   </div>
                 </ScrollArea>
               </CardContent>
             </Card>
           )}
-
-          {/* Stats */}
-          <Card className="shrink-0 mt-auto">
-            <CardContent className="py-3 px-3">
-              <div className="grid grid-cols-4 gap-1">
-                <StatBox label="Nós" value={nodes.length} />
-                <StatBox label="Arestas" value={edges.length} />
-                <StatBox label="Cargos" value={roles.length} />
-                <StatBox label="Perms" value={permissions.length} />
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
@@ -1466,24 +1441,26 @@ function LiveAccessPreview({ focusRoleId, roles, permissions, rolePermMap }: Liv
 
   if (!focusedRole) {
     return (
-      <Card className="border-dashed border-border/50 shrink-0">
-        <CardContent className="py-6 text-center">
-          <Scan className="h-7 w-7 mx-auto mb-2 text-muted-foreground/20" />
-          <p className="text-[11px] text-muted-foreground">Selecione um cargo para ver o preview de acesso.</p>
+      <Card className="border-dashed border-border/30 shrink-0 rounded-2xl">
+        <CardContent className="py-8 text-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted/30 mx-auto mb-3">
+            <Scan className="h-5 w-5 text-muted-foreground/30" />
+          </div>
+          <p className="text-xs text-muted-foreground">Selecione um cargo para ver o preview de acesso.</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="flex-1 flex flex-col overflow-hidden border-border/50 animate-in fade-in slide-in-from-right-2 duration-200">
-      <CardHeader className="pb-2 pt-3 px-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-            <Scan className="h-3.5 w-3.5 text-primary" />
+    <Card className="flex-1 flex flex-col overflow-hidden border-border/30 rounded-2xl shadow-sm animate-fade-in">
+      <CardHeader className="pb-2 pt-3.5 px-3.5 shrink-0 border-b border-border/20">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/15">
+            <Scan className="h-4 w-4 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-xs">Live Access Preview</CardTitle>
+            <CardTitle className="text-xs font-bold">Live Access Preview</CardTitle>
             <p className="text-[10px] text-muted-foreground truncate">
               Usuário com cargo <span className="font-semibold text-foreground">{focusedRole.name}</span> poderá:
             </p>
@@ -1602,11 +1579,11 @@ function PermissionLibraryPanel({ permissions, rolePermMap, focusRoleId, onSelec
   };
 
   return (
-    <Card className="border-border/50 flex flex-col overflow-hidden" style={{ height: '68vh', minHeight: 460 }}>
-      <CardHeader className="pb-2 pt-3 px-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-            <Library className="h-3.5 w-3.5 text-primary" />
+    <Card className="border-border/30 rounded-2xl flex flex-col overflow-hidden h-full shadow-sm">
+      <CardHeader className="pb-2 pt-3.5 px-3.5 shrink-0 border-b border-border/20">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/15">
+            <Library className="h-4 w-4 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <CardTitle className="text-xs">Permission Library</CardTitle>
@@ -1833,6 +1810,15 @@ function StatBox({ label, value }: { label: string; value: number }) {
     <div className="text-center">
       <p className="text-lg font-bold font-mono tabular-nums text-foreground">{value}</p>
       <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="text-center">
+      <p className="text-xs font-bold font-mono tabular-nums text-foreground leading-none">{value}</p>
+      <p className="text-[8px] text-muted-foreground uppercase tracking-wider mt-0.5">{label}</p>
     </div>
   );
 }
