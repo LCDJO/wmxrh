@@ -37,6 +37,8 @@ import { createFeatureLifecycleManager } from './feature-lifecycle-manager';
 import { createCognitiveOrchestrator } from './cognitive-orchestrator';
 import { CognitiveInsightsService } from '@/domains/platform-cognitive/cognitive-insights.service';
 import { installEventBridges } from './event-bridges';
+import { PLATFORM_EVENTS } from './platform-events';
+import type { PlatformBootstrappedPayload } from './platform-events';
 
 // ── Security Kernel imports ──────────────────────────────────────
 import {
@@ -173,6 +175,18 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
       bootedAt = Date.now();
       phase = 'ready';
       events.emit('runtime:ready', 'PlatformRuntime', { booted_at: bootedAt });
+
+      // ── Canonical: PlatformBootstrapped ─────────────────────
+      events.emit<PlatformBootstrappedPayload>(
+        PLATFORM_EVENTS.PlatformBootstrapped,
+        'PlatformRuntime',
+        {
+          booted_at: bootedAt,
+          services_count: services.list().length,
+          modules_count: modules.list().length,
+        },
+        { priority: 'high' },
+      );
 
       console.info('[PlatformOS] Runtime ready', {
         services: services.list().length,

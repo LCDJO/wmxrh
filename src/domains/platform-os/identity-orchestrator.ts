@@ -17,6 +17,8 @@ import type {
   OperationalIdentitySnapshot,
   GlobalEventKernelAPI,
 } from './types';
+import { PLATFORM_EVENTS } from './platform-events';
+import type { IdentitySnapshotUpdatedPayload } from './platform-events';
 
 // ── Security Kernel sources ──────────────────────────────────
 import { identityBoundary } from '@/domains/security/kernel/identity-boundary';
@@ -157,11 +159,28 @@ export function createIdentityOrchestrator(events: GlobalEventKernelAPI): Identi
 
   // ── Notify listeners ─────────────────────────────────────────
 
-  function notifyListeners(): void {
+  function emitSnapshotUpdated(trigger: IdentitySnapshotUpdatedPayload['trigger']): void {
+    const snap = buildSnapshot();
+    events.emit<IdentitySnapshotUpdatedPayload>(
+      PLATFORM_EVENTS.IdentitySnapshotUpdated,
+      'IdentityOrchestrator',
+      {
+        user_id: snap.user_id,
+        is_authenticated: snap.is_authenticated,
+        is_impersonating: snap.is_impersonating,
+        tenant_id: snap.current_tenant_id,
+        scope_level: snap.scope_level,
+        trigger,
+      },
+    );
+  }
+
+  function notifyListeners(trigger: IdentitySnapshotUpdatedPayload['trigger'] = 'external'): void {
     const snap = buildSnapshot();
     listeners.forEach(fn => {
       try { fn(snap); } catch (err) { console.error('[IdentityOrchestrator] listener error:', err); }
     });
+    emitSnapshotUpdated(trigger);
   }
 
   // ── Public API ───────────────────────────────────────────────
@@ -172,8 +191,7 @@ export function createIdentityOrchestrator(events: GlobalEventKernelAPI): Identi
 
   async function refresh(): Promise<void> {
     events.emit('identity:refresh_requested', 'IdentityOrchestrator', {});
-    // Notify listeners with fresh snapshot
-    notifyListeners();
+    notifyListeners('refresh');
   }
 
   function onIdentityChange(handler: IdentityChangeHandler): () => void {
@@ -195,10 +213,10 @@ export function createIdentityOrchestrator(events: GlobalEventKernelAPI): Identi
 
   // ── Listen for identity updates from event kernel ────────────
 
-  events.on('identity:updated', () => notifyListeners());
-  events.on('ibl:ContextSwitched', () => notifyListeners());
-  events.on('iil:PhaseTransition', () => notifyListeners());
-  events.on('iil:WorkspaceSwitched', () => notifyListeners());
+  events.on('identity:updated', () => notifyListeners('external'));
+  events.on('ibl:ContextSwitched', () => notifyListeners('context_switch'));
+  events.on('iil:PhaseTransition', () => notifyListeners('phase_transition'));
+  events.on('iil:WorkspaceSwitched', () => notifyListeners('workspace_switch'));
 
   return {
     snapshot,
