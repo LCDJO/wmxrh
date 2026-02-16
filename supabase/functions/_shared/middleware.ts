@@ -8,10 +8,14 @@
  *   4. ScopeGuardMiddleware     – validates hierarchical scope access
  *   5. RateLimitMiddleware      – per-user request throttling
  *   6. AuditMiddleware          – logs every request to audit_logs
+ *   7. ValidationMiddleware     – validates request payloads, blocks invalid financial data
  *
- * Usage in any edge function:
- *   import { createHandler } from "../_shared/middleware.ts";
- *   Deno.serve(createHandler(async (ctx) => { ... }));
+ * Usage:
+ *   import { createHandler, v } from "../_shared/middleware.ts";
+ *   Deno.serve(createHandler(async (ctx) => {
+ *     const body = await validateBody(ctx, salaryContractSchema);
+ *     ...
+ *   }, { rateLimit: "financial", route: "salary", action: "create" }));
  */
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
@@ -22,7 +26,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 
 export interface PermissionScope {
   role: string;
-  scope_type: string;  // 'tenant' | 'company_group' | 'company'
+  scope_type: string;
   scope_id: string | null;
 }
 
@@ -42,15 +46,10 @@ export interface MiddlewareContext {
 export type HandlerFn = (ctx: MiddlewareContext) => Promise<Response>;
 
 export interface HandlerOptions {
-  /** Skip auth entirely (public/webhook endpoints) */
   skipAuth?: boolean;
-  /** Rate limit tier for this endpoint */
   rateLimit?: RateLimitTier;
-  /** Audit metadata: route name for logging */
   route?: string;
-  /** Audit metadata: action name */
   action?: string;
-  /** Skip audit logging for this endpoint */
   skipAudit?: boolean;
 }
 
@@ -71,18 +70,25 @@ export const corsHeaders: Record<string, string> = {
 export class MiddlewareError extends Error {
   status: number;
   code: string;
-  constructor(status: number, code: string, message: string) {
+  details?: Record<string, string[]>;
+  constructor(status: number, code: string, message: string, details?: Record<string, string[]>) {
     super(message);
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
-function errorResponse(requestId: string, status: number, code: string, message: string): Response {
-  return new Response(
-    JSON.stringify({ error: { code, message }, request_id: requestId, timestamp: new Date().toISOString() }),
-    { status, headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": requestId } },
-  );
+function errorResponse(requestId: string, status: number, code: string, message: string, details?: Record<string, string[]>): Response {
+  const body: Record<string, unknown> = {
+    error: { code, message, ...(details ? { details } : {}) },
+    request_id: requestId,
+    timestamp: new Date().toISOString(),
+  };
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json", "x-request-id": requestId },
+  });
 }
 
 // ═══════════════════════════════════
@@ -103,25 +109,17 @@ interface TenantInfo { tenantId: string; tenantName: string; }
 
 async function resolveTenant(supabase: SupabaseClient, userId: string, req: Request): Promise<TenantInfo> {
   const headerTenantId = req.headers.get("x-tenant-id");
-
   if (headerTenantId) {
     const { data: membership, error } = await supabase
-      .from("tenant_memberships")
-      .select("tenant_id, tenants(name)")
-      .eq("user_id", userId)
-      .eq("tenant_id", headerTenantId)
-      .maybeSingle();
+      .from("tenant_memberships").select("tenant_id, tenants(name)")
+      .eq("user_id", userId).eq("tenant_id", headerTenantId).maybeSingle();
     if (error || !membership) throw new MiddlewareError(403, "TENANT_ACCESS_DENIED", "You do not have access to this tenant");
     return { tenantId: headerTenantId, tenantName: (membership as any).tenants?.name || "Unknown" };
   }
-
   const { data: memberships, error } = await supabase
-    .from("tenant_memberships")
-    .select("tenant_id, tenants(name)")
-    .eq("user_id", userId)
-    .limit(1);
+    .from("tenant_memberships").select("tenant_id, tenants(name)")
+    .eq("user_id", userId).limit(1);
   if (error || !memberships?.length) throw new MiddlewareError(403, "NO_TENANT", "User has no tenant membership");
-
   const first = memberships[0];
   return { tenantId: first.tenant_id, tenantName: (first as any).tenants?.name || "Unknown" };
 }
@@ -135,23 +133,18 @@ interface AuthInfo { userId: string; email: string; supabase: SupabaseClient; }
 async function authenticateRequest(req: Request): Promise<AuthInfo> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) throw new MiddlewareError(401, "MISSING_TOKEN", "Authorization header is required");
-
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
-
   const token = authHeader.replace("Bearer ", "");
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
   if (claimsError || !claimsData?.claims) throw new MiddlewareError(401, "INVALID_TOKEN", "JWT validation failed");
-
   const claims = claimsData.claims;
   const userId = claims.sub as string;
   const email = (claims.email as string) || "";
   if (!userId) throw new MiddlewareError(401, "INVALID_TOKEN", "Token missing subject claim");
-
   const exp = claims.exp as number;
   if (exp && exp < Math.floor(Date.now() / 1000)) throw new MiddlewareError(401, "TOKEN_EXPIRED", "JWT has expired");
-
   return { userId, email, supabase };
 }
 
@@ -161,9 +154,7 @@ async function resolvePermissionScopes(
   const { data: userRoles, error } = await supabase
     .from("user_roles").select("role, scope_type, scope_id")
     .eq("user_id", userId).eq("tenant_id", tenantId);
-
   if (error) { console.error("[AuthMiddleware] Failed to fetch user_roles:", error.message); return { roles: [], scopes: [] }; }
-
   const roles = [...new Set((userRoles || []).map((r: any) => r.role))];
   const scopes: PermissionScope[] = (userRoles || []).map((r: any) => ({
     role: r.role, scope_type: r.scope_type, scope_id: r.scope_id,
@@ -175,41 +166,22 @@ async function resolvePermissionScopes(
 // 4) ScopeGuardMiddleware
 // ═══════════════════════════════════
 
-/**
- * Validates that the user can access the requested company/group scope.
- * Reads x-company-id and x-group-id headers from the request.
- * Tenant-scoped users pass through; group/company-scoped users are restricted.
- */
 function validateScopeAccess(ctx: MiddlewareContext): void {
   const requestedCompanyId = ctx.request.headers.get("x-company-id");
   const requestedGroupId = ctx.request.headers.get("x-group-id");
-
-  // If no specific scope requested, no cross-scope check needed
   if (!requestedCompanyId && !requestedGroupId) return;
-
-  // Tenant-level users can access everything within the tenant
   const hasTenantScope = ctx.permissionScopes.some(s => s.scope_type === "tenant");
   if (hasTenantScope) return;
-
-  // Check group access
   if (requestedGroupId) {
-    const hasGroupAccess = ctx.permissionScopes.some(
-      s => s.scope_type === "company_group" && s.scope_id === requestedGroupId
-    );
-    if (!hasGroupAccess) {
-      throw new MiddlewareError(403, "SCOPE_CROSS_GROUP", `Access denied to group ${requestedGroupId}`);
-    }
+    const hasGroupAccess = ctx.permissionScopes.some(s => s.scope_type === "company_group" && s.scope_id === requestedGroupId);
+    if (!hasGroupAccess) throw new MiddlewareError(403, "SCOPE_CROSS_GROUP", `Access denied to group ${requestedGroupId}`);
   }
-
-  // Check company access
   if (requestedCompanyId) {
     const hasCompanyAccess = ctx.permissionScopes.some(s =>
       (s.scope_type === "company" && s.scope_id === requestedCompanyId) ||
-      (s.scope_type === "company_group") // Group-scoped users may access companies within their group (RLS enforces this)
+      (s.scope_type === "company_group")
     );
-    if (!hasCompanyAccess) {
-      throw new MiddlewareError(403, "SCOPE_CROSS_COMPANY", `Access denied to company ${requestedCompanyId}`);
-    }
+    if (!hasCompanyAccess) throw new MiddlewareError(403, "SCOPE_CROSS_COMPANY", `Access denied to company ${requestedCompanyId}`);
   }
 }
 
@@ -219,18 +191,12 @@ function validateScopeAccess(ctx: MiddlewareContext): void {
 
 export type RateLimitTier = "standard" | "sensitive" | "financial";
 
-interface RateLimitConfig {
-  maxRequests: number;
-  windowMs: number;
-}
-
-const RATE_LIMIT_CONFIGS: Record<RateLimitTier, RateLimitConfig> = {
-  standard:  { maxRequests: 100, windowMs: 60_000 },    // 100/min
-  sensitive: { maxRequests: 30,  windowMs: 60_000 },     // 30/min
-  financial: { maxRequests: 10,  windowMs: 60_000 },     // 10/min
+const RATE_LIMIT_CONFIGS: Record<RateLimitTier, { maxRequests: number; windowMs: number }> = {
+  standard:  { maxRequests: 100, windowMs: 60_000 },
+  sensitive: { maxRequests: 30,  windowMs: 60_000 },
+  financial: { maxRequests: 10,  windowMs: 60_000 },
 };
 
-// In-memory sliding window per user+tier (resets on cold start — acceptable for edge functions)
 const rateLimitStore = new Map<string, { timestamps: number[] }>();
 
 function checkRateLimit(userId: string, tier: RateLimitTier): void {
@@ -238,29 +204,17 @@ function checkRateLimit(userId: string, tier: RateLimitTier): void {
   const key = `${userId}:${tier}`;
   const now = Date.now();
   const windowStart = now - config.windowMs;
-
   let entry = rateLimitStore.get(key);
-  if (!entry) {
-    entry = { timestamps: [] };
-    rateLimitStore.set(key, entry);
-  }
-
-  // Slide window: remove expired timestamps
+  if (!entry) { entry = { timestamps: [] }; rateLimitStore.set(key, entry); }
   entry.timestamps = entry.timestamps.filter(t => t > windowStart);
-
   if (entry.timestamps.length >= config.maxRequests) {
     const retryAfterMs = entry.timestamps[0] + config.windowMs - now;
-    throw new MiddlewareError(
-      429,
-      "RATE_LIMITED",
-      `Rate limit exceeded (${tier}: ${config.maxRequests}/${config.windowMs / 1000}s). Retry after ${Math.ceil(retryAfterMs / 1000)}s`
-    );
+    throw new MiddlewareError(429, "RATE_LIMITED",
+      `Rate limit exceeded (${tier}: ${config.maxRequests}/${config.windowMs / 1000}s). Retry after ${Math.ceil(retryAfterMs / 1000)}s`);
   }
-
   entry.timestamps.push(now);
 }
 
-// Periodic cleanup to prevent memory leaks (every 5 minutes)
 setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of rateLimitStore.entries()) {
@@ -273,70 +227,355 @@ setInterval(() => {
 // 6) AuditMiddleware
 // ═══════════════════════════════════
 
-/**
- * Logs the request to audit_logs using a service-role client (SECURITY DEFINER equivalent).
- * Fire-and-forget: does not block the response.
- */
-async function auditLog(
-  ctx: MiddlewareContext,
-  options: HandlerOptions,
-  responseStatus: number,
-): Promise<void> {
+async function auditLog(ctx: MiddlewareContext, options: HandlerOptions, responseStatus: number): Promise<void> {
   try {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!serviceRoleKey) { console.warn("[AuditMiddleware] Missing service role key, skipping audit"); return; }
-
     const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
-
     const url = new URL(ctx.request.url);
-    const companyId = ctx.request.headers.get("x-company-id") || null;
-    const groupId = ctx.request.headers.get("x-group-id") || null;
-
     await supabaseAdmin.from("audit_logs").insert({
-      tenant_id: ctx.tenantId,
-      user_id: ctx.userId,
-      company_id: companyId,
-      company_group_id: groupId,
+      tenant_id: ctx.tenantId, user_id: ctx.userId,
+      company_id: ctx.request.headers.get("x-company-id") || null,
+      company_group_id: ctx.request.headers.get("x-group-id") || null,
       action: options.action || ctx.request.method,
-      entity_type: options.route || url.pathname,
-      entity_id: null,
+      entity_type: options.route || url.pathname, entity_id: null,
       metadata: {
-        request_id: ctx.requestId,
-        method: ctx.request.method,
-        path: url.pathname,
-        response_status: responseStatus,
-        elapsed_ms: Date.now() - ctx.startedAt,
+        request_id: ctx.requestId, method: ctx.request.method, path: url.pathname,
+        response_status: responseStatus, elapsed_ms: Date.now() - ctx.startedAt,
         roles: ctx.roles,
         ip: ctx.request.headers.get("x-forwarded-for") || ctx.request.headers.get("cf-connecting-ip") || null,
         user_agent: ctx.request.headers.get("user-agent") || null,
       },
     });
   } catch (err) {
-    // Never let audit failures break the pipeline
     console.error("[AuditMiddleware] Failed to write audit log:", err);
   }
 }
 
 // ═══════════════════════════════════
-// Pipeline Orchestrator
+// 7) ValidationMiddleware
 // ═══════════════════════════════════
 
 /**
- * Creates a Deno.serve-compatible handler with the full 6-layer middleware pipeline.
+ * Lightweight schema validation (no external deps).
+ * Provides type-safe validation with detailed field-level errors.
  */
+
+type FieldRule = {
+  type: "string" | "number" | "boolean" | "uuid" | "date" | "email" | "enum" | "array" | "object";
+  required?: boolean;
+  min?: number;       // string: minLength, number: min value
+  max?: number;       // string: maxLength, number: max value
+  precision?: number; // max decimal places for numbers
+  positive?: boolean; // number must be > 0
+  enumValues?: string[];
+  pattern?: RegExp;
+  maxBytes?: number;  // max payload size for strings
+  sanitize?: boolean; // strip HTML tags
+  items?: ValidationSchema; // for arrays
+  custom?: (value: unknown, field: string) => string | null; // custom validator
+};
+
+export type ValidationSchema = Record<string, FieldRule>;
+
+interface ValidationResult<T = Record<string, unknown>> {
+  valid: boolean;
+  data: T;
+  errors: Record<string, string[]>;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const HTML_TAG_RE = /<[^>]*>/g;
+
+function sanitizeString(val: string): string {
+  return val.replace(HTML_TAG_RE, "").trim();
+}
+
+function validateField(field: string, value: unknown, rule: FieldRule, errors: Record<string, string[]>): unknown {
+  const addError = (msg: string) => {
+    if (!errors[field]) errors[field] = [];
+    errors[field].push(msg);
+  };
+
+  // Required check
+  if (value === undefined || value === null || value === "") {
+    if (rule.required) addError(`${field} is required`);
+    return value;
+  }
+
+  let processed = value;
+
+  switch (rule.type) {
+    case "string": {
+      if (typeof value !== "string") { addError(`${field} must be a string`); return value; }
+      processed = rule.sanitize ? sanitizeString(value) : value.trim();
+      const str = processed as string;
+      if (rule.min !== undefined && str.length < rule.min) addError(`${field} must be at least ${rule.min} characters`);
+      if (rule.max !== undefined && str.length > rule.max) addError(`${field} must be at most ${rule.max} characters`);
+      if (rule.maxBytes !== undefined && new TextEncoder().encode(str).length > rule.maxBytes) addError(`${field} exceeds max byte size`);
+      if (rule.pattern && !rule.pattern.test(str)) addError(`${field} has invalid format`);
+      break;
+    }
+    case "number": {
+      const num = typeof value === "string" ? Number(value) : value;
+      if (typeof num !== "number" || isNaN(num)) { addError(`${field} must be a valid number`); return value; }
+      if (!isFinite(num)) { addError(`${field} must be a finite number`); return value; }
+      if (rule.positive && num <= 0) addError(`${field} must be positive`);
+      if (rule.min !== undefined && num < rule.min) addError(`${field} must be >= ${rule.min}`);
+      if (rule.max !== undefined && num > rule.max) addError(`${field} must be <= ${rule.max}`);
+      if (rule.precision !== undefined) {
+        const parts = String(num).split(".");
+        if (parts[1] && parts[1].length > rule.precision) addError(`${field} must have at most ${rule.precision} decimal places`);
+      }
+      processed = num;
+      break;
+    }
+    case "boolean": {
+      if (typeof value !== "boolean") { addError(`${field} must be a boolean`); return value; }
+      break;
+    }
+    case "uuid": {
+      if (typeof value !== "string" || !UUID_RE.test(value)) addError(`${field} must be a valid UUID`);
+      break;
+    }
+    case "date": {
+      if (typeof value !== "string" || !DATE_RE.test(value)) { addError(`${field} must be a valid date (YYYY-MM-DD)`); return value; }
+      const d = new Date(value);
+      if (isNaN(d.getTime())) addError(`${field} is not a valid date`);
+      break;
+    }
+    case "email": {
+      if (typeof value !== "string" || !EMAIL_RE.test(value)) addError(`${field} must be a valid email`);
+      if (typeof value === "string" && value.length > 255) addError(`${field} email too long`);
+      break;
+    }
+    case "enum": {
+      if (!rule.enumValues?.includes(String(value))) addError(`${field} must be one of: ${rule.enumValues?.join(", ")}`);
+      break;
+    }
+    case "array": {
+      if (!Array.isArray(value)) { addError(`${field} must be an array`); return value; }
+      if (rule.min !== undefined && value.length < rule.min) addError(`${field} must have at least ${rule.min} items`);
+      if (rule.max !== undefined && value.length > rule.max) addError(`${field} must have at most ${rule.max} items`);
+      break;
+    }
+    case "object": {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) addError(`${field} must be an object`);
+      break;
+    }
+  }
+
+  // Custom validator
+  if (rule.custom) {
+    const customErr = rule.custom(processed, field);
+    if (customErr) addError(customErr);
+  }
+
+  return processed;
+}
+
+function validatePayload<T = Record<string, unknown>>(
+  payload: Record<string, unknown>,
+  schema: ValidationSchema
+): ValidationResult<T> {
+  const errors: Record<string, string[]> = {};
+  const data: Record<string, unknown> = {};
+
+  for (const [field, rule] of Object.entries(schema)) {
+    data[field] = validateField(field, payload[field], rule, errors);
+  }
+
+  // Reject unknown fields (allowlist approach)
+  for (const key of Object.keys(payload)) {
+    if (!(key in schema)) {
+      if (!errors[key]) errors[key] = [];
+      errors[key].push(`Unknown field: ${key}`);
+    }
+  }
+
+  return {
+    valid: Object.keys(errors).length === 0,
+    data: data as T,
+    errors,
+  };
+}
+
+// ─── Max payload size guard ───
+
+const MAX_PAYLOAD_BYTES = 1_048_576; // 1MB
+
+async function parseAndLimitBody(req: Request): Promise<Record<string, unknown>> {
+  const contentType = req.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new MiddlewareError(415, "UNSUPPORTED_MEDIA_TYPE", "Content-Type must be application/json");
+  }
+
+  const raw = await req.text();
+  if (new TextEncoder().encode(raw).length > MAX_PAYLOAD_BYTES) {
+    throw new MiddlewareError(413, "PAYLOAD_TOO_LARGE", `Request body exceeds ${MAX_PAYLOAD_BYTES} bytes`);
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      throw new MiddlewareError(400, "INVALID_PAYLOAD", "Request body must be a JSON object");
+    }
+    return parsed;
+  } catch (err) {
+    if (err instanceof MiddlewareError) throw err;
+    throw new MiddlewareError(400, "INVALID_JSON", "Request body is not valid JSON");
+  }
+}
+
+/**
+ * Parse + validate the request body against a schema.
+ * Throws MiddlewareError(422) with field-level details on failure.
+ */
+export async function validateBody<T = Record<string, unknown>>(
+  ctx: MiddlewareContext,
+  schema: ValidationSchema
+): Promise<T> {
+  const payload = await parseAndLimitBody(ctx.request);
+  const result = validatePayload<T>(payload, schema);
+
+  if (!result.valid) {
+    throw new MiddlewareError(
+      422,
+      "VALIDATION_FAILED",
+      `Validation failed for ${Object.keys(result.errors).length} field(s)`,
+      result.errors
+    );
+  }
+
+  return result.data;
+}
+
+// ═══════════════════════════════════
+// Pre-built Financial Schemas
+// ═══════════════════════════════════
+
+/** Reusable field rules for financial data */
+export const v = {
+  // ── Identifiers ──
+  uuid: (required = true): FieldRule => ({ type: "uuid", required }),
+  tenantId: (): FieldRule => ({ type: "uuid", required: true }),
+  employeeId: (): FieldRule => ({ type: "uuid", required: true }),
+  companyId: (): FieldRule => ({ type: "uuid", required: false }),
+  groupId: (): FieldRule => ({ type: "uuid", required: false }),
+
+  // ── Financial ──
+  salary: (opts?: { min?: number; max?: number }): FieldRule => ({
+    type: "number", required: true, positive: true, precision: 2,
+    min: opts?.min ?? 0.01,
+    max: opts?.max ?? 999_999_999.99,
+    custom: (val) => {
+      if (typeof val === "number" && val > 999_999_999.99) return "Salary exceeds maximum allowed value";
+      return null;
+    },
+  }),
+  percentage: (): FieldRule => ({
+    type: "number", required: false, min: -100, max: 1000, precision: 2,
+  }),
+  amount: (required = true): FieldRule => ({
+    type: "number", required, positive: true, precision: 2, min: 0.01, max: 999_999_999.99,
+  }),
+
+  // ── Strings ──
+  name: (max = 200): FieldRule => ({ type: "string", required: true, min: 1, max, sanitize: true }),
+  description: (max = 1000): FieldRule => ({ type: "string", required: false, max, sanitize: true }),
+  reason: (max = 500): FieldRule => ({ type: "string", required: false, max, sanitize: true }),
+  email: (): FieldRule => ({ type: "email", required: false }),
+
+  // ── Dates ──
+  date: (required = true): FieldRule => ({ type: "date", required }),
+  dateOptional: (): FieldRule => ({ type: "date", required: false }),
+
+  // ── Enums ──
+  adjustmentType: (): FieldRule => ({
+    type: "enum", required: true,
+    enumValues: ["annual", "promotion", "adjustment", "merit", "correction"],
+  }),
+  additionalType: (): FieldRule => ({
+    type: "enum", required: true,
+    enumValues: ["bonus", "commission", "allowance", "hazard_pay", "overtime", "other"],
+  }),
+  employeeStatus: (): FieldRule => ({
+    type: "enum", required: true,
+    enumValues: ["active", "inactive", "on_leave"],
+  }),
+
+  // ── Boolean ──
+  boolean: (required = false): FieldRule => ({ type: "boolean", required }),
+} as const;
+
+/** Salary contract creation schema */
+export const salaryContractSchema: ValidationSchema = {
+  employee_id:  v.employeeId(),
+  base_salary:  v.salary(),
+  start_date:   v.date(),
+  end_date:     v.dateOptional(),
+  company_id:   v.companyId(),
+  company_group_id: v.groupId(),
+};
+
+/** Salary adjustment schema */
+export const salaryAdjustmentSchema: ValidationSchema = {
+  employee_id:      v.employeeId(),
+  contract_id:      v.uuid(),
+  adjustment_type:  v.adjustmentType(),
+  previous_salary:  v.salary(),
+  new_salary:       v.salary(),
+  percentage:       v.percentage(),
+  reason:           v.reason(),
+  company_id:       v.companyId(),
+  company_group_id: v.groupId(),
+};
+
+/** Salary additional schema */
+export const salaryAdditionalSchema: ValidationSchema = {
+  employee_id:      v.employeeId(),
+  additional_type:  v.additionalType(),
+  amount:           v.amount(),
+  description:      v.description(),
+  start_date:       v.date(),
+  end_date:         v.dateOptional(),
+  is_recurring:     v.boolean(true),
+  company_id:       v.companyId(),
+  company_group_id: v.groupId(),
+};
+
+/** Employee creation schema */
+export const employeeSchema: ValidationSchema = {
+  name:           v.name(200),
+  email:          v.email(),
+  cpf:            { type: "string", required: false, pattern: /^\d{11}$/, max: 11 },
+  phone:          { type: "string", required: false, max: 20, sanitize: true },
+  company_id:     v.uuid(),
+  department_id:  v.uuid(false),
+  position_id:    v.uuid(false),
+  manager_id:     v.uuid(false),
+  hire_date:      v.dateOptional(),
+  base_salary:    { type: "number", required: false, positive: true, precision: 2, max: 999_999_999.99 },
+  status:         v.employeeStatus(),
+  company_group_id: v.groupId(),
+};
+
+// ═══════════════════════════════════
+// Pipeline Orchestrator
+// ═══════════════════════════════════
+
 export function createHandler(handler: HandlerFn, options: HandlerOptions = {}): (req: Request) => Promise<Response> {
   return async (req: Request): Promise<Response> => {
-    // ── CORS preflight ──
     if (req.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    // ── 1) RequestId ──
     const requestId = resolveRequestId(req);
     const startedAt = Date.now();
 
     try {
-      // ── Public/webhook endpoints ──
       if (options.skipAuth) {
         const ctx: MiddlewareContext = {
           requestId, userId: "", email: "", tenantId: "", tenantName: "",
@@ -349,50 +588,42 @@ export function createHandler(handler: HandlerFn, options: HandlerOptions = {}):
         return response;
       }
 
-      // ── 3) Auth ──
+      // 3) Auth
       const { userId, email, supabase } = await authenticateRequest(req);
-
-      // ── 2) Tenant ──
+      // 2) Tenant
       const { tenantId, tenantName } = await resolveTenant(supabase, userId, req);
-
-      // ── 3 cont.) Permission Scopes ──
+      // 3 cont.) Scopes
       const { roles, scopes } = await resolvePermissionScopes(supabase, userId, tenantId);
 
-      // ── Build Context ──
       const ctx: MiddlewareContext = {
         requestId, userId, email, tenantId, tenantName,
         roles, permissionScopes: scopes, supabase, request: req, startedAt,
       };
 
-      // ── 4) ScopeGuard ──
+      // 4) ScopeGuard
       validateScopeAccess(ctx);
+      // 5) RateLimit
+      checkRateLimit(userId, options.rateLimit || "standard");
 
-      // ── 5) RateLimit ──
-      const tier = options.rateLimit || "standard";
-      checkRateLimit(userId, tier);
+      console.log(`[Middleware] req=${requestId} user=${userId} tenant=${tenantId} roles=[${roles.join(",")}]`);
 
-      console.log(`[Middleware] req=${requestId} user=${userId} tenant=${tenantId} roles=[${roles.join(",")}] tier=${tier}`);
+      // 7) Validation happens inside the handler via validateBody()
 
-      // ── Execute Handler ──
       const response = await handler(ctx);
-
-      // Attach trace headers
       response.headers.set("x-request-id", requestId);
       response.headers.set("x-tenant-id", tenantId);
 
       const elapsed = Date.now() - startedAt;
       console.log(`[Middleware] req=${requestId} completed in ${elapsed}ms status=${response.status}`);
 
-      // ── 6) Audit (fire-and-forget) ──
-      if (!options.skipAudit) {
-        auditLog(ctx, options, response.status).catch(() => {});
-      }
+      // 6) Audit
+      if (!options.skipAudit) auditLog(ctx, options, response.status).catch(() => {});
 
       return response;
     } catch (err) {
       if (err instanceof MiddlewareError) {
         console.warn(`[Middleware] req=${requestId} error=${err.code}: ${err.message}`);
-        return errorResponse(requestId, err.status, err.code, err.message);
+        return errorResponse(requestId, err.status, err.code, err.message, err.details);
       }
       console.error(`[Middleware] req=${requestId} unhandled:`, err);
       return errorResponse(requestId, 500, "INTERNAL_ERROR", "An unexpected error occurred");
@@ -401,17 +632,15 @@ export function createHandler(handler: HandlerFn, options: HandlerOptions = {}):
 }
 
 // ═══════════════════════════════════
-// Guards (exported for handlers)
+// Guards (exported)
 // ═══════════════════════════════════
 
-/** Throws 403 if user doesn't have any of the required roles. */
 export function requireRoles(ctx: MiddlewareContext, ...requiredRoles: string[]): void {
   if (!ctx.roles.some(r => requiredRoles.includes(r))) {
     throw new MiddlewareError(403, "INSUFFICIENT_PERMISSIONS", `Requires one of: ${requiredRoles.join(", ")}`);
   }
 }
 
-/** Throws 403 if user doesn't have scoped access to a specific entity. */
 export function requireScopedAccess(
   ctx: MiddlewareContext, entityType: "company_group" | "company", entityId: string, requiredRoles: string[]
 ): void {
@@ -419,14 +648,12 @@ export function requireScopedAccess(
     if (!requiredRoles.includes(scope.role)) return false;
     if (scope.scope_type === "tenant") return true;
     if (scope.scope_type === entityType && scope.scope_id === entityId) return true;
-    // Group-scoped users can access companies within their group
     if (entityType === "company" && scope.scope_type === "company_group") return true;
     return false;
   });
   if (!hasAccess) throw new MiddlewareError(403, "SCOPE_ACCESS_DENIED", `No ${entityType} access for entity ${entityId}`);
 }
 
-/** Creates a JSON success response with standard envelope. */
 export function jsonResponse(ctx: MiddlewareContext, data: unknown, status = 200): Response {
   return new Response(
     JSON.stringify({ data, request_id: ctx.requestId, timestamp: new Date().toISOString() }),
