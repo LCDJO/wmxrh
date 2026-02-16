@@ -1,19 +1,20 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Briefcase, TrendingUp, Building2, ChevronLeft, ChevronRight, Layers, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Briefcase, TrendingUp, Building2, ChevronLeft, ChevronRight, Layers, LogOut, DollarSign } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useScope } from '@/contexts/ScopeContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/employees', icon: Users, label: 'Funcionários' },
-  { to: '/companies', icon: Building2, label: 'Empresas' },
-  { to: '/groups', icon: Layers, label: 'Grupos' },
-  { to: '/positions', icon: Briefcase, label: 'Cargos' },
-  { to: '/compensation', icon: TrendingUp, label: 'Remuneração' },
-  { to: '/departments', icon: Building2, label: 'Departamentos' },
+const allNavItems = [
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard', key: 'dashboard' },
+  { to: '/employees', icon: Users, label: 'Funcionários', key: 'employees' },
+  { to: '/companies', icon: Building2, label: 'Empresas', key: 'companies' },
+  { to: '/groups', icon: Layers, label: 'Grupos', key: 'groups' },
+  { to: '/positions', icon: Briefcase, label: 'Cargos', key: 'positions' },
+  { to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation' },
+  { to: '/departments', icon: Building2, label: 'Departamentos', key: 'departments' },
 ];
 
 export function AppSidebar() {
@@ -21,6 +22,12 @@ export function AppSidebar() {
   const location = useLocation();
   const { currentTenant, tenants, setCurrentTenant } = useTenant();
   const { signOut } = useAuth();
+  const { canAccessNav, effectiveRoles, rolesLoading } = useScope();
+
+  // Filter nav items based on user roles
+  const navItems = rolesLoading
+    ? allNavItems // show all while loading to prevent flash
+    : allNavItems.filter(item => canAccessNav(item.key));
 
   return (
     <aside className={cn("gradient-sidebar flex flex-col border-r border-sidebar-border transition-all duration-300 h-screen sticky top-0", collapsed ? "w-[72px]" : "w-[260px]")}>
@@ -46,6 +53,22 @@ export function AppSidebar() {
           </div>
         )}
       </div>
+
+      {/* Role badge */}
+      {!collapsed && effectiveRoles.length > 0 && (
+        <div className="px-5 py-2 border-b border-sidebar-border">
+          <div className="flex flex-wrap gap-1">
+            {effectiveRoles.slice(0, 2).map(role => (
+              <span key={role} className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-sidebar-accent text-sidebar-accent-foreground uppercase">
+                {role.replace('_', ' ')}
+              </span>
+            ))}
+            {effectiveRoles.length > 2 && (
+              <span className="text-[10px] text-sidebar-foreground/50">+{effectiveRoles.length - 2}</span>
+            )}
+          </div>
+        </div>
+      )}
 
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map((item) => {
