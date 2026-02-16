@@ -30,6 +30,7 @@ import { benefitPlanService } from '@/domains/compliance/benefit-plan.service';
 import { healthProgramService } from '@/domains/compliance/health-program.service';
 import { payrollSimulationService } from '@/domains/compliance/payroll-simulation.service';
 import { salaryStructureService } from '@/domains/compensation/salary-structure.service';
+import { riskExposureService } from '@/domains/compliance/risk-exposure.service';
 
 // Types
 import type {
@@ -39,6 +40,7 @@ import type {
   CreatePayrollItemCatalogDTO, CreateBenefitPlanDTO, CreateEmployeeBenefitDTO,
   CreateHealthProgramDTO, CreateHealthExamDTO,
   CreateSalaryStructureDTO, CreateSalaryRubricDTO,
+  CreateEmployeeRiskExposureDTO,
 } from '@/domains/shared';
 
 // ========================
@@ -625,6 +627,56 @@ export function useRemoveSalaryRubric() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['salary_structures'] });
       qc.invalidateQueries({ queryKey: ['salary_structure_active'] });
+    },
+  });
+}
+
+// ========================
+// RISK EXPOSURE
+// ========================
+
+const riskExposureKeys = {
+  byEmployee: (employeeId?: string) => ['employee_risk_exposures', employeeId],
+  byTenant: (tenantId?: string) => ['employee_risk_exposures_tenant', tenantId],
+  hazardPay: (tenantId?: string) => ['hazard_pay_employees', tenantId],
+};
+
+export function useEmployeeRiskExposures(employeeId?: string) {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: riskExposureKeys.byEmployee(employeeId),
+    queryFn: () => riskExposureService.listByEmployee(employeeId!, qs!),
+    enabled: !!employeeId && !!qs,
+  });
+}
+
+export function useRiskExposuresTenant() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: riskExposureKeys.byTenant(qs?.tenantId),
+    queryFn: () => riskExposureService.listByTenant(qs!),
+    enabled: !!qs,
+  });
+}
+
+export function useHazardPayEmployees() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: riskExposureKeys.hazardPay(qs?.tenantId),
+    queryFn: () => riskExposureService.listHazardPayEmployees(qs!),
+    enabled: !!qs,
+  });
+}
+
+export function useCreateRiskExposure() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateEmployeeRiskExposureDTO) => riskExposureService.create(dto, qs!),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: riskExposureKeys.byEmployee(vars.employee_id) });
+      qc.invalidateQueries({ queryKey: riskExposureKeys.byTenant(qs?.tenantId) });
+      qc.invalidateQueries({ queryKey: riskExposureKeys.hazardPay(qs?.tenantId) });
     },
   });
 }
