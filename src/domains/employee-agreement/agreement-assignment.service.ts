@@ -91,18 +91,30 @@ export const agreementAssignmentService = {
 
     if (error) throw error;
 
+    // Map DB row → domain entity
+    const result: EmployeeAgreement = {
+      id: data.id,
+      employee_id: (data as any).employee_id,
+      agreement_template_id: (data as any).template_id,
+      status: (data as any).status,
+      assinatura_provider_id: (data as any).signature_provider,
+      data_envio: (data as any).sent_at,
+      data_assinatura: (data as any).signed_at,
+      documento_assinado_url: (data as any).signed_document_url,
+    };
+
     emitAgreementEvent({
       type: 'agreement.sent_for_signature',
       tenant_id: ctx.tenant_id,
       employee_id: dto.employee_id,
-      agreement_id: data.id,
+      agreement_id: result.id,
       template_id: dto.template_id,
       company_id: dto.company_id,
       payload: { provider: providerName, versao: version.version_number },
       timestamp: new Date().toISOString(),
     });
 
-    return data as unknown as EmployeeAgreement;
+    return result;
   },
 
   // ── SIGNATURE CALLBACK ──
@@ -137,9 +149,9 @@ export const agreementAssignmentService = {
           if (storagePath) update.signed_document_url = storagePath;
         }
       }
-    } else if (dto.status === 'refused') {
+    } else if (dto.status === 'rejected') {
       update.refused_at = new Date().toISOString();
-      update.refusal_reason = dto.refusal_reason;
+      update.refusal_reason = dto.rejection_reason;
     }
 
     const { error } = await supabase
@@ -150,7 +162,7 @@ export const agreementAssignmentService = {
     if (error) throw error;
 
     emitAgreementEvent({
-      type: dto.status === 'signed' ? 'agreement.signed' : 'agreement.refused',
+      type: dto.status === 'signed' ? 'agreement.signed' : 'agreement.rejected',
       tenant_id: ctx.tenant_id,
       agreement_id: dto.agreement_id,
       payload: { status: dto.status },
@@ -175,7 +187,16 @@ export const agreementAssignmentService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return (data || []) as unknown as EmployeeAgreement[];
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      employee_id: row.employee_id,
+      agreement_template_id: row.template_id,
+      status: row.status,
+      assinatura_provider_id: row.signature_provider,
+      data_envio: row.sent_at,
+      data_assinatura: row.signed_at,
+      documento_assinado_url: row.signed_document_url,
+    })) as EmployeeAgreement[];
   },
 
   // ── AUTO-DISPATCH ON ADMISSION ──
@@ -253,7 +274,7 @@ export const agreementAssignmentService = {
     if (error) throw error;
 
     emitAgreementEvent({
-      type: 'agreement.cancelled',
+      type: 'agreement.rejected',
       tenant_id: ctx.tenant_id,
       agreement_id: agreementId,
       payload: {},
@@ -275,8 +296,8 @@ export const agreementAssignmentService = {
     const allAgreements = (agreements || []) as any[];
 
     const byStatus: Record<AgreementStatus, number> = {
-      pending: 0, sent: 0, viewed: 0, signed: 0,
-      refused: 0, expired: 0, cancelled: 0,
+      pending: 0, sent: 0, signed: 0,
+      rejected: 0, expired: 0,
     };
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
     let signedThisMonth = 0;
@@ -298,7 +319,7 @@ export const agreementAssignmentService = {
       active_templates: allTemplates.filter(t => t.is_active).length,
       total_agreements: allAgreements.length,
       by_status: byStatus,
-      pending_signatures: byStatus.pending + byStatus.sent + byStatus.viewed,
+      pending_signatures: byStatus.pending + byStatus.sent,
       signed_this_month: signedThisMonth,
       compliance_rate: Math.round(complianceRate * 10) / 10,
     };

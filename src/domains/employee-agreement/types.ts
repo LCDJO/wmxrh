@@ -12,11 +12,9 @@ export type AgreementTipo = 'geral' | 'funcao' | 'empresa' | 'risco';
 export type AgreementStatus =
   | 'pending'
   | 'sent'
-  | 'viewed'
   | 'signed'
-  | 'refused'
-  | 'expired'
-  | 'cancelled';
+  | 'rejected'
+  | 'expired';
 
 export type SignatureProvider =
   | 'opensign'
@@ -65,32 +63,22 @@ export interface AgreementTemplateVersion {
   created_at: string;
 }
 
+/**
+ * EmployeeAgreement — Vínculo do Termo ao Colaborador
+ *
+ * Regras:
+ * - Ao contratar funcionário → associar termos obrigatórios automaticamente
+ * - Se cargo exigir termo específico (tipo=funcao) → criar vínculo automático
+ */
 export interface EmployeeAgreement {
   id: string;
-  tenant_id: string;
-  company_id: string | null;
-  company_group_id: string | null;
   employee_id: string;
-  template_id: string;
-  template_version_id: string;
+  agreement_template_id: string;
   status: AgreementStatus;
-  signature_provider: SignatureProvider | null;
-  external_document_id: string | null;
-  external_signing_url: string | null;
-  signed_document_url: string | null;
-  signed_document_hash: string | null;
-  sent_at: string | null;
-  viewed_at: string | null;
-  signed_at: string | null;
-  refused_at: string | null;
-  expires_at: string | null;
-  cancelled_at: string | null;
-  ip_address: string | null;
-  user_agent: string | null;
-  refusal_reason: string | null;
-  sent_by: string | null;
-  created_at: string;
-  updated_at: string;
+  assinatura_provider_id: SignatureProvider | null;
+  data_envio: string | null;
+  data_assinatura: string | null;
+  documento_assinado_url: string | null;
 }
 
 // ── DTOs ──
@@ -130,12 +118,12 @@ export interface SendForSignatureDTO {
 export interface SignatureCallbackDTO {
   agreement_id: string;
   external_document_id: string;
-  status: 'signed' | 'refused';
-  signed_document_url?: string;
+  status: 'signed' | 'rejected';
+  documento_assinado_url?: string;
   signed_document_hash?: string;
   ip_address?: string;
   user_agent?: string;
-  refusal_reason?: string;
+  rejection_reason?: string;
 }
 
 // ── Dashboard ──

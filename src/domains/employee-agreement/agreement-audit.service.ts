@@ -55,8 +55,8 @@ const AUDITABLE_EVENTS: AgreementDomainEvent['type'][] = [
   'agreement.template.version_published',
   'agreement.sent_for_signature',
   'agreement.signed',
-  'agreement.refused',
-  'agreement.cancelled',
+  'agreement.rejected',
+  'agreement.expired',
   'agreement.auto_dispatch_triggered',
 ];
 
