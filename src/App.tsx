@@ -34,7 +34,7 @@ import ESocialDashboard from "./pages/ESocialDashboard";
 import AgreementManagement from "./pages/AgreementManagement";
 import DocumentSignatureIntegrations from "./pages/DocumentSignatureIntegrations";
 import OccupationalCompliance from "./pages/OccupationalCompliance";
-
+import NrComplianceDashboard from "./pages/NrComplianceDashboard";
 const queryClient = new QueryClient();
 
 function AppRoutes() {
@@ -171,6 +171,11 @@ function AppRoutes() {
         <Route path="/occupational-compliance" element={
           <ProtectedRoute navKey="health">
             <OccupationalCompliance />
+          </ProtectedRoute>
+        } />
+        <Route path="/nr-compliance" element={
+          <ProtectedRoute navKey="health">
+            <NrComplianceDashboard />
           </ProtectedRoute>
         } />
       </Route>
