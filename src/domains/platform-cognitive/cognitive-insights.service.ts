@@ -2,6 +2,17 @@
  * CognitiveInsightsService — Orchestrator
  *
  * Pipeline: Collect → Analyze → Advise → AI → Response
+ *
+ * ╔══════════════════════════════════════════════════════════════════╗
+ * ║  SECURITY CONTRACT                                              ║
+ * ║  This service is READ-ONLY. It NEVER modifies permissions,      ║
+ * ║  roles, users, or any database state. It only:                  ║
+ * ║    1. Reads snapshot data (via CognitiveContextCollector)        ║
+ * ║    2. Builds AI prompts (via Advisors)                          ║
+ * ║    3. Returns suggestions (CognitiveResponse)                   ║
+ * ║  All mutations MUST happen in the calling UI component          ║
+ * ║  AFTER explicit user confirmation.                              ║
+ * ╚══════════════════════════════════════════════════════════════════╝
  */
 import { supabase } from '@/integrations/supabase/client';
 import { CognitiveContextCollector } from './cognitive-context-collector';
@@ -36,18 +47,25 @@ export class CognitiveInsightsService {
     this.collector.trackCommand(command, meta);
   }
 
+  /**
+   * Query the cognitive layer for suggestions.
+   *
+   * SECURITY: This method is READ-ONLY. It returns suggestions but
+   * NEVER applies them. The caller MUST present suggestions to the
+   * user and require explicit confirmation before any mutation.
+   */
   async query(
     intent: CognitiveIntent,
     caller: { role: string; email: string },
     params?: Record<string, unknown>,
   ): Promise<CognitiveResponse> {
-    // 1. Collect snapshot
+    // 1. Collect snapshot (read-only)
     const snapshot = await this.collector.collect();
 
-    // 2. Build advisor payload (uses snapshot + behavior)
+    // 2. Build advisor payload (read-only prompt generation)
     const payload = await this.routeToAdvisor(intent, caller.role, params);
 
-    // 3. Call edge function
+    // 3. Call edge function (read-only — returns suggestions only)
     const { data, error } = await supabase.functions.invoke('platform-cognitive', {
       body: { intent, advisor_payload: payload, context: params },
     });
@@ -57,7 +75,20 @@ export class CognitiveInsightsService {
       throw new Error(msg);
     }
     if (data?.error) throw new Error(data.error);
-    return data as CognitiveResponse;
+
+    const response = data as CognitiveResponse;
+
+    // SECURITY GUARD: Strip any mutation payloads that AI might hallucinate
+    response.suggestions = response.suggestions.map(s => ({
+      ...s,
+      metadata: {
+        ...s.metadata,
+        _readonly: true,
+        _requires_user_confirmation: true,
+      },
+    }));
+
+    return response;
   }
 
   refreshContext() { this.collector.invalidate(); }

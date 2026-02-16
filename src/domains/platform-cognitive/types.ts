@@ -1,5 +1,12 @@
 /**
  * Shared types for the Platform Cognitive Layer.
+ *
+ * SECURITY CONTRACT:
+ * The Cognitive Layer is STRICTLY READ-ONLY. It analyses data and
+ * returns suggestions but NEVER executes mutations. Every suggestion
+ * MUST be explicitly confirmed by the user in the UI before any
+ * change is applied. The `_readonly` and `_requires_user_confirmation`
+ * metadata flags are injected by the orchestrator as a runtime guard.
  */
 
 // ── Intents ────────────────────────────────────────────────────────

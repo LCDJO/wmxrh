@@ -2,6 +2,10 @@
  * RoleRecommendationPanel — Shows AI-detected role recommendations
  * based on behavioral analysis (BehaviorAnalyzer fingerprints).
  *
+ * SECURITY: This component is display-only. Role application happens
+ * ONLY when the user explicitly clicks "Aplicar cargo", which calls
+ * onSelectRole. No automatic mutations ever occur.
+ *
  * Usage:
  *   <RoleRecommendationPanel onSelectRole={(role) => console.log(role)} />
  */

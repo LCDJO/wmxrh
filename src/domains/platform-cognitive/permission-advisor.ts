@@ -3,6 +3,12 @@
  *
  * Builds prompts for the AI to suggest ideal permissions for a given
  * role, based on current permission patterns across all roles.
+ *
+ * SECURITY: This class is PURE — it only builds prompt strings.
+ * It has NO write access to the database and CANNOT modify
+ * permissions, roles, or any other entity. All suggestions
+ * returned by the AI MUST be confirmed by the user in the UI
+ * before any mutation occurs.
  */
 import type { AdvisorPayload, PlatformSnapshot } from './types';
 
