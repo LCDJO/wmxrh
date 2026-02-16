@@ -2412,12 +2412,16 @@ export type Database = {
           agreement_id: string | null
           blocking_level: string
           cbo_code: string | null
+          certificado_url: string | null
           company_group_id: string | null
           company_id: string | null
           created_at: string
+          data_realizacao: string | null
+          data_validade: string | null
           due_date: string | null
           employee_id: string
           id: string
+          instrutor: string | null
           is_renewal: boolean
           legal_basis: string | null
           nr_number: number
@@ -2426,6 +2430,7 @@ export type Database = {
           required_hours: number
           status: string
           tenant_id: string
+          termo_assinado_url: string | null
           training_name: string
           trigger: string
           updated_at: string
@@ -2437,12 +2442,16 @@ export type Database = {
           agreement_id?: string | null
           blocking_level?: string
           cbo_code?: string | null
+          certificado_url?: string | null
           company_group_id?: string | null
           company_id?: string | null
           created_at?: string
+          data_realizacao?: string | null
+          data_validade?: string | null
           due_date?: string | null
           employee_id: string
           id?: string
+          instrutor?: string | null
           is_renewal?: boolean
           legal_basis?: string | null
           nr_number: number
@@ -2451,6 +2460,7 @@ export type Database = {
           required_hours?: number
           status?: string
           tenant_id: string
+          termo_assinado_url?: string | null
           training_name: string
           trigger?: string
           updated_at?: string
@@ -2462,12 +2472,16 @@ export type Database = {
           agreement_id?: string | null
           blocking_level?: string
           cbo_code?: string | null
+          certificado_url?: string | null
           company_group_id?: string | null
           company_id?: string | null
           created_at?: string
+          data_realizacao?: string | null
+          data_validade?: string | null
           due_date?: string | null
           employee_id?: string
           id?: string
+          instrutor?: string | null
           is_renewal?: boolean
           legal_basis?: string | null
           nr_number?: number
@@ -2476,6 +2490,7 @@ export type Database = {
           required_hours?: number
           status?: string
           tenant_id?: string
+          termo_assinado_url?: string | null
           training_name?: string
           trigger?: string
           updated_at?: string
