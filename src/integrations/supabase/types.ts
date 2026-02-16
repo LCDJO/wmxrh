@@ -178,43 +178,52 @@ export type Database = {
       audit_logs: {
         Row: {
           action: string
+          active_user_id: string | null
           company_group_id: string | null
           company_id: string | null
           created_at: string
           entity_id: string | null
           entity_type: string
           id: string
+          impersonation_session_id: string | null
           metadata: Json | null
           new_value: Json | null
           old_value: Json | null
+          real_user_id: string | null
           tenant_id: string
           user_id: string | null
         }
         Insert: {
           action: string
+          active_user_id?: string | null
           company_group_id?: string | null
           company_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type: string
           id?: string
+          impersonation_session_id?: string | null
           metadata?: Json | null
           new_value?: Json | null
           old_value?: Json | null
+          real_user_id?: string | null
           tenant_id: string
           user_id?: string | null
         }
         Update: {
           action?: string
+          active_user_id?: string | null
           company_group_id?: string | null
           company_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type?: string
           id?: string
+          impersonation_session_id?: string | null
           metadata?: Json | null
           new_value?: Json | null
           old_value?: Json | null
+          real_user_id?: string | null
           tenant_id?: string
           user_id?: string | null
         }
@@ -3862,9 +3871,12 @@ export type Database = {
       security_logs: {
         Row: {
           action: string
+          active_user_id: string | null
           created_at: string
           id: string
+          impersonation_session_id: string | null
           ip_address: string | null
+          real_user_id: string | null
           request_id: string | null
           resource: string
           result: string
@@ -3874,9 +3886,12 @@ export type Database = {
         }
         Insert: {
           action: string
+          active_user_id?: string | null
           created_at?: string
           id?: string
+          impersonation_session_id?: string | null
           ip_address?: string | null
+          real_user_id?: string | null
           request_id?: string | null
           resource: string
           result: string
@@ -3886,9 +3901,12 @@ export type Database = {
         }
         Update: {
           action?: string
+          active_user_id?: string | null
           created_at?: string
           id?: string
+          impersonation_session_id?: string | null
           ip_address?: string | null
+          real_user_id?: string | null
           request_id?: string | null
           resource?: string
           result?: string

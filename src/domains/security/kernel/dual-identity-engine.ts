@@ -235,22 +235,16 @@ export class DualIdentityEngine {
       }
     }, durationMin * 60_000);
 
-    // ── Audit ──
-    auditSecurity.log({
-      action: 'identity_established' as any,
-      resource: 'dual_identity_engine',
-      result: 'success',
-      reason: `Impersonation started: ${this._realIdentity.email} → tenant ${request.targetTenantName} as ${simulatedRole}`,
-      user_id: this._realIdentity.userId,
-      tenant_id: request.targetTenantId,
-      metadata: {
-        sessionId,
-        impersonatedBy: this._realIdentity.userId,
-        platformRole: this._realIdentity.platformRole,
-        simulatedRole,
-        reason: request.reason,
-        expiresAt,
-      },
+    // ── Audit (dedicated impersonation method) ──
+    auditSecurity.logImpersonationStarted({
+      realUserId: this._realIdentity.userId,
+      activeUserId: this._realIdentity.userId,
+      tenantId: request.targetTenantId,
+      sessionId,
+      reason: request.reason,
+      simulatedRole,
+      platformRole: this._realIdentity.platformRole!,
+      metadata: { targetTenantName: request.targetTenantName, expiresAt },
     });
 
     // ── Event ──
@@ -290,21 +284,16 @@ export class DualIdentityEngine {
     this._activeSession = null;
     this._clearTimer();
 
-    // ── Audit ──
-    auditSecurity.log({
-      action: 'identity_cleared' as any,
-      resource: 'dual_identity_engine',
-      result: 'success',
-      reason: `Impersonation ended (${endReason}): ${session.realIdentity.email} left tenant ${session.targetTenantName}`,
-      user_id: session.realIdentity.userId,
-      tenant_id: session.targetTenantId,
-      metadata: {
-        sessionId: session.id,
-        endReason,
-        durationMs,
-        operationCount: session.operationCount,
-        simulatedRole: session.simulatedRole,
-      },
+    // ── Audit (dedicated impersonation method) ──
+    auditSecurity.logImpersonationEnded({
+      realUserId: session.realIdentity.userId,
+      activeUserId: session.realIdentity.userId,
+      tenantId: session.targetTenantId,
+      sessionId: session.id,
+      endReason,
+      durationMs,
+      operationCount: session.operationCount,
+      metadata: { targetTenantName: session.targetTenantName, simulatedRole: session.simulatedRole },
     });
 
     // ── Event ──
@@ -333,6 +322,16 @@ export class DualIdentityEngine {
   recordOperation(): void {
     if (this._activeSession) {
       (this._activeSession as any).operationCount = this._activeSession.operationCount + 1;
+
+      // Audit: ImpersonatedActionExecuted
+      auditSecurity.logImpersonatedAction({
+        realUserId: this._activeSession.realIdentity.userId,
+        activeUserId: this._activeSession.activeIdentity.userId,
+        tenantId: this._activeSession.targetTenantId,
+        sessionId: this._activeSession.id,
+        resource: 'operation',
+        actionDescription: `Operation #${this._activeSession.operationCount} during impersonation`,
+      });
     }
   }
 
