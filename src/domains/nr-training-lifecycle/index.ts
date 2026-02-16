@@ -46,6 +46,18 @@ export type {
 // Integrations
 export { trainingIntegrations } from './integrations';
 
+// Functional Block Engine
+export {
+  functionalBlockEngine,
+  classifyBlockingLevel,
+  isOperationallyRestricted,
+} from './functional-block.engine';
+export type {
+  EmployeeRestrictionStatus,
+  RestrictionReason,
+  BlockedTrainingSummary,
+} from './functional-block.engine';
+
 // Types
 export type {
   TrainingLifecycleStatus,

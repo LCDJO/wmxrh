@@ -68,11 +68,15 @@ Deno.serve(async (req: Request) => {
       expired: 0,
       overdue: 0,
       blocked: 0,
+      employees_restricted: 0,
       alerts_created: 0,
       insights_created: 0,
       tenants_processed: 0,
       errors: [] as string[],
     };
+
+    // Track employees that need operacao_restrita = true
+    const employeesToBlock = new Map<string, { employee_id: string; tenant_id: string; reasons: { nr: number; assignment_id: string; expired_at: string }[] }>();
 
     // ── 1. Scan COMPLETED trainings for expiry ──
     let completedQuery = supabase
@@ -112,7 +116,15 @@ Deno.serve(async (req: Request) => {
         }
 
         results.expired++;
-        if (blockingLevel !== "warning") results.blocked++;
+        if (blockingLevel !== "warning") {
+          results.blocked++;
+          // Track for operacao_restrita update
+          const key = a.employee_id;
+          if (!employeesToBlock.has(key)) {
+            employeesToBlock.set(key, { employee_id: a.employee_id, tenant_id: a.tenant_id, reasons: [] });
+          }
+          employeesToBlock.get(key)!.reasons.push({ nr: a.nr_number, assignment_id: a.id, expired_at: a.data_validade });
+        }
 
         // Audit trail
         await supabase.from("nr_training_audit_log").insert({
@@ -203,7 +215,14 @@ Deno.serve(async (req: Request) => {
         }
 
         results.overdue++;
-        if (blockingLevel !== "warning") results.blocked++;
+        if (blockingLevel !== "warning") {
+          results.blocked++;
+          const key = a.employee_id;
+          if (!employeesToBlock.has(key)) {
+            employeesToBlock.set(key, { employee_id: a.employee_id, tenant_id: a.tenant_id, reasons: [] });
+          }
+          employeesToBlock.get(key)!.reasons.push({ nr: a.nr_number, assignment_id: a.id, expired_at: a.due_date });
+        }
 
         // Audit trail
         await supabase.from("nr_training_audit_log").insert({
@@ -237,7 +256,57 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // ── 3. Send aggregated insight to Workforce Intelligence ──
+    // ── 3. Update operacao_restrita on blocked employees ──
+    for (const [, emp] of employeesToBlock) {
+      const { error: blockErr } = await supabase
+        .from("employees")
+        .update({
+          operacao_restrita: true,
+          restricao_motivo: emp.reasons,
+          updated_at: now.toISOString(),
+        })
+        .eq("id", emp.employee_id)
+        .eq("tenant_id", emp.tenant_id);
+
+      if (blockErr) {
+        results.errors.push(`Block employee ${emp.employee_id}: ${blockErr.message}`);
+      } else {
+        results.employees_restricted++;
+      }
+    }
+
+    // Also clear operacao_restrita for employees who no longer have active blocks
+    // Get all employees currently restricted
+    const { data: restrictedEmployees } = await supabase
+      .from("employees")
+      .select("id, tenant_id")
+      .eq("operacao_restrita", true);
+
+    for (const re of restrictedEmployees ?? []) {
+      if (!employeesToBlock.has(re.id)) {
+        // Check if they still have any hard/soft blocked assignments
+        const { data: activeBlocks } = await supabase
+          .from("nr_training_assignments")
+          .select("id")
+          .eq("employee_id", re.id)
+          .in("status", ["expired", "overdue"])
+          .in("blocking_level", ["hard_block", "soft_block"])
+          .limit(1);
+
+        if (!activeBlocks || activeBlocks.length === 0) {
+          await supabase
+            .from("employees")
+            .update({
+              operacao_restrita: false,
+              restricao_motivo: null,
+              updated_at: now.toISOString(),
+            })
+            .eq("id", re.id);
+        }
+      }
+    }
+
+    // ── 4. Send aggregated insight to Workforce Intelligence ──
     if (results.expired > 0 || results.overdue > 0) {
       // Group by tenant for per-tenant insights
       const tenantIds = new Set<string>();
