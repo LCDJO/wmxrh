@@ -1,73 +1,142 @@
 /**
  * RoleBootstrapper — Suggests initial roles based on plan tier.
+ *
+ * Basic/Free/Starter → RH + Gestor
+ * Professional       → + RH Manager + Finance
+ * Enterprise/Custom  → + HR Admin + Finance Admin + Operations
  */
 
 import type { RoleBootstrapperAPI, RoleBootstrapPlan, BootstrapRole } from './types';
 import type { PlanTier } from '@/domains/platform-experience/types';
 
-const BASE_ROLES: BootstrapRole[] = [
+// ── Basic roles (all plans) ─────────────────────────────────────
+
+const BASIC_ROLES: BootstrapRole[] = [
   {
-    name: 'Administrador RH',
-    slug: 'admin_rh',
-    description: 'Acesso completo a RH, folha e benefícios.',
-    permissions: ['employees.read', 'employees.write', 'salary.read', 'salary.write', 'benefits.read', 'benefits.write'],
+    name: 'RH',
+    slug: 'rh',
+    description: 'Acesso operacional a cadastro de colaboradores, cargos e departamentos.',
+    permissions: [
+      'employees.read', 'employees.write',
+      'departments.read',
+      'positions.read',
+      'benefits.read',
+    ],
     is_recommended: true,
   },
   {
-    name: 'Gestor Departamental',
-    slug: 'gestor_depto',
-    description: 'Visualiza colaboradores e gerencia seu departamento.',
-    permissions: ['employees.read', 'departments.read', 'departments.write'],
+    name: 'Gestor',
+    slug: 'gestor',
+    description: 'Visualiza e gerencia sua equipe e departamento.',
+    permissions: [
+      'employees.read',
+      'departments.read', 'departments.write',
+      'positions.read',
+    ],
     is_recommended: true,
   },
 ];
+
+// ── Professional roles ──────────────────────────────────────────
 
 const PRO_ROLES: BootstrapRole[] = [
   {
-    name: 'Analista de Compliance',
-    slug: 'analista_compliance',
-    description: 'Acesso a módulos de compliance, eSocial e saúde ocupacional.',
-    permissions: ['compliance.read', 'compliance.write', 'health.read', 'esocial.read'],
+    name: 'RH Manager',
+    slug: 'rh_manager',
+    description: 'Gestão completa de RH incluindo remuneração, compliance e saúde ocupacional.',
+    permissions: [
+      'employees.read', 'employees.write',
+      'salary.read', 'salary.write',
+      'benefits.read', 'benefits.write',
+      'compliance.read', 'compliance.write',
+      'health.read',
+      'esocial.read',
+      'departments.read', 'departments.write',
+      'positions.read', 'positions.write',
+    ],
     is_recommended: true,
   },
   {
-    name: 'Auditor',
-    slug: 'auditor',
-    description: 'Acesso somente leitura a logs e auditoria.',
-    permissions: ['audit.read', 'employees.read', 'compliance.read'],
-    is_recommended: false,
+    name: 'Finance',
+    slug: 'finance',
+    description: 'Acesso a informações financeiras, folha e benefícios.',
+    permissions: [
+      'salary.read',
+      'benefits.read',
+      'employees.read',
+      'payroll.read',
+    ],
+    is_recommended: true,
   },
 ];
+
+// ── Enterprise roles ────────────────────────────────────────────
 
 const ENTERPRISE_ROLES: BootstrapRole[] = [
   {
-    name: 'Diretor Estratégico',
-    slug: 'diretor_estrategico',
-    description: 'Acesso a dashboards de inteligência e indicadores estratégicos.',
-    permissions: ['dashboard.read', 'intelligence.read', 'salary.read', 'compliance.read'],
+    name: 'HR Admin',
+    slug: 'hr_admin',
+    description: 'Administração total de RH com controle de IAM, auditoria e inteligência.',
+    permissions: [
+      'employees.read', 'employees.write',
+      'salary.read', 'salary.write',
+      'benefits.read', 'benefits.write',
+      'compliance.read', 'compliance.write',
+      'health.read', 'health.write',
+      'esocial.read', 'esocial.write',
+      'departments.read', 'departments.write',
+      'positions.read', 'positions.write',
+      'iam.read', 'iam.write',
+      'audit.read',
+      'intelligence.read',
+    ],
     is_recommended: true,
   },
   {
-    name: 'Operador de Segurança',
-    slug: 'operador_seguranca',
-    description: 'Gerencia configurações de segurança e IAM.',
-    permissions: ['iam.read', 'iam.write', 'audit.read', 'security.read'],
-    is_recommended: false,
+    name: 'Finance Admin',
+    slug: 'finance_admin',
+    description: 'Administração financeira com acesso a folha, projeções e relatórios estratégicos.',
+    permissions: [
+      'salary.read', 'salary.write',
+      'benefits.read', 'benefits.write',
+      'payroll.read', 'payroll.write',
+      'intelligence.read',
+      'employees.read',
+    ],
+    is_recommended: true,
+  },
+  {
+    name: 'Operations',
+    slug: 'operations',
+    description: 'Gestão operacional com visão de compliance, treinamentos e segurança do trabalho.',
+    permissions: [
+      'employees.read',
+      'departments.read', 'departments.write',
+      'compliance.read',
+      'health.read',
+      'training.read', 'training.write',
+      'audit.read',
+    ],
+    is_recommended: true,
   },
 ];
 
+// ── Tier reasons ────────────────────────────────────────────────
+
 const TIER_REASONS: Record<PlanTier, string> = {
-  free: 'Papéis básicos para operação mínima.',
-  starter: 'Papéis recomendados para equipe pequena.',
-  professional: 'Papéis com separação de compliance e operação.',
-  enterprise: 'Papéis com governança, auditoria e segurança.',
+  free: 'Papéis básicos: RH operacional e Gestor de equipe.',
+  starter: 'Papéis básicos para equipe pequena com gestão departamental.',
+  professional: 'Papéis com separação entre gestão de RH e financeiro.',
+  enterprise: 'Papéis com governança completa: HR Admin, Finance Admin e Operations.',
   custom: 'Papéis customizados conforme contrato.',
 };
+
+// ── Factory ─────────────────────────────────────────────────────
 
 export function createRoleBootstrapper(): RoleBootstrapperAPI {
   return {
     suggestRoles(planTier: PlanTier): RoleBootstrapPlan {
-      let roles = [...BASE_ROLES];
+      let roles = [...BASIC_ROLES];
 
       if (['professional', 'enterprise', 'custom'].includes(planTier)) {
         roles = [...roles, ...PRO_ROLES];
