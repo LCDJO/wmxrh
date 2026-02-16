@@ -1,15 +1,18 @@
 /**
- * AdaptiveOnboardingWizard — Full-screen wizard for new tenant onboarding.
+ * AdaptiveOnboardingWizard — 5-step visual wizard for tenant onboarding.
  *
- * Integrates with PXE and Identity Intelligence to provide a
- * personalised setup experience based on plan, modules, and context.
+ * Steps:
+ *   1. Informações da Empresa (Tenant)
+ *   2. Estrutura Inicial (Grupos / Empresas)
+ *   3. Cargos e Permissões
+ *   4. Convidar Usuários
+ *   5. Configurar Pagamentos
  */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAdaptiveOnboarding } from '@/hooks/use-adaptive-onboarding';
-import { useTenant } from '@/contexts/TenantContext';
 import { useCreateTenant } from '@/domains/hooks';
+import { useAdaptiveOnboarding } from '@/hooks/use-adaptive-onboarding';
 import { useToast } from '@/hooks/use-toast';
 import { PlanBadge } from '@/components/shared/PlanBadge';
 import { Progress } from '@/components/ui/progress';
@@ -18,31 +21,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import {
-  Building2, Users, Shield, Puzzle, ClipboardCheck, Sparkles,
-  ChevronRight, CheckCircle, SkipForward, Lightbulb, AlertTriangle,
-  ArrowRight, Rocket, FolderTree, UserPlus, Info,
+  Building2, Network, Shield, UserPlus, CreditCard,
+  ChevronRight, ChevronLeft, CheckCircle, Sparkles,
+  Rocket, FolderTree, Briefcase, Users, ArrowRight,
+  Lightbulb, Plus, Mail, Check,
 } from 'lucide-react';
-import type { OnboardingStep, OnboardingHint } from '@/domains/adaptive-onboarding/types';
 import type { PlanTier } from '@/domains/platform-experience/types';
 
-const PHASE_ICONS: Record<string, React.ElementType> = {
-  welcome: Sparkles,
-  company_setup: Building2,
-  role_setup: Shield,
-  module_activation: Puzzle,
-  team_invite: UserPlus,
-  compliance_check: ClipboardCheck,
-  review: CheckCircle,
-};
+// ── Wizard step metadata ────────────────────────────────────────
 
-const HINT_ICONS: Record<string, React.ElementType> = {
-  tip: Lightbulb,
-  warning: AlertTriangle,
-  recommendation: Sparkles,
-  compliance: ClipboardCheck,
-};
+const WIZARD_STEPS = [
+  { id: 'empresa', label: 'Empresa', icon: Building2, description: 'Informações da organização' },
+  { id: 'estrutura', label: 'Estrutura', icon: Network, description: 'Grupos e empresas' },
+  { id: 'cargos', label: 'Cargos', icon: Shield, description: 'Cargos e permissões' },
+  { id: 'convites', label: 'Equipe', icon: UserPlus, description: 'Convidar usuários' },
+  { id: 'pagamentos', label: 'Pagamentos', icon: CreditCard, description: 'Configurar pagamentos' },
+] as const;
+
+type WizardStepId = typeof WIZARD_STEPS[number]['id'];
 
 interface Props {
   planTier?: PlanTier;
@@ -54,31 +53,56 @@ export default function AdaptiveOnboardingWizard({ planTier = 'free', onComplete
   const navigate = useNavigate();
   const createMutation = useCreateTenant();
 
-  // Tenant creation form
+  const [currentStepIdx, setCurrentStepIdx] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<Set<WizardStepId>>(new Set());
+
+  // ── Step 1 state ──
   const [tenantName, setTenantName] = useState('');
   const [tenantDoc, setTenantDoc] = useState('');
+  const [tenantIndustry, setTenantIndustry] = useState('');
   const [tenantCreated, setTenantCreated] = useState(false);
   const [tenantId, setTenantId] = useState('temp-onboarding');
 
-  const onboarding = useAdaptiveOnboarding({
-    tenantId,
-    planTier,
-  });
+  // ── Step 2 state ──
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [newDept, setNewDept] = useState('');
 
-  const {
-    flow,
-    currentStep,
-    hints,
-    suggestedRoles,
-    availableModules,
-    recommendedModules,
-    completeStep,
-    skipStep,
-    isCompleted,
-    completionPct,
-  } = onboarding;
+  // ── Step 3 state ──
+  const [selectedRoles, setSelectedRoles] = useState<Set<string>>(new Set());
 
-  // ── Tenant creation handler ──
+  // ── Step 4 state ──
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [invitedEmails, setInvitedEmails] = useState<string[]>([]);
+
+  // ── Onboarding engine (for role suggestions, modules) ──
+  const onboarding = useAdaptiveOnboarding({ tenantId, planTier });
+
+  const currentStep = WIZARD_STEPS[currentStepIdx];
+  const completionPct = Math.round((completedSteps.size / WIZARD_STEPS.length) * 100);
+  const isLastStep = currentStepIdx === WIZARD_STEPS.length - 1;
+
+  // ── Navigation ──
+  const goNext = () => {
+    setCompletedSteps(prev => new Set([...prev, currentStep.id]));
+    if (isLastStep) {
+      onComplete();
+    } else {
+      setCurrentStepIdx(i => i + 1);
+    }
+  };
+
+  const goBack = () => {
+    if (currentStepIdx > 0) setCurrentStepIdx(i => i - 1);
+  };
+
+  const goToStep = (idx: number) => {
+    // Allow going to completed steps or the next available one
+    if (idx <= currentStepIdx || completedSteps.has(WIZARD_STEPS[idx - 1]?.id)) {
+      setCurrentStepIdx(idx);
+    }
+  };
+
+  // ── Step 1: Criar tenant ──
   const handleCreateTenant = (e: React.FormEvent) => {
     e.preventDefault();
     createMutation.mutate(
@@ -87,8 +111,7 @@ export default function AdaptiveOnboardingWizard({ planTier = 'free', onComplete
         onSuccess: (data: any) => {
           setTenantCreated(true);
           if (data?.id) setTenantId(data.id);
-          toast({ title: 'Organização criada!', description: 'Prossiga com a configuração.' });
-          completeStep('welcome');
+          toast({ title: 'Organização criada!', description: 'Prossiga com a estrutura.' });
         },
         onError: (err) => {
           toast({ title: 'Erro', description: err.message, variant: 'destructive' });
@@ -97,33 +120,55 @@ export default function AdaptiveOnboardingWizard({ planTier = 'free', onComplete
     );
   };
 
-  // ── Phase progress indicator ──
-  const phases = [...new Set(flow.steps.map(s => s.phase))];
-  const currentPhaseIdx = phases.indexOf(currentStep?.phase ?? 'welcome');
+  // ── Step 2: Add department ──
+  const addDepartment = () => {
+    const name = newDept.trim();
+    if (name && !departments.includes(name)) {
+      setDepartments(prev => [...prev, name]);
+      setNewDept('');
+    }
+  };
 
-  // ── Render step content ──
+  // ── Step 4: Add invite ──
+  const addInvite = () => {
+    const email = inviteEmail.trim().toLowerCase();
+    if (email && email.includes('@') && !invitedEmails.includes(email)) {
+      setInvitedEmails(prev => [...prev, email]);
+      setInviteEmail('');
+    }
+  };
+
+  // ── Suggested departments by industry ──
+  const suggestedDepts = (() => {
+    const map: Record<string, string[]> = {
+      comercio: ['Vendas', 'Estoque', 'RH', 'Financeiro'],
+      industria: ['Produção', 'Qualidade', 'RH', 'Manutenção', 'Logística'],
+      servicos: ['Operações', 'Comercial', 'RH', 'TI'],
+      construcao: ['Obras', 'Segurança do Trabalho', 'RH', 'Compras'],
+      saude: ['Assistencial', 'RH', 'Faturamento', 'Qualidade'],
+    };
+    return map[tenantIndustry] ?? ['Administrativo', 'RH', 'Financeiro', 'Operações'];
+  })();
+
+  // ── Render step content ──────────────────────────────────────
+
   const renderStepContent = () => {
-    if (!currentStep) return null;
-
     switch (currentStep.id) {
-      case 'welcome':
+      // ═══ STEP 1: EMPRESA ═══
+      case 'empresa':
         return (
           <div className="space-y-6">
-            <div className="text-center space-y-3">
-              <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-primary/10">
-                <Rocket className="h-8 w-8 text-primary" />
+            <div className="text-center space-y-2">
+              <div className="flex h-14 w-14 mx-auto items-center justify-center rounded-2xl bg-primary/10">
+                <Rocket className="h-7 w-7 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold font-display text-foreground">
-                Vamos configurar sua organização
-              </h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                Em poucos passos, sua organização estará pronta para uso.
-                O assistente vai adaptar a configuração ao seu plano.
+              <h2 className="text-xl font-bold text-foreground">Informações da Empresa</h2>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Comece cadastrando os dados principais da sua organização.
               </p>
-              <PlanBadge tier={planTier} size="lg" className="mx-auto" />
             </div>
 
-            <form onSubmit={handleCreateTenant} className="space-y-4 max-w-sm mx-auto">
+            <form onSubmit={handleCreateTenant} className="space-y-4 max-w-md mx-auto">
               <div className="space-y-2">
                 <Label htmlFor="org-name">Nome da Organização *</Label>
                 <Input
@@ -132,6 +177,7 @@ export default function AdaptiveOnboardingWizard({ planTier = 'free', onComplete
                   value={tenantName}
                   onChange={e => setTenantName(e.target.value)}
                   required
+                  disabled={tenantCreated}
                 />
               </div>
               <div className="space-y-2">
@@ -141,174 +187,354 @@ export default function AdaptiveOnboardingWizard({ planTier = 'free', onComplete
                   placeholder="00.000.000/0000-00"
                   value={tenantDoc}
                   onChange={e => setTenantDoc(e.target.value)}
+                  disabled={tenantCreated}
                 />
               </div>
-              <Button type="submit" className="w-full gap-2" disabled={createMutation.isPending}>
-                <ArrowRight className="h-4 w-4" />
-                {createMutation.isPending ? 'Criando...' : 'Criar e Continuar'}
-              </Button>
+              <div className="space-y-2">
+                <Label htmlFor="org-industry">Segmento</Label>
+                <select
+                  id="org-industry"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={tenantIndustry}
+                  onChange={e => setTenantIndustry(e.target.value)}
+                  disabled={tenantCreated}
+                >
+                  <option value="">Selecione...</option>
+                  <option value="comercio">Comércio</option>
+                  <option value="industria">Indústria</option>
+                  <option value="servicos">Serviços</option>
+                  <option value="construcao">Construção Civil</option>
+                  <option value="saude">Saúde</option>
+                </select>
+              </div>
+
+              {!tenantCreated ? (
+                <Button type="submit" className="w-full gap-2" disabled={createMutation.isPending || !tenantName.trim()}>
+                  <ArrowRight className="h-4 w-4" />
+                  {createMutation.isPending ? 'Criando...' : 'Criar Organização'}
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 justify-center text-sm text-primary">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Organização criada com sucesso</span>
+                </div>
+              )}
             </form>
-          </div>
-        );
 
-      case 'create_company':
-        return (
-          <div className="space-y-4 text-center">
-            <Building2 className="h-12 w-12 mx-auto text-primary/60" />
-            <h3 className="text-lg font-semibold">Cadastrar Empresa</h3>
-            <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              Adicione os dados da empresa principal. Você poderá cadastrar mais empresas depois.
-            </p>
-            <Button onClick={() => { completeStep('create_company'); }} className="gap-2">
-              <CheckCircle className="h-4 w-4" /> Marcar como concluído
-            </Button>
-          </div>
-        );
-
-      case 'setup_departments':
-        return (
-          <div className="space-y-4 text-center">
-            <FolderTree className="h-12 w-12 mx-auto text-primary/60" />
-            <h3 className="text-lg font-semibold">Criar Departamentos</h3>
-            <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              Sugestões baseadas no tipo de empresa:
-            </p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              {['Administrativo', 'RH', 'Financeiro', 'Operações'].map(d => (
-                <Badge key={d} variant="secondary">{d}</Badge>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'configure_roles':
-        return (
-          <div className="space-y-4">
-            <div className="text-center">
-              <Shield className="h-12 w-12 mx-auto text-primary/60" />
-              <h3 className="text-lg font-semibold mt-2">Configurar Papéis</h3>
-              <p className="text-muted-foreground text-sm">{suggestedRoles.reason}</p>
-            </div>
-            <div className="grid gap-3 max-w-lg mx-auto">
-              {suggestedRoles.roles.map(role => (
-                <Card key={role.slug} className={cn(
-                  'border',
-                  role.is_recommended ? 'border-primary/30 bg-primary/5' : 'border-border',
-                )}>
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm">{role.name}</p>
-                        <p className="text-xs text-muted-foreground">{role.description}</p>
-                      </div>
-                      {role.is_recommended && (
-                        <Badge variant="secondary" className="text-[10px]">Recomendado</Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'activate_modules':
-        return (
-          <div className="space-y-4">
-            <div className="text-center">
-              <Puzzle className="h-12 w-12 mx-auto text-primary/60" />
-              <h3 className="text-lg font-semibold mt-2">Ativar Módulos</h3>
-              <p className="text-muted-foreground text-sm">
-                Módulos disponíveis no seu plano {planTier}:
+            <div className="flex items-start gap-2 p-3 rounded-lg border border-primary/20 bg-primary/5 max-w-md mx-auto">
+              <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+              <p className="text-xs text-muted-foreground">
+                O segmento ajuda a pré-configurar departamentos e requisitos de compliance automaticamente.
               </p>
             </div>
-            <div className="grid gap-2 max-w-lg mx-auto">
-              {availableModules.map(mod => (
-                <div
-                  key={mod.module_key}
-                  className={cn(
-                    'flex items-center justify-between p-3 rounded-lg border',
-                    mod.recommended ? 'border-primary/30 bg-primary/5' : 'border-border',
-                  )}
-                >
-                  <div>
-                    <p className="font-medium text-sm">{mod.label}</p>
-                    <p className="text-xs text-muted-foreground">{mod.description}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {mod.recommended && (
-                      <Badge variant="secondary" className="text-[10px]">✓</Badge>
-                    )}
-                    {mod.requires_setup && (
-                      <Badge variant="outline" className="text-[10px]">Setup</Badge>
-                    )}
+          </div>
+        );
+
+      // ═══ STEP 2: ESTRUTURA ═══
+      case 'estrutura':
+        return (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <Network className="h-10 w-10 mx-auto text-primary/70" />
+              <h2 className="text-xl font-bold text-foreground">Estrutura Inicial</h2>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Configure os departamentos da sua empresa. Sugestões baseadas no seu segmento:
+              </p>
+            </div>
+
+            {/* Suggested departments */}
+            <div className="max-w-md mx-auto space-y-4">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Sugestões para seu segmento</Label>
+                <div className="flex flex-wrap gap-2">
+                  {suggestedDepts.map(dept => {
+                    const isAdded = departments.includes(dept);
+                    return (
+                      <Badge
+                        key={dept}
+                        variant={isAdded ? 'default' : 'outline'}
+                        className={cn(
+                          'cursor-pointer transition-colors',
+                          isAdded ? 'bg-primary text-primary-foreground' : 'hover:bg-accent',
+                        )}
+                        onClick={() => {
+                          if (!isAdded) setDepartments(prev => [...prev, dept]);
+                        }}
+                      >
+                        {isAdded && <Check className="h-3 w-3 mr-1" />}
+                        {dept}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Custom department */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Adicionar departamento..."
+                  value={newDept}
+                  onChange={e => setNewDept(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addDepartment())}
+                />
+                <Button variant="outline" size="icon" onClick={addDepartment} disabled={!newDept.trim()}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Selected departments */}
+              {departments.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Departamentos selecionados ({departments.length})</Label>
+                  <div className="grid gap-1.5">
+                    {departments.map(dept => (
+                      <div key={dept} className="flex items-center justify-between p-2 rounded-md border border-border bg-card text-sm">
+                        <div className="flex items-center gap-2">
+                          <FolderTree className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>{dept}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => setDepartments(prev => prev.filter(d => d !== dept))}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              )}
+
+              {planTier === 'enterprise' || planTier === 'custom' ? (
+                <div className="flex items-start gap-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
+                  <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+                  <p className="text-xs text-muted-foreground">
+                    Plano Enterprise: você pode criar <strong>Grupos Econômicos</strong> para gerenciar múltiplas empresas após o onboarding.
+                  </p>
+                </div>
+              ) : null}
             </div>
           </div>
         );
 
-      case 'invite_users':
+      // ═══ STEP 3: CARGOS E PERMISSÕES ═══
+      case 'cargos':
         return (
-          <div className="space-y-4 text-center">
-            <UserPlus className="h-12 w-12 mx-auto text-primary/60" />
-            <h3 className="text-lg font-semibold">Convidar Equipe</h3>
-            <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              Convide gestores e administradores. Você pode fazer isso agora ou depois.
-            </p>
-          </div>
-        );
-
-      case 'compliance_check':
-        return (
-          <div className="space-y-4 text-center">
-            <ClipboardCheck className="h-12 w-12 mx-auto text-primary/60" />
-            <h3 className="text-lg font-semibold">Verificar Compliance</h3>
-            <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              Revise as obrigações trabalhistas e de saúde ocupacional identificadas para sua empresa.
-            </p>
-          </div>
-        );
-
-      case 'add_employees':
-        return (
-          <div className="space-y-4 text-center">
-            <Users className="h-12 w-12 mx-auto text-primary/60" />
-            <h3 className="text-lg font-semibold">Cadastrar Colaboradores</h3>
-            <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              Adicione os primeiros colaboradores ao sistema. Importação em lote disponível.
-            </p>
-          </div>
-        );
-
-      case 'review':
-        return (
-          <div className="space-y-6 text-center">
-            <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-primary/10">
-              <CheckCircle className="h-8 w-8 text-primary" />
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <Shield className="h-10 w-10 mx-auto text-primary/70" />
+              <h2 className="text-xl font-bold text-foreground">Cargos e Permissões</h2>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Selecione os papéis que deseja criar. Recomendações baseadas no plano <strong>{planTier}</strong>.
+              </p>
             </div>
-            <h3 className="text-xl font-bold">Tudo pronto!</h3>
-            <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              Sua organização está configurada. Você pode ajustar qualquer configuração a qualquer momento.
+
+            <div className="max-w-lg mx-auto grid gap-3">
+              {onboarding.suggestedRoles.roles.map(role => {
+                const isSelected = selectedRoles.has(role.slug);
+                return (
+                  <Card
+                    key={role.slug}
+                    className={cn(
+                      'cursor-pointer transition-all border',
+                      isSelected
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                        : 'border-border hover:border-primary/30',
+                    )}
+                    onClick={() => {
+                      setSelectedRoles(prev => {
+                        const next = new Set(prev);
+                        if (next.has(role.slug)) next.delete(role.slug);
+                        else next.add(role.slug);
+                        return next;
+                      });
+                    }}
+                  >
+                    <CardContent className="p-4 flex items-start gap-3">
+                      <Checkbox
+                        checked={isSelected}
+                        className="mt-0.5"
+                        onCheckedChange={() => {}}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{role.name}</p>
+                          {role.is_recommended && (
+                            <Badge variant="secondary" className="text-[10px]">Recomendado</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{role.description}</p>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {role.permissions.slice(0, 4).map(perm => (
+                            <Badge key={perm} variant="outline" className="text-[9px] font-mono">
+                              {perm}
+                            </Badge>
+                          ))}
+                          {role.permissions.length > 4 && (
+                            <Badge variant="outline" className="text-[9px]">
+                              +{role.permissions.length - 4}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            <p className="text-center text-xs text-muted-foreground">
+              {selectedRoles.size} papel(éis) selecionado(s) · Permissões podem ser ajustadas depois em IAM
             </p>
-            <div className="flex flex-wrap gap-2 justify-center text-xs text-muted-foreground">
-              <span>✓ {onboarding.progress.completed_steps.length} etapas concluídas</span>
-              {onboarding.progress.skipped_steps.length > 0 && (
-                <span>⏭ {onboarding.progress.skipped_steps.length} puladas</span>
+          </div>
+        );
+
+      // ═══ STEP 4: CONVIDAR USUÁRIOS ═══
+      case 'convites':
+        return (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <UserPlus className="h-10 w-10 mx-auto text-primary/70" />
+              <h2 className="text-xl font-bold text-foreground">Convidar Equipe</h2>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Adicione os e-mails dos gestores e administradores que irão acessar o sistema.
+              </p>
+            </div>
+
+            <div className="max-w-md mx-auto space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="email@empresa.com"
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addInvite())}
+                />
+                <Button variant="outline" onClick={addInvite} disabled={!inviteEmail.trim()} className="gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  Adicionar
+                </Button>
+              </div>
+
+              {invitedEmails.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Convites ({invitedEmails.length})</Label>
+                  <div className="grid gap-1.5">
+                    {invitedEmails.map(email => (
+                      <div key={email} className="flex items-center justify-between p-2.5 rounded-md border border-border bg-card text-sm">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-sm">{email}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => setInvitedEmails(prev => prev.filter(e => e !== email))}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {invitedEmails.length === 0 && (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Nenhum convite adicionado</p>
+                  <p className="text-xs mt-1">Você pode convidar membros depois em Configurações → Usuários</p>
+                </div>
               )}
             </div>
           </div>
         );
 
-      default:
+      // ═══ STEP 5: PAGAMENTOS ═══
+      case 'pagamentos':
         return (
-          <div className="text-center">
-            <p className="text-muted-foreground">{currentStep.description}</p>
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <CreditCard className="h-10 w-10 mx-auto text-primary/70" />
+              <h2 className="text-xl font-bold text-foreground">Configurar Pagamentos</h2>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Configure as informações de faturamento para seu plano.
+              </p>
+            </div>
+
+            <div className="max-w-md mx-auto space-y-4">
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-medium text-sm">Plano Atual</p>
+                      <PlanBadge tier={planTier} size="sm" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {planTier === 'free'
+                        ? 'Plano gratuito com funcionalidades essenciais.'
+                        : planTier === 'starter'
+                          ? 'Ideal para equipes pequenas em crescimento.'
+                          : planTier === 'professional'
+                            ? 'Para empresas que precisam de compliance e eSocial.'
+                            : 'Governança completa para grandes organizações.'}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {planTier === 'free' && (
+                <Card className="border-border">
+                  <CardContent className="p-4 space-y-3">
+                    <p className="text-sm font-medium">Quer desbloquear mais recursos?</p>
+                    <p className="text-xs text-muted-foreground">
+                      Faça upgrade para acessar remuneração, compliance, eSocial e muito mais.
+                    </p>
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate('/platform/plans')}>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Ver Planos
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {planTier !== 'free' && (
+                <Card className="border-border">
+                  <CardContent className="p-4 space-y-3">
+                    <p className="text-sm font-medium">Dados de Faturamento</p>
+                    <p className="text-xs text-muted-foreground">
+                      Configure os dados de cobrança e nota fiscal para sua organização.
+                    </p>
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="billing-email" className="text-xs">E-mail de faturamento</Label>
+                        <Input id="billing-email" placeholder="financeiro@empresa.com" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="billing-cnpj" className="text-xs">CNPJ para NF</Label>
+                        <Input id="billing-cnpj" placeholder="00.000.000/0000-00" defaultValue={tenantDoc} />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="flex items-start gap-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
+                <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+                <p className="text-xs text-muted-foreground">
+                  Configurações de pagamento podem ser alteradas a qualquer momento em Configurações → Planos.
+                </p>
+              </div>
+            </div>
           </div>
         );
     }
   };
+
+  // ── Main render ──────────────────────────────────────────────
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -316,7 +542,7 @@ export default function AdaptiveOnboardingWizard({ planTier = 'free', onComplete
       <header className="border-b border-border px-6 py-3 flex items-center justify-between bg-card">
         <div className="flex items-center gap-3">
           <Sparkles className="h-5 w-5 text-primary" />
-          <span className="font-display font-semibold text-sm">Assistente de Configuração</span>
+          <span className="font-semibold text-sm">Assistente de Configuração</span>
         </div>
         <div className="flex items-center gap-3">
           <PlanBadge tier={planTier} size="sm" />
@@ -329,107 +555,84 @@ export default function AdaptiveOnboardingWizard({ planTier = 'free', onComplete
         <Progress value={completionPct} className="h-1.5" />
       </div>
 
-      {/* ── Phase nav ── */}
-      <nav className="px-6 py-3 flex items-center gap-1 overflow-x-auto">
-        {phases.map((phase, idx) => {
-          const Icon = PHASE_ICONS[phase] ?? Info;
-          const isActive = idx === currentPhaseIdx;
-          const isDone = idx < currentPhaseIdx;
+      {/* ── Step nav ── */}
+      <nav className="px-6 py-4 flex items-center justify-center gap-1">
+        {WIZARD_STEPS.map((step, idx) => {
+          const Icon = step.icon;
+          const isActive = idx === currentStepIdx;
+          const isDone = completedSteps.has(step.id);
+          const isClickable = idx <= currentStepIdx || (idx > 0 && completedSteps.has(WIZARD_STEPS[idx - 1].id));
+
           return (
-            <div key={phase} className="flex items-center gap-1">
-              {idx > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground/40 flex-shrink-0" />}
-              <div className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors flex-shrink-0',
-                isActive && 'bg-primary/10 text-primary',
-                isDone && 'bg-muted text-muted-foreground',
-                !isActive && !isDone && 'text-muted-foreground/50',
-              )}>
-                {isDone ? (
-                  <CheckCircle className="h-3.5 w-3.5 text-primary" />
+            <div key={step.id} className="flex items-center gap-1">
+              {idx > 0 && (
+                <div className={cn(
+                  'h-px w-6 sm:w-10 transition-colors',
+                  isDone || isActive ? 'bg-primary' : 'bg-border',
+                )} />
+              )}
+              <button
+                onClick={() => isClickable && goToStep(idx)}
+                disabled={!isClickable}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                  isActive && 'bg-primary text-primary-foreground shadow-sm',
+                  isDone && !isActive && 'bg-primary/10 text-primary',
+                  !isActive && !isDone && 'text-muted-foreground/50',
+                  isClickable && !isActive && 'hover:bg-accent cursor-pointer',
+                  !isClickable && 'cursor-not-allowed',
+                )}
+              >
+                {isDone && !isActive ? (
+                  <CheckCircle className="h-3.5 w-3.5" />
                 ) : (
                   <Icon className="h-3.5 w-3.5" />
                 )}
-                <span className="hidden sm:inline capitalize">
-                  {phase.replace('_', ' ')}
-                </span>
-              </div>
+                <span className="hidden sm:inline">{step.label}</span>
+              </button>
             </div>
           );
         })}
       </nav>
 
       {/* ── Main content ── */}
-      <main className="flex-1 flex items-center justify-center px-6 py-8">
-        <div className="w-full max-w-2xl animate-fade-in">
+      <main className="flex-1 flex items-start justify-center px-6 py-8 overflow-y-auto">
+        <div className="w-full max-w-2xl animate-fade-in" key={currentStep.id}>
           {renderStepContent()}
-
-          {/* ── Hints ── */}
-          {hints.length > 0 && (
-            <div className="mt-6 space-y-2">
-              {hints.map(hint => {
-                const HintIcon = HINT_ICONS[hint.type] ?? Info;
-                return (
-                  <div
-                    key={hint.id}
-                    className={cn(
-                      'flex items-start gap-3 p-3 rounded-lg border text-sm',
-                      hint.type === 'warning' && 'bg-warning/5 border-warning/20',
-                      hint.type === 'compliance' && 'bg-destructive/5 border-destructive/20',
-                      hint.type === 'tip' && 'bg-primary/5 border-primary/20',
-                      hint.type === 'recommendation' && 'bg-accent border-border',
-                    )}
-                  >
-                    <HintIcon className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-xs">{hint.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{hint.description}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       </main>
 
       {/* ── Footer actions ── */}
       <footer className="border-t border-border px-6 py-4 flex items-center justify-between bg-card">
         <div className="text-xs text-muted-foreground">
-          {currentStep && !isCompleted && (
-            <>
-              Etapa {flow.steps.indexOf(currentStep) + 1} de {flow.steps.length}
-              {currentStep.estimated_minutes > 0 && ` · ~${currentStep.estimated_minutes} min`}
-            </>
-          )}
+          Etapa {currentStepIdx + 1} de {WIZARD_STEPS.length}
+          <span className="hidden sm:inline"> · {currentStep.description}</span>
         </div>
         <div className="flex items-center gap-2">
-          {currentStep && !currentStep.is_mandatory && !isCompleted && currentStep.id !== 'welcome' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => skipStep(currentStep.id)}
-              className="gap-1 text-muted-foreground"
-            >
-              <SkipForward className="h-3.5 w-3.5" />
+          {currentStepIdx > 0 && (
+            <Button variant="ghost" size="sm" onClick={goBack} className="gap-1">
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Voltar
+            </Button>
+          )}
+          {currentStep.id === 'convites' && invitedEmails.length === 0 && (
+            <Button variant="ghost" size="sm" onClick={goNext} className="gap-1 text-muted-foreground">
               Pular
             </Button>
           )}
-          {currentStep && currentStep.id !== 'welcome' && !isCompleted && (
-            <Button
-              size="sm"
-              onClick={() => completeStep(currentStep.id)}
-              className="gap-1"
-            >
-              <CheckCircle className="h-3.5 w-3.5" />
-              Concluir Etapa
-            </Button>
-          )}
-          {isCompleted && (
-            <Button size="sm" onClick={onComplete} className="gap-1">
-              <Rocket className="h-3.5 w-3.5" />
-              Começar a usar
-            </Button>
-          )}
+          <Button size="sm" onClick={goNext} className="gap-1">
+            {isLastStep ? (
+              <>
+                <Rocket className="h-3.5 w-3.5" />
+                Finalizar
+              </>
+            ) : (
+              <>
+                Próximo
+                <ChevronRight className="h-3.5 w-3.5" />
+              </>
+            )}
+          </Button>
         </div>
       </footer>
     </div>
