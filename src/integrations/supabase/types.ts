@@ -3141,6 +3141,45 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_modules: {
+        Row: {
+          created_at: string
+          id: string
+          module_key: string
+          plan_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          module_key: string
+          plan_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          module_key?: string
+          plan_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_modules_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_modules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_cognitive_events: {
         Row: {
           created_at: string
