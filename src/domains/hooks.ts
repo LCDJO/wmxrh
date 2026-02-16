@@ -25,12 +25,18 @@ import { salaryAdjustmentService } from '@/domains/compensation/salary-adjustmen
 import { salaryAdditionalService } from '@/domains/compensation/salary-additional.service';
 import { compensationTimelineService } from '@/domains/compensation/compensation-timeline.service';
 import { auditLogService } from '@/domains/audit/audit-log.service';
+import { payrollCatalogService } from '@/domains/compliance/payroll-catalog.service';
+import { benefitPlanService } from '@/domains/compliance/benefit-plan.service';
+import { healthProgramService } from '@/domains/compliance/health-program.service';
+import { payrollSimulationService } from '@/domains/compliance/payroll-simulation.service';
 
 // Types
 import type {
   CreateTenantDTO, CreateCompanyGroupDTO, CreateCompanyDTO,
   CreateDepartmentDTO, CreatePositionDTO, CreateEmployeeDTO,
   CreateSalaryContractDTO, CreateSalaryAdjustmentDTO, CreateSalaryAdditionalDTO,
+  CreatePayrollItemCatalogDTO, CreateBenefitPlanDTO, CreateEmployeeBenefitDTO,
+  CreateHealthProgramDTO, CreateHealthExamDTO,
 } from '@/domains/shared';
 
 // ========================
@@ -77,6 +83,15 @@ export const queryKeys = {
   compensationTimeline: (empId: string) => ['compensation_timeline', empId] as const,
   auditLogs: (tenantId?: string, filters?: string) => ['audit_logs', tenantId, filters] as const,
   auditLogsByEntity: (entityType: string, entityId: string) => ['audit_logs_entity', entityType, entityId] as const,
+  // Compliance
+  payrollCatalog: (tenantId?: string) => ['payroll_catalog', tenantId] as const,
+  benefitPlans: (tenantId?: string) => ['benefit_plans', tenantId] as const,
+  employeeBenefits: (empId: string) => ['employee_benefits', empId] as const,
+  healthPrograms: (tenantId?: string) => ['health_programs', tenantId] as const,
+  healthExams: (tenantId?: string) => ['health_exams', tenantId] as const,
+  employeeHealthExams: (empId: string) => ['employee_health_exams', empId] as const,
+  riskFactors: (tenantId?: string) => ['risk_factors', tenantId] as const,
+  exposureGroups: (tenantId?: string) => ['exposure_groups', tenantId] as const,
 };
 
 // ========================
@@ -401,5 +416,142 @@ export function useAuditLogsByEntity(entityType: string, entityId: string) {
     queryKey: queryKeys.auditLogsByEntity(entityType, entityId),
     queryFn: () => auditLogService.listByEntity(entityType, entityId, qs!),
     enabled: !!entityType && !!entityId && !!qs,
+  });
+}
+
+// ========================
+// COMPLIANCE — PAYROLL CATALOG
+// ========================
+
+export function usePayrollCatalog() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.payrollCatalog(qs?.tenantId),
+    queryFn: () => payrollCatalogService.list(qs!),
+    enabled: !!qs,
+  });
+}
+
+export function useCreatePayrollCatalogItem() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreatePayrollItemCatalogDTO) => payrollCatalogService.create(dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.payrollCatalog(qs?.tenantId) }),
+  });
+}
+
+// ========================
+// COMPLIANCE — BENEFIT PLANS
+// ========================
+
+export function useBenefitPlans() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.benefitPlans(qs?.tenantId),
+    queryFn: () => benefitPlanService.listPlans(qs!),
+    enabled: !!qs,
+  });
+}
+
+export function useCreateBenefitPlan() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateBenefitPlanDTO) => benefitPlanService.createPlan(dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.benefitPlans(qs?.tenantId) }),
+  });
+}
+
+export function useEmployeeBenefits(employeeId: string) {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.employeeBenefits(employeeId),
+    queryFn: () => benefitPlanService.listEmployeeBenefits(employeeId, qs!),
+    enabled: !!employeeId && !!qs,
+  });
+}
+
+export function useCreateEmployeeBenefit() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateEmployeeBenefitDTO) => benefitPlanService.createEmployeeBenefit(dto, qs!),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: queryKeys.employeeBenefits(vars.employee_id) });
+    },
+  });
+}
+
+// ========================
+// COMPLIANCE — HEALTH PROGRAMS & EXAMS
+// ========================
+
+export function useHealthPrograms() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.healthPrograms(qs?.tenantId),
+    queryFn: () => healthProgramService.listPrograms(qs!),
+    enabled: !!qs,
+  });
+}
+
+export function useCreateHealthProgram() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateHealthProgramDTO) => healthProgramService.createProgram(dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.healthPrograms(qs?.tenantId) }),
+  });
+}
+
+export function useHealthExams(employeeId?: string) {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: employeeId ? queryKeys.employeeHealthExams(employeeId) : queryKeys.healthExams(qs?.tenantId),
+    queryFn: () => healthProgramService.listExams(qs!, employeeId),
+    enabled: !!qs,
+  });
+}
+
+export function useCreateHealthExam() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateHealthExamDTO) => healthProgramService.createExam(dto, qs!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.healthExams(qs?.tenantId) });
+    },
+  });
+}
+
+export function useRiskFactors() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.riskFactors(qs?.tenantId),
+    queryFn: () => healthProgramService.listRiskFactors(qs!),
+    enabled: !!qs,
+  });
+}
+
+export function useExposureGroups() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.exposureGroups(qs?.tenantId),
+    queryFn: () => healthProgramService.listExposureGroups(qs!),
+    enabled: !!qs,
+  });
+}
+
+// ========================
+// COMPLIANCE — PAYROLL SIMULATION
+// ========================
+
+export function usePayrollSimulation(baseSalary: number, referenceDate?: string) {
+  const { currentTenant } = useTenant();
+  return useQuery({
+    queryKey: ['payroll_simulation', currentTenant?.id, baseSalary, referenceDate],
+    queryFn: () => payrollSimulationService.simulate(currentTenant!.id, baseSalary, referenceDate),
+    enabled: !!currentTenant && baseSalary > 0,
   });
 }

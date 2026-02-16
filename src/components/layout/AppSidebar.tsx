@@ -12,7 +12,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Briefcase, TrendingUp, Building2,
-  ChevronLeft, ChevronRight, LogOut,
+  ChevronLeft, ChevronRight, LogOut, FileText, Heart, ShieldCheck,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -42,6 +42,9 @@ const allNavItems: NavItem[] = [
   { to: '/positions', icon: Briefcase, label: 'Cargos', key: 'positions' },
   { to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation' },
   { to: '/departments', icon: Building2, label: 'Departamentos', key: 'departments' },
+  { to: '/compliance', icon: FileText, label: 'Rubricas', key: 'compliance' },
+  { to: '/benefits', icon: ShieldCheck, label: 'Benefícios', key: 'benefits' },
+  { to: '/health', icon: Heart, label: 'Saúde Ocupacional', key: 'health' },
 ];
 
 export function AppSidebar() {

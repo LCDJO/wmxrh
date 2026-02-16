@@ -69,6 +69,8 @@ export const BUSINESS_FEATURES = [
   'recruitment',
   'onboarding_workflow',
   'document_management',
+  'labor_compliance',
+  'occupational_health',
 ] as const;
 
 export type BusinessFeatureKey = typeof BUSINESS_FEATURES[number];
