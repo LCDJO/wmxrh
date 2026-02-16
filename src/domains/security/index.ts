@@ -4,7 +4,47 @@
  * Single import point for all security concerns.
  */
 
-// Permissions
+// ══════════════════════════════════════
+// SECURITY KERNEL (primary API)
+// ══════════════════════════════════════
+export {
+  resolveIdentity,
+  permissionEngine,
+  policyEngine,
+  resolveScope,
+  featureFlagEngine,
+  auditSecurity,
+  requireAtLeastOneRole,
+  requireValidScope,
+  preventCrossTenantAccess,
+} from './kernel';
+export type {
+  Identity,
+  PermissionEngineAPI,
+  PermissionCheck,
+  PolicyEngineAPI,
+  PolicyFn,
+  PolicyContext,
+  PolicyResult,
+  PolicyDecision,
+  ScopeResolution,
+  ScopeResolverInput,
+  FeatureFlagEngineAPI,
+  FeatureFlagContext,
+  AuditSecurityAPI,
+  AuditEntry,
+  AuditAction,
+} from './kernel';
+
+// ── Kernel Hook ──
+export { useSecurityKernel } from './use-security-kernel';
+export type { UseSecurityKernelReturn } from './use-security-kernel';
+
+// ══════════════════════════════════════
+// LEGACY / COMPAT (delegates to kernel)
+// ══════════════════════════════════════
+
+// Permissions (raw matrix)
 export { PERMISSION_MATRIX, hasPermission, canAccessNavItem } from './permissions';
 export type { PermissionAction, PermissionEntity, NavKey } from './permissions';
 
