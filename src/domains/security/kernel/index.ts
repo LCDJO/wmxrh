@@ -51,3 +51,7 @@ export type { PipelineResult, PipelineInput, PipelineDecision } from './security
 // ── Access Graph ───────────────────────────────────────────
 export { AccessGraph, buildAccessGraph, getAccessGraph, setAccessGraph, clearAccessGraph } from './access-graph';
 export type { AccessGraphInput, GraphNode, GraphEdge, NodeType, EdgeRelation } from './access-graph';
+
+// ── Access Graph Service ───────────────────────────────────
+export { accessGraphService } from './access-graph.service';
+export type { InheritedScopes, InheritanceEntry, AccessCheckResult } from './access-graph.service';
