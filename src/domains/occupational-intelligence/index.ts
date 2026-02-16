@@ -24,6 +24,10 @@ export { cboSuggestionService } from './cbo-suggestion.service';
 export type { CboCatalogRecord, CnaeCboMappingRecord } from './cbo-suggestion.service';
 export { nrTrainingRequirementService } from './nr-training-requirement.service';
 export type { NrTrainingCatalogRecord, TrainingRequirementRecord } from './nr-training-requirement.service';
+export { occupationalComplianceGenerator } from './occupational-compliance-generator';
+export type { ComplianceGenerationResult } from './occupational-compliance-generator';
+export { occupationalEvents } from './occupational-compliance.events';
+export type { CompanyRiskProfileGeneratedEvent, CBOSuggestionsGeneratedEvent, TrainingRequirementCreatedEvent, OccupationalComplianceEvent } from './occupational-compliance.events';
 
 export type {
   GrauRisco,
