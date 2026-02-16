@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, LogOut, FileText, Heart,
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
+  GraduationCap,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -74,6 +75,7 @@ const navStructure: NavEntry[] = [
       { to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation' },
       { to: '/benefits', icon: ShieldCheck, label: 'Benefícios', key: 'benefits' },
       { to: '/health', icon: Heart, label: 'Saúde Ocupacional', key: 'health' },
+      { to: '/occupational-compliance', icon: GraduationCap, label: 'Compliance Ocupacional', key: 'health' },
       { to: '/compliance', icon: FileText, label: 'Rubricas', key: 'compliance' },
       { to: '/payroll-simulation', icon: Calculator, label: 'Simulação Folha', key: 'compensation' },
     ],

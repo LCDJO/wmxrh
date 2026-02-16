@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { CnpjConsultaPanel } from '@/components/company/CnpjConsultaPanel';
+import { occupationalComplianceGenerator } from '@/domains/occupational-intelligence/occupational-compliance-generator';
 
 export default function Companies() {
   const { currentTenant } = useTenant();
@@ -16,16 +18,43 @@ export default function Companies() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [document, setDocument] = useState('');
+  const [cnaeConsulted, setCnaeConsulted] = useState(false);
 
   const { data: companies = [] } = useCompanies();
   const { data: employees = [] } = useEmployeesSimple();
   const createMutation = useCreateCompany();
   const { isTenantAdmin } = usePermissions();
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!tenantId) return;
     createMutation.mutate({ tenant_id: tenantId, name, document: document || null }, {
-      onSuccess: () => { toast({ title: 'Empresa criada!' }); setOpen(false); setName(''); setDocument(''); },
+      onSuccess: async (company) => {
+        toast({ title: 'Empresa criada!' });
+
+        // If CNPJ was consulted, run the occupational compliance pipeline
+        const cleanedCnpj = document.replace(/\D/g, '');
+        if (cnaeConsulted && cleanedCnpj.length === 14 && company?.id) {
+          try {
+            const result = await occupationalComplianceGenerator.generateFromCnpj(
+              tenantId,
+              company.id,
+              null,
+              cleanedCnpj,
+            );
+            toast({
+              title: 'Análise ocupacional gerada',
+              description: `Risco ${result.summary.grau_risco} · ${result.summary.total_cbos_suggested} cargos · ${result.summary.total_trainings_generated} treinamentos`,
+            });
+          } catch (err) {
+            console.error('[Companies] Occupational compliance failed:', err);
+          }
+        }
+
+        setOpen(false);
+        setName('');
+        setDocument('');
+        setCnaeConsulted(false);
+      },
       onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
     });
   };
@@ -38,14 +67,23 @@ export default function Companies() {
           <p className="text-muted-foreground mt-1">{companies.length} empresas cadastradas</p>
         </div>
         {isTenantAdmin && (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setName(''); setDocument(''); setCnaeConsulted(false); } }}>
           <DialogTrigger asChild><Button className="gap-2"><Plus className="h-4 w-4" />Nova Empresa</Button></DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>Nova Empresa</DialogTitle></DialogHeader>
             <form onSubmit={e => { e.preventDefault(); handleCreate(); }} className="space-y-4">
               <div className="space-y-2"><Label>Nome *</Label><Input value={name} onChange={e => setName(e.target.value)} required /></div>
-              <div className="space-y-2"><Label>CNPJ</Label><Input value={document} onChange={e => setDocument(e.target.value)} placeholder="00.000.000/0000-00" /></div>
-              <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? 'Criando...' : 'Criar Empresa'}</Button>
+              <div className="space-y-2">
+                <Label>CNPJ</Label>
+                <CnpjConsultaPanel
+                  cnpj={document}
+                  onCnpjChange={setDocument}
+                  onResultReady={() => setCnaeConsulted(true)}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+                {createMutation.isPending ? 'Criando...' : 'Criar Empresa'}
+              </Button>
             </form>
           </DialogContent>
         </Dialog>
