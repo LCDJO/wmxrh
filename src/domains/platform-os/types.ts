@@ -248,16 +248,43 @@ type IdentityPhase = 'anonymous' | 'authenticated' | 'scoped' | 'impersonating' 
 // Navigation Orchestrator
 // ══════════════════════════════════════════════════════════════════
 
+export type NavigationSource = 'core' | 'module' | 'cognitive' | 'pinned';
+
 export interface NavigationEntry {
   path: string;
   label: string;
   module?: ModuleKey | string;
   icon?: string;
+  /** Where this entry came from */
+  source: NavigationSource;
   /** Permissions required to see this route */
   required_permissions?: string[];
   /** Feature flag that gates this route */
   feature_flag?: string;
+  /** Cognitive hint metadata (confidence, reason) */
+  cognitive_hint?: { confidence: number; reason: string };
+  /** Sort priority (lower = higher in tree) */
+  priority?: number;
   children?: NavigationEntry[];
+}
+
+/**
+ * MergedNavigationTree — The final navigation tree after merging
+ * Core Navigation + Module Routes + Cognitive Hints.
+ */
+export interface MergedNavigationTree {
+  /** All entries merged and sorted */
+  entries: NavigationEntry[];
+  /** Core entries only */
+  core: NavigationEntry[];
+  /** Module-contributed entries */
+  modules: NavigationEntry[];
+  /** AI-suggested entries */
+  cognitive: NavigationEntry[];
+  /** User-pinned entries */
+  pinned: NavigationEntry[];
+  /** Merge timestamp */
+  merged_at: number;
 }
 
 export interface NavigationState {
@@ -266,6 +293,8 @@ export interface NavigationState {
   history: string[];
   pinned: string[];
   suggestions: NavigationEntry[];
+  /** The merged navigation tree */
+  tree: MergedNavigationTree;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -376,9 +405,21 @@ export interface IdentityOrchestratorAPI {
 export interface NavigationOrchestratorAPI {
   state(): NavigationState;
   navigate(path: string): void;
-  registerRoutes(entries: NavigationEntry[]): void;
+  /** Register core navigation entries (sidebar, top-nav) */
+  registerCoreRoutes(entries: NavigationEntry[]): void;
+  /** Register module-contributed routes (called by ModuleOrchestrator) */
+  registerModuleRoutes(moduleKey: string, entries: NavigationEntry[]): void;
+  /** Push cognitive hints from the AI layer */
+  pushCognitiveHints(entries: NavigationEntry[]): void;
+  /** Remove all routes contributed by a specific module */
+  removeModuleRoutes(moduleKey: string): void;
   pin(path: string): void;
   unpin(path: string): void;
+  /** Get the merged navigation tree (core + modules + cognitive + pinned) */
+  mergedTree(): MergedNavigationTree;
+  /** Legacy: register routes (delegates to registerCoreRoutes) */
+  registerRoutes(entries: NavigationEntry[]): void;
+  /** Legacy: set suggestions (delegates to pushCognitiveHints) */
   suggest(entries: NavigationEntry[]): void;
 }
 
