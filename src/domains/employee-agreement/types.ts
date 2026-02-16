@@ -7,13 +7,7 @@
 
 // ── Enums ──
 
-export type AgreementCategory =
-  | 'general'
-  | 'position_specific'
-  | 'department_specific'
-  | 'onboarding'
-  | 'compliance'
-  | 'policy';
+export type AgreementTipo = 'geral' | 'funcao' | 'empresa' | 'risco';
 
 export type AgreementStatus =
   | 'pending'
@@ -33,25 +27,27 @@ export type SignatureProvider =
 
 // ── Entities ──
 
+/**
+ * AgreementTemplate — Modelo de Termo
+ *
+ * Exemplos:
+ * - Termo de Uso de Imagem
+ * - Termo de Confidencialidade
+ * - Termo de Direção Veicular
+ * - Termo de EPI
+ * - Termo LGPD
+ */
 export interface AgreementTemplate {
   id: string;
   tenant_id: string;
-  company_id: string | null;
-  company_group_id: string | null;
-  name: string;
-  slug: string;
-  description: string | null;
-  category: AgreementCategory;
-  applies_to_positions: string[];
-  applies_to_departments: string[];
-  is_mandatory: boolean;
-  is_active: boolean;
-  auto_send_on_admission: boolean;
-  requires_witness: boolean;
-  expiry_days: number | null;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
+  nome_termo: string;
+  descricao: string | null;
+  tipo: AgreementTipo;
+  obrigatorio: boolean;
+  cargo_id: string | null;
+  versao: number;
+  conteudo_html: string;
+  ativo: boolean;
 }
 
 export interface AgreementTemplateVersion {
@@ -100,27 +96,28 @@ export interface EmployeeAgreement {
 // ── DTOs ──
 
 export interface CreateTemplateDTO {
-  name: string;
-  slug: string;
-  description?: string;
-  category: AgreementCategory;
-  applies_to_positions?: string[];
-  applies_to_departments?: string[];
-  is_mandatory?: boolean;
-  auto_send_on_admission?: boolean;
-  requires_witness?: boolean;
-  expiry_days?: number | null;
-  company_id?: string;
-  company_group_id?: string;
+  nome_termo: string;
+  descricao?: string;
+  tipo: AgreementTipo;
+  obrigatorio?: boolean;
+  cargo_id?: string | null;
+  conteudo_html: string;
 }
 
-export interface CreateVersionDTO {
+export interface UpdateTemplateDTO {
+  nome_termo?: string;
+  descricao?: string;
+  tipo?: AgreementTipo;
+  obrigatorio?: boolean;
+  cargo_id?: string | null;
+  conteudo_html?: string;
+  ativo?: boolean;
+}
+
+export interface PublishNewVersionDTO {
   template_id: string;
-  title: string;
-  content_html: string;
-  content_plain?: string;
-  change_summary?: string;
-  publish_immediately?: boolean;
+  conteudo_html: string;
+  descricao_mudanca?: string;
 }
 
 export interface SendForSignatureDTO {

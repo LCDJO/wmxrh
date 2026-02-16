@@ -79,9 +79,11 @@ export type Database = {
           applies_to_departments: string[] | null
           applies_to_positions: string[] | null
           auto_send_on_admission: boolean
+          cargo_id: string | null
           category: string
           company_group_id: string | null
           company_id: string | null
+          conteudo_html: string
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -94,14 +96,17 @@ export type Database = {
           slug: string
           tenant_id: string
           updated_at: string
+          versao: number
         }
         Insert: {
           applies_to_departments?: string[] | null
           applies_to_positions?: string[] | null
           auto_send_on_admission?: boolean
+          cargo_id?: string | null
           category?: string
           company_group_id?: string | null
           company_id?: string | null
+          conteudo_html?: string
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -114,14 +119,17 @@ export type Database = {
           slug: string
           tenant_id: string
           updated_at?: string
+          versao?: number
         }
         Update: {
           applies_to_departments?: string[] | null
           applies_to_positions?: string[] | null
           auto_send_on_admission?: boolean
+          cargo_id?: string | null
           category?: string
           company_group_id?: string | null
           company_id?: string | null
+          conteudo_html?: string
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -134,8 +142,16 @@ export type Database = {
           slug?: string
           tenant_id?: string
           updated_at?: string
+          versao?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "agreement_templates_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agreement_templates_company_group_id_fkey"
             columns: ["company_group_id"]

@@ -1,12 +1,15 @@
 /**
  * AgreementTemplateService
  *
- * Manages agreement template CRUD and versioning (append-only).
+ * Manages agreement template CRUD and versioning.
  * Templates define terms, policies, and conditions that employees must sign.
  *
- * ╔══════════════════════════════════════════════════╗
- * ║  tenant_id always derived from SecurityContext   ║
- * ╚══════════════════════════════════════════════════╝
+ * Exemplos:
+ *  - Termo de Uso de Imagem
+ *  - Termo de Confidencialidade
+ *  - Termo de Direção Veicular
+ *  - Termo de EPI
+ *  - Termo LGPD
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -17,43 +20,60 @@ import type { SecurityContext } from '@/domains/security/kernel/identity.service
 import { emitAgreementEvent } from './events';
 import type {
   AgreementTemplate,
-  AgreementTemplateVersion,
   CreateTemplateDTO,
-  CreateVersionDTO,
+  UpdateTemplateDTO,
+  PublishNewVersionDTO,
 } from './types';
 
 function buildPipeline(
   ctx: SecurityContext,
   action: PipelineInput['action'],
-  companyId?: string | null,
 ): PipelineInput {
   return {
     action,
     resource: 'agreement_templates',
     ctx,
-    target: companyId ? { company_id: companyId } : undefined,
-    guardTarget: { tenantId: ctx.tenant_id, companyId: companyId ?? undefined },
+    guardTarget: { tenantId: ctx.tenant_id },
+  };
+}
+
+/** Maps DB row → domain entity */
+function toDomain(row: any): AgreementTemplate {
+  return {
+    id: row.id,
+    tenant_id: row.tenant_id,
+    nome_termo: row.name,
+    descricao: row.description,
+    tipo: row.category as AgreementTemplate['tipo'],
+    obrigatorio: row.is_mandatory,
+    cargo_id: row.cargo_id,
+    versao: row.versao,
+    conteudo_html: row.conteudo_html,
+    ativo: row.is_active,
   };
 }
 
 export const agreementTemplateService = {
 
   async create(dto: CreateTemplateDTO, ctx: SecurityContext): Promise<AgreementTemplate> {
-    requirePermission(buildPipeline(ctx, 'create', dto.company_id));
+    requirePermission(buildPipeline(ctx, 'create'));
+
+    const slug = dto.nome_termo
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
 
     const row = scopedInsertFromContext({
-      name: dto.name,
-      slug: dto.slug,
-      description: dto.description ?? null,
-      category: dto.category,
-      applies_to_positions: dto.applies_to_positions ?? [],
-      applies_to_departments: dto.applies_to_departments ?? [],
-      is_mandatory: dto.is_mandatory ?? true,
-      auto_send_on_admission: dto.auto_send_on_admission ?? false,
-      requires_witness: dto.requires_witness ?? false,
-      expiry_days: dto.expiry_days ?? null,
-      company_id: dto.company_id ?? null,
-      company_group_id: dto.company_group_id ?? null,
+      name: dto.nome_termo,
+      slug,
+      description: dto.descricao ?? null,
+      category: dto.tipo,
+      is_mandatory: dto.obrigatorio ?? true,
+      is_active: true,
+      cargo_id: dto.cargo_id ?? null,
+      versao: 1,
+      conteudo_html: dto.conteudo_html,
     }, ctx);
 
     const { data, error } = await supabase
@@ -68,17 +88,17 @@ export const agreementTemplateService = {
       type: 'agreement.template.created',
       tenant_id: ctx.tenant_id,
       template_id: data.id,
-      payload: { name: dto.name, category: dto.category },
+      payload: { nome_termo: dto.nome_termo, tipo: dto.tipo },
       timestamp: new Date().toISOString(),
     });
 
-    return data as unknown as AgreementTemplate;
+    return toDomain(data);
   },
 
   async list(
     ctx: SecurityContext,
     scope: QueryScope,
-    opts?: { category?: string; active_only?: boolean },
+    opts?: { tipo?: string; active_only?: boolean },
   ): Promise<AgreementTemplate[]> {
     requirePermission(buildPipeline(ctx, 'view'));
 
@@ -87,12 +107,12 @@ export const agreementTemplateService = {
       scope,
     ).order('name');
 
-    if (opts?.category) q = q.eq('category', opts.category);
+    if (opts?.tipo) q = q.eq('category', opts.tipo);
     if (opts?.active_only !== false) q = q.eq('is_active', true);
 
     const { data, error } = await q;
     if (error) throw error;
-    return (data || []) as unknown as AgreementTemplate[];
+    return (data || []).map(toDomain);
   },
 
   async getById(id: string, ctx: SecurityContext): Promise<AgreementTemplate | null> {
@@ -105,71 +125,80 @@ export const agreementTemplateService = {
       .single();
 
     if (error) return null;
-    return data as unknown as AgreementTemplate;
+    return toDomain(data);
   },
 
   async update(
     id: string,
-    updates: Partial<CreateTemplateDTO>,
+    updates: UpdateTemplateDTO,
     ctx: SecurityContext,
   ): Promise<void> {
     requirePermission(buildPipeline(ctx, 'update'));
 
+    const dbUpdates: Record<string, unknown> = {};
+    if (updates.nome_termo !== undefined) dbUpdates.name = updates.nome_termo;
+    if (updates.descricao !== undefined) dbUpdates.description = updates.descricao;
+    if (updates.tipo !== undefined) dbUpdates.category = updates.tipo;
+    if (updates.obrigatorio !== undefined) dbUpdates.is_mandatory = updates.obrigatorio;
+    if (updates.cargo_id !== undefined) dbUpdates.cargo_id = updates.cargo_id;
+    if (updates.conteudo_html !== undefined) dbUpdates.conteudo_html = updates.conteudo_html;
+    if (updates.ativo !== undefined) dbUpdates.is_active = updates.ativo;
+
     const { error } = await supabase
       .from('agreement_templates')
-      .update(updates as any)
+      .update(dbUpdates as any)
       .eq('id', id);
 
     if (error) throw error;
 
     emitAgreementEvent({
+
       type: 'agreement.template.updated',
       tenant_id: ctx.tenant_id,
       template_id: id,
-      payload: updates,
+      payload: updates as unknown as Record<string, unknown>,
       timestamp: new Date().toISOString(),
     });
   },
 
-  // ── VERSIONING (append-only, immutable) ──
+  // ── VERSIONING ──
 
-  async publishVersion(dto: CreateVersionDTO, ctx: SecurityContext): Promise<AgreementTemplateVersion> {
+  async publishNewVersion(dto: PublishNewVersionDTO, ctx: SecurityContext): Promise<AgreementTemplate> {
     requirePermission(buildPipeline(ctx, 'update'));
 
-    const { data: existing } = await supabase
-      .from('agreement_template_versions')
-      .select('version_number')
-      .eq('template_id', dto.template_id)
-      .order('version_number', { ascending: false })
-      .limit(1);
+    const current = await this.getById(dto.template_id, ctx);
+    if (!current) throw new Error('Template não encontrado.');
 
-    const nextVersion = existing && existing.length > 0
-      ? (existing[0] as any).version_number + 1
-      : 1;
+    const nextVersion = current.versao + 1;
 
-    // Unset previous current
+    // Also store in versions table for audit trail
+    const versionRow = scopedInsertFromContext({
+      template_id: dto.template_id,
+      version_number: nextVersion,
+      title: current.nome_termo,
+      content_html: dto.conteudo_html,
+      change_summary: dto.descricao_mudanca ?? null,
+      is_current: true,
+      published_at: new Date().toISOString(),
+    }, ctx);
+
+    // Unset previous current version
     await supabase
       .from('agreement_template_versions')
       .update({ is_current: false } as any)
       .eq('template_id', dto.template_id)
       .eq('is_current', true);
 
-    const row = scopedInsertFromContext({
-      template_id: dto.template_id,
-      version_number: nextVersion,
-      title: dto.title,
-      content_html: dto.content_html,
-      content_plain: dto.content_plain ?? null,
-      change_summary: dto.change_summary ?? null,
-      is_current: true,
-      published_at: dto.publish_immediately !== false ? new Date().toISOString() : null,
-    }, ctx);
-
-    const { data, error } = await supabase
+    // Insert new version record
+    await supabase
       .from('agreement_template_versions')
-      .insert([row as any])
-      .select()
-      .single();
+      .insert([versionRow as any]);
+
+    // Update template itself
+    const { error } = await supabase
+      .from('agreement_templates')
+      .update({ versao: nextVersion, conteudo_html: dto.conteudo_html } as any)
+      .eq('id', dto.template_id);
 
     if (error) throw error;
 
@@ -177,35 +206,27 @@ export const agreementTemplateService = {
       type: 'agreement.template.version_published',
       tenant_id: ctx.tenant_id,
       template_id: dto.template_id,
-      payload: { version: nextVersion, title: dto.title },
+      payload: { versao: nextVersion },
       timestamp: new Date().toISOString(),
     });
 
-    return data as unknown as AgreementTemplateVersion;
+    return { ...current, versao: nextVersion, conteudo_html: dto.conteudo_html };
   },
 
-  async getVersions(templateId: string, ctx: SecurityContext): Promise<AgreementTemplateVersion[]> {
-    requirePermission(buildPipeline(ctx, 'view'));
-
-    const { data, error } = await supabase
-      .from('agreement_template_versions')
-      .select('*')
-      .eq('template_id', templateId)
-      .order('version_number', { ascending: false });
-
-    if (error) throw error;
-    return (data || []) as unknown as AgreementTemplateVersion[];
-  },
-
-  async getCurrentVersion(templateId: string): Promise<AgreementTemplateVersion | null> {
+  /** Get current version's content (from the template itself) */
+  async getCurrentVersion(templateId: string): Promise<{ id: string; version_number: number; content_html: string; title: string } | null> {
     const { data } = await supabase
-      .from('agreement_template_versions')
-      .select('*')
-      .eq('template_id', templateId)
-      .eq('is_current', true)
-      .limit(1);
+      .from('agreement_templates')
+      .select('id, versao, conteudo_html, name')
+      .eq('id', templateId)
+      .single();
 
-    if (!data || data.length === 0) return null;
-    return data[0] as unknown as AgreementTemplateVersion;
+    if (!data) return null;
+    return {
+      id: (data as any).id,
+      version_number: (data as any).versao,
+      content_html: (data as any).conteudo_html,
+      title: (data as any).name,
+    };
   },
 };
