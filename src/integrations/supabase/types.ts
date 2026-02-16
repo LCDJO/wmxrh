@@ -81,6 +81,88 @@ export type Database = {
           },
         ]
       }
+      benefit_plans: {
+        Row: {
+          base_value: number
+          benefit_type: Database["public"]["Enums"]["benefit_type"]
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          employee_discount_percentage: number | null
+          employer_percentage: number | null
+          has_coparticipation: boolean | null
+          id: string
+          is_active: boolean
+          name: string
+          plan_code: string | null
+          provider: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          base_value?: number
+          benefit_type: Database["public"]["Enums"]["benefit_type"]
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          employee_discount_percentage?: number | null
+          employer_percentage?: number | null
+          has_coparticipation?: boolean | null
+          id?: string
+          is_active?: boolean
+          name: string
+          plan_code?: string | null
+          provider?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          base_value?: number
+          benefit_type?: Database["public"]["Enums"]["benefit_type"]
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          employee_discount_percentage?: number | null
+          employer_percentage?: number | null
+          has_coparticipation?: boolean | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          plan_code?: string | null
+          provider?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "benefit_plans_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "benefit_plans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "benefit_plans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           address: string | null
@@ -237,6 +319,102 @@ export type Database = {
           },
         ]
       }
+      employee_benefits: {
+        Row: {
+          benefit_plan_id: string
+          cancellation_date: string | null
+          card_number: string | null
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          custom_value: number | null
+          deleted_at: string | null
+          dependents_count: number | null
+          employee_id: string
+          enrollment_date: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          benefit_plan_id: string
+          cancellation_date?: string | null
+          card_number?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_value?: number | null
+          deleted_at?: string | null
+          dependents_count?: number | null
+          employee_id: string
+          enrollment_date?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          benefit_plan_id?: string
+          cancellation_date?: string | null
+          card_number?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_value?: number | null
+          deleted_at?: string | null
+          dependents_count?: number | null
+          employee_id?: string
+          enrollment_date?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_benefits_benefit_plan_id_fkey"
+            columns: ["benefit_plan_id"]
+            isOneToOne: false
+            referencedRelation: "benefit_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_benefits_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_benefits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_benefits_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_benefits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_events: {
         Row: {
           created_at: string
@@ -288,6 +466,204 @@ export type Database = {
           },
         ]
       }
+      employee_health_exams: {
+        Row: {
+          cbo_code: string | null
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          employee_id: string
+          exam_date: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          expiry_date: string | null
+          health_program_id: string | null
+          id: string
+          is_valid: boolean
+          observations: string | null
+          physician_crm: string | null
+          physician_name: string | null
+          result: Database["public"]["Enums"]["exam_result"]
+          risk_factors_evaluated: string[] | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cbo_code?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id: string
+          exam_date: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          expiry_date?: string | null
+          health_program_id?: string | null
+          id?: string
+          is_valid?: boolean
+          observations?: string | null
+          physician_crm?: string | null
+          physician_name?: string | null
+          result?: Database["public"]["Enums"]["exam_result"]
+          risk_factors_evaluated?: string[] | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cbo_code?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id?: string
+          exam_date?: string
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          expiry_date?: string | null
+          health_program_id?: string | null
+          id?: string
+          is_valid?: boolean
+          observations?: string | null
+          physician_crm?: string | null
+          physician_name?: string | null
+          result?: Database["public"]["Enums"]["exam_result"]
+          risk_factors_evaluated?: string[] | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_health_exams_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_health_exams_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_health_exams_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_health_exams_health_program_id_fkey"
+            columns: ["health_program_id"]
+            isOneToOne: false
+            referencedRelation: "health_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_health_exams_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_payroll_items: {
+        Row: {
+          amount: number
+          catalog_item_id: string
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          employee_id: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          percentage: number | null
+          reference_value: string | null
+          start_date: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          catalog_item_id: string
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          percentage?: number | null
+          reference_value?: string | null
+          start_date?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          catalog_item_id?: string
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          percentage?: number | null
+          reference_value?: string | null
+          start_date?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_payroll_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_item_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_payroll_items_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_payroll_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_payroll_items_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_payroll_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           base_salary: number | null
@@ -299,6 +675,7 @@ export type Database = {
           deleted_at: string | null
           department_id: string | null
           email: string | null
+          exposure_group_id: string | null
           hire_date: string | null
           id: string
           manager_id: string | null
@@ -320,6 +697,7 @@ export type Database = {
           deleted_at?: string | null
           department_id?: string | null
           email?: string | null
+          exposure_group_id?: string | null
           hire_date?: string | null
           id?: string
           manager_id?: string | null
@@ -341,6 +719,7 @@ export type Database = {
           deleted_at?: string | null
           department_id?: string | null
           email?: string | null
+          exposure_group_id?: string | null
           hire_date?: string | null
           id?: string
           manager_id?: string | null
@@ -375,6 +754,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employees_exposure_group_id_fkey"
+            columns: ["exposure_group_id"]
+            isOneToOne: false
+            referencedRelation: "exposure_groups"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "employees_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
@@ -390,6 +776,121 @@ export type Database = {
           },
           {
             foreignKeyName: "employees_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exposure_group_risks: {
+        Row: {
+          control_measures: string | null
+          created_at: string
+          exposure_group_id: string
+          id: string
+          intensity: string | null
+          measurement_date: string | null
+          risk_factor_id: string
+        }
+        Insert: {
+          control_measures?: string | null
+          created_at?: string
+          exposure_group_id: string
+          id?: string
+          intensity?: string | null
+          measurement_date?: string | null
+          risk_factor_id: string
+        }
+        Update: {
+          control_measures?: string | null
+          created_at?: string
+          exposure_group_id?: string
+          id?: string
+          intensity?: string | null
+          measurement_date?: string | null
+          risk_factor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exposure_group_risks_exposure_group_id_fkey"
+            columns: ["exposure_group_id"]
+            isOneToOne: false
+            referencedRelation: "exposure_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exposure_group_risks_risk_factor_id_fkey"
+            columns: ["risk_factor_id"]
+            isOneToOne: false
+            referencedRelation: "occupational_risk_factors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exposure_groups: {
+        Row: {
+          cbo_code: string | null
+          code: string
+          company_group_id: string | null
+          company_id: string
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          environment: string | null
+          id: string
+          is_active: boolean
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cbo_code?: string | null
+          code: string
+          company_group_id?: string | null
+          company_id: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          environment?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cbo_code?: string | null
+          code?: string
+          company_group_id?: string | null
+          company_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          environment?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exposure_groups_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exposure_groups_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exposure_groups_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -455,9 +956,201 @@ export type Database = {
           },
         ]
       }
+      health_programs: {
+        Row: {
+          company_group_id: string | null
+          company_id: string
+          created_at: string
+          deleted_at: string | null
+          document_url: string | null
+          id: string
+          name: string
+          notes: string | null
+          program_type: Database["public"]["Enums"]["health_program_type"]
+          responsible_name: string | null
+          responsible_registration: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          valid_from: string
+          valid_until: string
+        }
+        Insert: {
+          company_group_id?: string | null
+          company_id: string
+          created_at?: string
+          deleted_at?: string | null
+          document_url?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          program_type: Database["public"]["Enums"]["health_program_type"]
+          responsible_name?: string | null
+          responsible_registration?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          valid_from: string
+          valid_until: string
+        }
+        Update: {
+          company_group_id?: string | null
+          company_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          document_url?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          program_type?: Database["public"]["Enums"]["health_program_type"]
+          responsible_name?: string | null
+          responsible_registration?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_programs_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_programs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_programs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      occupational_risk_factors: {
+        Row: {
+          category: Database["public"]["Enums"]["risk_category"]
+          code: string
+          created_at: string
+          description: string | null
+          esocial_code: string | null
+          exposure_limit: string | null
+          id: string
+          is_active: boolean
+          measurement_unit: string | null
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["risk_category"]
+          code: string
+          created_at?: string
+          description?: string | null
+          esocial_code?: string | null
+          exposure_limit?: string | null
+          id?: string
+          is_active?: boolean
+          measurement_unit?: string | null
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["risk_category"]
+          code?: string
+          created_at?: string
+          description?: string | null
+          esocial_code?: string | null
+          exposure_limit?: string | null
+          id?: string
+          is_active?: boolean
+          measurement_unit?: string | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "occupational_risk_factors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_item_catalog: {
+        Row: {
+          code: string
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          esocial_code: string | null
+          id: string
+          incidence: Database["public"]["Enums"]["payroll_incidence"]
+          is_active: boolean
+          is_system: boolean
+          item_type: Database["public"]["Enums"]["payroll_item_type"]
+          name: string
+          nature: Database["public"]["Enums"]["payroll_item_nature"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          esocial_code?: string | null
+          id?: string
+          incidence?: Database["public"]["Enums"]["payroll_incidence"]
+          is_active?: boolean
+          is_system?: boolean
+          item_type: Database["public"]["Enums"]["payroll_item_type"]
+          name: string
+          nature?: Database["public"]["Enums"]["payroll_item_nature"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          esocial_code?: string | null
+          id?: string
+          incidence?: Database["public"]["Enums"]["payroll_incidence"]
+          is_active?: boolean
+          is_system?: boolean
+          item_type?: Database["public"]["Enums"]["payroll_item_type"]
+          name?: string
+          nature?: Database["public"]["Enums"]["payroll_item_nature"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_item_catalog_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       positions: {
         Row: {
           base_salary: number | null
+          cbo_code: string | null
           company_group_id: string | null
           company_id: string
           created_at: string
@@ -471,6 +1164,7 @@ export type Database = {
         }
         Insert: {
           base_salary?: number | null
+          cbo_code?: string | null
           company_group_id?: string | null
           company_id: string
           created_at?: string
@@ -484,6 +1178,7 @@ export type Database = {
         }
         Update: {
           base_salary?: number | null
+          cbo_code?: string | null
           company_group_id?: string | null
           company_id?: string
           created_at?: string
@@ -881,6 +1576,59 @@ export type Database = {
           },
         ]
       }
+      tax_brackets: {
+        Row: {
+          bracket_order: number
+          created_at: string
+          deduction: number
+          effective_from: string
+          effective_until: string | null
+          id: string
+          max_value: number | null
+          min_value: number
+          rate: number
+          tax_type: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          bracket_order: number
+          created_at?: string
+          deduction?: number
+          effective_from: string
+          effective_until?: string | null
+          id?: string
+          max_value?: number | null
+          min_value: number
+          rate: number
+          tax_type: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          bracket_order?: number
+          created_at?: string
+          deduction?: number
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          max_value?: number | null
+          min_value?: number
+          rate?: number
+          tax_type?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_brackets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_memberships: {
         Row: {
           created_at: string
@@ -992,6 +1740,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_payroll_simulation: {
+        Args: {
+          _base_salary: number
+          _reference_date?: string
+          _tenant_id: string
+        }
+        Returns: Json
+      }
       can_manage_compensation: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
@@ -1066,6 +1822,7 @@ export type Database = {
       }
     }
     Enums: {
+      benefit_type: "va" | "vr" | "vt" | "health" | "dental"
       employee_event_type:
         | "company_transfer"
         | "position_change"
@@ -1079,6 +1836,31 @@ export type Database = {
         | "additional_added"
         | "job_changed"
       employee_status: "active" | "inactive" | "on_leave"
+      exam_result: "apto" | "inapto" | "apto_restricao"
+      exam_type:
+        | "admissional"
+        | "periodico"
+        | "demissional"
+        | "mudanca_funcao"
+        | "retorno_trabalho"
+      health_program_type: "pcmso" | "pgr" | "ltcat" | "ppra"
+      payroll_incidence:
+        | "inss"
+        | "irrf"
+        | "fgts"
+        | "inss_irrf"
+        | "inss_fgts"
+        | "irrf_fgts"
+        | "all"
+        | "none"
+      payroll_item_nature: "fixed" | "variable" | "informational"
+      payroll_item_type: "provento" | "desconto"
+      risk_category:
+        | "fisico"
+        | "quimico"
+        | "biologico"
+        | "ergonomico"
+        | "acidente"
       salary_additional_type:
         | "bonus"
         | "commission"
@@ -1231,6 +2013,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      benefit_type: ["va", "vr", "vt", "health", "dental"],
       employee_event_type: [
         "company_transfer",
         "position_change",
@@ -1245,6 +2028,34 @@ export const Constants = {
         "job_changed",
       ],
       employee_status: ["active", "inactive", "on_leave"],
+      exam_result: ["apto", "inapto", "apto_restricao"],
+      exam_type: [
+        "admissional",
+        "periodico",
+        "demissional",
+        "mudanca_funcao",
+        "retorno_trabalho",
+      ],
+      health_program_type: ["pcmso", "pgr", "ltcat", "ppra"],
+      payroll_incidence: [
+        "inss",
+        "irrf",
+        "fgts",
+        "inss_irrf",
+        "inss_fgts",
+        "irrf_fgts",
+        "all",
+        "none",
+      ],
+      payroll_item_nature: ["fixed", "variable", "informational"],
+      payroll_item_type: ["provento", "desconto"],
+      risk_category: [
+        "fisico",
+        "quimico",
+        "biologico",
+        "ergonomico",
+        "acidente",
+      ],
       salary_additional_type: [
         "bonus",
         "commission",

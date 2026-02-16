@@ -29,7 +29,12 @@ export type PermissionEntity =
   | 'salary_history'
   | 'compensation'
   | 'audit_logs'
-  | 'user_roles';
+  | 'user_roles'
+  | 'payroll_catalog'
+  | 'benefit_plans'
+  | 'employee_benefits'
+  | 'health_programs'
+  | 'health_exams';
 
 // ========================
 // ROLE SETS (mirrors DB functions)
@@ -150,13 +155,43 @@ export const PERMISSION_MATRIX: PermissionMatrix = {
     update: TENANT_ADMINS,
     delete: TENANT_ADMINS,
   },
+  payroll_catalog: {
+    view: ALL_MEMBERS,
+    create: TENANT_ADMINS,
+    update: TENANT_ADMINS,
+    delete: TENANT_ADMINS,
+  },
+  benefit_plans: {
+    view: ALL_MEMBERS,
+    create: TENANT_ADMINS,
+    update: TENANT_ADMINS,
+    delete: TENANT_ADMINS,
+  },
+  employee_benefits: {
+    view: COMPENSATION_VIEWERS,
+    create: COMPENSATION_MANAGERS,
+    update: COMPENSATION_MANAGERS,
+    delete: COMPENSATION_MANAGERS,
+  },
+  health_programs: {
+    view: ALL_MEMBERS,
+    create: EMPLOYEE_MANAGERS,
+    update: EMPLOYEE_MANAGERS,
+    delete: EMPLOYEE_MANAGERS,
+  },
+  health_exams: {
+    view: EMPLOYEE_MANAGERS,
+    create: EMPLOYEE_MANAGERS,
+    update: EMPLOYEE_MANAGERS,
+    delete: [], // Immutable
+  },
 };
 
 // ========================
 // NAV ACCESS (derived from permission matrix)
 // ========================
 
-export type NavKey = 'dashboard' | 'employees' | 'companies' | 'groups' | 'positions' | 'compensation' | 'departments' | 'audit';
+export type NavKey = 'dashboard' | 'employees' | 'companies' | 'groups' | 'positions' | 'compensation' | 'departments' | 'audit' | 'compliance' | 'benefits' | 'health';
 
 const NAV_ENTITY_MAP: Record<NavKey, PermissionEntity> = {
   dashboard: 'tenants',
@@ -167,6 +202,9 @@ const NAV_ENTITY_MAP: Record<NavKey, PermissionEntity> = {
   compensation: 'compensation',
   departments: 'departments',
   audit: 'audit_logs',
+  compliance: 'payroll_catalog',
+  benefits: 'benefit_plans',
+  health: 'health_programs',
 };
 
 /**

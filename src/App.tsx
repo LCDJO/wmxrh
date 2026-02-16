@@ -18,6 +18,9 @@ import CompanyGroups from "./pages/CompanyGroups";
 import Positions from "./pages/Positions";
 import Compensation from "./pages/Compensation";
 import Departments from "./pages/Departments";
+import Compliance from "./pages/Compliance";
+import Benefits from "./pages/Benefits";
+import Health from "./pages/Health";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -81,6 +84,21 @@ function AppRoutes() {
         <Route path="/departments" element={
           <ProtectedRoute navKey="departments">
             <Departments />
+          </ProtectedRoute>
+        } />
+        <Route path="/compliance" element={
+          <ProtectedRoute navKey="compliance">
+            <Compliance />
+          </ProtectedRoute>
+        } />
+        <Route path="/benefits" element={
+          <ProtectedRoute navKey="benefits">
+            <Benefits />
+          </ProtectedRoute>
+        } />
+        <Route path="/health" element={
+          <ProtectedRoute navKey="health">
+            <Health />
           </ProtectedRoute>
         } />
       </Route>
