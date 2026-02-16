@@ -376,22 +376,75 @@ function validateField(field: string, value: unknown, rule: FieldRule, errors: R
   return processed;
 }
 
+/**
+ * Fields that MUST NEVER come from the frontend.
+ * These are server-derived from the authenticated context.
+ */
+const FORBIDDEN_FIELDS = new Set([
+  "tenant_id",    // ALWAYS derived from JWT token
+  "user_id",      // ALWAYS derived from JWT token
+  "created_by",   // ALWAYS derived from JWT token
+  "performed_by", // ALWAYS derived from JWT token
+]);
+
 function validatePayload<T = Record<string, unknown>>(
   payload: Record<string, unknown>,
-  schema: ValidationSchema
+  schema: ValidationSchema,
+  ctx?: MiddlewareContext
 ): ValidationResult<T> {
   const errors: Record<string, string[]> = {};
   const data: Record<string, unknown> = {};
 
+  // ── CRITICAL: Block forbidden fields from frontend ──
+  for (const key of Object.keys(payload)) {
+    if (FORBIDDEN_FIELDS.has(key)) {
+      if (!errors[key]) errors[key] = [];
+      errors[key].push(`Field '${key}' cannot be set by the client. It is derived from your authentication token.`);
+    }
+  }
+
   for (const [field, rule] of Object.entries(schema)) {
+    // Skip forbidden fields in schema validation (they'll be injected server-side)
+    if (FORBIDDEN_FIELDS.has(field)) continue;
     data[field] = validateField(field, payload[field], rule, errors);
   }
 
-  // Reject unknown fields (allowlist approach)
+  // Reject unknown fields (allowlist approach), excluding forbidden fields already flagged
   for (const key of Object.keys(payload)) {
-    if (!(key in schema)) {
+    if (!(key in schema) && !FORBIDDEN_FIELDS.has(key)) {
       if (!errors[key]) errors[key] = [];
       errors[key].push(`Unknown field: ${key}`);
+    }
+  }
+
+  // ── CRITICAL: Validate company_id against user's scopes ──
+  if (ctx && payload.company_id && typeof payload.company_id === "string") {
+    const companyId = payload.company_id;
+    const hasTenantScope = ctx.permissionScopes.some(s => s.scope_type === "tenant");
+    if (!hasTenantScope) {
+      const hasCompanyAccess = ctx.permissionScopes.some(s =>
+        (s.scope_type === "company" && s.scope_id === companyId) ||
+        (s.scope_type === "company_group") // group admins can access companies in their group (RLS double-checks)
+      );
+      if (!hasCompanyAccess) {
+        if (!errors["company_id"]) errors["company_id"] = [];
+        errors["company_id"].push("You do not have access to this company");
+      }
+    }
+  }
+
+  // ── CRITICAL: Validate company_group_id against user's scopes ──
+  if (ctx && payload.company_group_id && typeof payload.company_group_id === "string") {
+    const groupId = payload.company_group_id;
+    const hasTenantScope = ctx.permissionScopes.some(s => s.scope_type === "tenant");
+    if (!hasTenantScope) {
+      const hasGroupAccess = ctx.permissionScopes.some(s =>
+        s.scope_type === "company_group" && s.scope_id === groupId
+      );
+      if (!hasGroupAccess) {
+        if (!errors["company_group_id"]) errors["company_group_id"] = [];
+        errors["company_group_id"].push("You do not have access to this company group");
+      }
     }
   }
 
@@ -430,15 +483,22 @@ async function parseAndLimitBody(req: Request): Promise<Record<string, unknown>>
 }
 
 /**
- * Parse + validate the request body against a schema.
- * Throws MiddlewareError(422) with field-level details on failure.
+ * Parse, validate, and secure the request body.
+ *
+ * SECURITY RULES ENFORCED:
+ *   1. tenant_id NEVER accepted from frontend → always injected from ctx.tenantId
+ *   2. user_id / created_by NEVER accepted → injected from ctx.userId
+ *   3. company_id validated against user's permission scopes → blocks cross-company injection
+ *   4. company_group_id validated against user's permission scopes → blocks cross-group injection
+ *
+ * Returns sanitized data WITH server-injected fields ready for DB insert.
  */
 export async function validateBody<T = Record<string, unknown>>(
   ctx: MiddlewareContext,
   schema: ValidationSchema
 ): Promise<T> {
   const payload = await parseAndLimitBody(ctx.request);
-  const result = validatePayload<T>(payload, schema);
+  const result = validatePayload<T>(payload, schema, ctx);
 
   if (!result.valid) {
     throw new MiddlewareError(
@@ -449,21 +509,46 @@ export async function validateBody<T = Record<string, unknown>>(
     );
   }
 
-  return result.data;
+  // ── Server-side injection: NEVER trust frontend for these ──
+  const secured = result.data as Record<string, unknown>;
+  secured.tenant_id = ctx.tenantId;
+  secured.created_by = ctx.userId;
+
+  return secured as T;
+}
+
+/**
+ * Convenience: inject server-derived fields into any data object.
+ * Use when you don't need full schema validation but still need security injection.
+ */
+export function injectServerFields<T extends Record<string, unknown>>(ctx: MiddlewareContext, data: T): T & { tenant_id: string; created_by: string } {
+  // Strip any client-supplied forbidden fields
+  for (const field of FORBIDDEN_FIELDS) {
+    if (field in data) {
+      console.warn(`[Security] Stripped forbidden field '${field}' from payload (req=${ctx.requestId})`);
+      delete data[field];
+    }
+  }
+  return { ...data, tenant_id: ctx.tenantId, created_by: ctx.userId };
 }
 
 // ═══════════════════════════════════
 // Pre-built Financial Schemas
 // ═══════════════════════════════════
 
-/** Reusable field rules for financial data */
+/**
+ * Reusable field rules for financial data.
+ *
+ * NOTE: tenant_id, user_id, created_by are NEVER in schemas.
+ * They are injected server-side by validateBody() from the auth context.
+ */
 export const v = {
-  // ── Identifiers ──
+  // ── Identifiers (client-provided, validated against scopes) ──
   uuid: (required = true): FieldRule => ({ type: "uuid", required }),
-  tenantId: (): FieldRule => ({ type: "uuid", required: true }),
+  // NO tenantId builder — tenant_id is FORBIDDEN from frontend
   employeeId: (): FieldRule => ({ type: "uuid", required: true }),
-  companyId: (): FieldRule => ({ type: "uuid", required: false }),
-  groupId: (): FieldRule => ({ type: "uuid", required: false }),
+  companyId: (): FieldRule => ({ type: "uuid", required: false }),  // validated against scopes
+  groupId: (): FieldRule => ({ type: "uuid", required: false }),    // validated against scopes
 
   // ── Financial ──
   salary: (opts?: { min?: number; max?: number }): FieldRule => ({
@@ -510,7 +595,11 @@ export const v = {
   boolean: (required = false): FieldRule => ({ type: "boolean", required }),
 } as const;
 
-/** Salary contract creation schema */
+/**
+ * Salary contract creation schema.
+ * tenant_id + created_by are auto-injected by validateBody().
+ * company_id is validated against user's permission scopes.
+ */
 export const salaryContractSchema: ValidationSchema = {
   employee_id:  v.employeeId(),
   base_salary:  v.salary(),
