@@ -110,6 +110,16 @@ export type {
 export { useFeatureFlags } from './use-feature-flags';
 export type { UseFeatureFlagsReturn } from './use-feature-flags';
 
+// ── Identity Intelligence Layer ──
+export { identityIntelligence, onIILEvent, getIILEventLog } from './kernel';
+export type {
+  IdentityPhase, IdentityTrigger, IdentitySnapshot,
+  RiskLevel, RiskAssessment, IntelligenceDecision,
+  IILEvent,
+} from './kernel';
+export { useIdentityIntelligence } from './kernel/identity-intelligence/use-identity-intelligence';
+export type { UseIdentityIntelligenceReturn } from './kernel/identity-intelligence/use-identity-intelligence';
+
 // ── Kernel Hook ──
 export { useSecurityKernel } from './use-security-kernel';
 export type { UseSecurityKernelReturn } from './use-security-kernel';
