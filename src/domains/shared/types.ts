@@ -196,6 +196,27 @@ export interface SalaryAdjustmentWithRelations extends SalaryAdjustment {
 }
 
 // ========================
+// AUDIT LOG
+// ========================
+
+export type AuditAction = 'create' | 'update' | 'delete';
+
+export interface AuditLog {
+  id: string;
+  tenant_id: string;
+  company_group_id: string | null;
+  company_id: string | null;
+  user_id: string | null;
+  action: AuditAction;
+  entity_type: string;
+  entity_id: string | null;
+  old_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+// ========================
 // AGGREGATE VIEWS (with joined data)
 // ========================
 
