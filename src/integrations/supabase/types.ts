@@ -258,9 +258,11 @@ export type Database = {
           document_url: string | null
           employer_union_name: string | null
           id: string
+          jornada_semanal: number | null
           metadata: Json | null
           notes: string | null
           registration_number: string | null
+          regras_extras: Json | null
           rule_set_id: string | null
           salary_ceiling: number | null
           salary_floor: number | null
@@ -284,9 +286,11 @@ export type Database = {
           document_url?: string | null
           employer_union_name?: string | null
           id?: string
+          jornada_semanal?: number | null
           metadata?: Json | null
           notes?: string | null
           registration_number?: string | null
+          regras_extras?: Json | null
           rule_set_id?: string | null
           salary_ceiling?: number | null
           salary_floor?: number | null
@@ -310,9 +314,11 @@ export type Database = {
           document_url?: string | null
           employer_union_name?: string | null
           id?: string
+          jornada_semanal?: number | null
           metadata?: Json | null
           notes?: string | null
           registration_number?: string | null
+          regras_extras?: Json | null
           rule_set_id?: string | null
           salary_ceiling?: number | null
           salary_floor?: number | null
@@ -357,6 +363,7 @@ export type Database = {
       }
       companies: {
         Row: {
+          active_agreement_id: string | null
           address: string | null
           company_group_id: string | null
           created_at: string
@@ -371,6 +378,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          active_agreement_id?: string | null
           address?: string | null
           company_group_id?: string | null
           created_at?: string
@@ -385,6 +393,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          active_agreement_id?: string | null
           address?: string | null
           company_group_id?: string | null
           created_at?: string
@@ -399,6 +408,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "companies_active_agreement_id_fkey"
+            columns: ["active_agreement_id"]
+            isOneToOne: false
+            referencedRelation: "collective_agreements"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "companies_company_group_id_fkey"
             columns: ["company_group_id"]
