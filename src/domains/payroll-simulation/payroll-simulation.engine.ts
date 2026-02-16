@@ -30,6 +30,7 @@ import {
   detectSimulationRisks,
   type PayrollSimulationCreatedPayload,
   type EncargoEstimateUpdatedPayload,
+  type ComplianceContext,
 } from './payroll-simulation.events';
 /**
  * Run a full payroll simulation.
@@ -42,7 +43,7 @@ import {
 export function simulatePayroll(
   input: SimulationInput,
   rules: LaborRuleDefinition[],
-  meta?: { tenantId?: string; employeeId?: string },
+  meta?: { tenantId?: string; employeeId?: string; compliance?: ComplianceContext },
 ): PayrollSimulationOutput {
   // 1. Build WorkContext for LaborRulesEngine
   const workContext: WorkContext = {
@@ -223,6 +224,8 @@ export function simulatePayroll(
     employerCost.fator_custo,
     fullSummary.baseInss,
     input.salario_base,
+    input,
+    meta?.compliance,
   );
   for (const risk of risks) {
     payrollSimulationEventBus.emit('SimulationRiskDetected', risk);

@@ -108,6 +108,14 @@ export const payrollSimulationEventBus = {
 const FATOR_CUSTO_WARNING = 2.0;
 const FATOR_CUSTO_CRITICAL = 2.5;
 const INSS_CEILING = 7786.02;
+const MAX_HE_MENSAL = 44; // CLT Art. 59 — máximo 2h/dia × 22 dias úteis
+
+export interface ComplianceContext {
+  /** Piso salarial da CCT (se disponível) */
+  piso_cct?: number;
+  /** Funcionário tem vínculo de risco ativo (insalubridade/periculosidade) */
+  tem_vinculo_risco?: boolean;
+}
 
 export function detectSimulationRisks(
   tenantId: string,
@@ -115,6 +123,8 @@ export function detectSimulationRisks(
   fatorCusto: number,
   baseInss: number,
   salarioBase: number,
+  input?: { horas_extras_50?: number; horas_extras_100?: number; insalubridade_grau?: string | null; periculosidade?: boolean },
+  compliance?: ComplianceContext,
 ): SimulationRiskDetectedPayload[] {
   const risks: SimulationRiskDetectedPayload[] = [];
 
@@ -157,6 +167,50 @@ export function detectSimulationRisks(
       risk_level: 'critical',
       message: 'Salário base é zero ou negativo — simulação pode estar inconsistente',
       details: { salario_base: salarioBase },
+    });
+  }
+
+  // ── Compliance Alerts ──
+
+  // 1. Funcionário abaixo do piso CCT
+  if (compliance?.piso_cct && salarioBase < compliance.piso_cct) {
+    risks.push({
+      tenant_id: tenantId,
+      employee_id: employeeId,
+      risk_code: 'BELOW_CCT_FLOOR',
+      risk_level: 'critical',
+      message: `Salário base (${salarioBase.toFixed(2)}) abaixo do piso da CCT (${compliance.piso_cct.toFixed(2)})`,
+      details: { salario_base: salarioBase, piso_cct: compliance.piso_cct, deficit: compliance.piso_cct - salarioBase },
+    });
+  }
+
+  // 2. Excesso de horas extras (CLT Art. 59 — máx 2h/dia)
+  const totalHE = (input?.horas_extras_50 ?? 0) + (input?.horas_extras_100 ?? 0);
+  if (totalHE > MAX_HE_MENSAL) {
+    risks.push({
+      tenant_id: tenantId,
+      employee_id: employeeId,
+      risk_code: 'OVERTIME_EXCESS',
+      risk_level: 'warning',
+      message: `Total de horas extras (${totalHE}h) excede limite mensal recomendado (${MAX_HE_MENSAL}h) — CLT Art. 59`,
+      details: { horas_extras_total: totalHE, limite: MAX_HE_MENSAL, horas_extras_50: input?.horas_extras_50, horas_extras_100: input?.horas_extras_100 },
+    });
+  }
+
+  // 3. Adicional sem vínculo de risco
+  const temAdicionalRisco = !!(input?.insalubridade_grau || input?.periculosidade);
+  if (temAdicionalRisco && compliance?.tem_vinculo_risco === false) {
+    risks.push({
+      tenant_id: tenantId,
+      employee_id: employeeId,
+      risk_code: 'HAZARD_PAY_WITHOUT_RISK',
+      risk_level: 'critical',
+      message: 'Adicional de insalubridade/periculosidade sem vínculo de risco ativo — possível irregularidade',
+      details: {
+        insalubridade_grau: input?.insalubridade_grau,
+        periculosidade: input?.periculosidade,
+        tem_vinculo_risco: false,
+      },
     });
   }
 
