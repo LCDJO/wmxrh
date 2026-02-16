@@ -4,6 +4,7 @@
  */
 import { useState, useMemo, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { RoleSuggestionPanel } from '@/components/iam/RoleSuggestionPanel';
 import { useRolePermissionsMatrixView, useRolePermissionsCached } from '@/domains/iam/read-models';
 import { identityGateway } from '@/domains/iam/identity.gateway';
 import { type CustomRole, type PermissionDefinition } from '@/domains/iam/iam.service';
@@ -639,6 +640,31 @@ export function VisualPermissionBuilder({ roles, permissions, tenantId, userId, 
                 )}
               </CardContent>
             </Card>
+
+            {/* AI Role Suggestions */}
+            {selectedRole && (
+              <RoleSuggestionPanel
+                roleName={selectedRole.name}
+                currentPermissionCodes={new Set(
+                  Array.from(selected)
+                    .map(id => permissions.find(p => p.id === id)?.code)
+                    .filter(Boolean) as string[]
+                )}
+                onApplySuggestions={(codes) => {
+                  const idsToAdd = permissions
+                    .filter(p => codes.includes(p.code) && !selected.has(p.id))
+                    .map(p => p.id);
+                  if (idsToAdd.length > 0) {
+                    setSelected(prev => {
+                      const next = new Set(prev);
+                      idsToAdd.forEach(id => next.add(id));
+                      return next;
+                    });
+                    setDirty(true);
+                  }
+                }}
+              />
+            )}
 
             {/* Inheritance Visualization */}
             <Card>

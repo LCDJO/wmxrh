@@ -31,6 +31,9 @@ Rules:
 - Explain WHY each permission is recommended.
 - Respond in pt-BR.
 - Confidence: 0.0–1.0.
+- IMPORTANT: Each suggestion title MUST be the permission code (e.g. "employee.view").
+- Each suggestion MUST include metadata.permission_code with the exact code string.
+- Type must be "permission".
 Caller role: ${callerRole}`,
       user_prompt: `Target role: "${targetRole ?? 'new role'}"
 
@@ -40,7 +43,7 @@ ${snapshot.permissions.map(p => `• ${p.code} (${p.module}) — ${p.description
 Current matrix:
 ${JSON.stringify(matrix, null, 2)}
 
-Suggest the ideal permissions for "${targetRole ?? 'new role'}".`,
+Suggest the ideal permissions for "${targetRole ?? 'new role'}". Return each as type "permission" with metadata.permission_code set to the exact code.`,
       snapshot_summary: {
         total_permissions: snapshot.permissions.length,
         roles_configured: Object.keys(existingBindings).length,
