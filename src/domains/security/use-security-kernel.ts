@@ -31,6 +31,7 @@ import {
   auditSecurity,
   executeSecurityPipeline,
   accessGraphService,
+  identityBoundary,
   type Identity,
   type SecurityContext,
   type PolicyResult,
@@ -41,6 +42,10 @@ import {
   type AccessGraph,
   type AccessCheckResult,
   type InheritedScopes,
+  type BoundaryIdentity,
+  type OperationalContext,
+  type ContextSwitchResult,
+  type IdentityBoundarySnapshot,
 } from './kernel';
 
 import type { PermissionAction, PermissionEntity, NavKey } from './permissions';
@@ -51,38 +56,38 @@ export interface UseSecurityKernelReturn {
   // ── SecurityContext (the universal auth envelope) ──
   securityContext: SecurityContext | null;
 
+  // ── Identity Boundary Layer ──
+  boundaryIdentity: BoundaryIdentity | null;
+  operationalContext: OperationalContext | null;
+  switchContext: (request: { targetTenantId?: string; targetScopeLevel?: ScopeType; targetGroupId?: string | null; targetCompanyId?: string | null }) => ContextSwitchResult;
+  boundarySnapshot: () => IdentityBoundarySnapshot;
+  availableTenants: ReadonlyArray<{ tenantId: string; tenantName: string; role: TenantRole }>;
+  canSwitchToTenant: (tenantId: string) => boolean;
+
   // ── Identity ──
   identity: Identity | null;
   isAuthenticated: boolean;
 
   // ── Permissions (RBAC + ABAC) ──
-  /** RBAC+ABAC: full permission check against SecurityContext */
   checkPermission: (action: PermissionAction, resource: PermissionEntity, target?: ResourceTarget) => PermissionResult;
-  /** RBAC-only shortcut (backward compat) */
   can: (entity: PermissionEntity, action: PermissionAction) => boolean;
   canNav: (navKey: NavKey) => boolean;
   hasRole: (...roles: TenantRole[]) => boolean;
   effectiveRoles: TenantRole[];
 
   // ── Policy (declarative rules) ──
-  /** Evaluate declarative policy rules for a specific action+resource */
   evaluateRules: (action: PermissionAction, resource: PermissionEntity, target?: ResourceTarget) => PolicyResult;
-  /** Legacy: evaluate function-based policies */
   evaluatePolicy: () => PolicyResult;
 
   // ── Feature Flags ──
   isFeatureEnabled: (feature: FeatureKey) => boolean;
 
   // ── Pipeline ──
-  /** Execute the full security pipeline: Auth → Scope → Permission → Policy → Audit */
   executePipeline: (action: PermissionAction, resource: PermissionEntity, target?: ResourceTarget) => PipelineResult;
 
   // ── Access Graph ──
-  /** The precomputed access graph for O(1) authorization checks */
   accessGraph: AccessGraph | null;
-  /** Check access via graph: RBAC + scope in one call */
   graphCheckAccess: (action: PermissionAction, resource: PermissionEntity, scopeId?: string | null, scopeType?: ScopeType) => AccessCheckResult;
-  /** Resolve all inherited scopes for the current user */
   resolveInheritedScopes: () => InheritedScopes | null;
 
   // ── Audit ──
@@ -100,7 +105,7 @@ export interface UseSecurityKernelReturn {
 
 export function useSecurityKernel(): UseSecurityKernelReturn {
   const { user, session } = useAuth();
-  const { currentTenant } = useTenant();
+  const { currentTenant, tenants, membership } = useTenant();
   const {
     effectiveRoles,
     hasRole,
@@ -109,6 +114,64 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     membershipRole,
     scope: uiScope,
   } = useScope();
+
+  // ── Identity Boundary Layer ──
+  const boundaryIdentity = useMemo(() => {
+    if (!user || !session) {
+      identityBoundary.clear();
+      return null;
+    }
+    if (identityBoundary.identity?.userId === user.id) {
+      return identityBoundary.identity;
+    }
+    return identityBoundary.establish({
+      user,
+      session,
+      tenantMemberships: tenants.map(t => ({
+        tenantId: t.id,
+        tenantName: t.name,
+        role: (membership?.tenant_id === t.id ? membership.role : 'viewer') as TenantRole,
+      })),
+      allUserRoles: userRoles,
+    });
+  }, [user, session, tenants, membership, userRoles]);
+
+  // ── Sync operational context with ScopeContext ──
+  const operationalContext = useMemo((): OperationalContext | null => {
+    if (!boundaryIdentity || !currentTenant || !membership) return null;
+
+    const scopeLevel: ScopeType =
+      uiScope.level === 'tenant' ? 'tenant' :
+      uiScope.level === 'group' ? 'company_group' : 'company';
+
+    const result = identityBoundary.switchContext({
+      targetTenantId: currentTenant.id,
+      targetScopeLevel: scopeLevel,
+      targetGroupId: uiScope.groupId,
+      targetCompanyId: uiScope.companyId,
+    });
+
+    return result.success ? result.newContext : null;
+  }, [boundaryIdentity, currentTenant, membership, uiScope]);
+
+  const switchContext = useCallback(
+    (request: { targetTenantId?: string; targetScopeLevel?: ScopeType; targetGroupId?: string | null; targetCompanyId?: string | null }): ContextSwitchResult => {
+      return identityBoundary.switchContext(request);
+    },
+    []
+  );
+
+  const boundarySnapshot = useCallback(() => identityBoundary.snapshot(), []);
+
+  const availableTenants = useMemo(
+    () => identityBoundary.getAvailableTenants(),
+    [boundaryIdentity]
+  );
+
+  const canSwitchToTenant = useCallback(
+    (tenantId: string) => identityBoundary.canSwitchToTenant(tenantId),
+    [boundaryIdentity]
+  );
 
   // ── Identity ──
   const identity = useMemo(
@@ -282,6 +345,12 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
 
   return {
     securityContext,
+    boundaryIdentity,
+    operationalContext,
+    switchContext,
+    boundarySnapshot,
+    availableTenants,
+    canSwitchToTenant,
     identity,
     isAuthenticated: !!user,
     checkPermission: checkPerm,

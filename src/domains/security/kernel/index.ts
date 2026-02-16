@@ -74,3 +74,11 @@ export type {
   ExternalRoleMapping, IdentityMapping,
   AccessCapabilities, AccessGraphInputExtended,
 } from './access-graph.capabilities';
+
+// ── Identity Boundary Layer ────────────────────────────────
+export { IdentityBoundaryLayer, identityBoundary } from './identity-boundary';
+export type {
+  BoundaryIdentity, OperationalContext, TenantMembership,
+  IdentityProvider, ContextSwitchRequest, ContextSwitchResult,
+  EstablishIdentityInput, IdentityBoundarySnapshot,
+} from './identity-boundary';
