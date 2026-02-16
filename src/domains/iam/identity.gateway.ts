@@ -22,7 +22,9 @@ import { graphEvents } from '@/domains/security/kernel/access-graph.events';
 import { accessGraphService } from '@/domains/security/kernel/access-graph.service';
 import { auditSecurity } from '@/domains/security/kernel/audit-security.service';
 import { executeSecurityPipeline, SecurityPipelineError } from '@/domains/security/kernel/security-pipeline';
+import { dualIdentityEngine } from '@/domains/security/kernel/dual-identity-engine';
 import type { SecurityContext } from '@/domains/security/kernel/identity.service';
+import type { StartImpersonationRequest, ImpersonationSession } from '@/domains/security/kernel/dual-identity-engine.types';
 
 // ═══════════════════════════════════
 // SECURITY ERRORS
@@ -217,6 +219,30 @@ export interface RemoveRoleInheritanceCommand {
   is_tenant_admin: boolean;
   is_company_admin?: boolean;
   ctx?: SecurityContext | null;
+}
+
+// ── Impersonation Commands & Queries ──
+
+export interface StartImpersonationCommand {
+  targetTenantId: string;
+  targetTenantName: string;
+  reason: string;
+  simulatedRole?: 'tenant_admin' | 'manager' | 'viewer';
+  maxDurationMinutes?: number;
+}
+
+export interface EndImpersonationCommand {
+  endReason?: 'manual' | 'forced';
+}
+
+export interface GetActiveImpersonationQuery {}
+
+export interface ActiveImpersonationResult {
+  isImpersonating: boolean;
+  session: ImpersonationSession | null;
+  remainingMs: number;
+  realUserId: string | null;
+  activeTenantId: string | null;
 }
 
 // ═══════════════════════════════════
@@ -493,6 +519,59 @@ export const identityGateway = {
       user_id: null,
       reason: 'RolePermissionsUpdated',
     });
+  },
+
+  // ── Impersonation Commands ──
+
+  /**
+   * StartImpersonationCommand
+   * Delegates to DualIdentityEngine with full validation.
+   */
+  startImpersonation(cmd: StartImpersonationCommand) {
+    const result = dualIdentityEngine.startImpersonation({
+      targetTenantId: cmd.targetTenantId,
+      targetTenantName: cmd.targetTenantName,
+      reason: cmd.reason,
+      simulatedRole: cmd.simulatedRole,
+      maxDurationMinutes: cmd.maxDurationMinutes,
+    });
+
+    if (!result.success) {
+      throw new IAMAuthorizationError('startImpersonation', result.reason);
+    }
+
+    return result;
+  },
+
+  /**
+   * EndImpersonationCommand
+   * Cleanly terminates the active impersonation session.
+   */
+  endImpersonation(cmd?: EndImpersonationCommand) {
+    const result = dualIdentityEngine.endImpersonation(cmd?.endReason ?? 'manual');
+
+    if (!result.success) {
+      throw new IAMAuthorizationError('endImpersonation', result.reason);
+    }
+
+    return result;
+  },
+
+  // ── Impersonation Query ──
+
+  /**
+   * GetActiveImpersonationQuery
+   * Returns the current impersonation state snapshot.
+   */
+  getActiveImpersonation(_query?: GetActiveImpersonationQuery): ActiveImpersonationResult {
+    const session = dualIdentityEngine.currentSession;
+    return {
+      isImpersonating: dualIdentityEngine.isImpersonating,
+      session,
+      remainingMs: dualIdentityEngine.getRemainingMs(),
+      realUserId: dualIdentityEngine.realIdentity?.userId ?? null,
+      activeTenantId: session?.targetTenantId ?? null,
+    };
   },
 
   // ── Queries (read-only — no side-effects) ──
