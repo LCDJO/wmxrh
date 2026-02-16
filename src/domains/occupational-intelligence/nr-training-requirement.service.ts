@@ -21,12 +21,15 @@ export interface NrTrainingCatalogRecord {
   descricao: string | null;
   obrigatoria_para_grau_risco: number[];
   periodicidade: string;
-  carga_horaria: number;
+  carga_horaria_minima: number;
   validade_meses: number | null;
   base_legal: string | null;
   target_cbos: string[];
   is_active: boolean;
   is_system: boolean;
+  exige_reciclagem: boolean;
+  exige_avaliacao_medica: boolean;
+  exige_assinatura_termo: boolean;
   created_at: string;
   updated_at: string;
 }

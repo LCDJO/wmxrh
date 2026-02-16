@@ -267,7 +267,7 @@ export default function OccupationalCompliance() {
                           <div className="flex gap-3 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
-                              {catItem.carga_horaria}h
+                              {catItem.carga_horaria_minima}h
                             </span>
                             <span>{catItem.periodicidade === 'admissional' ? 'Admissional' : 'Periódico'}</span>
                             {catItem.validade_meses && <span>Validade: {catItem.validade_meses}m</span>}

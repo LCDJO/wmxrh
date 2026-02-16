@@ -2585,9 +2585,12 @@ export type Database = {
       nr_training_catalog: {
         Row: {
           base_legal: string | null
-          carga_horaria: number
+          carga_horaria_minima: number
           created_at: string
           descricao: string | null
+          exige_assinatura_termo: boolean
+          exige_avaliacao_medica: boolean
+          exige_reciclagem: boolean
           id: string
           is_active: boolean
           is_system: boolean
@@ -2602,9 +2605,12 @@ export type Database = {
         }
         Insert: {
           base_legal?: string | null
-          carga_horaria?: number
+          carga_horaria_minima?: number
           created_at?: string
           descricao?: string | null
+          exige_assinatura_termo?: boolean
+          exige_avaliacao_medica?: boolean
+          exige_reciclagem?: boolean
           id?: string
           is_active?: boolean
           is_system?: boolean
@@ -2619,9 +2625,12 @@ export type Database = {
         }
         Update: {
           base_legal?: string | null
-          carga_horaria?: number
+          carga_horaria_minima?: number
           created_at?: string
           descricao?: string | null
+          exige_assinatura_termo?: boolean
+          exige_avaliacao_medica?: boolean
+          exige_reciclagem?: boolean
           id?: string
           is_active?: boolean
           is_system?: boolean
