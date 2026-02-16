@@ -1,11 +1,11 @@
 /**
  * Settings > Cargos & Permissões — Roles and permission matrix page
+ * Uses RolePermissionsMatrixView and AccessGraphSummaryView read models.
  */
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { identityGateway } from '@/domains/iam/identity.gateway';
+import { useRolePermissionsMatrixView, useAccessGraphSummaryView, useIAMScopeInvalidation } from '@/domains/iam/read-models';
 import { RolesTab } from '@/components/iam/RolesTab';
 import { AccessGraphTab } from '@/components/iam/AccessGraphTab';
 import { Shield, Network } from 'lucide-react';
@@ -15,37 +15,11 @@ export default function SettingsRoles() {
   const { user } = useAuth();
   const { currentTenant } = useTenant();
   const { isTenantAdmin } = useSecurityKernel();
-  const qc = useQueryClient();
   const tenantId = currentTenant?.id;
 
-  const { data: roles = [] } = useQuery({
-    queryKey: ['iam_roles', tenantId],
-    queryFn: () => identityGateway.getRoles({ tenant_id: tenantId! }),
-    enabled: !!tenantId,
-  });
-
-  const { data: permissions = [] } = useQuery({
-    queryKey: ['iam_permissions'],
-    queryFn: () => identityGateway.getAllPermissions(),
-  });
-
-  const { data: assignments = [] } = useQuery({
-    queryKey: ['iam_assignments', tenantId],
-    queryFn: () => identityGateway.getUserAssignments({ tenant_id: tenantId! }),
-    enabled: !!tenantId,
-  });
-
-  const { data: members = [] } = useQuery({
-    queryKey: ['iam_members', tenantId],
-    queryFn: () => identityGateway.getTenantUsers({ tenant_id: tenantId! }),
-    enabled: !!tenantId,
-  });
-
-  const invalidateAll = () => {
-    qc.invalidateQueries({ queryKey: ['iam_roles'] });
-    qc.invalidateQueries({ queryKey: ['iam_assignments'] });
-    qc.invalidateQueries({ queryKey: ['iam_members'] });
-  };
+  const { roles, permissions } = useRolePermissionsMatrixView();
+  const graphView = useAccessGraphSummaryView();
+  const invalidateAll = useIAMScopeInvalidation();
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -81,10 +55,10 @@ export default function SettingsRoles() {
         {isTenantAdmin && (
           <TabsContent value="graph">
             <AccessGraphTab
-              members={members}
-              assignments={assignments}
-              roles={roles}
-              permissions={permissions}
+              members={graphView.members}
+              assignments={graphView.assignments}
+              roles={graphView.roles}
+              permissions={graphView.permissions}
               tenantId={tenantId!}
             />
           </TabsContent>

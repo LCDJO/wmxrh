@@ -1,44 +1,23 @@
 /**
  * Settings > Usuários — User management page
+ * Uses TenantUserListView read model for scope-aware queries.
  */
 import { useAuth } from '@/contexts/AuthContext';
-import { useTenant } from '@/contexts/TenantContext';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { identityGateway } from '@/domains/iam/identity.gateway';
+import { useTenantUserListView, useRolePermissionsMatrixView, useIAMScopeInvalidation } from '@/domains/iam/read-models';
 import { UsersTab } from '@/components/iam/UsersTab';
-import { Users, Settings } from 'lucide-react';
+import { Users } from 'lucide-react';
+import { useTenant } from '@/contexts/TenantContext';
 
 export default function SettingsUsers() {
   const { user } = useAuth();
   const { currentTenant } = useTenant();
   const { isTenantAdmin } = useSecurityKernel();
-  const qc = useQueryClient();
   const tenantId = currentTenant?.id;
 
-  const { data: roles = [] } = useQuery({
-    queryKey: ['iam_roles', tenantId],
-    queryFn: () => identityGateway.getRoles({ tenant_id: tenantId! }),
-    enabled: !!tenantId,
-  });
-
-  const { data: assignments = [] } = useQuery({
-    queryKey: ['iam_assignments', tenantId],
-    queryFn: () => identityGateway.getUserAssignments({ tenant_id: tenantId! }),
-    enabled: !!tenantId,
-  });
-
-  const { data: members = [] } = useQuery({
-    queryKey: ['iam_members', tenantId],
-    queryFn: () => identityGateway.getTenantUsers({ tenant_id: tenantId! }),
-    enabled: !!tenantId,
-  });
-
-  const invalidateAll = () => {
-    qc.invalidateQueries({ queryKey: ['iam_roles'] });
-    qc.invalidateQueries({ queryKey: ['iam_assignments'] });
-    qc.invalidateQueries({ queryKey: ['iam_members'] });
-  };
+  const { filteredMembers, filteredAssignments } = useTenantUserListView();
+  const { roles } = useRolePermissionsMatrixView();
+  const invalidateAll = useIAMScopeInvalidation();
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -53,8 +32,8 @@ export default function SettingsUsers() {
       </div>
 
       <UsersTab
-        members={members}
-        assignments={assignments}
+        members={filteredMembers}
+        assignments={filteredAssignments}
         roles={roles}
         tenantId={tenantId!}
         userId={user?.id}

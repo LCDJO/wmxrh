@@ -1,8 +1,10 @@
 /**
  * Permission Matrix — Premium visual grid with domain icons, tooltips, and action toggles
+ * Uses cached RolePermissions read model for performance.
  */
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRolePermissionsCached } from '@/domains/iam/read-models';
 import { identityGateway } from '@/domains/iam/identity.gateway';
 import { type CustomRole, type PermissionDefinition } from '@/domains/iam/iam.service';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -117,10 +119,7 @@ export function PermissionMatrix({ role, permissions, userId, isTenantAdmin, onC
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const { data: rolePerms = [], isLoading } = useQuery({
-    queryKey: ['iam_role_perms', role.id],
-    queryFn: () => identityGateway.getPermissionsMatrix({ role_id: role.id }),
-  });
+  const { data: rolePerms = [], isLoading } = useRolePermissionsCached(role.id);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [initialized, setInitialized] = useState(false);
