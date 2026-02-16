@@ -16,6 +16,8 @@
  */
 
 export { simulatePayroll } from './payroll-simulation.engine';
+export { payrollSimulationService } from './payroll-simulation.service';
+export type { WorkDataOverrides } from './payroll-simulation.service';
 export { calculateTaxes, calculateInss, calculateIrrf, calculateFgts } from './tax-calculator';
 export { calculateReflections } from './reflection-calculator';
 export { calculateEmployerCost } from './employer-cost-calculator';
