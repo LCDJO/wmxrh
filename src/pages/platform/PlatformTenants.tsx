@@ -57,7 +57,7 @@ export default function PlatformTenants() {
   const [saving, setSaving] = useState(false);
 
   // Create form
-  const [form, setForm] = useState({ name: '', document: '', email: '', phone: '' });
+  const [form, setForm] = useState({ name: '', document: '', email: '', phone: '', adminEmail: '', adminName: '' });
 
   // Modules
   const [tenantModules, setTenantModules] = useState<TenantModule[]>([]);
@@ -81,22 +81,23 @@ export default function PlatformTenants() {
     t.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // ── Create Tenant ──
+  // ── Create Tenant (atomic: tenant + role + first admin) ──
   const handleCreate = async () => {
     if (!form.name.trim()) return;
     setSaving(true);
-    const { error } = await supabase.from('tenants').insert({
-      name: form.name.trim(),
-      document: form.document.trim() || null,
-      email: form.email.trim() || null,
-      phone: form.phone.trim() || null,
-      status: 'active',
+    const { data, error } = await supabase.rpc('platform_create_tenant', {
+      p_name: form.name.trim(),
+      p_document: form.document.trim() || null,
+      p_email: form.email.trim() || null,
+      p_phone: form.phone.trim() || null,
+      p_admin_email: form.adminEmail.trim() || null,
+      p_admin_name: form.adminName.trim() || null,
     });
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: 'Tenant criado', description: `${form.name} foi criado com sucesso.` });
-      setForm({ name: '', document: '', email: '', phone: '' });
+      toast({ title: 'Tenant criado', description: `${form.name} criado com role TenantAdmin e convite enviado.` });
+      setForm({ name: '', document: '', email: '', phone: '', adminEmail: '', adminName: '' });
       setDialogMode(null);
       fetchTenants();
     }
@@ -333,7 +334,7 @@ export default function PlatformTenants() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Email</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Email da empresa</Label>
                 <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="contato@empresa.com" />
               </div>
               <div className="space-y-1.5">
@@ -341,10 +342,22 @@ export default function PlatformTenants() {
                 <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(00) 0000-0000" />
               </div>
             </div>
+
+            <div className="border-t border-border pt-4 space-y-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Primeiro Administrador</p>
+              <div className="space-y-1.5">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Email do admin *</Label>
+                <Input type="email" value={form.adminEmail} onChange={e => setForm(f => ({ ...f, adminEmail: e.target.value }))} placeholder="admin@empresa.com" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nome do admin</Label>
+                <Input value={form.adminName} onChange={e => setForm(f => ({ ...f, adminName: e.target.value }))} placeholder="João Silva" />
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogMode(null)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={saving || !form.name.trim()} className="gap-2">
+            <Button onClick={handleCreate} disabled={saving || !form.name.trim() || !form.adminEmail.trim()} className="gap-2">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Criar Tenant
             </Button>
