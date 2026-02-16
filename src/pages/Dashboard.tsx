@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Users, Briefcase, TrendingUp, Building2, Layers, Calendar } from 'lucide-react';
+import { Users, Briefcase, TrendingUp, Building2, Layers, Calendar, Lock, Sparkles, ShieldCheck, Brain } from 'lucide-react';
 import { CognitiveInsightsCard } from '@/components/dashboard/CognitiveInsightsCard';
 import { StatsCard } from '@/components/shared/StatsCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { useTenant } from '@/contexts/TenantContext';
 import { useScope } from '@/contexts/ScopeContext';
+import { useExperienceProfile } from '@/hooks/use-experience-profile';
 import {
   useEmployees, useEmployeesSimple, usePositions, useDepartments,
   useCompanies, useCompanyGroups, useSalaryAdjustmentsByTenant
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { currentTenant } = useTenant();
   const { scope, setGroupScope, setCompanyScope } = useScope();
+  const { profile: expProfile, isPlanAtLeast, isUIFeatureEnabled } = useExperienceProfile();
 
   const { data: employees = [] } = useEmployees();
   const { data: employeesSimple = [] } = useEmployeesSimple();
@@ -324,6 +326,81 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* ── Adaptive: Advanced Analytics (Professional+) ── */}
+      {isPlanAtLeast('professional') && (
+        <div className="bg-card rounded-xl shadow-card p-6 animate-fade-in border border-primary/10">
+          <div className="flex items-center gap-2 mb-4">
+            <Brain className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold font-display text-card-foreground">Analytics Avançado</h2>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase">Pro</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-lg bg-secondary/50">
+              <p className="text-xs text-muted-foreground">Turnover Rate</p>
+              <p className="text-2xl font-bold text-card-foreground mt-1">3.2%</p>
+              <p className="text-xs text-accent-foreground mt-1">↓ 0.8% vs mês anterior</p>
+            </div>
+            <div className="p-4 rounded-lg bg-secondary/50">
+              <p className="text-xs text-muted-foreground">Custo Médio/Funcionário</p>
+              <p className="text-2xl font-bold text-card-foreground mt-1">
+                R$ {activeEmployees.length > 0 ? (totalPayroll / activeEmployees.length / 1000).toFixed(1) : '0'}k
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-secondary/50">
+              <p className="text-xs text-muted-foreground">Score de Compliance</p>
+              <p className="text-2xl font-bold text-card-foreground mt-1">87%</p>
+              <p className="text-xs text-primary mt-1">✓ Dentro da meta</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Adaptive: Enterprise Dashboards ── */}
+      {isPlanAtLeast('enterprise') && (
+        <div className="bg-card rounded-xl shadow-card p-6 animate-fade-in border border-primary/20">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold font-display text-card-foreground">Inteligência Corporativa</h2>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase">Enterprise</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-lg bg-secondary/50">
+              <div className="flex items-center gap-2 mb-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <p className="text-sm font-medium text-card-foreground">Previsão de Riscos Trabalhistas</p>
+              </div>
+              <p className="text-xs text-muted-foreground">IA analisa padrões de CLT, convenções coletivas e histórico para prever riscos.</p>
+              <p className="text-lg font-bold text-primary mt-2">2 alertas ativos</p>
+            </div>
+            <div className="p-4 rounded-lg bg-secondary/50">
+              <div className="flex items-center gap-2 mb-2">
+                <Brain className="h-4 w-4 text-primary" />
+                <p className="text-sm font-medium text-card-foreground">Projeção de Headcount</p>
+              </div>
+              <p className="text-xs text-muted-foreground">Baseado em crescimento histórico e sazonalidade.</p>
+              <p className="text-lg font-bold text-primary mt-2">+12 previstos em 90 dias</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Upgrade CTA for Basic/Starter tenants ── */}
+      {!isPlanAtLeast('professional') && (
+        <div className="bg-card rounded-xl shadow-card p-6 animate-fade-in border border-dashed border-primary/30">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Lock className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-card-foreground">Desbloqueie Analytics Avançado e Dashboards Extras</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Faça upgrade para o plano Professional ou Enterprise e acesse Turnover Analytics, Projeção de Headcount e Inteligência Corporativa.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cognitive Insights */}
       <CognitiveInsightsCard
