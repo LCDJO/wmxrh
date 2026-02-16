@@ -154,13 +154,23 @@ export interface ImpersonationStartedPayload {
   expiresAt: number;
 }
 
+export interface ImpersonationExpiredPayload {
+  type: 'ImpersonationExpired';
+  timestamp: number;
+  sessionId: string;
+  realUserId: string;
+  targetTenantId: string;
+  durationMs: number;
+  operationCount: number;
+}
+
 export interface ImpersonationEndedPayload {
   type: 'ImpersonationEnded';
   timestamp: number;
   sessionId: string;
   realUserId: string;
   targetTenantId: string;
-  endReason: 'manual' | 'expired' | 'forced';
+  endReason: 'manual' | 'forced';
   durationMs: number;
   operationCount: number;
 }
@@ -176,5 +186,6 @@ export interface ImpersonationDeniedPayload {
 
 export type ImpersonationEvent =
   | ImpersonationStartedPayload
+  | ImpersonationExpiredPayload
   | ImpersonationEndedPayload
   | ImpersonationDeniedPayload;
