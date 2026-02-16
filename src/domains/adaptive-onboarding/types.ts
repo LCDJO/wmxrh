@@ -53,6 +53,10 @@ export interface OnboardingStep {
   depends_on: string[];
   /** Whether step is relevant for the tenant's plan tier */
   applies_to_tiers: PlanTier[];
+  /** Modules that must be active for this step to appear */
+  requires_modules?: string[];
+  /** Roles that can see this step (empty = all) */
+  allowed_roles?: string[];
   status: StepStatus;
 }
 
@@ -150,8 +154,15 @@ export interface OnboardingHint {
 // Engine API
 // ══════════════════════════════════════════════════════════════════
 
+export interface FlowResolverContext {
+  planTier: PlanTier;
+  allowedModules?: string[];
+  userRole?: string;
+  config?: TenantSetupConfig;
+}
+
 export interface OnboardingFlowResolverAPI {
-  resolveFlow(tenantId: string, planTier: PlanTier, config?: TenantSetupConfig): OnboardingFlow;
+  resolveFlow(tenantId: string, ctx: FlowResolverContext): OnboardingFlow;
   getStepsForPhase(flow: OnboardingFlow, phase: OnboardingPhase): OnboardingStep[];
   getNextStep(flow: OnboardingFlow): OnboardingStep | null;
 }

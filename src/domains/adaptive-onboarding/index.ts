@@ -25,6 +25,7 @@ export type {
   StepStatus,
   OnboardingStep,
   OnboardingFlow,
+  FlowResolverContext,
   TenantSetupConfig,
   TenantSetupResult,
   BootstrapRole,

@@ -1,6 +1,12 @@
 /**
  * OnboardingFlowResolver — Determines the onboarding flow
- * based on plan tier, modules, and tenant context.
+ * based on plan tier, allowed modules, user role, and tenant context.
+ *
+ * RESOLUTION LOGIC:
+ *   1. Filter steps by plan tier (applies_to_tiers)
+ *   2. Filter by allowed modules (requires_modules ⊆ allowedModules)
+ *   3. Filter by user role (allowed_roles includes userRole)
+ *   4. Sort by order, resolve dependencies
  */
 
 import type {
@@ -8,14 +14,16 @@ import type {
   OnboardingFlowResolverAPI,
   OnboardingPhase,
   OnboardingStep,
-  TenantSetupConfig,
+  FlowResolverContext,
 } from './types';
 import type { PlanTier } from '@/domains/platform-experience/types';
 
 // ── Step Catalog ────────────────────────────────────────────────
 
-const STEP_CATALOG: Omit<OnboardingStep, 'status'>[] = [
-  // Welcome
+type StepDef = Omit<OnboardingStep, 'status'>;
+
+const STEP_CATALOG: StepDef[] = [
+  // ═══ WELCOME ═══
   {
     id: 'welcome',
     phase: 'welcome',
@@ -28,7 +36,8 @@ const STEP_CATALOG: Omit<OnboardingStep, 'status'>[] = [
     depends_on: [],
     applies_to_tiers: ['free', 'starter', 'professional', 'enterprise', 'custom'],
   },
-  // Company Setup
+
+  // ═══ COMPANY SETUP ═══
   {
     id: 'create_company',
     phase: 'company_setup',
@@ -55,25 +64,69 @@ const STEP_CATALOG: Omit<OnboardingStep, 'status'>[] = [
     depends_on: ['create_company'],
     applies_to_tiers: ['starter', 'professional', 'enterprise', 'custom'],
   },
-  // Role Setup
+  {
+    id: 'setup_company_groups',
+    phase: 'company_setup',
+    order: 2,
+    title: 'Configurar Grupos Econômicos',
+    description: 'Organize múltiplas empresas em grupos econômicos para gestão centralizada.',
+    icon: 'Network',
+    is_mandatory: false,
+    estimated_minutes: 10,
+    route: '/groups',
+    depends_on: ['create_company'],
+    applies_to_tiers: ['enterprise', 'custom'],
+    allowed_roles: ['tenant_admin', 'owner'],
+  },
+
+  // ═══ ROLE SETUP ═══
+  {
+    id: 'configure_roles_basic',
+    phase: 'role_setup',
+    order: 3,
+    title: 'Configurar Cargos',
+    description: 'Defina os cargos da empresa (CLT, estagiário, etc.).',
+    icon: 'Briefcase',
+    is_mandatory: true,
+    estimated_minutes: 5,
+    route: '/positions',
+    depends_on: ['create_company'],
+    applies_to_tiers: ['free', 'starter'],
+  },
   {
     id: 'configure_roles',
     phase: 'role_setup',
     order: 3,
-    title: 'Configurar Papéis',
-    description: 'Defina os papéis e permissões iniciais do sistema.',
+    title: 'Configurar Papéis e Permissões',
+    description: 'Defina papéis com controle granular de permissões, escopos e hierarquias.',
     icon: 'Shield',
     is_mandatory: true,
-    estimated_minutes: 10,
+    estimated_minutes: 15,
     route: '/settings/roles',
     depends_on: ['create_company'],
-    applies_to_tiers: ['starter', 'professional', 'enterprise', 'custom'],
+    applies_to_tiers: ['professional', 'enterprise', 'custom'],
+    allowed_roles: ['tenant_admin', 'owner'],
   },
-  // Module Activation
+  {
+    id: 'configure_advanced_iam',
+    phase: 'role_setup',
+    order: 4,
+    title: 'IAM Avançado',
+    description: 'Configure Identity & Access Management com grafo de acessos e políticas ABAC.',
+    icon: 'KeyRound',
+    is_mandatory: false,
+    estimated_minutes: 20,
+    route: '/settings/users',
+    depends_on: ['configure_roles'],
+    applies_to_tiers: ['enterprise', 'custom'],
+    allowed_roles: ['tenant_admin', 'owner'],
+  },
+
+  // ═══ MODULE ACTIVATION ═══
   {
     id: 'activate_modules',
     phase: 'module_activation',
-    order: 4,
+    order: 5,
     title: 'Ativar Módulos',
     description: 'Escolha quais módulos deseja ativar para sua organização.',
     icon: 'Puzzle',
@@ -82,25 +135,56 @@ const STEP_CATALOG: Omit<OnboardingStep, 'status'>[] = [
     depends_on: ['create_company'],
     applies_to_tiers: ['professional', 'enterprise', 'custom'],
   },
-  // Team Invite
+  {
+    id: 'activate_analytics',
+    phase: 'module_activation',
+    order: 6,
+    title: 'Ativar Analytics e Inteligência',
+    description: 'Configure dashboards de Workforce Intelligence e indicadores estratégicos.',
+    icon: 'BarChart3',
+    is_mandatory: false,
+    estimated_minutes: 10,
+    route: '/workforce-intelligence',
+    depends_on: ['activate_modules'],
+    applies_to_tiers: ['enterprise', 'custom'],
+    requires_modules: ['intelligence'],
+    allowed_roles: ['tenant_admin', 'owner'],
+  },
+  {
+    id: 'activate_esocial',
+    phase: 'module_activation',
+    order: 6,
+    title: 'Configurar eSocial',
+    description: 'Vincule certificado digital e configure empregador para envio de eventos.',
+    icon: 'FileKey',
+    is_mandatory: false,
+    estimated_minutes: 15,
+    route: '/esocial',
+    depends_on: ['create_company'],
+    applies_to_tiers: ['professional', 'enterprise', 'custom'],
+    requires_modules: ['esocial'],
+  },
+
+  // ═══ TEAM INVITE ═══
   {
     id: 'invite_users',
     phase: 'team_invite',
-    order: 5,
+    order: 7,
     title: 'Convidar Equipe',
-    description: 'Adicione outros administradores e gestores.',
+    description: 'Adicione outros administradores e gestores ao sistema.',
     icon: 'UserPlus',
     is_mandatory: false,
     estimated_minutes: 5,
     route: '/settings/users',
-    depends_on: ['configure_roles'],
+    depends_on: ['create_company'],
     applies_to_tiers: ['starter', 'professional', 'enterprise', 'custom'],
   },
-  // Compliance Check
+
+  // ═══ COMPLIANCE CHECK ═══
   {
     id: 'compliance_check',
     phase: 'compliance_check',
-    order: 6,
+    order: 8,
     title: 'Verificar Compliance',
     description: 'Revise as obrigações trabalhistas e de saúde ocupacional.',
     icon: 'ClipboardCheck',
@@ -109,11 +193,26 @@ const STEP_CATALOG: Omit<OnboardingStep, 'status'>[] = [
     route: '/compliance',
     depends_on: ['create_company'],
     applies_to_tiers: ['professional', 'enterprise', 'custom'],
+    requires_modules: ['compliance'],
+  },
+  {
+    id: 'configure_health_programs',
+    phase: 'compliance_check',
+    order: 9,
+    title: 'Configurar Programas de Saúde',
+    description: 'PCMSO, PGR e programas de saúde ocupacional.',
+    icon: 'HeartPulse',
+    is_mandatory: false,
+    estimated_minutes: 15,
+    route: '/health',
+    depends_on: ['compliance_check'],
+    applies_to_tiers: ['professional', 'enterprise', 'custom'],
+    requires_modules: ['health'],
   },
   {
     id: 'add_employees',
     phase: 'compliance_check',
-    order: 7,
+    order: 10,
     title: 'Cadastrar Colaboradores',
     description: 'Adicione os primeiros colaboradores ao sistema.',
     icon: 'Users',
@@ -123,11 +222,12 @@ const STEP_CATALOG: Omit<OnboardingStep, 'status'>[] = [
     depends_on: ['create_company'],
     applies_to_tiers: ['free', 'starter', 'professional', 'enterprise', 'custom'],
   },
-  // Review
+
+  // ═══ REVIEW ═══
   {
     id: 'review',
     phase: 'review',
-    order: 8,
+    order: 99,
     title: 'Revisão Final',
     description: 'Revise as configurações e comece a usar o sistema.',
     icon: 'CheckCircle',
@@ -138,27 +238,46 @@ const STEP_CATALOG: Omit<OnboardingStep, 'status'>[] = [
   },
 ];
 
+// ── Resolution Engine ───────────────────────────────────────────
+
+function filterSteps(steps: StepDef[], ctx: FlowResolverContext): StepDef[] {
+  return steps.filter(step => {
+    // 1. Plan tier gate
+    if (!step.applies_to_tiers.includes(ctx.planTier)) return false;
+
+    // 2. Module gate
+    if (step.requires_modules && step.requires_modules.length > 0) {
+      if (!ctx.allowedModules) return false;
+      const hasAll = step.requires_modules.every(m => ctx.allowedModules!.includes(m));
+      if (!hasAll) return false;
+    }
+
+    // 3. Role gate
+    if (step.allowed_roles && step.allowed_roles.length > 0) {
+      if (!ctx.userRole) return true; // No role info → show by default
+      if (!step.allowed_roles.includes(ctx.userRole)) return false;
+    }
+
+    return true;
+  });
+}
+
 export function createOnboardingFlowResolver(): OnboardingFlowResolverAPI {
   return {
-    resolveFlow(tenantId: string, planTier: PlanTier, _config?: TenantSetupConfig): OnboardingFlow {
-      const applicableSteps = STEP_CATALOG
-        .filter(s => s.applies_to_tiers.includes(planTier))
-        .map(s => ({ ...s, status: 'pending' as const }));
+    resolveFlow(tenantId: string, ctx: FlowResolverContext): OnboardingFlow {
+      const filtered = filterSteps(STEP_CATALOG, ctx);
+      const sorted = [...filtered].sort((a, b) => a.order - b.order);
+      const steps: OnboardingStep[] = sorted.map(s => ({ ...s, status: 'pending' as const }));
 
-      const phases: OnboardingPhase[] = [
-        'welcome', 'company_setup', 'role_setup',
-        'module_activation', 'team_invite', 'compliance_check', 'review',
-      ];
-
-      const firstPhase = applicableSteps.length > 0 ? applicableSteps[0].phase : 'welcome';
+      const firstPhase = steps.length > 0 ? steps[0].phase : 'welcome';
 
       return {
         tenant_id: tenantId,
-        plan_tier: planTier,
-        steps: applicableSteps,
+        plan_tier: ctx.planTier,
+        steps,
         current_phase: firstPhase,
         completion_pct: 0,
-        estimated_total_minutes: applicableSteps.reduce((sum, s) => sum + s.estimated_minutes, 0),
+        estimated_total_minutes: steps.reduce((sum, s) => sum + s.estimated_minutes, 0),
         started_at: Date.now(),
         completed_at: null,
       };
@@ -171,10 +290,12 @@ export function createOnboardingFlowResolver(): OnboardingFlowResolverAPI {
     getNextStep(flow: OnboardingFlow): OnboardingStep | null {
       const pending = flow.steps.filter(s => s.status === 'pending');
       const ready = pending.filter(s =>
-        s.depends_on.every(dep =>
-          flow.steps.find(d => d.id === dep)?.status === 'completed' ||
-          flow.steps.find(d => d.id === dep)?.status === 'skipped'
-        )
+        s.depends_on.every(dep => {
+          const depStep = flow.steps.find(d => d.id === dep);
+          // If dependency doesn't exist in filtered flow, consider it satisfied
+          if (!depStep) return true;
+          return depStep.status === 'completed' || depStep.status === 'skipped';
+        })
       );
       return ready[0] ?? null;
     },
