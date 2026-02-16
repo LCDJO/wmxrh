@@ -4,18 +4,13 @@
  * Government communication module for Brazilian eSocial system.
  * Decoupled from HR Core and LaborCompliance — operates via domain events.
  *
- * Capabilities:
- *   - Automatic eSocial event generation from internal domain events
- *   - Entity → official layout mapping (S-2200, S-2206, S-2220, etc.)
- *   - Transmission lifecycle control (draft → validated → queued → accepted)
- *   - Layout versioning (S-1.0, S-1.1, S-1.2)
- *
- * Architecture:
- *   - Event Bus: receives InboundDomainEvents from other BCs
- *   - Layout Mappers: pure functions mapping internal data → eSocial XML-JSON
- *   - Transmission Controller: state machine for event lifecycle
- *   - Event Generator: routes domain events → correct eSocial event types
- *   - Service Layer: orchestrates persistence and external API calls
+ * Architecture Components:
+ *   1. EventMapper (layout-mappers/) — Entity → official layout mapping
+ *   2. XMLGenerator — Envelope → eSocial-compliant XML
+ *   3. DigitalSigner — ICP-Brasil A1/A3 certificate signing (Port)
+ *   4. TransmissionService — Batch send with retry & rate limiting
+ *   5. ReturnProcessor — Government response parsing & classification
+ *   6. LayoutVersionManager — Version migration & compatibility
  */
 
 // ── Service (main entry point) ──
@@ -37,7 +32,27 @@ export {
   computeBatchStats,
 } from './transmission-controller';
 
-// ── Layout Mappers ──
+// ── XML Generator ──
+export { generateXML, generateBatchXML, validateXMLStructure } from './xml-generator';
+export type { XMLGenerationResult } from './xml-generator';
+
+// ── Digital Signer (Port + Simulation Adapter) ──
+export { simulationSigner } from './digital-signer';
+export type { IDigitalSigner, DigitalCertificate, SignatureResult, SignatureValidation, CertificateType } from './digital-signer';
+
+// ── Transmission Service ──
+export { transmissionService } from './transmission-service';
+export type { TransmissionConfig, IGovernmentAPI, TransmissionBatchResult, TransmissionItemResult } from './transmission-service';
+
+// ── Return Processor ──
+export { processReturn, processBatchReturn, toTransmissionResult, summarizeBatchReturn } from './return-processor';
+export type { GovernmentResponse, GovernmentEventResponse, ProcessedReturn } from './return-processor';
+
+// ── Layout Version Manager ──
+export { layoutVersionManager } from './layout-version-manager';
+export type { LayoutVersionInfo } from './layout-version-manager';
+
+// ── Layout Mappers (EventMapper) ──
 export { getMapper, getRegisteredEventTypes, hasMapper } from './layout-mappers';
 
 // ── Types ──
