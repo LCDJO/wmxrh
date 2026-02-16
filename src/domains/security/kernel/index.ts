@@ -85,7 +85,7 @@ export type {
   RealIdentity, ActiveIdentity, ImpersonationSession,
   StartImpersonationRequest, StartImpersonationResult, EndImpersonationResult,
   ImpersonationDenialReason, ImpersonationEvent,
-  ImpersonationStartedPayload, ImpersonationEndedPayload, ImpersonationDeniedPayload,
+  ImpersonationStartedPayload, ImpersonationExpiredPayload, ImpersonationEndedPayload, ImpersonationDeniedPayload,
 } from './dual-identity-engine.types';
 
 // ── Identity Boundary Layer ────────────────────────────────

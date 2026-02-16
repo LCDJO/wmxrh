@@ -94,6 +94,8 @@ export type {
   CacheInvalidationEvent,
   GraphEventType,
   GraphEvent,
+  // Impersonation Events
+  ImpersonationExpiredPayload,
   // IAM Events
   IAMEventType,
   IAMDomainEvent,
