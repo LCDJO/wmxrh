@@ -14,6 +14,151 @@ export type Database = {
   }
   public: {
     Tables: {
+      agreement_template_versions: {
+        Row: {
+          change_summary: string | null
+          content_html: string
+          content_plain: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_current: boolean
+          published_at: string | null
+          template_id: string
+          tenant_id: string
+          title: string
+          version_number: number
+        }
+        Insert: {
+          change_summary?: string | null
+          content_html: string
+          content_plain?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_current?: boolean
+          published_at?: string | null
+          template_id: string
+          tenant_id: string
+          title: string
+          version_number?: number
+        }
+        Update: {
+          change_summary?: string | null
+          content_html?: string
+          content_plain?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_current?: boolean
+          published_at?: string | null
+          template_id?: string
+          tenant_id?: string
+          title?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreement_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "agreement_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreement_template_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agreement_templates: {
+        Row: {
+          applies_to_departments: string[] | null
+          applies_to_positions: string[] | null
+          auto_send_on_admission: boolean
+          category: string
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          expiry_days: number | null
+          id: string
+          is_active: boolean
+          is_mandatory: boolean
+          name: string
+          requires_witness: boolean
+          slug: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          applies_to_departments?: string[] | null
+          applies_to_positions?: string[] | null
+          auto_send_on_admission?: boolean
+          category?: string
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          expiry_days?: number | null
+          id?: string
+          is_active?: boolean
+          is_mandatory?: boolean
+          name: string
+          requires_witness?: boolean
+          slug: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          applies_to_departments?: string[] | null
+          applies_to_positions?: string[] | null
+          auto_send_on_admission?: boolean
+          category?: string
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          expiry_days?: number | null
+          id?: string
+          is_active?: boolean
+          is_mandatory?: boolean
+          name?: string
+          requires_witness?: boolean
+          slug?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreement_templates_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreement_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreement_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -587,6 +732,133 @@ export type Database = {
           },
           {
             foreignKeyName: "departments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_agreements: {
+        Row: {
+          cancelled_at: string | null
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          employee_id: string
+          expires_at: string | null
+          external_document_id: string | null
+          external_signing_url: string | null
+          id: string
+          ip_address: string | null
+          refusal_reason: string | null
+          refused_at: string | null
+          sent_at: string | null
+          sent_by: string | null
+          signature_provider: string | null
+          signed_at: string | null
+          signed_document_hash: string | null
+          signed_document_url: string | null
+          status: string
+          template_id: string
+          template_version_id: string
+          tenant_id: string
+          updated_at: string
+          user_agent: string | null
+          viewed_at: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          employee_id: string
+          expires_at?: string | null
+          external_document_id?: string | null
+          external_signing_url?: string | null
+          id?: string
+          ip_address?: string | null
+          refusal_reason?: string | null
+          refused_at?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          signature_provider?: string | null
+          signed_at?: string | null
+          signed_document_hash?: string | null
+          signed_document_url?: string | null
+          status?: string
+          template_id: string
+          template_version_id: string
+          tenant_id: string
+          updated_at?: string
+          user_agent?: string | null
+          viewed_at?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          employee_id?: string
+          expires_at?: string | null
+          external_document_id?: string | null
+          external_signing_url?: string | null
+          id?: string
+          ip_address?: string | null
+          refusal_reason?: string | null
+          refused_at?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          signature_provider?: string | null
+          signed_at?: string | null
+          signed_document_hash?: string | null
+          signed_document_url?: string | null
+          status?: string
+          template_id?: string
+          template_version_id?: string
+          tenant_id?: string
+          updated_at?: string
+          user_agent?: string | null
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_agreements_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_agreements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_agreements_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_agreements_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "agreement_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_agreements_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "agreement_template_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_agreements_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

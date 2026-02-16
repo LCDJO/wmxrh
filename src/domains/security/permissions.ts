@@ -36,7 +36,9 @@ export type PermissionEntity =
   | 'health_programs'
   | 'health_exams'
   | 'labor_rules'
-  | 'esocial_events';
+  | 'esocial_events'
+  | 'agreement_templates'
+  | 'employee_agreements';
 
 // ========================
 // ROLE SETS (mirrors DB functions)
@@ -194,6 +196,18 @@ export const PERMISSION_MATRIX: PermissionMatrix = {
     delete: TENANT_ADMINS,
   },
   esocial_events: {
+    view: ALL_MEMBERS,
+    create: EMPLOYEE_MANAGERS,
+    update: EMPLOYEE_MANAGERS,
+    delete: TENANT_ADMINS,
+  },
+  agreement_templates: {
+    view: ALL_MEMBERS,
+    create: TENANT_ADMINS,
+    update: TENANT_ADMINS,
+    delete: TENANT_ADMINS,
+  },
+  employee_agreements: {
     view: ALL_MEMBERS,
     create: EMPLOYEE_MANAGERS,
     update: EMPLOYEE_MANAGERS,
