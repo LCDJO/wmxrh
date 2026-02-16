@@ -366,7 +366,10 @@ export type IILEventType =
   | 'AnomalyDetected'
   | 'DecisionIssued'
   | 'UserTypeDetected'
-  | 'WorkspaceSwitched';
+  | 'WorkspaceSwitched'
+  | 'UnifiedSessionStarted'
+  | 'ContextRestored'
+  | 'LoginIntentDetected';
 
 export interface IILPhaseTransitionEvent {
   type: 'PhaseTransition';
@@ -419,10 +422,54 @@ export interface IILWorkspaceSwitchedEvent {
   switchMethod: 'explicit' | 'auto_restore' | 'initial';
 }
 
+/**
+ * Emitted when the UnifiedIdentitySession is first built after authentication.
+ */
+export interface IILUnifiedSessionStartedEvent {
+  type: 'UnifiedSessionStarted';
+  timestamp: number;
+  userId: string;
+  sessionId: string;
+  userType: DetectedUserType;
+  tenantCount: number;
+  phase: IdentityPhase;
+}
+
+/**
+ * Emitted when a previous context is successfully restored from ContextMemory.
+ */
+export interface IILContextRestoredEvent {
+  type: 'ContextRestored';
+  timestamp: number;
+  userId: string;
+  restoredTenantId: string;
+  restoredTenantName: string;
+  scopeLevel: ScopeType;
+  groupId: string | null;
+  companyId: string | null;
+  source: 'context_memory' | 'local_storage' | 'url_param';
+}
+
+/**
+ * Emitted when the LoginIntentDetector resolves the user's post-login destination.
+ */
+export interface IILLoginIntentDetectedEvent {
+  type: 'LoginIntentDetected';
+  timestamp: number;
+  userId: string;
+  intent: 'platform' | 'tenant' | 'onboarding' | 'workspace_select';
+  tenantCount: number;
+  isPlatformUser: boolean;
+  redirectTo: string;
+}
+
 export type IILEvent =
   | IILPhaseTransitionEvent
   | IILRiskEscalationEvent
   | IILAnomalyDetectedEvent
   | IILDecisionIssuedEvent
   | IILUserTypeDetectedEvent
-  | IILWorkspaceSwitchedEvent;
+  | IILWorkspaceSwitchedEvent
+  | IILUnifiedSessionStartedEvent
+  | IILContextRestoredEvent
+  | IILLoginIntentDetectedEvent;

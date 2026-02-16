@@ -59,4 +59,7 @@ export type {
   IILDecisionIssuedEvent,
   IILUserTypeDetectedEvent,
   IILWorkspaceSwitchedEvent,
+  IILUnifiedSessionStartedEvent,
+  IILContextRestoredEvent,
+  IILLoginIntentDetectedEvent,
 } from './types';
