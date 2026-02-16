@@ -102,11 +102,18 @@ export default function Auth() {
         platformEvents.userLoggedIn('', email);
         navigate('/platform/dashboard', { replace: true });
         break;
-      case 'tenant':
+      case 'tenant': {
+        // Auto-restore last context if single tenant
+        const lastCtx = identityIntelligence.contextMemory.getLastValidContext();
+        if (lastCtx && intent.tenants.length === 1 && lastCtx.tenantId === intent.tenants[0]?.id) {
+          localStorage.setItem('currentTenantId', lastCtx.tenantId);
+        } else if (intent.tenants.length === 1) {
+          localStorage.setItem('currentTenantId', intent.tenants[0].id);
+        }
         navigate('/', { replace: true });
         break;
+      }
       case 'both':
-        // Show workspace selector
         setDetectedIntent(intent);
         setSelectorOpen(true);
         break;
