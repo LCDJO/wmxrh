@@ -29,12 +29,14 @@ import {
   policyEngine,
   featureFlagEngine,
   auditSecurity,
+  executeSecurityPipeline,
   type Identity,
   type SecurityContext,
   type PolicyResult,
   type PolicyEvalContext,
   type PermissionResult,
   type ResourceTarget,
+  type PipelineResult,
 } from './kernel';
 
 import type { PermissionAction, PermissionEntity, NavKey } from './permissions';
@@ -66,6 +68,10 @@ export interface UseSecurityKernelReturn {
 
   // ── Feature Flags ──
   isFeatureEnabled: (feature: FeatureKey) => boolean;
+
+  // ── Pipeline ──
+  /** Execute the full security pipeline: Auth → Scope → Permission → Policy → Audit */
+  executePipeline: (action: PermissionAction, resource: PermissionEntity, target?: ResourceTarget) => PipelineResult;
 
   // ── Audit ──
   audit: typeof auditSecurity;
@@ -207,6 +213,19 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     [effectiveRoles]
   );
 
+  // ── Pipeline ──
+  const executePipeline = useCallback(
+    (action: PermissionAction, resource: PermissionEntity, target?: ResourceTarget): PipelineResult => {
+      return executeSecurityPipeline({
+        action,
+        resource,
+        ctx: securityContext,
+        target,
+      });
+    },
+    [securityContext]
+  );
+
   return {
     securityContext,
     identity,
@@ -219,6 +238,7 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     evaluateRules,
     evaluatePolicy,
     isFeatureEnabled,
+    executePipeline,
     audit: auditSecurity,
     loading: rolesLoading,
     isTenantAdmin,

@@ -21,6 +21,9 @@ export {
   featureFlagEngine,
   auditSecurity,
   onSecurityEvent,
+  executeSecurityPipeline,
+  requirePermission,
+  SecurityPipelineError,
   requireAtLeastOneRole,
   requireValidScope,
   preventCrossTenantAccess,
@@ -56,6 +59,9 @@ export type {
   AuditResult,
   SecurityEventType,
   SecurityEventPayload,
+  PipelineResult,
+  PipelineInput,
+  PipelineDecision,
 } from './kernel';
 
 // ── Feature Flags Hook ──

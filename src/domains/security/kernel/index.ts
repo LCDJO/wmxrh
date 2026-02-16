@@ -12,7 +12,8 @@
  * ║   ├── PolicyEngine        (regras dinâmicas)            ║
  * ║   ├── ScopeResolver       (onde pode acessar)           ║
  * ║   ├── FeatureFlagEngine   (o que está habilitado)       ║
- * ║   └── AuditSecurityService(registrar tudo)              ║
+ * ║   ├── AuditSecurityService(registrar tudo)              ║
+ * ║   └── SecurityPipeline    (orquestra tudo)              ║
  * ╚══════════════════════════════════════════════════════════╝
  */
 
@@ -42,3 +43,7 @@ export type { FeatureFlagEngineAPI, FeatureFlagContext, FeatureFlagRecord } from
 // ── Audit Security ─────────────────────────────────────────
 export { auditSecurity, onSecurityEvent } from './audit-security.service';
 export type { AuditSecurityAPI, AuditEntry, AuditAction, AuditResult, SecurityEventType, SecurityEventPayload } from './audit-security.service';
+
+// ── Security Pipeline ──────────────────────────────────────
+export { executeSecurityPipeline, requirePermission, SecurityPipelineError } from './security-pipeline';
+export type { PipelineResult, PipelineInput, PipelineDecision } from './security-pipeline';
