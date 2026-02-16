@@ -46,6 +46,15 @@ export type {
 // Integrations
 export { trainingIntegrations } from './integrations';
 
+// Training ↔ Agreement Integration
+export {
+  initTrainingAgreementIntegration,
+  getNrAgreementRules,
+  getRuleForNr,
+  nrRequiresAgreement,
+} from './training-agreement.integration';
+export type { NrAgreementRule } from './training-agreement.integration';
+
 // Functional Block Engine
 export {
   functionalBlockEngine,
