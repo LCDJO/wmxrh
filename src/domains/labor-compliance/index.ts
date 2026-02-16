@@ -13,6 +13,10 @@
  * This context is prepared for future extraction to microservices.
  */
 
+// ── Occupational Intelligence Integration ──
+export { laborComplianceIntegration } from './labor-compliance-integration';
+export type { ComplianceCheckResult } from './labor-compliance-integration';
+
 // ── Services ──
 export { salaryStructureService } from '@/domains/compensation/salary-structure.service';
 export { benefitPlanService } from '@/domains/compliance/benefit-plan.service';
