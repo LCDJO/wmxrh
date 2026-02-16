@@ -1,21 +1,27 @@
 /**
- * SecurityKernel — Middleware Pipeline (v2)
+ * SecurityKernel — Middleware Pipeline (v3)
  * 
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║  REQUEST PIPELINE (executes in order, short-circuits on deny):      ║
+ * ║  UNIFIED REQUEST PIPELINE — branches by user_type:                  ║
  * ║                                                                      ║
  * ║  1. RequestId               → generate unique request identifier    ║
- * ║  2. IdentityService         → validate auth, resolve Identity       ║
- * ║  3. IdentitySessionManager  → validate IBL session established      ║
- * ║  4. ContextResolver         → validate OperationalContext active    ║
- * ║  5. AccessGraph             → O(1) scope reachability check         ║
- * ║  6. PermissionEngine        → RBAC + ABAC check                     ║
- * ║  7. PolicyEngine            → declarative rule evaluation           ║
- * ║  8. AuditSecurity           → log result (allow or deny)            ║
+ * ║  2. IdentityResolver        → validate auth (SecurityContext)       ║
+ * ║  3. UserTypeResolver        → route to platform or tenant pipeline  ║
+ * ║                                                                      ║
+ * ║  ┌─ PLATFORM PATH (user_type === 'platform') ──────────────────┐   ║
+ * ║  │  4P. PlatformPermissionGuard → check PlatformPermissionMatrix│   ║
+ * ║  │  5P. AuditSecurity           → log result                   │   ║
+ * ║  └─────────────────────────────────────────────────────────────┘   ║
+ * ║                                                                      ║
+ * ║  ┌─ TENANT PATH (user_type === 'tenant') ──────────────────────┐   ║
+ * ║  │  4T. IdentitySessionManager  → validate IBL session          │   ║
+ * ║  │  5T. ContextResolver         → validate OperationalContext   │   ║
+ * ║  │  6T. AccessGraph             → O(1) scope reachability       │   ║
+ * ║  │  7T. PermissionEngine        → RBAC + ABAC check             │   ║
+ * ║  │  8T. PolicyEngine            → declarative rule evaluation   │   ║
+ * ║  │  9T. AuditSecurity           → log result                   │   ║
+ * ║  └─────────────────────────────────────────────────────────────┘   ║
  * ╚══════════════════════════════════════════════════════════════════════╝
- * 
- * Domain services (HR, Compensation) call executeSecurityPipeline()
- * instead of checking roles directly.
  */
 
 import type { SecurityContext } from './identity.service';
@@ -29,6 +35,8 @@ import { contextGuard } from './ibl/context-guard.middleware';
 import type { GuardTarget } from './ibl/context-guard.middleware';
 import { identityBoundary } from './identity-boundary';
 import { getAccessGraph } from './access-graph';
+import { hasPlatformPermission, type PlatformPermission } from '@/domains/platform/platform-permissions';
+import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 
 // ════════════════════════════════════
 // PIPELINE TYPES
@@ -38,25 +46,27 @@ export type PipelineDecision = 'allow' | 'deny';
 
 export type PipelineDeniedBy =
   | 'auth'                    // Stage 2: no SecurityContext
-  | 'identity_session'        // Stage 3: IBL session not established
-  | 'context'                 // Stage 4: OperationalContext missing/expired
-  | 'access_graph'            // Stage 5: scope unreachable in graph
-  | 'permission'              // Stage 6: RBAC/ABAC denied
-  | 'policy';                 // Stage 7: declarative rule denied
+  | 'identity_session'        // Stage 4T: IBL session not established
+  | 'context'                 // Stage 5T: OperationalContext missing/expired
+  | 'access_graph'            // Stage 6T: scope unreachable in graph
+  | 'permission'              // Stage 7T / 4P: RBAC/ABAC or Platform denied
+  | 'policy';                 // Stage 8T: declarative rule denied
 
 export interface PipelineResult {
   decision: PipelineDecision;
   /** Which stage denied (if any) */
   deniedBy?: PipelineDeniedBy;
-  /** Stage number that denied (1-8) */
-  deniedAtStage?: number;
+  /** Stage label that denied */
+  deniedAtStage?: number | string;
   reason?: string;
-  /** Permission engine result */
+  /** Permission engine result (tenant path) */
   permissionResult?: PermissionResult;
-  /** Policy engine result */
+  /** Policy engine result (tenant path) */
   policyResult?: PolicyResult;
   /** Request ID for tracing */
   requestId: string;
+  /** Which pipeline path was taken */
+  path?: 'platform' | 'tenant';
 }
 
 export interface PipelineInput {
@@ -76,35 +86,23 @@ export interface PipelineInput {
   skipPolicy?: boolean;
   /** Skip audit logging (for high-frequency reads) */
   skipAudit?: boolean;
+  /** For platform path: the platform permission to check */
+  platformPermission?: PlatformPermission;
+  /** For platform path: the user's platform role */
+  platformRole?: PlatformRoleType;
 }
 
 // ════════════════════════════════════
 // PIPELINE EXECUTION
 // ════════════════════════════════════
 
-/**
- * Execute the full 8-stage security pipeline.
- * 
- * Usage:
- *   const result = executeSecurityPipeline({
- *     action: 'create',
- *     resource: 'employees',
- *     ctx: securityContext,
- *     target: { company_id: employee.company_id },
- *     guardTarget: { tenantId, companyId: employee.company_id },
- *   });
- *   if (result.decision === 'deny') throw new SecurityError(result.reason);
- */
 export function executeSecurityPipeline(input: PipelineInput): PipelineResult {
-  const {
-    action, resource, ctx, target, guardTarget,
-    skipAccessGraph = false, skipPolicy = false, skipAudit = false,
-  } = input;
+  const { ctx, skipAudit = false } = input;
 
   // ── Stage 1: RequestId ──
   const requestId = ctx?.request_id || `anon-${Date.now().toString(36)}`;
 
-  // ── Stage 2: IdentityService — validate auth ──
+  // ── Stage 2: IdentityResolver — validate auth ──
   if (!ctx) {
     return denyAndAudit({
       decision: 'deny',
@@ -112,21 +110,92 @@ export function executeSecurityPipeline(input: PipelineInput): PipelineResult {
       deniedAtStage: 2,
       reason: 'Usuário não autenticado.',
       requestId,
-    }, resource, action, skipAudit);
+    }, input.resource, input.action, skipAudit);
   }
 
-  // ── Stage 3: IdentitySessionManager — validate IBL session ──
+  // ── Stage 3: UserTypeResolver — branch ──
+  if (ctx.user_type === 'platform') {
+    return executePlatformPipeline(input, ctx, requestId);
+  }
+
+  return executeTenantPipeline(input, ctx, requestId);
+}
+
+// ════════════════════════════════════
+// PLATFORM PIPELINE
+// ════════════════════════════════════
+
+function executePlatformPipeline(
+  input: PipelineInput,
+  ctx: SecurityContext,
+  requestId: string,
+): PipelineResult {
+  const { action, resource, skipAudit = false, platformPermission, platformRole } = input;
+
+  // ── Stage 4P: PlatformPermissionGuard ──
+  if (platformPermission) {
+    const allowed = hasPlatformPermission(platformRole ?? null, platformPermission);
+    if (!allowed) {
+      const result: PipelineResult = {
+        decision: 'deny',
+        deniedBy: 'permission',
+        deniedAtStage: '4P',
+        reason: `Permissão de plataforma negada: ${platformPermission} para role ${platformRole ?? 'unknown'}.`,
+        requestId,
+        path: 'platform',
+      };
+      if (!skipAudit) {
+        auditSecurity.logAccessDenied({
+          resource: `platform:${platformPermission}`,
+          reason: result.reason!,
+          ctx,
+          metadata: { platformRole, stage: '4P' },
+        });
+      }
+      return result;
+    }
+  }
+
+  // ── Stage 5P: Audit (success) ──
+  if (!skipAudit) {
+    auditSecurity.logAccessAllowed({
+      resource: `platform:${platformPermission ?? `${resource}:${action}`}`,
+      action,
+      ctx,
+      metadata: { platformRole, path: 'platform' },
+    });
+  }
+
+  return { decision: 'allow', requestId, path: 'platform' };
+}
+
+// ════════════════════════════════════
+// TENANT PIPELINE
+// ════════════════════════════════════
+
+function executeTenantPipeline(
+  input: PipelineInput,
+  ctx: SecurityContext,
+  requestId: string,
+): PipelineResult {
+  const {
+    action, resource, target, guardTarget,
+    skipAccessGraph = false, skipPolicy = false, skipAudit = false,
+  } = input;
+
+  // ── Stage 4T: IdentitySessionManager — validate IBL session ──
   if (!identityBoundary.isEstablished) {
     return denyAndAudit({
       decision: 'deny',
       deniedBy: 'identity_session',
-      deniedAtStage: 3,
+      deniedAtStage: '4T',
       reason: 'Sessão de identidade não estabelecida no IBL.',
       requestId,
+      path: 'tenant',
     }, resource, action, skipAudit, ctx);
   }
 
-  // ── Stage 4: ContextResolver — validate OperationalContext ──
+  // ── Stage 5T: ContextResolver — validate OperationalContext ──
   const guardResult = contextGuard.validate(
     identityBoundary.identity,
     identityBoundary.operationalContext,
@@ -136,13 +205,14 @@ export function executeSecurityPipeline(input: PipelineInput): PipelineResult {
     return denyAndAudit({
       decision: 'deny',
       deniedBy: 'context',
-      deniedAtStage: 4,
+      deniedAtStage: '5T',
       reason: guardResult.reason,
       requestId,
+      path: 'tenant',
     }, resource, action, skipAudit, ctx);
   }
 
-  // ── Stage 5: AccessGraph — O(1) scope reachability ──
+  // ── Stage 6T: AccessGraph — O(1) scope reachability ──
   if (!skipAccessGraph && target) {
     const graph = getAccessGraph();
     if (graph) {
@@ -151,37 +221,39 @@ export function executeSecurityPipeline(input: PipelineInput): PipelineResult {
         return denyAndAudit({
           decision: 'deny',
           deniedBy: 'access_graph',
-          deniedAtStage: 5,
+          deniedAtStage: '6T',
           reason: `Escopo não alcançável no AccessGraph: company=${target.company_id ?? '?'}, group=${target.company_group_id ?? '?'}`,
           requestId,
+          path: 'tenant',
         }, resource, action, skipAudit, ctx, { target });
       }
     }
   }
 
-  // ── Stage 6: PermissionEngine (RBAC + ABAC) ──
+  // ── Stage 7T: PermissionEngine (RBAC + ABAC) ──
   const permResult = checkPermission(action, resource, ctx, target);
   if (permResult.decision === 'deny') {
     const result: PipelineResult = {
       decision: 'deny',
       deniedBy: 'permission',
-      deniedAtStage: 6,
+      deniedAtStage: '7T',
       reason: permResult.reason || `Permissão negada: ${action} em ${resource}.`,
       permissionResult: permResult,
       requestId,
+      path: 'tenant',
     };
     if (!skipAudit) {
       auditSecurity.logAccessDenied({
         resource: `${resource}:${action}`,
         reason: result.reason!,
         ctx,
-        metadata: { failedCheck: permResult.failedCheck, target, stage: 6 },
+        metadata: { failedCheck: permResult.failedCheck, target, stage: '7T' },
       });
     }
     return result;
   }
 
-  // ── Stage 7: PolicyEngine (declarative rules) ──
+  // ── Stage 8T: PolicyEngine (declarative rules) ──
   if (!skipPolicy) {
     const policyResult = policyEngine.evaluateRules({
       securityContext: ctx,
@@ -198,10 +270,11 @@ export function executeSecurityPipeline(input: PipelineInput): PipelineResult {
       const result: PipelineResult = {
         decision: 'deny',
         deniedBy: 'policy',
-        deniedAtStage: 7,
+        deniedAtStage: '8T',
         reason: policyResult.reason || `Policy negou: ${action} em ${resource}.`,
         policyResult,
         requestId,
+        path: 'tenant',
       };
       if (!skipAudit) {
         auditSecurity.logPolicyViolation({
@@ -209,20 +282,20 @@ export function executeSecurityPipeline(input: PipelineInput): PipelineResult {
           reason: result.reason!,
           policyId: policyResult.policyId,
           ctx,
-          metadata: { evaluatedRules: policyResult.evaluatedRules, target, stage: 7 },
+          metadata: { evaluatedRules: policyResult.evaluatedRules, target, stage: '8T' },
         });
       }
       return result;
     }
   }
 
-  // ── Stage 8: AuditSecurity (success) ──
+  // ── Stage 9T: AuditSecurity (success) ──
   if (!skipAudit) {
     auditSecurity.logAccessAllowed({
       resource: `${resource}:${action}`,
       action,
       ctx,
-      metadata: { target, stagesCleared: 8 },
+      metadata: { target, path: 'tenant', stagesCleared: '9T' },
     });
   }
 
@@ -230,12 +303,12 @@ export function executeSecurityPipeline(input: PipelineInput): PipelineResult {
     decision: 'allow',
     requestId,
     permissionResult: permResult,
+    path: 'tenant',
   };
 }
 
 /**
  * Execute pipeline and throw if denied.
- * Convenience for mutation guards.
  */
 export function requirePermission(input: PipelineInput): void {
   const result = executeSecurityPipeline(input);
@@ -271,7 +344,7 @@ function checkAccessGraphReachability(
   graph: ReturnType<typeof getAccessGraph>,
   target: ResourceTarget,
 ): boolean {
-  if (!graph) return true; // No graph = skip check
+  if (!graph) return true;
 
   if (target.company_id) {
     if (!graph.canAccessScope('company', target.company_id)) return false;
