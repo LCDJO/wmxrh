@@ -118,13 +118,14 @@ const navStructure: NavEntry[] = [
     ],
   },
 
-  // ── Administração ──
+  // ── Configurações ──
   {
-    id: 'admin',
-    icon: UserCog,
-    label: 'Administração',
+    id: 'configuracoes',
+    icon: Settings,
+    label: 'Configurações',
     children: [
-      { to: '/iam', icon: UserCog, label: 'Gestão de Acesso', key: 'audit' },
+      { to: '/settings/users', icon: Users, label: 'Usuários', key: 'iam_users' },
+      { to: '/settings/roles', icon: ShieldCheck, label: 'Cargos & Permissões', key: 'iam_roles' },
     ],
   },
 ];
