@@ -13,7 +13,7 @@
  */
 
 import type {
-  Tenant, TenantMembership,
+  Tenant, TenantMembership, TenantRole, UserRole, ScopeType,
   CompanyGroup, Company, Department, Position,
   Employee, EmployeeWithRelations, SalaryHistory,
   CompanyWithRelations, PositionWithRelations, DepartmentWithRelations,
@@ -27,6 +27,12 @@ export interface ITenantService {
   list(): Promise<Tenant[]>;
   create(data: CreateTenantDTO): Promise<Tenant>;
   getMemberships(userId: string): Promise<(TenantMembership & { tenants: Tenant })[]>;
+}
+
+export interface IUserRoleService {
+  listByTenant(tenantId: string): Promise<UserRole[]>;
+  create(data: { user_id: string; tenant_id: string; role: TenantRole; scope_type: ScopeType; scope_id?: string | null }): Promise<UserRole>;
+  delete(id: string): Promise<void>;
 }
 
 export interface ICompanyGroupService {

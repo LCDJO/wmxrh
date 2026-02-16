@@ -24,6 +24,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          status: string
           tenant_id: string
           updated_at: string
         }
@@ -36,6 +37,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          status?: string
           tenant_id: string
           updated_at?: string
         }
@@ -48,6 +50,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          status?: string
           tenant_id?: string
           updated_at?: string
         }
@@ -374,6 +377,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          status: string
           updated_at: string
         }
         Insert: {
@@ -384,6 +388,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -394,9 +399,48 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["tenant_role"]
+          scope_id: string | null
+          scope_type: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["tenant_role"]
+          scope_id?: string | null
+          scope_type?: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["tenant_role"]
+          scope_id?: string | null
+          scope_type?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -409,6 +453,22 @@ export type Database = {
         Returns: boolean
       }
       is_tenant_member: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_has_company_access: {
+        Args: { _company_id: string; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_has_group_access: {
+        Args: { _group_id: string; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_has_tenant_access: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
