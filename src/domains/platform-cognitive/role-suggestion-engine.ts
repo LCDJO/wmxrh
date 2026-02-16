@@ -2,6 +2,10 @@
  * RoleSuggestionEngine
  *
  * Builds prompts for pattern detection and quick-setup guidance.
+ *
+ * SECURITY: This class is PURE — it only builds prompt strings.
+ * It NEVER writes to the database or modifies any entity.
+ * All suggestions require explicit user confirmation.
  */
 import type { AdvisorPayload, PlatformSnapshot } from './types';
 

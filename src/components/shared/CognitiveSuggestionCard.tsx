@@ -2,6 +2,9 @@
  * CognitiveSuggestionCard — Reusable card for a single CognitiveSuggestion.
  * Follows the design system tokens and supports interactive actions.
  *
+ * SECURITY: This component is display-only. Actions passed via onAction
+ * are triggered ONLY by explicit user click — never automatically.
+ *
  * Usage:
  *   <CognitiveSuggestionCard suggestion={s} onAction={() => apply(s)} />
  */

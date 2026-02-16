@@ -1,6 +1,10 @@
 /**
  * RoleSuggestionPanel — AI-powered permission suggestions when creating/editing a role.
  * Shows "Sugestão baseada em outros tenants semelhantes" with checkable permissions.
+ *
+ * SECURITY: This component NEVER applies suggestions automatically.
+ * The user MUST manually select suggestions and click "Aplicar" to
+ * trigger onApplySuggestions. No mutation happens without explicit confirmation.
  */
 import { useState, useEffect } from 'react';
 import { usePlatformCognitive } from '@/domains/platform/use-platform-cognitive';

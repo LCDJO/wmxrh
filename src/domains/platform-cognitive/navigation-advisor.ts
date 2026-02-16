@@ -3,6 +3,11 @@
  *
  * Produces prompts to recommend dashboards and navigation shortcuts
  * based on the caller's role and behaviour profile.
+ *
+ * SECURITY: This class is PURE — it only builds prompt strings.
+ * It has NO write access and CANNOT modify navigation, shortcuts,
+ * or any user settings. All suggestions MUST be confirmed by the
+ * user before any action is taken.
  */
 import type { AdvisorPayload, BehaviorProfile, PlatformSnapshot } from './types';
 

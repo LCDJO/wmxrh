@@ -2,6 +2,9 @@
  * CognitiveHint — Inline contextual hint powered by cognitive layer.
  * Lightweight banner showing a single AI-generated tip or observation.
  *
+ * SECURITY: This component is display-only. It shows suggestions
+ * but NEVER executes any mutation. Actions require explicit user click.
+ *
  * Usage:
  *   <CognitiveHint message="Este cargo possui acesso financeiro elevado." />
  *   <CognitiveHint message="..." severity="warn" dismissible />
