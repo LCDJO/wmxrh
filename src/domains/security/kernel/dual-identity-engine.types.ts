@@ -110,10 +110,21 @@ export interface EndImpersonationResult {
 // CONFIGURATION
 // ════════════════════════════════════
 
-/** Platform roles allowed to impersonate into tenant contexts */
+/**
+ * Platform roles allowed to impersonate into tenant contexts.
+ *
+ * CRITICAL RULES:
+ *   1. RealIdentity is NEVER mutated during impersonation
+ *   2. Impersonation does NOT generate a new login/session
+ *   3. TenantUsers can NEVER impersonate (userType must be 'platform')
+ *   4. platform_finance is explicitly EXCLUDED — no impersonation rights
+ *   5. platform_read_only is explicitly EXCLUDED
+ */
 export const IMPERSONATION_ALLOWED_ROLES: readonly PlatformRoleType[] = [
   'platform_super_admin',
   'platform_support',
+  // NOTE: 'platform_finance' and 'platform_read_only' are intentionally excluded.
+  // 'platform_operations' is excluded — can manage tenants but not impersonate.
 ] as const;
 
 /** Default simulated role when impersonating */
