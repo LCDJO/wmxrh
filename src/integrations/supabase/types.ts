@@ -2865,6 +2865,64 @@ export type Database = {
           },
         ]
       }
+      workforce_insights: {
+        Row: {
+          company_id: string | null
+          criado_em: string
+          dados_origem_json: Json | null
+          descricao: string
+          group_id: string | null
+          id: string
+          insight_type: string
+          severity: string
+          tenant_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          criado_em?: string
+          dados_origem_json?: Json | null
+          descricao: string
+          group_id?: string | null
+          id?: string
+          insight_type: string
+          severity?: string
+          tenant_id: string
+        }
+        Update: {
+          company_id?: string | null
+          criado_em?: string
+          dados_origem_json?: Json | null
+          descricao?: string
+          group_id?: string | null
+          id?: string
+          insight_type?: string
+          severity?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workforce_insights_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workforce_insights_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workforce_insights_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       pcmso_exam_alerts: {
