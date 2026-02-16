@@ -1,0 +1,155 @@
+/**
+ * UnifiedSessionManager — Builds the UnifiedIdentitySession and IdentitySnapshot.
+ *
+ * Pure read-model projector: no mutations, no side effects.
+ * Collects state from all subsystems and projects into a single object.
+ *
+ * Part of the Identity Intelligence Layer decomposition.
+ */
+
+import { identityBoundary } from '../identity-boundary';
+import { dualIdentityEngine } from '../dual-identity-engine';
+import { getAccessGraph } from '../access-graph';
+import type { IdentityPhase, UserTypeDetection, RiskAssessment, RecentContext, WorkspaceEntry } from './types';
+import type { IdentitySnapshot, UnifiedIdentitySession } from './types';
+
+export interface SessionProjectionInput {
+  phase: IdentityPhase;
+  previousPhase: IdentityPhase | null;
+  phaseChangedAt: number | null;
+  userTypeDetection: UserTypeDetection | null;
+  recentContexts: readonly RecentContext[];
+  lastRisk: RiskAssessment;
+  workspaces: WorkspaceEntry[];
+}
+
+export class UnifiedSessionManager {
+  /**
+   * Project UnifiedIdentitySession — the clean, focused API.
+   */
+  buildSession(input: SessionProjectionInput): UnifiedIdentitySession {
+    const iblSession = identityBoundary.identity;
+    const dual = dualIdentityEngine;
+    const graph = getAccessGraph();
+    const context = identityBoundary.operationalContext;
+    const impersonation = dual.currentSession;
+    const now = Date.now();
+
+    const realUserId = iblSession?.userId ?? dual.realIdentity?.userId ?? '';
+    const realEmail = iblSession?.email ?? dual.realIdentity?.email ?? null;
+
+    const activeTenantId = context?.activeTenantId ?? null;
+    const availableTenants = (iblSession?.tenantScopes ?? []).map(scope => ({
+      tenant_id: scope.tenantId,
+      tenant_name: scope.tenantName,
+      role: scope.role,
+      is_active: scope.tenantId === activeTenantId,
+    }));
+
+    const availableGroups: Array<{ group_id: string; tenant_id: string; inherited_from: 'tenant' | 'direct' }> = [];
+    if (graph && activeTenantId) {
+      for (const groupId of graph.getReachableGroups()) {
+        availableGroups.push({ group_id: groupId, tenant_id: activeTenantId, inherited_from: 'tenant' });
+      }
+    }
+
+    const activeContext = context ? {
+      tenant_id: context.activeTenantId,
+      tenant_name: context.activeTenantName,
+      membership_role: context.membershipRole,
+      effective_roles: context.effectiveRoles,
+      scope_level: context.scopeLevel,
+      group_id: context.activeGroupId,
+      company_id: context.activeCompanyId,
+      activated_at: context.activatedAt,
+    } : null;
+
+    const impersonationState = impersonation ? {
+      session_id: impersonation.id,
+      real_user_id: impersonation.realIdentity.userId,
+      target_tenant_id: impersonation.targetTenantId,
+      target_tenant_name: impersonation.targetTenantName,
+      simulated_role: impersonation.simulatedRole,
+      reason: impersonation.reason,
+      started_at: impersonation.startedAt,
+      expires_at: impersonation.expiresAt,
+      remaining_ms: dual.getRemainingMs(),
+      operation_count: impersonation.operationCount,
+    } : null;
+
+    return {
+      session_id: iblSession?.sessionFingerprint ?? `anon_${now}`,
+      phase: input.phase,
+      real_identity: {
+        user_id: realUserId,
+        email: realEmail,
+        user_type: input.userTypeDetection?.detectedType ?? 'unknown',
+        platform_role: input.userTypeDetection?.platformRole ?? dual.realIdentity?.platformRole ?? null,
+        detection: input.userTypeDetection,
+        authenticated_at: iblSession?.authenticatedAt ?? dual.realIdentity?.authenticatedAt ?? 0,
+      },
+      available_tenants: availableTenants,
+      available_groups: availableGroups,
+      recent_contexts: input.recentContexts,
+      active_context: activeContext,
+      impersonation_state: impersonationState,
+      risk: input.lastRisk,
+      established_at: iblSession?.authenticatedAt ?? 0,
+      resolved_at: now,
+    };
+  }
+
+  /**
+   * Project IdentitySnapshot — the full diagnostic model.
+   */
+  buildSnapshot(input: SessionProjectionInput): IdentitySnapshot {
+    const iblSnapshot = identityBoundary.snapshot();
+    const dual = dualIdentityEngine;
+    const graph = getAccessGraph();
+    const session = dual.currentSession;
+    const context = identityBoundary.operationalContext;
+    const now = Date.now();
+
+    return {
+      phase: input.phase,
+      previousPhase: input.previousPhase,
+      phaseChangedAt: input.phaseChangedAt,
+
+      userId: iblSnapshot.userId ?? dual.realIdentity?.userId ?? null,
+      email: dual.realIdentity?.email ?? null,
+      userType: input.userTypeDetection?.detectedType === 'unknown'
+        ? null
+        : (input.userTypeDetection?.detectedType ?? dual.activeIdentity.userType ?? null),
+      platformRole: input.userTypeDetection?.platformRole ?? dual.realIdentity?.platformRole ?? null,
+      userTypeDetection: input.userTypeDetection,
+
+      tenantId: context?.activeTenantId ?? iblSnapshot.activeTenantId ?? dual.activeIdentity.tenantId ?? null,
+      tenantName: context?.activeTenantName ?? session?.targetTenantName ?? null,
+      scopeLevel: context?.scopeLevel ?? iblSnapshot.scopeLevel ?? null,
+      groupId: context?.activeGroupId ?? null,
+      companyId: context?.activeCompanyId ?? null,
+      effectiveRoles: context?.effectiveRoles ?? iblSnapshot.effectiveRoles,
+
+      availableWorkspaces: input.workspaces,
+      recentContexts: input.recentContexts,
+      canSwitchWorkspace: input.workspaces.length > 1,
+
+      isImpersonating: dual.isImpersonating,
+      realIdentity: dual.realIdentity,
+      activeIdentity: dual.activeIdentity,
+      impersonationSession: session,
+      impersonationRemainingMs: dual.getRemainingMs(),
+
+      hasAccessGraph: iblSnapshot.hasAccessGraph,
+      reachableCompanyCount: graph?.getReachableCompanies().size ?? 0,
+      reachableGroupCount: graph?.getReachableGroups().size ?? 0,
+
+      iblEstablished: iblSnapshot.hasIdentity,
+      contextSwitchCount: iblSnapshot.switchCount,
+      availableTenantCount: iblSnapshot.tenantCount,
+
+      risk: input.lastRisk,
+      resolvedAt: now,
+    };
+  }
+}
