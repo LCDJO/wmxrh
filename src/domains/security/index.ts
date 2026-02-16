@@ -51,6 +51,7 @@ export type {
   SecurityContext,
   SecurityScope,
   BuildSecurityContextInput,
+  UserType,
   PermissionEngineAPI,
   PermissionCheck,
   PermissionResult,

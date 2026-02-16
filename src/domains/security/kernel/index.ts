@@ -19,7 +19,7 @@
 
 // ── Identity + SecurityContext ─────────────────────────────
 export { resolveIdentity, buildSecurityContext } from './identity.service';
-export type { Identity, SecurityContext, SecurityScope, BuildSecurityContextInput } from './identity.service';
+export type { Identity, SecurityContext, SecurityScope, BuildSecurityContextInput, UserType } from './identity.service';
 
 // ── Permission Engine ──────────────────────────────────────
 export { permissionEngine, checkPermission } from './permission-engine';
