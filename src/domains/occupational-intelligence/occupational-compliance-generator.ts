@@ -17,6 +17,8 @@ import { cboSuggestionService } from './cbo-suggestion.service';
 import { nrTrainingRequirementService } from './nr-training-requirement.service';
 import { classifyCnae } from './cnae-risk-classifier';
 import { occupationalEvents } from './occupational-compliance.events';
+import { laborComplianceIntegration } from '@/domains/labor-compliance/labor-compliance-integration';
+import type { ComplianceCheckResult } from '@/domains/labor-compliance/labor-compliance-integration';
 import type { GrauRisco } from './types';
 import type { RiskProfile } from './cnae-risk-mapping.service';
 import type { CnaeCboMappingRecord } from './cbo-suggestion.service';
@@ -28,12 +30,16 @@ export interface ComplianceGenerationResult {
   riskProfile: RiskProfile;
   cboSuggestions: CnaeCboMappingRecord[];
   trainingRequirements: TrainingRequirementRecord[];
+  complianceCheck: ComplianceCheckResult | null;
   summary: {
     grau_risco: number;
     ambiente: string;
     total_cbos_suggested: number;
     total_trainings_generated: number;
     nrs_aplicaveis: number[];
+    pcmso_required: boolean;
+    pgr_required: boolean;
+    violations_created: string[];
   };
 }
 
@@ -147,16 +153,33 @@ export const occupationalComplianceGenerator = {
       allTrainings.push(...trainings);
     }
 
+    // ── Step 4: Labor Compliance Enforcement ──
+    let complianceCheck: ComplianceCheckResult | null = null;
+    try {
+      complianceCheck = await laborComplianceIntegration.enforceForCompany(
+        tenantId,
+        companyId,
+        grauRisco,
+        riskProfile.nrs_aplicaveis,
+      );
+    } catch (err) {
+      console.error('[ComplianceGenerator] Compliance enforcement failed:', err);
+    }
+
     return {
       riskProfile,
       cboSuggestions,
       trainingRequirements: allTrainings,
+      complianceCheck,
       summary: {
         grau_risco: grauRisco,
         ambiente: riskProfile.ambiente,
         total_cbos_suggested: cboSuggestions.length,
         total_trainings_generated: allTrainings.length,
         nrs_aplicaveis: riskProfile.nrs_aplicaveis,
+        pcmso_required: complianceCheck?.pcmso_required ?? false,
+        pgr_required: complianceCheck?.pgr_required ?? false,
+        violations_created: complianceCheck?.violations_created ?? [],
       },
     };
   },
