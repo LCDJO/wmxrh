@@ -22,6 +22,8 @@ export { cnaeRiskMappingService } from './cnae-risk-mapping.service';
 export type { CnaeRiskMapping, RiskProfile, UpsertCnaeRiskMappingDTO } from './cnae-risk-mapping.service';
 export { cboSuggestionService } from './cbo-suggestion.service';
 export type { CboCatalogRecord, CnaeCboMappingRecord } from './cbo-suggestion.service';
+export { nrTrainingRequirementService } from './nr-training-requirement.service';
+export type { NrTrainingCatalogRecord, TrainingRequirementRecord } from './nr-training-requirement.service';
 
 export type {
   GrauRisco,
