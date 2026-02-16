@@ -12,7 +12,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Briefcase, TrendingUp, Building2,
-  ChevronLeft, ChevronRight, LogOut, FileText, Heart, ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark, Calculator, Brain,
+  ChevronLeft, ChevronRight, LogOut, FileText, Heart, ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark, Calculator, Brain, Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -51,6 +51,7 @@ const allNavItems: NavItem[] = [
   { to: '/legal-dashboard', icon: Landmark, label: 'Dashboard Legal', key: 'legal_dashboard' },
   { to: '/payroll-simulation', icon: Calculator, label: 'Simulação Folha', key: 'compensation' },
   { to: '/workforce-intelligence', icon: Brain, label: 'Inteligência RH', key: 'dashboard' },
+  { to: '/strategic-intelligence', icon: Sparkles, label: 'IA Estratégica', key: 'dashboard' },
   { to: '/audit', icon: ScrollText, label: 'Auditoria Legal', key: 'audit' },
 ];
 

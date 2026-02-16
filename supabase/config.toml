@@ -2,3 +2,9 @@ project_id = "gmxhyjoxzgsoejkqxupz"
 
 [functions.generate-workforce-insights]
 verify_jwt = false
+
+[functions.salary-intelligence]
+verify_jwt = false
+
+[functions.health]
+verify_jwt = false

@@ -29,6 +29,7 @@ import Audit from "./pages/Audit";
 import PayrollSimulation from "./pages/PayrollSimulation";
 import NotFound from "./pages/NotFound";
 import WorkforceIntelligence from "./pages/WorkforceIntelligence";
+import StrategicIntelligence from "./pages/StrategicIntelligence";
 
 const queryClient = new QueryClient();
 
@@ -141,6 +142,11 @@ function AppRoutes() {
         <Route path="/workforce-intelligence" element={
           <ProtectedRoute navKey="dashboard">
             <WorkforceIntelligence />
+          </ProtectedRoute>
+        } />
+        <Route path="/strategic-intelligence" element={
+          <ProtectedRoute navKey="dashboard">
+            <StrategicIntelligence />
           </ProtectedRoute>
         } />
       </Route>
