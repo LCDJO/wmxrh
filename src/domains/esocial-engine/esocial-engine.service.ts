@@ -8,8 +8,11 @@
  *   4. Persist to esocial_events table
  *   5. Track status transitions
  *
- * Uses the existing esocial_events table as persistence.
- * Decoupled from HR Core — only consumes InboundDomainEvents.
+ * ╔══════════════════════════════════════════════════════════╗
+ * ║  SECURITY: Every operation goes through SecurityKernel  ║
+ * ║  - tenant_id derived from SecurityContext (never FE)     ║
+ * ║  - company scope validated via pipeline                  ║
+ * ╚══════════════════════════════════════════════════════════╝
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +22,9 @@ import type { ESocialEnvelope, TransmissionStatus, ESocialDashboardStats, ESocia
 import { generateFromDomainEvent } from './event-generator';
 import { validateEnvelope, transitionEnvelope, computeBatchStats } from './transmission-controller';
 import type { InboundDomainEvent } from './types';
+import { executeSecurityPipeline, requirePermission, type PipelineInput } from '@/domains/security/kernel/security-pipeline';
+import { scopedInsertFromContext, buildQueryScope } from '@/domains/security/kernel/scope-resolver';
+import type { SecurityContext } from '@/domains/security/kernel/identity.service';
 
 // ════════════════════════════════════
 // ENVELOPE PERSISTENCE (via esocial_events table)
@@ -97,25 +103,70 @@ function rowToEnvelope(row: any): ESocialEnvelope {
 }
 
 // ════════════════════════════════════
+// SECURITY HELPERS
+// ════════════════════════════════════
+
+/**
+ * Build a PipelineInput for eSocial operations.
+ * Ensures tenant_id + company scope are validated.
+ */
+function buildPipelineInput(
+  ctx: SecurityContext,
+  action: PipelineInput['action'],
+  companyId?: string | null,
+): PipelineInput {
+  return {
+    action,
+    resource: 'esocial_events',
+    ctx,
+    target: companyId ? { company_id: companyId } : undefined,
+    guardTarget: {
+      tenantId: ctx.tenant_id,
+      companyId: companyId ?? undefined,
+    },
+  };
+}
+
+// ════════════════════════════════════
 // PUBLIC API
 // ════════════════════════════════════
 
 export const esocialEngineService = {
   /**
-   * Process an inbound domain event: generate envelope, validate, persist.
+   * Process an inbound domain event: validate security, generate envelope, persist.
+   *
+   * tenant_id is ALWAYS derived from SecurityContext, never from the event payload.
    */
-  async processEvent(event: InboundDomainEvent): Promise<ESocialEnvelope | null> {
-    const envelope = generateFromDomainEvent(event);
+  async processEvent(
+    event: InboundDomainEvent,
+    ctx: SecurityContext,
+  ): Promise<ESocialEnvelope | null> {
+    // ── Security: validate tenant + company scope ──
+    requirePermission(buildPipelineInput(ctx, 'create', event.company_id));
+
+    // Override tenant_id from SecurityContext (never trust frontend)
+    const securedEvent: InboundDomainEvent = {
+      ...event,
+      tenant_id: ctx.tenant_id,
+    };
+
+    const envelope = generateFromDomainEvent(securedEvent);
     if (!envelope) return null;
 
-    // Validate
-    const validation = validateEnvelope(envelope);
-    const finalEnvelope = validation.valid
-      ? { ...envelope, status: 'validated' as TransmissionStatus, validated_at: new Date().toISOString() }
-      : envelope; // Stay as draft if invalid
+    // Inject tenant_id from ctx into envelope
+    const securedEnvelope: ESocialEnvelope = {
+      ...envelope,
+      tenant_id: ctx.tenant_id,
+    };
 
-    // Persist
-    const row = envelopeToRow(finalEnvelope);
+    // Validate
+    const validation = validateEnvelope(securedEnvelope);
+    const finalEnvelope = validation.valid
+      ? { ...securedEnvelope, status: 'validated' as TransmissionStatus, validated_at: new Date().toISOString() }
+      : securedEnvelope;
+
+    // Persist — tenant_id from ctx
+    const row = scopedInsertFromContext(envelopeToRow(finalEnvelope), ctx);
     const { data, error } = await supabase
       .from('esocial_events')
       .insert([row as any])
@@ -127,14 +178,22 @@ export const esocialEngineService = {
   },
 
   /**
-   * List envelopes with scope filtering.
+   * List envelopes with SecurityKernel scope filtering.
+   * tenant_id derived from SecurityContext.
    */
-  async listEnvelopes(scope: QueryScope, opts?: {
-    status?: string;
-    category?: string;
-    event_type?: string;
-    limit?: number;
-  }): Promise<ESocialEnvelope[]> {
+  async listEnvelopes(
+    ctx: SecurityContext,
+    scope: QueryScope,
+    opts?: {
+      status?: string;
+      category?: string;
+      event_type?: string;
+      limit?: number;
+    },
+  ): Promise<ESocialEnvelope[]> {
+    // ── Security: validate read access ──
+    requirePermission(buildPipelineInput(ctx, 'view'));
+
     let q = applyScope(
       supabase.from('esocial_events').select('*'),
       scope,
@@ -152,10 +211,20 @@ export const esocialEngineService = {
   },
 
   /**
-   * Get dashboard stats.
+   * Get dashboard stats (read-only, skip policy for performance).
    */
-  async getDashboardStats(scope: QueryScope): Promise<ESocialDashboardStats> {
-    const envelopes = await this.listEnvelopes(scope, { limit: 1000 });
+  async getDashboardStats(ctx: SecurityContext, scope: QueryScope): Promise<ESocialDashboardStats> {
+    // ── Security: validate read access (skip policy for perf) ──
+    const pipelineResult = executeSecurityPipeline({
+      ...buildPipelineInput(ctx, 'view'),
+      skipPolicy: true,
+      skipAudit: true,
+    });
+    if (pipelineResult.decision === 'deny') {
+      throw new Error(pipelineResult.reason || 'Acesso negado ao dashboard eSocial.');
+    }
+
+    const envelopes = await this.listEnvelopes(ctx, scope, { limit: 1000 });
     const stats = computeBatchStats(envelopes);
 
     const lastAccepted = envelopes
@@ -175,11 +244,21 @@ export const esocialEngineService = {
 
   /**
    * Transition an envelope to a new status.
+   * Validates that the user has update permission on the envelope's company scope.
    */
-  async updateStatus(id: string, newStatus: TransmissionStatus, meta?: {
-    receipt_number?: string;
-    error_message?: string;
-  }): Promise<void> {
+  async updateStatus(
+    id: string,
+    newStatus: TransmissionStatus,
+    ctx: SecurityContext,
+    meta?: {
+      receipt_number?: string;
+      error_message?: string;
+      company_id?: string;
+    },
+  ): Promise<void> {
+    // ── Security: validate update + company scope ──
+    requirePermission(buildPipelineInput(ctx, 'update', meta?.company_id));
+
     const update: Record<string, unknown> = { status: mapStatusToDb(newStatus) };
     if (newStatus === 'accepted' || newStatus === 'rejected') {
       update.processed_at = new Date().toISOString();
@@ -200,22 +279,24 @@ export const esocialEngineService = {
   /**
    * Cancel an envelope.
    */
-  async cancel(id: string): Promise<void> {
-    await this.updateStatus(id, 'cancelled');
+  async cancel(id: string, ctx: SecurityContext, companyId?: string): Promise<void> {
+    await this.updateStatus(id, 'cancelled', ctx, { company_id: companyId });
   },
 
   /**
    * Queue validated envelopes for transmission.
    */
-  async queueValidated(scope: QueryScope): Promise<number> {
-    const envelopes = await this.listEnvelopes(scope, { status: 'pending' });
+  async queueValidated(ctx: SecurityContext, scope: QueryScope): Promise<number> {
+    // ── Security: validate update permission ──
+    requirePermission(buildPipelineInput(ctx, 'update'));
+
+    const envelopes = await this.listEnvelopes(ctx, scope, { status: 'pending' });
     let queued = 0;
     for (const env of envelopes) {
       if (env.status === 'validated' || env.status === 'draft') {
-        // Re-validate before queuing
         const validation = validateEnvelope(env);
         if (validation.valid) {
-          await this.updateStatus(env.id, 'queued');
+          await this.updateStatus(env.id, 'queued', ctx, { company_id: env.company_id ?? undefined });
           queued++;
         }
       }

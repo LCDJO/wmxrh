@@ -35,7 +35,8 @@ export type PermissionEntity =
   | 'employee_benefits'
   | 'health_programs'
   | 'health_exams'
-  | 'labor_rules';
+  | 'labor_rules'
+  | 'esocial_events';
 
 // ========================
 // ROLE SETS (mirrors DB functions)
@@ -192,6 +193,12 @@ export const PERMISSION_MATRIX: PermissionMatrix = {
     update: TENANT_ADMINS,
     delete: TENANT_ADMINS,
   },
+  esocial_events: {
+    view: ALL_MEMBERS,
+    create: EMPLOYEE_MANAGERS,
+    update: EMPLOYEE_MANAGERS,
+    delete: TENANT_ADMINS,
+  },
 };
 
 // ========================
@@ -216,7 +223,7 @@ const NAV_ENTITY_MAP: Record<NavKey, PermissionEntity> = {
   labor_compliance: 'health_programs',
   labor_rules: 'labor_rules',
   legal_dashboard: 'labor_rules',
-  esocial: 'tenants',
+  esocial: 'esocial_events',
 };
 
 /**
