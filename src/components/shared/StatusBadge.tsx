@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { EmployeeStatus } from '@/types/hr';
+import { EmployeeStatus } from '@/domains/shared';
 
 const statusConfig: Record<EmployeeStatus, { label: string; className: string }> = {
   active: { label: 'Ativo', className: 'bg-accent text-accent-foreground' },

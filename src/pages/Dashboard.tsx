@@ -4,58 +4,23 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { useTenant } from '@/contexts/TenantContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useEmployees, usePositions, useDepartments, useCompanies } from '@/domains/hooks';
+import type { EmployeeWithRelations, CompanyWithRelations } from '@/domains/shared';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
 
-  const { data: employees = [] } = useQuery({
-    queryKey: ['employees', tenantId],
-    queryFn: async () => {
-      if (!tenantId) return [];
-      const { data } = await supabase.from('employees').select('*, positions(title), departments(name), companies(name)').eq('tenant_id', tenantId);
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
+  const { data: employees = [] } = useEmployees();
+  const { data: positions = [] } = usePositions();
+  const { data: departments = [] } = useDepartments();
+  const { data: companies = [] } = useCompanies();
 
-  const { data: positions = [] } = useQuery({
-    queryKey: ['positions', tenantId],
-    queryFn: async () => {
-      if (!tenantId) return [];
-      const { data } = await supabase.from('positions').select('*').eq('tenant_id', tenantId);
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
-
-  const { data: departments = [] } = useQuery({
-    queryKey: ['departments', tenantId],
-    queryFn: async () => {
-      if (!tenantId) return [];
-      const { data } = await supabase.from('departments').select('*').eq('tenant_id', tenantId);
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
-
-  const { data: companies = [] } = useQuery({
-    queryKey: ['companies', tenantId],
-    queryFn: async () => {
-      if (!tenantId) return [];
-      const { data } = await supabase.from('companies').select('*').eq('tenant_id', tenantId);
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
-
-  const activeEmployees = employees.filter((e: any) => e.status === 'active');
-  const totalPayroll = activeEmployees.reduce((sum: number, e: any) => sum + (e.current_salary || 0), 0);
-  const avgSalary = activeEmployees.length > 0 ? Math.round(totalPayroll / activeEmployees.length) : 0;
-  const recentEmployees = [...employees].sort((a: any, b: any) => new Date(b.hire_date || b.created_at).getTime() - new Date(a.hire_date || a.created_at).getTime()).slice(0, 5);
+  const activeEmployees = employees.filter((e) => e.status === 'active');
+  const totalPayroll = activeEmployees.reduce((sum, e) => sum + (e.current_salary || 0), 0);
+  const recentEmployees = [...employees]
+    .sort((a, b) => new Date(b.hire_date || b.created_at).getTime() - new Date(a.hire_date || a.created_at).getTime())
+    .slice(0, 5);
 
   return (
     <div className="space-y-8">
@@ -79,12 +44,12 @@ export default function Dashboard() {
           </div>
           {recentEmployees.length > 0 ? (
             <div className="space-y-4">
-              {recentEmployees.map((emp: any) => (
+              {recentEmployees.map((emp) => (
                 <div key={emp.id} className="flex items-center justify-between py-2">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">
                       <AvatarFallback className="bg-secondary text-secondary-foreground text-xs font-semibold">
-                        {emp.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('')}
+                        {emp.name.split(' ').map(n => n[0]).slice(0, 2).join('')}
                       </AvatarFallback>
                     </Avatar>
                     <div>
@@ -105,8 +70,8 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold font-display text-card-foreground mb-5">Empresas</h2>
           {companies.length > 0 ? (
             <div className="space-y-4">
-              {companies.map((c: any) => {
-                const empCount = employees.filter((e: any) => e.company_id === c.id).length;
+              {companies.map((c) => {
+                const empCount = employees.filter(e => e.company_id === c.id).length;
                 return (
                   <div key={c.id} className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-3">
