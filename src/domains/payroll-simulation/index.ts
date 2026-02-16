@@ -34,6 +34,18 @@ export type {
   SimulationRiskLevel,
   ComplianceContext,
 } from './payroll-simulation.events';
+export {
+  toPayrollSimulationView,
+  toCompanyCostProjectionView,
+  toEmployeeCostBreakdownView,
+} from './read-models';
+export type {
+  PayrollSimulationView,
+  CompanyCostProjectionView,
+  GroupCostSummary,
+  EmployeeCostBreakdownView,
+  CostLineItem,
+} from './read-models';
 
 export type {
   SimulationInput,
