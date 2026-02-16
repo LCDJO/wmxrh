@@ -55,3 +55,7 @@ export type { AccessGraphInput, GraphNode, GraphEdge, NodeType, EdgeRelation } f
 // ── Access Graph Service ───────────────────────────────────
 export { accessGraphService } from './access-graph.service';
 export type { InheritedScopes, InheritanceEntry, AccessCheckResult } from './access-graph.service';
+
+// ── Access Graph Cache ─────────────────────────────────────
+export { accessGraphCache } from './access-graph.cache';
+export type { AccessGraphCacheEntry, CacheInvalidationReason, CacheInvalidationEvent } from './access-graph.cache';

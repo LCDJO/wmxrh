@@ -22,6 +22,7 @@ import {
   setAccessGraph,
   type AccessGraphInput,
 } from './access-graph';
+import { accessGraphCache } from './access-graph.cache';
 import type { PermissionAction, PermissionEntity } from '../permissions';
 import type { ScopeType } from '@/domains/shared/types';
 
@@ -96,9 +97,53 @@ export const accessGraphService = {
    * });
    */
   buildUserAccessGraph(input: AccessGraphInput): AccessGraph {
+    // Check cache first
+    const cached = accessGraphCache.get(input.userId, input.tenantId);
+    if (cached) {
+      setAccessGraph(cached.graph);
+      return cached.graph;
+    }
+
+    // Build fresh graph
     const graph = buildAccessGraph(input);
     setAccessGraph(graph);
+
+    // Store in cache
+    accessGraphCache.set(input.userId, input.tenantId, graph);
+
     return graph;
+  },
+
+  /**
+   * Force rebuild the graph, bypassing cache.
+   * Call this when you know the data has changed.
+   */
+  rebuildUserAccessGraph(input: AccessGraphInput): AccessGraph {
+    accessGraphCache.invalidate(input.userId, input.tenantId, 'MANUAL');
+    const graph = buildAccessGraph(input);
+    setAccessGraph(graph);
+    accessGraphCache.set(input.userId, input.tenantId, graph);
+    return graph;
+  },
+
+  /**
+   * Invalidate the cache for a specific user+tenant.
+   * Next call to buildUserAccessGraph will rebuild.
+   */
+  invalidateUser(userId: string, tenantId: string, reason: 'ROLE_CHANGED' | 'SCOPE_CHANGED' = 'ROLE_CHANGED'): void {
+    accessGraphCache.invalidate(userId, tenantId, reason);
+  },
+
+  /**
+   * Invalidate ALL cached graphs for a tenant.
+   * Use when a company or group changes (affects all users in that tenant).
+   */
+  invalidateTenant(
+    tenantId: string,
+    reason: 'COMPANY_CHANGED' | 'GROUP_CHANGED',
+    triggeredBy?: { entity: string; entityId: string; action: 'insert' | 'update' | 'delete' }
+  ): void {
+    accessGraphCache.invalidateTenant(tenantId, reason, triggeredBy);
   },
 
   /**

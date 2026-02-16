@@ -137,16 +137,21 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     });
   }, [user, session, currentTenant, effectiveRoles, userRoles, membershipRole, uiScope]);
 
-  // ── Access Graph (precomputed O(1) authorization) ──
+  // ── Access Graph (cached, auto-invalidates when deps change) ──
   const accessGraph = useMemo((): AccessGraph | null => {
     if (!user || !currentTenant) return null;
+
+    // When userRoles or membershipRole change, the useMemo deps trigger a rebuild.
+    // The service checks cache first — if stale (deps changed), it rebuilds.
+    // We invalidate first to force a fresh build when React deps change.
+    accessGraphService.invalidateUser(user.id, currentTenant.id, 'ROLE_CHANGED');
 
     return accessGraphService.buildUserAccessGraph({
       userId: user.id,
       tenantId: currentTenant.id,
       userRoles,
       membershipRole,
-      companyGroupMap: {}, // populated dynamically when companies are loaded
+      companyGroupMap: {},
     });
   }, [user, currentTenant, userRoles, membershipRole]);
 
