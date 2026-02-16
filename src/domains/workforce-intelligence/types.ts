@@ -80,6 +80,25 @@ export interface BenefitSnapshot {
   is_active: boolean;
 }
 
+/** Snapshot of occupational compliance per company */
+export interface OccupationalSnapshot {
+  company_id: string;
+  /** Whether mandatory NR trainings are fulfilled */
+  has_pending_trainings: boolean;
+  pending_training_count: number;
+  /** Whether PGR is active */
+  has_active_pgr: boolean;
+  /** CNAE risk grade (1-4) */
+  grau_risco: number;
+}
+
+/** Snapshot of CBO assignment per employee */
+export interface CboAssignmentSnapshot {
+  employee_id: string;
+  has_cbo_defined: boolean;
+  cbo_code?: string;
+}
+
 /** Full workforce dataset for analysis */
 export interface WorkforceDataset {
   tenant_id: string;
@@ -88,6 +107,10 @@ export interface WorkforceDataset {
   simulations: SimulationSnapshot[];
   compliance: ComplianceSnapshot[];
   benefits: BenefitSnapshot[];
+  /** Occupational compliance per company (optional, enriches risk detection) */
+  occupational?: OccupationalSnapshot[];
+  /** CBO assignments per employee (optional, enriches risk detection) */
+  cbo_assignments?: CboAssignmentSnapshot[];
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -247,7 +270,9 @@ export type RiskCategory =
   | 'benefit_gap'
   | 'contract_irregularity'
   | 'cost_anomaly'
-  | 'turnover_risk';
+  | 'turnover_risk'
+  | 'occupational_training'
+  | 'cbo_gap';
 
 /** Insight type for persistence to workforce_insights table */
 export type WorkforceInsightType = 'LEGAL_RISK' | 'FINANCIAL_RISK' | 'COMPLIANCE_WARNING';
