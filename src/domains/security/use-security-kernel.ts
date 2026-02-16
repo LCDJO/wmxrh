@@ -137,15 +137,24 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     });
   }, [user, session, currentTenant, effectiveRoles, userRoles, membershipRole, uiScope]);
 
-  // ── Access Graph (cached, auto-invalidates when deps change) ──
+  // ── Stable fingerprint to avoid unnecessary graph rebuilds ──
+  // Only rebuild when the actual role data changes, not on every render.
+  const rolesFingerprint = useMemo(() => {
+    const roleKeys = userRoles
+      .map(r => `${r.role}:${r.scope_type}:${r.scope_id || '*'}`)
+      .sort()
+      .join('|');
+    return `${membershipRole || ''}::${roleKeys}`;
+  }, [userRoles, membershipRole]);
+
+  // ── Access Graph (cached, fingerprint-gated rebuilds) ──
   const accessGraph = useMemo((): AccessGraph | null => {
     if (!user || !currentTenant) return null;
 
-    // When userRoles or membershipRole change, the useMemo deps trigger a rebuild.
-    // The service checks cache first — if stale (deps changed), it rebuilds.
-    // We invalidate first to force a fresh build when React deps change.
-    accessGraphService.invalidateUser(user.id, currentTenant.id, 'ROLE_CHANGED');
-
+    // The cache inside accessGraphService handles TTL + LRU.
+    // We only reach buildUserAccessGraph when the fingerprint changes
+    // (useMemo deps gate this). No manual invalidation needed here —
+    // events (graphEvents.*) handle external invalidation.
     return accessGraphService.buildUserAccessGraph({
       userId: user.id,
       tenantId: currentTenant.id,
@@ -153,7 +162,7 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
       membershipRole,
       companyGroupMap: {},
     });
-  }, [user, currentTenant, userRoles, membershipRole]);
+  }, [user, currentTenant, rolesFingerprint]);
 
   const graphCheckAccess = useCallback(
     (action: PermissionAction, resource: PermissionEntity, scopeId?: string | null, scopeType?: ScopeType): AccessCheckResult => {
