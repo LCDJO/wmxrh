@@ -3137,6 +3137,55 @@ export type Database = {
           },
         ]
       }
+      role_inheritance: {
+        Row: {
+          child_role_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          parent_role_id: string
+          tenant_id: string
+        }
+        Insert: {
+          child_role_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          parent_role_id: string
+          tenant_id: string
+        }
+        Update: {
+          child_role_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          parent_role_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_inheritance_child_role_id_fkey"
+            columns: ["child_role_id"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_inheritance_parent_role_id_fkey"
+            columns: ["parent_role_id"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_inheritance_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           granted_at: string
