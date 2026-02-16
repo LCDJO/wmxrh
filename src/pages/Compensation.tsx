@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/domains/security';
 import {
   useEmployeesSimple, useSalaryHistoryByTenant,
   useSalaryAdjustmentsByTenant, useCompaniesSimple,
@@ -31,6 +32,7 @@ export default function Compensation() {
   const { data: employees = [] } = useEmployees();
   const { data: history = [] } = useSalaryHistoryByTenant();
   const { data: adjustments = [] } = useSalaryAdjustmentsByTenant();
+  const { canManageCompensation } = usePermissions();
 
   const active = employeesSimple.filter(e => e.status === 'active');
   const totalPayroll = active.reduce((sum, e) => sum + (e.current_salary || 0), 0);
@@ -114,6 +116,7 @@ export default function Compensation() {
           <h1 className="text-2xl font-bold font-display text-foreground">Remuneração</h1>
           <p className="text-muted-foreground mt-1">Gestão de salários, contratos e aumentos</p>
         </div>
+        {canManageCompensation && (
         <div className="flex gap-2">
           <Dialog open={contractOpen} onOpenChange={setContractOpen}>
             <DialogTrigger asChild>
@@ -166,6 +169,7 @@ export default function Compensation() {
             </DialogContent>
           </Dialog>
         </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

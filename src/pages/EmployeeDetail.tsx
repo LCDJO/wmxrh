@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
+import { usePermissions } from '@/domains/security';
 import {
   useEmployee, useSalaryHistoryByEmployee, useEmployeeEvents,
   useSalaryContracts, useSalaryAdjustments, useSalaryAdditionals,
@@ -49,6 +50,7 @@ export default function EmployeeDetail() {
   const createContract = useCreateSalaryContract();
   const createAdjustment = useCreateSalaryAdjustment();
   const createAdditional = useCreateSalaryAdditional();
+  const { canManageCompensation } = usePermissions();
 
   // Contract form
   const [contractOpen, setContractOpen] = useState(false);
@@ -167,7 +169,8 @@ export default function EmployeeDetail() {
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons (permission-gated) */}
+          {canManageCompensation && (
           <div className="flex flex-wrap gap-2">
             <Dialog open={contractOpen} onOpenChange={setContractOpen}>
               <DialogTrigger asChild><Button variant="outline" size="sm" className="gap-1"><FileText className="h-3.5 w-3.5" />Novo Contrato</Button></DialogTrigger>
@@ -226,6 +229,7 @@ export default function EmployeeDetail() {
               </DialogContent>
             </Dialog>
           </div>
+          )}
 
           {/* Tabs */}
           <Tabs defaultValue="events" className="space-y-4">

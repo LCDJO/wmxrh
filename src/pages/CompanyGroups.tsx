@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
 import { useCompanyGroups, useCompaniesSimple, useCreateCompanyGroup } from '@/domains/hooks';
+import { usePermissions } from '@/domains/security';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +20,7 @@ export default function CompanyGroups() {
   const { data: groups = [] } = useCompanyGroups();
   const { data: companies = [] } = useCompaniesSimple();
   const createMutation = useCreateCompanyGroup();
+  const { isTenantAdmin } = usePermissions();
 
   const handleCreate = () => {
     if (!tenantId) return;
@@ -35,6 +37,7 @@ export default function CompanyGroups() {
           <h1 className="text-2xl font-bold font-display text-foreground">Grupos de Empresas</h1>
           <p className="text-muted-foreground mt-1">{groups.length} grupos</p>
         </div>
+        {isTenantAdmin && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="gap-2"><Plus className="h-4 w-4" />Novo Grupo</Button></DialogTrigger>
           <DialogContent>
@@ -46,6 +49,7 @@ export default function CompanyGroups() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

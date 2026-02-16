@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useMemo } fr
 import { useAuth } from './AuthContext';
 import { useTenant } from './TenantContext';
 import { supabase } from '@/integrations/supabase/client';
+import { canAccessNavItem, type NavKey } from '@/domains/security/permissions';
 import type { TenantRole, UserRole } from '@/domains/shared/types';
 
 type ScopeLevel = 'tenant' | 'group' | 'company';
@@ -29,17 +30,6 @@ interface ScopeContextType {
 }
 
 const ScopeContext = createContext<ScopeContextType | undefined>(undefined);
-
-// Maps nav items to allowed roles
-const NAV_ACCESS: Record<string, TenantRole[]> = {
-  dashboard: ['owner', 'admin', 'superadmin', 'tenant_admin', 'group_admin', 'company_admin', 'rh', 'gestor', 'financeiro', 'manager', 'viewer'],
-  employees: ['owner', 'admin', 'superadmin', 'tenant_admin', 'group_admin', 'company_admin', 'rh', 'gestor', 'manager'],
-  companies: ['owner', 'admin', 'superadmin', 'tenant_admin', 'group_admin'],
-  groups: ['owner', 'admin', 'superadmin', 'tenant_admin'],
-  positions: ['owner', 'admin', 'superadmin', 'tenant_admin', 'group_admin', 'company_admin', 'rh'],
-  compensation: ['owner', 'admin', 'superadmin', 'tenant_admin', 'group_admin', 'company_admin', 'rh', 'financeiro'],
-  departments: ['owner', 'admin', 'superadmin', 'tenant_admin', 'group_admin', 'company_admin', 'rh'],
-};
 
 export function ScopeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -92,11 +82,8 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
   };
 
   const canAccessNav = (navKey: string) => {
-    const allowed = NAV_ACCESS[navKey];
-    if (!allowed) return true;
-    // Owner / superadmin can always access
-    if (hasRole('owner', 'superadmin', 'admin')) return true;
-    return effectiveRoles.some(r => allowed.includes(r));
+    // Delegate to centralized permission matrix
+    return canAccessNavItem(navKey as NavKey, effectiveRoles);
   };
 
   const setGroupScope = (groupId: string, groupName: string) => {

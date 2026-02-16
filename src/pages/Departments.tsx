@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
 import { useDepartments, useCompaniesSimple, useEmployeesSimple, useCreateDepartment } from '@/domains/hooks';
+import { usePermissions } from '@/domains/security';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +23,7 @@ export default function Departments() {
   const { data: companies = [] } = useCompaniesSimple();
   const { data: employees = [] } = useEmployeesSimple();
   const createMutation = useCreateDepartment();
+  const { canManageEmployees } = usePermissions();
 
   const handleCreate = () => {
     if (!tenantId || !companyId) { toast({ title: 'Erro', description: 'Campos obrigatórios', variant: 'destructive' }); return; }
@@ -38,6 +40,7 @@ export default function Departments() {
           <h1 className="text-2xl font-bold font-display text-foreground">Departamentos</h1>
           <p className="text-muted-foreground mt-1">{departments.length} departamentos</p>
         </div>
+        {canManageEmployees && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="gap-2"><Plus className="h-4 w-4" />Novo Departamento</Button></DialogTrigger>
           <DialogContent>
@@ -56,6 +59,7 @@ export default function Departments() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

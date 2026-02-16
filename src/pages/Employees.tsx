@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
 import { useEmployees, useCompaniesSimple, useCreateEmployee } from '@/domains/hooks';
+import { usePermissions } from '@/domains/security';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ export default function Employees() {
   const { data: employees = [] } = useEmployees();
   const { data: companies = [] } = useCompaniesSimple();
   const createMutation = useCreateEmployee();
+  const { canManageEmployees } = usePermissions();
 
   const handleCreate = () => {
     if (!tenantId || !formCompany) { toast({ title: 'Erro', description: 'Preencha os campos obrigatórios', variant: 'destructive' }); return; }
@@ -69,6 +71,7 @@ export default function Employees() {
           <h1 className="text-2xl font-bold font-display text-foreground">Funcionários</h1>
           <p className="text-muted-foreground mt-1">{employees.length} cadastrados</p>
         </div>
+        {canManageEmployees && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2"><Plus className="h-4 w-4" />Novo Funcionário</Button>
@@ -91,6 +94,7 @@ export default function Employees() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
