@@ -1700,6 +1700,7 @@ export type Database = {
       labor_rule_sets: {
         Row: {
           base_monthly_hours: number
+          categoria_profissional: string | null
           cct_number: string | null
           cct_valid_from: string | null
           cct_valid_until: string | null
@@ -1713,12 +1714,14 @@ export type Database = {
           is_active: boolean
           name: string
           tenant_id: string
+          uf: string | null
           union_code: string | null
           union_name: string | null
           updated_at: string
         }
         Insert: {
           base_monthly_hours?: number
+          categoria_profissional?: string | null
           cct_number?: string | null
           cct_valid_from?: string | null
           cct_valid_until?: string | null
@@ -1732,12 +1735,14 @@ export type Database = {
           is_active?: boolean
           name: string
           tenant_id: string
+          uf?: string | null
           union_code?: string | null
           union_name?: string | null
           updated_at?: string
         }
         Update: {
           base_monthly_hours?: number
+          categoria_profissional?: string | null
           cct_number?: string | null
           cct_valid_from?: string | null
           cct_valid_until?: string | null
@@ -1751,6 +1756,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           tenant_id?: string
+          uf?: string | null
           union_code?: string | null
           union_name?: string | null
           updated_at?: string

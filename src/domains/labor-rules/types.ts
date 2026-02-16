@@ -33,6 +33,8 @@ export interface LaborRuleSet {
   description: string | null;
   union_name: string | null;
   union_code: string | null;
+  uf: string | null;
+  categoria_profissional: string | null;
   cct_number: string | null;
   cct_valid_from: string | null;
   cct_valid_until: string | null;
@@ -130,6 +132,8 @@ export interface CreateLaborRuleSetDTO {
   description?: string | null;
   union_name?: string | null;
   union_code?: string | null;
+  uf?: string | null;
+  categoria_profissional?: string | null;
   cct_number?: string | null;
   cct_valid_from?: string | null;
   cct_valid_until?: string | null;
