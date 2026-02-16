@@ -58,14 +58,17 @@ export default function ESocialDashboard() {
   const qs = useQueryScope();
   const qc = useQueryClient();
 
+  // SecurityContext placeholder — in production, derived from useSecurityKernel
+  const ctx = null as any;
+
   const { data: envelopes = [], isLoading } = useQuery({
     queryKey: ['esocial-envelopes', qs?.tenantId],
-    queryFn: () => qs ? esocialEngineService.listEnvelopes(qs) : [],
+    queryFn: () => qs ? esocialEngineService.listEnvelopes(ctx, qs) : [],
     enabled: !!qs,
   });
 
   const queueMutation = useMutation({
-    mutationFn: () => qs ? esocialEngineService.queueValidated(qs) : Promise.resolve(0),
+    mutationFn: () => qs ? esocialEngineService.queueValidated(ctx, qs) : Promise.resolve(0),
     onSuccess: (count) => {
       qc.invalidateQueries({ queryKey: ['esocial-envelopes'] });
       toast.success(`${count} evento(s) enfileirado(s) para transmissão`);
@@ -74,7 +77,7 @@ export default function ESocialDashboard() {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: (id: string) => esocialEngineService.cancel(id),
+    mutationFn: (id: string) => esocialEngineService.cancel(id, ctx),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['esocial-envelopes'] });
       toast.success('Evento cancelado');
