@@ -62,6 +62,54 @@ export type IdentityTransition =
 export type IdentityTrigger = IdentityTransition['trigger'];
 
 // ════════════════════════════════════
+// USER TYPE AUTO-DETECTION
+// ════════════════════════════════════
+
+/**
+ * Detected user classification result.
+ * Auto-resolved from JWT claims, platform_users table, and tenant_memberships.
+ */
+export type DetectedUserType = 'platform' | 'tenant' | 'unknown';
+
+export interface UserTypeDetection {
+  readonly detectedType: DetectedUserType;
+  readonly confidence: 'jwt_claim' | 'db_lookup' | 'membership_inferred' | 'unknown';
+  readonly platformRole: PlatformRoleType | null;
+  readonly tenantCount: number;
+  readonly detectedAt: number;
+}
+
+// ════════════════════════════════════
+// WORKSPACE CONTEXT & HISTORY
+// ════════════════════════════════════
+
+/**
+ * Represents a workspace the user can switch to.
+ */
+export interface WorkspaceEntry {
+  readonly tenantId: string;
+  readonly tenantName: string;
+  readonly role: TenantRole;
+  readonly scopeLevel: ScopeType | null;
+  readonly groupId: string | null;
+  readonly companyId: string | null;
+}
+
+/**
+ * A recent context visit — persisted for quick switch back.
+ */
+export interface RecentContext {
+  readonly tenantId: string;
+  readonly tenantName: string;
+  readonly role: TenantRole;
+  readonly scopeLevel: ScopeType;
+  readonly groupId: string | null;
+  readonly companyId: string | null;
+  readonly visitedAt: number;
+  readonly durationMs: number;
+}
+
+// ════════════════════════════════════
 // RISK SCORING & ANOMALY DETECTION
 // ════════════════════════════════════
 
@@ -99,6 +147,7 @@ export interface IdentitySnapshot {
   readonly email: string | null;
   readonly userType: 'platform' | 'tenant' | null;
   readonly platformRole: PlatformRoleType | null;
+  readonly userTypeDetection: UserTypeDetection | null;
 
   // ── Where (tenant context) ──
   readonly tenantId: string | null;
@@ -107,6 +156,11 @@ export interface IdentitySnapshot {
   readonly groupId: string | null;
   readonly companyId: string | null;
   readonly effectiveRoles: readonly TenantRole[];
+
+  // ── Workspaces ──
+  readonly availableWorkspaces: readonly WorkspaceEntry[];
+  readonly recentContexts: readonly RecentContext[];
+  readonly canSwitchWorkspace: boolean;
 
   // ── Dual Identity ──
   readonly isImpersonating: boolean;
@@ -158,7 +212,9 @@ export type IILEventType =
   | 'PhaseTransition'
   | 'RiskEscalation'
   | 'AnomalyDetected'
-  | 'DecisionIssued';
+  | 'DecisionIssued'
+  | 'UserTypeDetected'
+  | 'WorkspaceSwitched';
 
 export interface IILPhaseTransitionEvent {
   type: 'PhaseTransition';
@@ -194,8 +250,27 @@ export interface IILDecisionIssuedEvent {
   decision: IntelligenceDecision;
 }
 
+export interface IILUserTypeDetectedEvent {
+  type: 'UserTypeDetected';
+  timestamp: number;
+  userId: string | null;
+  detection: UserTypeDetection;
+}
+
+export interface IILWorkspaceSwitchedEvent {
+  type: 'WorkspaceSwitched';
+  timestamp: number;
+  userId: string | null;
+  fromTenantId: string | null;
+  toTenantId: string;
+  toTenantName: string;
+  switchMethod: 'explicit' | 'auto_restore' | 'initial';
+}
+
 export type IILEvent =
   | IILPhaseTransitionEvent
   | IILRiskEscalationEvent
   | IILAnomalyDetectedEvent
-  | IILDecisionIssuedEvent;
+  | IILDecisionIssuedEvent
+  | IILUserTypeDetectedEvent
+  | IILWorkspaceSwitchedEvent;

@@ -127,11 +127,15 @@ export type {
 
 // ── Identity Intelligence Layer ────────────────────────────
 export { IdentityIntelligenceService, identityIntelligence, onIILEvent, getIILEventLog } from './identity-intelligence';
+export { useIdentityIntelligence } from './identity-intelligence';
+export type { UseIdentityIntelligenceReturn } from './identity-intelligence';
 export type {
   IdentityPhase, IdentityTrigger, IdentityTransition,
+  DetectedUserType, UserTypeDetection, WorkspaceEntry, RecentContext,
   RiskLevel, RiskSignal, RiskAssessment,
   IdentitySnapshot, DecisionAction, IntelligenceDecision,
   IILEventType, IILEvent,
   IILPhaseTransitionEvent, IILRiskEscalationEvent,
   IILAnomalyDetectedEvent, IILDecisionIssuedEvent,
+  IILUserTypeDetectedEvent, IILWorkspaceSwitchedEvent,
 } from './identity-intelligence';
