@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { to: '/platform/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/platform/tenants', label: 'Tenants', icon: Building2 },
   { to: '/platform/modules', label: 'Módulos', icon: Puzzle },
+  { to: '/platform/users', label: 'Usuários', icon: Users },
   { to: '/platform/security', label: 'Segurança', icon: ShieldCheck },
   { to: '/platform/audit', label: 'Auditoria', icon: ScrollText },
 ];

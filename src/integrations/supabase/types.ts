@@ -3141,9 +3141,66 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_permission_definitions: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          module: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module?: string
+        }
+        Relationships: []
+      }
+      platform_role_permissions: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          permission_id: string
+          role: Database["public"]["Enums"]["platform_role"]
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          permission_id: string
+          role: Database["public"]["Enums"]["platform_role"]
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          permission_id?: string
+          role?: Database["public"]["Enums"]["platform_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "platform_permission_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_users: {
         Row: {
           created_at: string
+          display_name: string | null
           email: string
           id: string
           role: Database["public"]["Enums"]["platform_role"]
@@ -3153,6 +3210,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display_name?: string | null
           email: string
           id?: string
           role?: Database["public"]["Enums"]["platform_role"]
@@ -3162,6 +3220,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display_name?: string | null
           email?: string
           id?: string
           role?: Database["public"]["Enums"]["platform_role"]
