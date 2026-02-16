@@ -49,10 +49,11 @@ export interface GraphNode {
 }
 
 export type EdgeRelation =
-  | 'has_role'         // user → role
-  | 'scoped_to'        // role → tenant/group/company
-  | 'belongs_to'       // company → group, group → tenant
-  | 'can_access';      // computed: user → resource
+  | 'HAS_ROLE'          // User → Role
+  | 'HAS_SCOPE'         // Role → Tenant/Group/Company
+  | 'BELONGS_TO'        // Company → Group, Group → Tenant
+  | 'CAN_ACCESS'        // computed: User → Resource
+  | 'INHERITS_SCOPE';   // Group → Tenant (scope inheritance chain)
 
 export interface GraphEdge {
   from: string;
@@ -146,8 +147,8 @@ export class AccessGraph {
     if (input.membershipRole) {
       const roleNodeId = `role:${input.membershipRole}:tenant`;
       this.addNode({ id: roleNodeId, type: 'role', meta: { role: input.membershipRole, scopeType: 'tenant' } });
-      this.addEdge(input.userId, roleNodeId, 'has_role');
-      this.addEdge(roleNodeId, input.tenantId, 'scoped_to');
+      this.addEdge(input.userId, roleNodeId, 'HAS_ROLE');
+      this.addEdge(roleNodeId, input.tenantId, 'HAS_SCOPE');
     }
 
     // 3. Process user_roles
@@ -158,27 +159,27 @@ export class AccessGraph {
         type: 'role',
         meta: { role: ur.role, scopeType: ur.scope_type, scopeId: ur.scope_id },
       });
-      this.addEdge(input.userId, roleNodeId, 'has_role');
+      this.addEdge(input.userId, roleNodeId, 'HAS_ROLE');
 
       // Scope target node
       if (ur.scope_type === 'tenant') {
-        this.addEdge(roleNodeId, input.tenantId, 'scoped_to');
+        this.addEdge(roleNodeId, input.tenantId, 'HAS_SCOPE');
       } else if (ur.scope_type === 'company_group' && ur.scope_id) {
         this.addNode({ id: ur.scope_id, type: 'company_group' });
-        this.addEdge(roleNodeId, ur.scope_id, 'scoped_to');
-        this.addEdge(ur.scope_id, input.tenantId, 'belongs_to');
+        this.addEdge(roleNodeId, ur.scope_id, 'HAS_SCOPE');
+        this.addEdge(ur.scope_id, input.tenantId, 'INHERITS_SCOPE');
       } else if (ur.scope_type === 'company' && ur.scope_id) {
         this.addNode({ id: ur.scope_id, type: 'company' });
-        this.addEdge(roleNodeId, ur.scope_id, 'scoped_to');
+        this.addEdge(roleNodeId, ur.scope_id, 'HAS_SCOPE');
 
         // Link company to group if known
         const groupId = input.companyGroupMap[ur.scope_id];
         if (groupId) {
           this.addNode({ id: groupId, type: 'company_group' });
-          this.addEdge(ur.scope_id, groupId, 'belongs_to');
-          this.addEdge(groupId, input.tenantId, 'belongs_to');
+          this.addEdge(ur.scope_id, groupId, 'BELONGS_TO');
+          this.addEdge(groupId, input.tenantId, 'INHERITS_SCOPE');
         } else {
-          this.addEdge(ur.scope_id, input.tenantId, 'belongs_to');
+          this.addEdge(ur.scope_id, input.tenantId, 'BELONGS_TO');
         }
       }
     }
@@ -192,7 +193,7 @@ export class AccessGraph {
         if (!this.nodes.has(groupId)) {
           this.addNode({ id: groupId, type: 'company_group' });
         }
-        this.addEdge(companyId, groupId, 'belongs_to');
+        this.addEdge(companyId, groupId, 'BELONGS_TO');
       }
     }
 
