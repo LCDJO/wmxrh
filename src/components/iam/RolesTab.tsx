@@ -22,9 +22,10 @@ interface Props {
   userId?: string;
   isTenantAdmin: boolean;
   onInvalidate: () => void;
+  securityContext?: import('@/domains/security/kernel/identity.service').SecurityContext | null;
 }
 
-export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, onInvalidate }: Props) {
+export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, onInvalidate, securityContext }: Props) {
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<CustomRole | null>(null);
@@ -35,7 +36,7 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
 
   const createRoleMut = useMutation({
     mutationFn: (dto: { tenant_id: string; name: string; description?: string; created_by?: string }) =>
-      identityGateway.createRole({ ...dto, is_tenant_admin: isTenantAdmin }),
+      identityGateway.createRole({ ...dto, is_tenant_admin: isTenantAdmin, ctx: securityContext }),
     onSuccess: () => {
       toast({ title: 'Cargo criado!' });
       setCreateOpen(false); setName(''); setDescription('');
@@ -46,7 +47,7 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
 
   const cloneRoleMut = useMutation({
     mutationFn: ({ sourceId, newName }: { sourceId: string; newName: string }) =>
-      identityGateway.cloneRole({ source_role_id: sourceId, tenant_id: tenantId, new_name: newName, created_by: userId, is_tenant_admin: isTenantAdmin }),
+      identityGateway.cloneRole({ source_role_id: sourceId, tenant_id: tenantId, new_name: newName, created_by: userId, is_tenant_admin: isTenantAdmin, ctx: securityContext }),
     onSuccess: () => {
       toast({ title: 'Cargo clonado com sucesso!' });
       setCloneOpen(null);
@@ -57,7 +58,7 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
   });
 
   const deleteRoleMut = useMutation({
-    mutationFn: (id: string) => identityGateway.deleteRole({ role_id: id, tenant_id: tenantId, is_tenant_admin: isTenantAdmin }),
+    mutationFn: (id: string) => identityGateway.deleteRole({ role_id: id, tenant_id: tenantId, is_tenant_admin: isTenantAdmin, ctx: securityContext }),
     onSuccess: () => { toast({ title: 'Cargo removido!' }); onInvalidate(); },
     onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
@@ -141,6 +142,7 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
           isTenantAdmin={isTenantAdmin}
           onClose={() => setEditingRole(null)}
           onSaved={onInvalidate}
+          securityContext={securityContext}
         />
       )}
 
