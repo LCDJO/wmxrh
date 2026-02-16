@@ -8,6 +8,7 @@ import { TenantProvider, useTenant } from "./contexts/TenantContext";
 import { ScopeProvider } from "./contexts/ScopeContext";
 import { ProtectedRoute } from "./domains/security";
 import { PlatformGuard } from "./domains/platform/PlatformGuard";
+import { PlatformShell } from "./components/platform/PlatformShell";
 import { useAdaptiveUserType } from "./components/layout/AdaptiveSidebar";
 import { AppLayout } from "./components/layout/AppLayout";
 import PlatformLayout from "./components/platform/PlatformLayout";
@@ -205,7 +206,9 @@ const App = () => (
         <AuthProvider>
           <TenantProvider>
             <ScopeProvider>
-              <AppRoutes />
+              <PlatformShell>
+                <AppRoutes />
+              </PlatformShell>
             </ScopeProvider>
           </TenantProvider>
         </AuthProvider>
