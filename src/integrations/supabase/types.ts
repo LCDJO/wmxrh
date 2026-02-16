@@ -3076,6 +3076,36 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          role: Database["public"]["Enums"]["platform_role"]
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          role?: Database["public"]["Enums"]["platform_role"]
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          role?: Database["public"]["Enums"]["platform_role"]
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       positions: {
         Row: {
           base_salary: number | null
@@ -4316,6 +4346,14 @@ export type Database = {
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
+      has_platform_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["platform_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_platform_user: { Args: { _user_id: string }; Returns: boolean }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
@@ -4474,6 +4512,10 @@ export type Database = {
       payroll_item_nature: "fixed" | "variable" | "informational"
       payroll_item_type: "provento" | "desconto"
       permission_scope: "tenant" | "company_group" | "company"
+      platform_role:
+        | "platform_super_admin"
+        | "platform_support"
+        | "platform_finance"
       risk_category:
         | "fisico"
         | "quimico"
@@ -4716,6 +4758,11 @@ export const Constants = {
       payroll_item_nature: ["fixed", "variable", "informational"],
       payroll_item_type: ["provento", "desconto"],
       permission_scope: ["tenant", "company_group", "company"],
+      platform_role: [
+        "platform_super_admin",
+        "platform_support",
+        "platform_finance",
+      ],
       risk_category: [
         "fisico",
         "quimico",
