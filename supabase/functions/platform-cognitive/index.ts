@@ -7,13 +7,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-type Intent =
-  | "suggest-permissions"
-  | "recommend-dashboards"
-  | "suggest-shortcuts"
-  | "detect-patterns"
-  | "quick-setup";
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -26,7 +19,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Verify caller is a platform user
+    // ── Auth ─────────────────────────────────────────────────────
     if (!authHeader) throw new Error("Not authenticated");
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
@@ -34,22 +27,32 @@ serve(async (req) => {
 
     const { data: platformUser } = await supabase
       .from("platform_users")
-      .select("role, status")
+      .select("role, status, email")
       .eq("user_id", user.id)
       .eq("status", "active")
       .maybeSingle();
-
     if (!platformUser) throw new Error("Not a platform user");
 
-    const { intent, context } = (await req.json()) as { intent: Intent; context?: Record<string, unknown> };
+    // ── Parse request ────────────────────────────────────────────
+    const body = await req.json();
+    const { intent, advisor_payload, context } = body;
 
-    // Gather platform context for AI
-    const platformContext = await gatherContext(supabase, intent, context);
+    // If the frontend sent a pre-built advisor payload, use it.
+    // Otherwise fall back to server-side prompt building.
+    let systemPrompt: string;
+    let userPrompt: string;
 
-    const systemPrompt = buildSystemPrompt(intent, platformContext, platformUser.role);
+    if (advisor_payload?.system_prompt && advisor_payload?.user_prompt) {
+      systemPrompt = advisor_payload.system_prompt;
+      userPrompt = advisor_payload.user_prompt;
+    } else {
+      // Fallback: gather context server-side
+      const serverCtx = await gatherServerContext(supabase, intent, context);
+      systemPrompt = buildFallbackSystem(intent, serverCtx, platformUser.role);
+      userPrompt = buildFallbackUser(intent, context);
+    }
 
-    const userPrompt = buildUserPrompt(intent, context);
-
+    // ── AI call ──────────────────────────────────────────────────
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -76,19 +79,19 @@ serve(async (req) => {
                     items: {
                       type: "object",
                       properties: {
-                        id: { type: "string", description: "Unique suggestion ID" },
+                        id: { type: "string" },
                         type: { type: "string", enum: ["permission", "dashboard", "shortcut", "pattern", "setup"] },
-                        title: { type: "string", description: "Short title (max 60 chars)" },
-                        description: { type: "string", description: "Explanation (max 200 chars)" },
-                        confidence: { type: "number", description: "0 to 1 confidence score" },
-                        action_label: { type: "string", description: "CTA button text (max 20 chars)" },
-                        metadata: { type: "object", description: "Extra data for the frontend" },
+                        title: { type: "string" },
+                        description: { type: "string" },
+                        confidence: { type: "number" },
+                        action_label: { type: "string" },
+                        metadata: { type: "object" },
                       },
                       required: ["id", "type", "title", "description", "confidence"],
                       additionalProperties: false,
                     },
                   },
-                  summary: { type: "string", description: "One sentence summary of the analysis" },
+                  summary: { type: "string" },
                 },
                 required: ["suggestions", "summary"],
                 additionalProperties: false,
@@ -103,29 +106,27 @@ serve(async (req) => {
     if (!aiResponse.ok) {
       const status = aiResponse.status;
       if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em instantes." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
+        return new Response(JSON.stringify({ error: "Créditos de AI esgotados." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errText = await aiResponse.text();
-      console.error("AI error:", status, errText);
+      console.error("AI gateway error:", status, errText);
       throw new Error("AI gateway error");
     }
 
     const aiData = await aiResponse.json();
-
-    // Extract tool call result
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     let result: unknown;
     if (toolCall?.function?.arguments) {
       result = JSON.parse(toolCall.function.arguments);
     } else {
-      result = { suggestions: [], summary: "Não foi possível gerar sugestões no momento." };
+      result = { suggestions: [], summary: "Nenhuma sugestão disponível no momento." };
     }
 
     return new Response(JSON.stringify(result), {
@@ -139,70 +140,41 @@ serve(async (req) => {
   }
 });
 
-// ── Context gathering ──────────────────────────────────────────────
+// ── Fallback server-side context (when no advisor_payload is sent) ──
 
-async function gatherContext(supabase: any, intent: Intent, context?: Record<string, unknown>) {
-  const data: Record<string, unknown> = {};
-
-  // Always fetch high-level stats
-  const [tenantsRes, usersRes, permsRes] = await Promise.all([
+async function gatherServerContext(supabase: any, intent: string, context?: Record<string, unknown>) {
+  const [tenantsRes, usersRes, permsRes, rpRes] = await Promise.all([
     supabase.from("tenants").select("id, name, status, created_at").limit(50),
     supabase.from("platform_users").select("id, role, status, email").limit(100),
     supabase.from("platform_permission_definitions").select("id, code, module, description"),
+    supabase.from("platform_role_permissions").select("*"),
   ]);
 
-  data.tenants_count = tenantsRes.data?.length ?? 0;
-  data.tenants_sample = (tenantsRes.data ?? []).slice(0, 10);
-  data.users = usersRes.data ?? [];
-  data.permissions = permsRes.data ?? [];
-
-  if (intent === "suggest-permissions") {
-    const rpRes = await supabase.from("platform_role_permissions").select("*");
-    data.role_permissions = rpRes.data ?? [];
-    if (context?.role_name) data.target_role = context.role_name;
-  }
-
-  if (intent === "recommend-dashboards" || intent === "suggest-shortcuts") {
-    // Pass current user's role context
-    data.current_role = context?.current_role ?? "unknown";
-    data.available_modules = [
-      "dashboard", "tenants", "modules", "users", "security", "audit",
-    ];
-  }
-
-  return data;
+  return {
+    tenants: tenantsRes.data ?? [],
+    users: usersRes.data ?? [],
+    permissions: permsRes.data ?? [],
+    role_permissions: rpRes.data ?? [],
+    intent,
+    context,
+  };
 }
 
-// ── Prompt builders ────────────────────────────────────────────────
-
-function buildSystemPrompt(intent: Intent, ctx: Record<string, unknown>, callerRole: string) {
-  return `You are the Platform Cognitive Layer of an HR SaaS called "RH Gestão".
-You analyse platform data and provide contextual, NON-DESTRUCTIVE suggestions.
-You NEVER execute actions — you only recommend.
-
+function buildFallbackSystem(intent: string, ctx: Record<string, unknown>, callerRole: string) {
+  return `You are the Platform Cognitive Layer of "RH Gestão" SaaS.
+You analyse platform data and provide NON-DESTRUCTIVE suggestions only.
 Caller role: ${callerRole}
-Platform context (JSON): ${JSON.stringify(ctx)}
-
-Guidelines:
-- Respond ONLY through the cognitive_response tool call.
-- Each suggestion must have a clear, actionable title in Portuguese (pt-BR).
-- Confidence score: 0.0 (low) to 1.0 (high).
-- Keep descriptions concise and professional.
-- Provide 3-6 suggestions max.
-- For permissions: suggest based on the role's purpose and existing permission patterns.
-- For dashboards: recommend based on role relevance.
-- For shortcuts: suggest most useful navigation paths.
-- For patterns: detect anomalies or optimization opportunities.
-- For setup: guide the admin through the best configuration steps.`;
+Platform context: ${JSON.stringify(ctx)}
+Respond in pt-BR. Max 6 suggestions.`;
 }
 
-function buildUserPrompt(intent: Intent, context?: Record<string, unknown>) {
-  const map: Record<Intent, string> = {
-    "suggest-permissions": `Suggest the ideal permissions for the role "${context?.role_name ?? "new role"}". Consider what this role typically needs and what permissions are already assigned to similar roles.`,
-    "recommend-dashboards": `Based on the caller's role and platform data, recommend which dashboards and data views would be most useful for them right now.`,
-    "suggest-shortcuts": `Suggest navigation shortcuts and quick actions that would save time for the current user based on their role and the platform's current state.`,
-    "detect-patterns": `Analyze the platform data and detect any operational patterns, anomalies, or optimization opportunities. Focus on user activity, tenant health, and permission configurations.`,
-    "quick-setup": `The admin is setting up the platform. Provide step-by-step recommendations for optimal configuration, including roles, permissions, modules, and tenant setup.`,
+function buildFallbackUser(intent: string, context?: Record<string, unknown>) {
+  const map: Record<string, string> = {
+    "suggest-permissions": `Suggest ideal permissions for role "${context?.role_name ?? "new role"}".`,
+    "recommend-dashboards": "Recommend relevant dashboards for the caller.",
+    "suggest-shortcuts": "Suggest time-saving navigation shortcuts.",
+    "detect-patterns": "Detect operational patterns and anomalies.",
+    "quick-setup": "Guide through optimal platform configuration.",
   };
   return map[intent] ?? "Provide general platform optimization suggestions.";
 }
