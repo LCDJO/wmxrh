@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Users, Briefcase, TrendingUp, Building2, Layers, Calendar, Lock, Sparkles, ShieldCheck, Brain } from 'lucide-react';
 import { CognitiveInsightsCard } from '@/components/dashboard/CognitiveInsightsCard';
+import { OnboardingProgressCard } from '@/components/dashboard/OnboardingProgressCard';
 import { StatsCard } from '@/components/shared/StatsCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -142,6 +143,9 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {/* ── Onboarding Progress ── */}
+      <OnboardingProgressCard />
+
       <div>
         <h1 className="text-2xl font-bold font-display text-foreground">Dashboard</h1>
         <p className="text-muted-foreground mt-1">{scopeSubtitle} — {scopeTitle}</p>

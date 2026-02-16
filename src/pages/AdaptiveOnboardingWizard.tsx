@@ -9,9 +9,10 @@
  *   5. Configurar Pagamentos
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateTenant } from '@/domains/hooks';
+import { supabase } from '@/integrations/supabase/client';
 import { useAdaptiveOnboarding } from '@/hooks/use-adaptive-onboarding';
 import { useToast } from '@/hooks/use-toast';
 import { PlanBadge } from '@/components/shared/PlanBadge';
@@ -81,10 +82,28 @@ export default function AdaptiveOnboardingWizard({ planTier = 'free', onComplete
   const completionPct = Math.round((completedSteps.size / WIZARD_STEPS.length) * 100);
   const isLastStep = currentStepIdx === WIZARD_STEPS.length - 1;
 
+  // ── Persist progress to DB ──
+  const persistProgress = useCallback(async (completed: Set<WizardStepId>, stepId: WizardStepId, done: boolean) => {
+    if (tenantId === 'temp-onboarding') return;
+    const stepsArr = [...completed];
+    await supabase
+      .from('onboarding_progress')
+      .upsert({
+        tenant_id: tenantId,
+        steps_completed: stepsArr,
+        last_step: stepId,
+        is_completed: done,
+        completed_at: done ? new Date().toISOString() : null,
+      }, { onConflict: 'tenant_id' });
+  }, [tenantId]);
+
   // ── Navigation ──
   const goNext = () => {
-    setCompletedSteps(prev => new Set([...prev, currentStep.id]));
-    if (isLastStep) {
+    const next = new Set([...completedSteps, currentStep.id]);
+    setCompletedSteps(next);
+    const done = isLastStep;
+    persistProgress(next, currentStep.id, done);
+    if (done) {
       onComplete();
     } else {
       setCurrentStepIdx(i => i + 1);
