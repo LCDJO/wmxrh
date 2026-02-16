@@ -1670,8 +1670,10 @@ export type Database = {
           id: string
           manager_id: string | null
           name: string
+          operacao_restrita: boolean
           phone: string | null
           position_id: string | null
+          restricao_motivo: Json | null
           status: Database["public"]["Enums"]["employee_status"]
           tenant_id: string
           updated_at: string
@@ -1692,8 +1694,10 @@ export type Database = {
           id?: string
           manager_id?: string | null
           name: string
+          operacao_restrita?: boolean
           phone?: string | null
           position_id?: string | null
+          restricao_motivo?: Json | null
           status?: Database["public"]["Enums"]["employee_status"]
           tenant_id: string
           updated_at?: string
@@ -1714,8 +1718,10 @@ export type Database = {
           id?: string
           manager_id?: string | null
           name?: string
+          operacao_restrita?: boolean
           phone?: string | null
           position_id?: string | null
+          restricao_motivo?: Json | null
           status?: Database["public"]["Enums"]["employee_status"]
           tenant_id?: string
           updated_at?: string
