@@ -4,11 +4,13 @@
  * Reactive hook that exposes both the UnifiedIdentitySession (primary API)
  * and the full IdentitySnapshot (diagnostic) from the Identity Intelligence Layer.
  *
- * PXE Integration: enriches active_context with active_plan + allowed_modules
- * from tenant_plans and tenant_module_access tables.
+ * PXE Integration: enriches active_context with active_plan + allowed_modules.
+ *
+ * PERFORMANCE: Plan + modules are resolved ONCE per login / context-switch
+ * and cached in a module-level store. Re-renders do NOT trigger re-fetches.
  */
 
-import { useSyncExternalStore, useCallback, useMemo, useEffect, useState } from 'react';
+import { useSyncExternalStore, useCallback, useMemo, useEffect, useRef } from 'react';
 import { identityIntelligence } from './identity-intelligence.service';
 import { supabase } from '@/integrations/supabase/client';
 import type {
@@ -24,6 +26,106 @@ import type {
   ActivePlanInfo,
   TenantWorkspace,
 } from './types';
+
+// ── Module-level PXE cache ─────────────────────────────────────────
+// Resolved once per tenant context switch; never re-fetched on re-render.
+
+interface PxeCache {
+  tenantId: string;
+  planInfo: ActivePlanInfo | null;
+  allowedModules: readonly string[];
+  /** Monotonic version to trigger React updates */
+  version: number;
+}
+
+let pxeCache: PxeCache = {
+  tenantId: '',
+  planInfo: null,
+  allowedModules: [],
+  version: 0,
+};
+
+let pxeFetchInFlight: string | null = null;
+let pxeListeners: Set<() => void> = new Set();
+
+function notifyPxe() {
+  pxeCache = { ...pxeCache, version: pxeCache.version + 1 };
+  pxeListeners.forEach(fn => fn());
+}
+
+/**
+ * Resolve plan + modules for a tenant. Called ONLY on login / context switch.
+ */
+async function resolvePxe(tenantId: string): Promise<void> {
+  if (!tenantId) {
+    if (pxeCache.tenantId !== '') {
+      pxeCache = { tenantId: '', planInfo: null, allowedModules: [], version: pxeCache.version + 1 };
+      notifyPxe();
+    }
+    return;
+  }
+
+  // Already resolved for this tenant — skip
+  if (pxeCache.tenantId === tenantId) return;
+
+  // Deduplicate in-flight requests
+  if (pxeFetchInFlight === tenantId) return;
+  pxeFetchInFlight = tenantId;
+
+  try {
+    const [planRes, modulesRes] = await Promise.all([
+      supabase
+        .from('tenant_plans')
+        .select('id, plan_id, status, billing_cycle')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active')
+        .maybeSingle(),
+      (supabase
+        .from('tenant_module_access' as any)
+        .select('module_key')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)) as any,
+    ]);
+
+    // If tenant changed while we were fetching, discard stale result
+    if (pxeFetchInFlight !== tenantId) return;
+
+    const planInfo: ActivePlanInfo | null = planRes.data
+      ? {
+          plan_id: (planRes.data as any).plan_id,
+          plan_name: (planRes.data as any).plan_id,
+          tier: 'active',
+          status: (planRes.data as any).status,
+          billing_cycle: (planRes.data as any).billing_cycle,
+        }
+      : null;
+
+    const allowedModules: string[] = ((modulesRes as any).data ?? []).map((m: any) => m.module_key);
+
+    pxeCache = { tenantId, planInfo, allowedModules, version: pxeCache.version + 1 };
+    notifyPxe();
+  } finally {
+    if (pxeFetchInFlight === tenantId) pxeFetchInFlight = null;
+  }
+}
+
+/** Force invalidation — call on logout */
+function invalidatePxe() {
+  pxeCache = { tenantId: '', planInfo: null, allowedModules: [], version: pxeCache.version + 1 };
+  pxeFetchInFlight = null;
+  notifyPxe();
+}
+
+// ── useSyncExternalStore for PXE ──────────────────────────────────
+
+function subscribePxe(cb: () => void) {
+  pxeListeners.add(cb);
+  return () => { pxeListeners.delete(cb); };
+}
+
+function getPxeSnapshot() { return pxeCache; }
+
+// ═══════════════════════════════════════════════════════════════════
 
 export interface UseIdentityIntelligenceReturn {
   /** Primary API — clean, focused session object */
@@ -70,14 +172,12 @@ export interface UseIdentityIntelligenceReturn {
   debug: () => ReturnType<typeof identityIntelligence.debug>;
 }
 
-// Subscription function for useSyncExternalStore
+// ── Identity store subscription ───────────────────────────────────
+
 function subscribe(onStoreChange: () => void): () => void {
   return identityIntelligence.onSnapshotChange(onStoreChange);
 }
 
-// Cache management
-let cachedSnapshot: IdentitySnapshot | null = null;
-let cachedSession: UnifiedIdentitySession | null = null;
 let cachedVersion = 0;
 let lastVersion = -1;
 
@@ -99,7 +199,6 @@ function getState(): CachedState {
   return cachedState;
 }
 
-// Bump version on every notification
 const originalSubscribe = subscribe;
 function subscribeBump(onStoreChange: () => void): () => void {
   return originalSubscribe(() => {
@@ -109,66 +208,40 @@ function subscribeBump(onStoreChange: () => void): () => void {
   });
 }
 
+// ═══════════════════════════════════════════════════════════════════
+
 export function useIdentityIntelligence(): UseIdentityIntelligenceReturn {
   const state = useSyncExternalStore(subscribeBump, getState, getState);
+  const pxe = useSyncExternalStore(subscribePxe, getPxeSnapshot, getPxeSnapshot);
 
-  // ── PXE enrichment: fetch active_plan + allowed_modules ──
-  const [planInfo, setPlanInfo] = useState<ActivePlanInfo | null>(null);
-  const [allowedModules, setAllowedModules] = useState<readonly string[]>([]);
-  const tenantId = state.session.active_context?.tenant_id ?? null;
+  // ── Trigger PXE resolution ONLY on context switch ──
+  const tenantId = state.session.active_context?.tenant_id ?? '';
+  const prevTenantRef = useRef('');
 
   useEffect(() => {
-    if (!tenantId) {
-      setPlanInfo(null);
-      setAllowedModules([]);
-      return;
+    if (tenantId !== prevTenantRef.current) {
+      prevTenantRef.current = tenantId;
+      resolvePxe(tenantId);
     }
-    let cancelled = false;
-
-    // Fetch plan + modules in parallel
-    const planPromise = supabase
-      .from('tenant_plans')
-      .select('id, plan_id, status, billing_cycle')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active')
-      .maybeSingle();
-
-    const modulesPromise = (supabase
-      .from('tenant_module_access' as any)
-      .select('module_key')
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)) as any;
-
-    Promise.all([planPromise, modulesPromise]).then(([planRes, modulesRes]: [any, any]) => {
-      if (cancelled) return;
-      if (planRes.data) {
-        const d = planRes.data as any;
-        setPlanInfo({
-          plan_id: d.plan_id,
-          plan_name: d.plan_id, // plan name resolved from plan_id
-          tier: 'active',
-          status: d.status,
-          billing_cycle: d.billing_cycle,
-        });
-      } else {
-        setPlanInfo(null);
-      }
-      setAllowedModules((modulesRes.data ?? []).map((m: any) => m.module_key));
-    });
-
-    return () => { cancelled = true; };
   }, [tenantId]);
 
-  // ── Enrich active_context with PXE data ──
+  // Invalidate PXE on logout (phase goes to anonymous)
+  useEffect(() => {
+    if (state.session.phase === 'anonymous') {
+      invalidatePxe();
+    }
+  }, [state.session.phase]);
+
+  // ── Enrich active_context with cached PXE data (no fetch) ──
   const enrichedContext: ActiveContext | null = useMemo(() => {
     const ctx = state.session.active_context;
     if (!ctx) return null;
     return {
       ...ctx,
-      active_plan: planInfo,
-      allowed_modules: allowedModules,
+      active_plan: pxe.tenantId === ctx.tenant_id ? pxe.planInfo : null,
+      allowed_modules: pxe.tenantId === ctx.tenant_id ? pxe.allowedModules : [],
     };
-  }, [state.session.active_context, planInfo, allowedModules]);
+  }, [state.session.active_context, pxe]);
 
   const evaluate = useCallback(
     (action?: string, resource?: string) => identityIntelligence.evaluate(action, resource),
