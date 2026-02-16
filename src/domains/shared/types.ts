@@ -241,7 +241,7 @@ export interface EmployeeWithRelations extends Employee {
   positions?: { title: string } | null;
   departments?: { name: string } | null;
   companies?: { name: string } | null;
-  manager?: { name: string }[] | null;
+  manager?: { name: string } | null;
 }
 
 export interface CompanyWithRelations extends Company {

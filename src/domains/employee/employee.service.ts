@@ -12,7 +12,7 @@ import type { QueryScope } from '@/domains/shared/scoped-query';
 import type { SecurityContext } from '@/domains/security/kernel/identity.service';
 import type { Employee, EmployeeWithRelations, CreateEmployeeDTO } from '@/domains/shared';
 
-const EMPLOYEE_SELECT = '*, positions(title), departments(name), companies(name), manager:employees!employees_manager_id_fkey(name)';
+const EMPLOYEE_SELECT = '*, positions(title), departments(name), companies(name), manager:employees!manager_id(name)';
 
 export const employeeService = {
   // ── SecurityContext API (preferred) ──
