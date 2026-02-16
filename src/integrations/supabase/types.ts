@@ -499,6 +499,7 @@ export type Database = {
           health_program_id: string | null
           id: string
           is_valid: boolean
+          next_exam_date: string | null
           observations: string | null
           physician_crm: string | null
           physician_name: string | null
@@ -521,6 +522,7 @@ export type Database = {
           health_program_id?: string | null
           id?: string
           is_valid?: boolean
+          next_exam_date?: string | null
           observations?: string | null
           physician_crm?: string | null
           physician_name?: string | null
@@ -543,6 +545,7 @@ export type Database = {
           health_program_id?: string | null
           id?: string
           is_valid?: boolean
+          next_exam_date?: string | null
           observations?: string | null
           physician_crm?: string | null
           physician_name?: string | null
@@ -1108,6 +1111,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           document_url: string | null
+          exam_periodicity_months: number
           generates_hazard_pay: boolean
           hazard_pay_type: string | null
           id: string
@@ -1128,6 +1132,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           document_url?: string | null
+          exam_periodicity_months?: number
           generates_hazard_pay?: boolean
           hazard_pay_type?: string | null
           id?: string
@@ -1148,6 +1153,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           document_url?: string | null
+          exam_periodicity_months?: number
           generates_hazard_pay?: boolean
           hazard_pay_type?: string | null
           id?: string
@@ -2050,7 +2056,53 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      pcmso_exam_alerts: {
+        Row: {
+          alert_status: string | null
+          company_id: string | null
+          days_until_due: number | null
+          employee_id: string | null
+          employee_name: string | null
+          exam_date: string | null
+          exam_id: string | null
+          exam_type: Database["public"]["Enums"]["exam_type"] | null
+          health_program_id: string | null
+          next_exam_date: string | null
+          program_name: string | null
+          result: Database["public"]["Enums"]["exam_result"] | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_health_exams_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_health_exams_health_program_id_fkey"
+            columns: ["health_program_id"]
+            isOneToOne: false
+            referencedRelation: "health_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_health_exams_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_payroll_simulation: {
