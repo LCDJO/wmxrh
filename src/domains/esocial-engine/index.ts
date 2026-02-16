@@ -37,8 +37,8 @@ export { generateEventXML, generateLoteXML, validateXMLStructure, generateXML, g
 export type { ESocialEventXML, ESocialLoteXML, XMLValidationResult, XMLGenerationResult } from './xml-generator';
 
 // ── Digital Signer (Port + Simulation Adapter) ──
-export { simulationSigner } from './digital-signer';
-export type { IDigitalSigner, DigitalCertificate, SignatureResult, SignatureValidation, CertificateType } from './digital-signer';
+export { simulationSigner, checkCertificateExpiry, selectBestCertificate } from './digital-signer';
+export type { IDigitalSigner, IA1Adapter, IA3Adapter, DigitalCertificate, CertificateStorage, SignatureResult, SignatureValidation, CertificateValidationResult, CertificateType } from './digital-signer';
 
 // ── Transmission Service ──
 export { transmissionService } from './transmission-service';
