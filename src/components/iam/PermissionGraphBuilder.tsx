@@ -31,6 +31,7 @@ import {
   Briefcase, DollarSign, ShieldCheck, Heart, Send, ScrollText,
   Brain, GraduationCap, AlertTriangle, Calculator,
   ChevronDown, ChevronRight, Search, Library,
+  Check, X, Scan,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -792,97 +793,211 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
           </div>
         </Card>
 
-        {/* Detail Panel */}
-        <div className="space-y-4">
-          {selectedInfo ? (
-            <Card className="animate-in fade-in slide-in-from-right-2 duration-200">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2.5">
+        {/* Right Panel: Live Access Preview + Node Detail + Stats */}
+        <div className="space-y-3 flex flex-col overflow-hidden" style={{ height: '68vh', minHeight: 460 }}>
+          {/* Live Access Preview */}
+          <LiveAccessPreview
+            focusRoleId={focusRoleId}
+            roles={roles}
+            permissions={permissions}
+            rolePermMap={rolePermMap}
+          />
+
+          {/* Node detail (compact) */}
+          {selectedInfo && (
+            <Card className="animate-in fade-in slide-in-from-right-2 duration-200 shrink-0">
+              <CardHeader className="pb-2 pt-3 px-3">
+                <div className="flex items-center gap-2">
                   <div className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-xl",
+                    "flex h-7 w-7 items-center justify-center rounded-lg",
                     selectedInfo.node.type === 'role' ? "bg-primary/10" :
                     selectedInfo.node.type === 'permission' ? "bg-info/10" :
                     selectedInfo.node.type === 'scope' ? "bg-warning/10" :
                     "bg-accent"
                   )}>
-                    {(() => { const I = getIcon(selectedInfo.node); return <I className="h-4 w-4" />; })()}
+                    {(() => { const I = getIcon(selectedInfo.node); return <I className="h-3.5 w-3.5" />; })()}
                   </div>
-                  <div>
-                    <CardTitle className="text-sm">{selectedInfo.node.label}</CardTitle>
-                    <Badge variant="outline" className="text-[9px] mt-0.5 capitalize">{selectedInfo.node.type} node</Badge>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-xs truncate">{selectedInfo.node.label}</CardTitle>
+                    <Badge variant="outline" className="text-[9px] capitalize">{selectedInfo.node.type}</Badge>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-0 space-y-3">
-                {selectedInfo.node.sublabel && (
-                  <div className="text-xs text-muted-foreground font-mono bg-muted/30 px-2.5 py-1.5 rounded-lg border border-border/30">
-                    {selectedInfo.node.sublabel}
+              <CardContent className="pt-0 pb-3 px-3">
+                <ScrollArea className="max-h-[18vh]">
+                  <div className="space-y-0.5">
+                    {selectedInfo.connectedNodes.slice(0, 8).map(cNode => {
+                      const edge = selectedInfo.edges.find(e => e.from === cNode.id || e.to === cNode.id);
+                      const CIcon = getIcon(cNode);
+                      const isOutgoing = edge && edge.from === selectedInfo.node.id;
+                      return (
+                        <button
+                          key={cNode.id}
+                          onClick={() => setSelectedNodeId(cNode.id)}
+                          className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-left hover:bg-muted/40 transition-colors"
+                        >
+                          <CIcon className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="text-[11px] text-foreground truncate flex-1">{cNode.label}</span>
+                          <span className="text-[9px] text-muted-foreground">{isOutgoing ? '→' : '←'}</span>
+                        </button>
+                      );
+                    })}
+                    {selectedInfo.connectedNodes.length > 8 && (
+                      <p className="text-[10px] text-muted-foreground text-center py-1">+{selectedInfo.connectedNodes.length - 8} mais</p>
+                    )}
                   </div>
-                )}
-
-                {/* Position info */}
-                <div className="flex gap-2 text-[10px] text-muted-foreground">
-                  <span className="font-mono">x: {selectedInfo.node.x}</span>
-                  <span className="font-mono">y: {selectedInfo.node.y}</span>
-                </div>
-
-                <div>
-                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
-                    Conexões ({selectedInfo.edges.length})
-                  </p>
-                  <ScrollArea className="max-h-[35vh]">
-                    <div className="space-y-1">
-                      {selectedInfo.connectedNodes.map(cNode => {
-                        const edge = selectedInfo.edges.find(e => e.from === cNode.id || e.to === cNode.id);
-                        const CIcon = getIcon(cNode);
-                        const isOutgoing = edge && edge.from === selectedInfo.node.id;
-                        return (
-                          <button
-                            key={cNode.id}
-                            onClick={() => setSelectedNodeId(cNode.id)}
-                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left hover:bg-muted/40 transition-colors group"
-                          >
-                            <CIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-foreground truncate">{cNode.label}</p>
-                              {edge && (
-                                <p className="text-[10px] text-muted-foreground">
-                                  {isOutgoing ? '→' : '←'} {EDGE_LABELS[edge.type]}
-                                </p>
-                              )}
-                            </div>
-                            <Badge variant="secondary" className="text-[9px] shrink-0 capitalize">{cNode.type}</Badge>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="border-dashed border-border/50">
-              <CardContent className="py-10 text-center">
-                <Eye className="h-8 w-8 mx-auto mb-3 text-muted-foreground/25" />
-                <p className="text-xs text-muted-foreground">Clique em um nó para ver detalhes e conexões.</p>
+                </ScrollArea>
               </CardContent>
             </Card>
           )}
 
           {/* Stats */}
-          <Card>
-            <CardContent className="py-4">
-              <div className="grid grid-cols-2 gap-3">
+          <Card className="shrink-0 mt-auto">
+            <CardContent className="py-3 px-3">
+              <div className="grid grid-cols-4 gap-1">
                 <StatBox label="Nós" value={nodes.length} />
                 <StatBox label="Arestas" value={edges.length} />
                 <StatBox label="Cargos" value={roles.length} />
-                <StatBox label="Permissões" value={permissions.length} />
+                <StatBox label="Perms" value={permissions.length} />
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
     </div>
+  );
+}
+
+// ══════════════════════════════════
+// LIVE ACCESS PREVIEW
+// ══════════════════════════════════
+
+const ACCESS_CHECKS: { resource: string; action: string; label: string }[] = [
+  { resource: 'employees', action: 'view', label: 'Ver funcionários' },
+  { resource: 'employees', action: 'create', label: 'Criar funcionários' },
+  { resource: 'employees', action: 'update', label: 'Editar funcionários' },
+  { resource: 'employees', action: 'delete', label: 'Excluir funcionários' },
+  { resource: 'salary', action: 'adjust', label: 'Ajustar salário' },
+  { resource: 'salary', action: 'manage', label: 'Gerenciar salários' },
+  { resource: 'salary', action: 'view', label: 'Ver salários' },
+  { resource: 'companies', action: 'create', label: 'Criar empresas' },
+  { resource: 'companies', action: 'view', label: 'Ver empresas' },
+  { resource: 'companies', action: 'update', label: 'Editar empresas' },
+  { resource: 'companies', action: 'delete', label: 'Excluir empresas' },
+  { resource: 'departments', action: 'view', label: 'Ver departamentos' },
+  { resource: 'departments', action: 'create', label: 'Criar departamentos' },
+  { resource: 'positions', action: 'view', label: 'Ver cargos' },
+  { resource: 'positions', action: 'create', label: 'Criar cargos' },
+  { resource: 'benefits', action: 'view', label: 'Ver benefícios' },
+  { resource: 'benefits', action: 'create', label: 'Criar benefícios' },
+  { resource: 'health', action: 'view', label: 'Ver saúde' },
+  { resource: 'audit', action: 'view', label: 'Ver auditoria' },
+  { resource: 'iam', action: 'view', label: 'Ver acesso (IAM)' },
+  { resource: 'iam', action: 'manage', label: 'Gerenciar acesso' },
+  { resource: 'agreements', action: 'view', label: 'Ver termos' },
+  { resource: 'agreements', action: 'create', label: 'Criar termos' },
+  { resource: 'esocial', action: 'view', label: 'Ver eSocial' },
+  { resource: 'esocial', action: 'create', label: 'Criar eventos eSocial' },
+  { resource: 'payroll', action: 'simulate', label: 'Simular folha' },
+  { resource: 'intelligence', action: 'view', label: 'Ver inteligência' },
+  { resource: 'training', action: 'view', label: 'Ver treinamentos' },
+  { resource: 'risk', action: 'view', label: 'Ver riscos' },
+  { resource: 'user', action: 'invite', label: 'Convidar usuários' },
+];
+
+interface LiveAccessPreviewProps {
+  focusRoleId: string | null;
+  roles: CustomRole[];
+  permissions: PermissionDefinition[];
+  rolePermMap: Map<string, string[]>;
+}
+
+function LiveAccessPreview({ focusRoleId, roles, permissions, rolePermMap }: LiveAccessPreviewProps) {
+  const focusedRole = focusRoleId ? roles.find(r => r.id === focusRoleId) : null;
+
+  const grantedSet = useMemo(() => {
+    if (!focusRoleId) return new Set<string>();
+    const permIds = rolePermMap.get(focusRoleId) || [];
+    const set = new Set<string>();
+    permIds.forEach(pid => {
+      const p = permissions.find(pp => pp.id === pid);
+      if (p) set.add(`${p.resource}.${p.action}`);
+    });
+    return set;
+  }, [focusRoleId, rolePermMap, permissions]);
+
+  const results = useMemo(() => {
+    return ACCESS_CHECKS.map(check => ({
+      ...check,
+      granted: grantedSet.has(`${check.resource}.${check.action}`),
+    }));
+  }, [grantedSet]);
+
+  const granted = results.filter(r => r.granted);
+  const denied = results.filter(r => !r.granted);
+
+  if (!focusedRole) {
+    return (
+      <Card className="border-dashed border-border/50 shrink-0">
+        <CardContent className="py-6 text-center">
+          <Scan className="h-7 w-7 mx-auto mb-2 text-muted-foreground/20" />
+          <p className="text-[11px] text-muted-foreground">Selecione um cargo para ver o preview de acesso.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="flex-1 flex flex-col overflow-hidden border-border/50 animate-in fade-in slide-in-from-right-2 duration-200">
+      <CardHeader className="pb-2 pt-3 px-3 shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+            <Scan className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-xs">Live Access Preview</CardTitle>
+            <p className="text-[10px] text-muted-foreground truncate">
+              Usuário com cargo <span className="font-semibold text-foreground">{focusedRole.name}</span> poderá:
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-2">
+          <Badge variant="secondary" className="text-[9px] gap-1">
+            <Check className="h-2.5 w-2.5 text-primary" />
+            {granted.length} permitido{granted.length !== 1 ? 's' : ''}
+          </Badge>
+          <Badge variant="secondary" className="text-[9px] gap-1">
+            <X className="h-2.5 w-2.5 text-destructive" />
+            {denied.length} negado{denied.length !== 1 ? 's' : ''}
+          </Badge>
+        </div>
+      </CardHeader>
+      <ScrollArea className="flex-1 px-1.5">
+        <div className="space-y-0.5 pb-3">
+          {granted.map(r => (
+            <div key={`${r.resource}.${r.action}`} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md">
+              <div className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-primary/10 shrink-0">
+                <Check className="h-3 w-3 text-primary" />
+              </div>
+              <span className="text-[11px] text-foreground flex-1">{r.label}</span>
+              <span className="text-[9px] text-muted-foreground font-mono">{r.resource}.{r.action}</span>
+            </div>
+          ))}
+          {granted.length > 0 && denied.length > 0 && (
+            <div className="border-t border-border/30 my-1.5" />
+          )}
+          {denied.map(r => (
+            <div key={`${r.resource}.${r.action}`} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md opacity-60">
+              <div className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-destructive/10 shrink-0">
+                <X className="h-3 w-3 text-destructive" />
+              </div>
+              <span className="text-[11px] text-muted-foreground flex-1 line-through decoration-destructive/30">{r.label}</span>
+              <span className="text-[9px] text-muted-foreground/50 font-mono">{r.resource}.{r.action}</span>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+    </Card>
   );
 }
 
