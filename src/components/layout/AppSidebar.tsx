@@ -12,7 +12,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Briefcase, TrendingUp, Building2,
-  ChevronLeft, ChevronRight, LogOut, FileText, Heart, ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel,
+  ChevronLeft, ChevronRight, LogOut, FileText, Heart, ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -48,6 +48,7 @@ const allNavItems: NavItem[] = [
   { to: '/labor-dashboard', icon: ClipboardCheck, label: 'Painel Trabalhista', key: 'labor_dashboard' },
   { to: '/labor-compliance', icon: Scale, label: 'Conformidade Trabalhista', key: 'labor_compliance' },
   { to: '/labor-rules', icon: Gavel, label: 'Regras Trabalhistas', key: 'labor_rules' },
+  { to: '/legal-dashboard', icon: Landmark, label: 'Dashboard Legal', key: 'legal_dashboard' },
   { to: '/audit', icon: ScrollText, label: 'Auditoria Legal', key: 'audit' },
 ];
 
