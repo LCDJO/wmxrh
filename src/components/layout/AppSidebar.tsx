@@ -13,7 +13,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, LogOut, FileText, Heart,
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
-  GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff,
+  GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
 import { useIdentityIntelligence } from '@/domains/security/kernel/identity-intelligence';
 import { useNavigationPins } from '@/hooks/use-navigation-pins';
+import { useExperienceProfile } from '@/hooks/use-experience-profile';
 import { NavigationSuggestionsPanel } from './NavigationSuggestionsPanel';
 import { ContextSelector } from './ContextSelector';
 import type { NavKey } from '@/domains/security/permissions';
@@ -150,11 +151,15 @@ export function AppSidebar() {
   const { canNav, isFeatureEnabled, effectiveRoles, loading } = useSecurityKernel();
   const { activeContext, isImpersonating, session } = useIdentityIntelligence();
   const { pins, removePin, isPinned } = useNavigationPins();
+  const { isPathVisible, isPathLocked, profile: expProfile } = useExperienceProfile();
 
   const isVisible = (item: NavChild) => {
     if (loading) return true;
     if (item.featureFlag && !isFeatureEnabled(item.featureFlag)) return false;
-    return canNav(item.key);
+    if (!canNav(item.key)) return false;
+    // PXE: hide if plan hides this path
+    if (!isPathVisible(item.to)) return false;
+    return true;
   };
 
   const isActive = (to: string) =>
@@ -173,6 +178,40 @@ export function AppSidebar() {
   const renderChild = (item: NavChild) => {
     if (!isVisible(item)) return null;
     const active = isActive(item.to);
+    const lockInfo = isPathLocked(item.to);
+
+    // Locked: show but greyed out with lock icon
+    if (lockInfo.locked) {
+      return (
+        <div
+          key={item.to}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium cursor-not-allowed group relative",
+            collapsed ? "justify-center" : "pl-10",
+            "text-sidebar-foreground/30"
+          )}
+          title={lockInfo.message || `Disponível no plano ${lockInfo.requiredPlan}`}
+        >
+          <item.icon className="h-4 w-4 shrink-0" />
+          {!collapsed && (
+            <>
+              <span className="truncate">{item.label}</span>
+              <Lock className="h-3 w-3 ml-auto shrink-0 text-sidebar-foreground/20" />
+            </>
+          )}
+          {/* Upgrade tooltip on hover */}
+          {!collapsed && (
+            <div className="absolute left-full ml-2 top-0 z-50 hidden group-hover:block">
+              <div className="bg-popover text-popover-foreground text-xs rounded-lg shadow-lg border border-border p-3 w-48">
+                <p className="font-semibold mb-1">🔒 Recurso bloqueado</p>
+                <p className="text-muted-foreground">{lockInfo.message || `Faça upgrade para o plano ${lockInfo.requiredPlan}.`}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <NavLink
         key={item.to}
@@ -356,6 +395,18 @@ export function AppSidebar() {
 
       {/* ── Navigation Suggestions ── */}
       <NavigationSuggestionsPanel collapsed={collapsed} />
+
+      {/* ── Upgrade Banner for non-enterprise tenants ── */}
+      {expProfile.plan_tier && !['enterprise', 'custom'].includes(expProfile.plan_tier) && !collapsed && (
+        <div className="mx-3 mb-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+          <p className="text-xs font-semibold text-primary">⚡ Upgrade disponível</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            {expProfile.plan_tier === 'free' && 'Desbloqueie módulos de Inteligência e Compliance.'}
+            {expProfile.plan_tier === 'starter' && 'Acesse Analytics avançado e dashboards extras.'}
+            {expProfile.plan_tier === 'professional' && 'Libere branding customizado e IA completa.'}
+          </p>
+        </div>
+      )}
 
       {/* ── Footer ── */}
       <div className="px-3 pb-3 space-y-1">
