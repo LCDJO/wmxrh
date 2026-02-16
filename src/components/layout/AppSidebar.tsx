@@ -13,13 +13,15 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, LogOut, FileText, Heart,
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
-  GraduationCap, ShieldAlert, Globe, Layers,
+  GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
 import { useIdentityIntelligence } from '@/domains/security/kernel/identity-intelligence';
+import { useNavigationPins } from '@/hooks/use-navigation-pins';
+import { NavigationSuggestionsPanel } from './NavigationSuggestionsPanel';
 import { ContextSelector } from './ContextSelector';
 import type { NavKey } from '@/domains/security/permissions';
 import type { FeatureKey } from '@/domains/security/feature-flags';
@@ -147,6 +149,7 @@ export function AppSidebar() {
   const { signOut } = useAuth();
   const { canNav, isFeatureEnabled, effectiveRoles, loading } = useSecurityKernel();
   const { activeContext, isImpersonating, session } = useIdentityIntelligence();
+  const { pins, removePin, isPinned } = useNavigationPins();
 
   const isVisible = (item: NavChild) => {
     if (loading) return true;
@@ -303,10 +306,56 @@ export function AppSidebar() {
         </div>
       )}
 
+      {/* ── Pinned Shortcuts ── */}
+      {pins.length > 0 && (
+        <div className={cn("px-3 pt-3 pb-1 border-b border-sidebar-border", collapsed && "px-2")}>
+          {!collapsed && (
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40 px-1 mb-1.5 flex items-center gap-1">
+              <Pin className="h-2.5 w-2.5" />
+              Atalhos fixados
+            </p>
+          )}
+          <div className="space-y-0.5">
+            {pins.map(pin => {
+              const active = location.pathname === pin.to || (pin.to !== '/' && location.pathname.startsWith(pin.to));
+              return (
+                <div key={pin.to} className="group flex items-center">
+                  <NavLink
+                    to={pin.to}
+                    className={cn(
+                      "flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                      collapsed ? "justify-center" : "",
+                      active
+                        ? "bg-sidebar-accent text-sidebar-primary"
+                        : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    )}
+                  >
+                    <Pin className={cn("h-3.5 w-3.5 shrink-0", active && "text-sidebar-primary")} />
+                    {!collapsed && <span className="truncate text-xs">{pin.label}</span>}
+                  </NavLink>
+                  {!collapsed && (
+                    <button
+                      onClick={() => removePin(pin.to)}
+                      className="opacity-0 group-hover:opacity-100 h-6 w-6 rounded flex items-center justify-center text-sidebar-foreground/30 hover:text-sidebar-foreground/70 transition-all shrink-0"
+                      title="Remover atalho"
+                    >
+                      <PinOff className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Navigation ── */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navStructure.map((entry, idx) => renderEntry(entry, idx))}
       </nav>
+
+      {/* ── Navigation Suggestions ── */}
+      <NavigationSuggestionsPanel collapsed={collapsed} />
 
       {/* ── Footer ── */}
       <div className="px-3 pb-3 space-y-1">
