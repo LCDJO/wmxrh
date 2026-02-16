@@ -626,3 +626,77 @@ export interface CreateHealthExamDTO {
   risk_factors_evaluated?: string[];
   created_by?: string | null;
 }
+
+// ========================
+// SALARY COMPOSITION ENGINE
+// ========================
+
+export type RubricBaseCalculo = 'salario_base' | 'percentual' | 'manual';
+
+export interface SalaryStructure {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  company_id: string;
+  company_group_id: string | null;
+  start_date: string;
+  end_date: string | null;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface SalaryRubric {
+  id: string;
+  tenant_id: string;
+  salary_structure_id: string;
+  rubric_code: string;
+  name: string;
+  item_type: PayrollItemType;
+  nature: PayrollItemNature;
+  base_calculo: RubricBaseCalculo;
+  amount: number;
+  percentage: number | null;
+  integra_fgts: boolean;
+  integra_inss: boolean;
+  integra_irrf: boolean;
+  esocial_code: string | null;
+  catalog_item_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface SalaryStructureWithRubrics extends SalaryStructure {
+  salary_rubrics?: SalaryRubric[];
+  employees?: { name: string } | null;
+}
+
+export interface CreateSalaryStructureDTO {
+  tenant_id: string;
+  employee_id: string;
+  company_id: string;
+  company_group_id?: string | null;
+  start_date: string;
+  created_by?: string | null;
+}
+
+export interface CreateSalaryRubricDTO {
+  tenant_id: string;
+  salary_structure_id: string;
+  rubric_code: string;
+  name: string;
+  item_type?: PayrollItemType;
+  nature?: PayrollItemNature;
+  base_calculo?: RubricBaseCalculo;
+  amount: number;
+  percentage?: number | null;
+  integra_fgts?: boolean;
+  integra_inss?: boolean;
+  integra_irrf?: boolean;
+  esocial_code?: string | null;
+  catalog_item_id?: string | null;
+}

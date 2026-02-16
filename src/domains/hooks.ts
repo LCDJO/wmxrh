@@ -29,6 +29,7 @@ import { payrollCatalogService } from '@/domains/compliance/payroll-catalog.serv
 import { benefitPlanService } from '@/domains/compliance/benefit-plan.service';
 import { healthProgramService } from '@/domains/compliance/health-program.service';
 import { payrollSimulationService } from '@/domains/compliance/payroll-simulation.service';
+import { salaryStructureService } from '@/domains/compensation/salary-structure.service';
 
 // Types
 import type {
@@ -37,6 +38,7 @@ import type {
   CreateSalaryContractDTO, CreateSalaryAdjustmentDTO, CreateSalaryAdditionalDTO,
   CreatePayrollItemCatalogDTO, CreateBenefitPlanDTO, CreateEmployeeBenefitDTO,
   CreateHealthProgramDTO, CreateHealthExamDTO,
+  CreateSalaryStructureDTO, CreateSalaryRubricDTO,
 } from '@/domains/shared';
 
 // ========================
@@ -92,6 +94,10 @@ export const queryKeys = {
   employeeHealthExams: (empId: string) => ['employee_health_exams', empId] as const,
   riskFactors: (tenantId?: string) => ['risk_factors', tenantId] as const,
   exposureGroups: (tenantId?: string) => ['exposure_groups', tenantId] as const,
+  // Salary Composition
+  salaryStructures: (empId: string) => ['salary_structures', empId] as const,
+  salaryStructureActive: (empId: string) => ['salary_structure_active', empId] as const,
+  salaryStructuresTenant: (tenantId?: string) => ['salary_structures_tenant', tenantId] as const,
 };
 
 // ========================
@@ -553,5 +559,72 @@ export function usePayrollSimulation(baseSalary: number, referenceDate?: string)
     queryKey: ['payroll_simulation', currentTenant?.id, baseSalary, referenceDate],
     queryFn: () => payrollSimulationService.simulate(currentTenant!.id, baseSalary, referenceDate),
     enabled: !!currentTenant && baseSalary > 0,
+  });
+}
+
+// ========================
+// SALARY COMPOSITION ENGINE
+// ========================
+
+export function useSalaryStructures(employeeId: string) {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.salaryStructures(employeeId),
+    queryFn: () => salaryStructureService.listByEmployee(employeeId, qs!),
+    enabled: !!employeeId && !!qs,
+  });
+}
+
+export function useActiveSalaryStructure(employeeId: string) {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.salaryStructureActive(employeeId),
+    queryFn: () => salaryStructureService.getActive(employeeId, qs!),
+    enabled: !!employeeId && !!qs,
+  });
+}
+
+export function useSalaryStructuresTenant() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.salaryStructuresTenant(qs?.tenantId),
+    queryFn: () => salaryStructureService.listByTenant(qs!),
+    enabled: !!qs,
+  });
+}
+
+export function useCreateSalaryStructure() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateSalaryStructureDTO) => salaryStructureService.create(dto, qs!),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: queryKeys.salaryStructures(vars.employee_id) });
+      qc.invalidateQueries({ queryKey: queryKeys.salaryStructureActive(vars.employee_id) });
+      qc.invalidateQueries({ queryKey: queryKeys.salaryStructuresTenant(qs?.tenantId) });
+    },
+  });
+}
+
+export function useAddSalaryRubric() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateSalaryRubricDTO) => salaryStructureService.addRubric(dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['salary_structures'] });
+      qc.invalidateQueries({ queryKey: ['salary_structure_active'] });
+      qc.invalidateQueries({ queryKey: ['salary_structures_tenant'] });
+    },
+  });
+}
+
+export function useRemoveSalaryRubric() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (rubricId: string) => salaryStructureService.removeRubric(rubricId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['salary_structures'] });
+      qc.invalidateQueries({ queryKey: ['salary_structure_active'] });
+    },
   });
 }

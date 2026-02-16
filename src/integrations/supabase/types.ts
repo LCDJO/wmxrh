@@ -1529,6 +1529,168 @@ export type Database = {
           },
         ]
       }
+      salary_rubrics: {
+        Row: {
+          amount: number
+          base_calculo: Database["public"]["Enums"]["rubric_base_calculo"]
+          catalog_item_id: string | null
+          created_at: string
+          deleted_at: string | null
+          esocial_code: string | null
+          id: string
+          integra_fgts: boolean
+          integra_inss: boolean
+          integra_irrf: boolean
+          is_active: boolean
+          item_type: Database["public"]["Enums"]["payroll_item_type"]
+          name: string
+          nature: Database["public"]["Enums"]["payroll_item_nature"]
+          percentage: number | null
+          rubric_code: string
+          salary_structure_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          base_calculo?: Database["public"]["Enums"]["rubric_base_calculo"]
+          catalog_item_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          esocial_code?: string | null
+          id?: string
+          integra_fgts?: boolean
+          integra_inss?: boolean
+          integra_irrf?: boolean
+          is_active?: boolean
+          item_type?: Database["public"]["Enums"]["payroll_item_type"]
+          name: string
+          nature?: Database["public"]["Enums"]["payroll_item_nature"]
+          percentage?: number | null
+          rubric_code: string
+          salary_structure_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          base_calculo?: Database["public"]["Enums"]["rubric_base_calculo"]
+          catalog_item_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          esocial_code?: string | null
+          id?: string
+          integra_fgts?: boolean
+          integra_inss?: boolean
+          integra_irrf?: boolean
+          is_active?: boolean
+          item_type?: Database["public"]["Enums"]["payroll_item_type"]
+          name?: string
+          nature?: Database["public"]["Enums"]["payroll_item_nature"]
+          percentage?: number | null
+          rubric_code?: string
+          salary_structure_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_rubrics_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_item_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_rubrics_salary_structure_id_fkey"
+            columns: ["salary_structure_id"]
+            isOneToOne: false
+            referencedRelation: "salary_structures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_rubrics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_structures: {
+        Row: {
+          company_group_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          employee_id: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          start_date: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_group_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          start_date?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_group_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          start_date?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_structures_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structures_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structures_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structures_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_logs: {
         Row: {
           action: string
@@ -1861,6 +2023,7 @@ export type Database = {
         | "biologico"
         | "ergonomico"
         | "acidente"
+      rubric_base_calculo: "salario_base" | "percentual" | "manual"
       salary_additional_type:
         | "bonus"
         | "commission"
@@ -2056,6 +2219,7 @@ export const Constants = {
         "ergonomico",
         "acidente",
       ],
+      rubric_base_calculo: ["salario_base", "percentual", "manual"],
       salary_additional_type: [
         "bonus",
         "commission",

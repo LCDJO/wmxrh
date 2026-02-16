@@ -21,10 +21,12 @@ import type {
   SalaryAdditional, AuditLog,
   CompanyWithRelations, PositionWithRelations, DepartmentWithRelations,
   SalaryHistoryWithRelations,
+  SalaryStructure, SalaryStructureWithRubrics, SalaryRubric,
   CreateTenantDTO, CreateCompanyDTO, CreateCompanyGroupDTO,
   CreateDepartmentDTO, CreatePositionDTO, CreateEmployeeDTO,
   CreateSalaryHistoryDTO, CreateSalaryContractDTO,
   CreateSalaryAdjustmentDTO, CreateSalaryAdditionalDTO,
+  CreateSalaryStructureDTO, CreateSalaryRubricDTO,
 } from './types';
 
 export interface ITenantService {
@@ -98,4 +100,12 @@ export interface ISalaryAdditionalService {
 export interface IAuditLogService {
   listByTenant(tenantId: string, opts?: { limit?: number; entity_type?: string; action?: string }): Promise<AuditLog[]>;
   listByEntity(entityType: string, entityId: string): Promise<AuditLog[]>;
+}
+
+export interface ISalaryStructureService {
+  listByEmployee(employeeId: string): Promise<SalaryStructureWithRubrics[]>;
+  getActive(employeeId: string): Promise<SalaryStructureWithRubrics | null>;
+  create(data: CreateSalaryStructureDTO): Promise<SalaryStructure>;
+  addRubric(data: CreateSalaryRubricDTO): Promise<SalaryRubric>;
+  removeRubric(rubricId: string): Promise<void>;
 }
