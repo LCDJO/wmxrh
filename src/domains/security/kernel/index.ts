@@ -63,3 +63,14 @@ export type { AccessGraphCacheEntry, CacheInvalidationReason, CacheInvalidationE
 // ── Access Graph Events ────────────────────────────────────
 export { emitGraphEvent, onGraphEvent, getGraphEventLog, clearGraphEventLog, graphEvents } from './access-graph.events';
 export type { GraphEventType, GraphEvent } from './access-graph.events';
+
+// ── Access Graph Capabilities (Future) ─────────────────────
+export { DEFAULT_CAPABILITIES, DEFAULT_EXPIRATION_CONFIG } from './access-graph.capabilities';
+export type {
+  AccessDelegation, DelegatedPermission, DelegationStatus, DelegatedEdgeRelation,
+  TemporaryPermission, TemporaryPermissionStatus, TemporaryPermissionEventType,
+  AccessExpirationConfig, ExpirationSweepResult,
+  ExternalIdentityProvider, IdentityProviderType, IdentityProviderConfig,
+  ExternalRoleMapping, IdentityMapping,
+  AccessCapabilities, AccessGraphInputExtended,
+} from './access-graph.capabilities';
