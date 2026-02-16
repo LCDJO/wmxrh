@@ -18,6 +18,8 @@ export { getApplicableNrs, getTrainingRequirements, estimateTrainingHours } from
 export { generateRecommendations } from './compliance-recommender';
 export { cnpjDataResolverService } from './cnpj-data-resolver.service';
 export type { CompanyCNAEProfile, ResolvedCNPJData, UpsertCNAEProfileDTO } from './cnpj-data-resolver.service';
+export { cnaeRiskMappingService } from './cnae-risk-mapping.service';
+export type { CnaeRiskMapping, RiskProfile, UpsertCnaeRiskMappingDTO } from './cnae-risk-mapping.service';
 
 export type {
   GrauRisco,
