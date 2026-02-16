@@ -3,9 +3,6 @@
  *
  * Assigns agreements to employees, sends for signature,
  * handles auto-dispatch on admission, and manages lifecycle.
- *
- * Delegates signature execution to DigitalSignatureProviderAdapter.
- * Delegates document storage to DocumentVault.
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -50,14 +47,12 @@ export const agreementAssignmentService = {
   ): Promise<EmployeeAgreement> {
     requirePermission(buildPipeline(ctx, 'create', dto.company_id));
 
-    // Resolve current version
     const version = await agreementTemplateService.getCurrentVersion(dto.template_id);
-    if (!version) throw new Error('Template não possui versão publicada.');
+    if (!version) throw new Error('Template não possui versão/conteúdo.');
 
     const template = await agreementTemplateService.getById(dto.template_id, ctx);
     if (!template) throw new Error('Template não encontrado.');
 
-    // Get employee signer info
     const { data: employee } = await supabase
       .from('employees')
       .select('name, email, cpf')
@@ -67,32 +62,24 @@ export const agreementAssignmentService = {
 
     const providerName: SignatureProvider = dto.provider ?? 'simulation';
 
-    // Delegate to DigitalSignatureProviderAdapter
     const signResult = await digitalSignatureAdapter.send(providerName, {
       document_title: version.title,
       document_content_html: version.content_html,
       signer_name: employee.name,
       signer_email: employee.email ?? '',
       signer_cpf: employee.cpf ?? undefined,
-      requires_witness: template.requires_witness,
     });
-
-    const expiresAt = template.expiry_days
-      ? new Date(Date.now() + template.expiry_days * 86400000).toISOString()
-      : null;
 
     const row = scopedInsertFromContext({
       employee_id: dto.employee_id,
       template_id: dto.template_id,
       template_version_id: version.id,
-      company_id: dto.company_id ?? template.company_id ?? null,
-      company_group_id: template.company_group_id ?? null,
+      company_id: dto.company_id ?? null,
       status: signResult.status === 'sent' ? 'sent' : 'pending',
       signature_provider: providerName,
       external_document_id: signResult.external_document_id || null,
       external_signing_url: signResult.signing_url || null,
       sent_at: signResult.status === 'sent' ? new Date().toISOString() : null,
-      expires_at: expiresAt,
       sent_by: ctx.user_id,
     }, ctx);
 
@@ -111,7 +98,7 @@ export const agreementAssignmentService = {
       agreement_id: data.id,
       template_id: dto.template_id,
       company_id: dto.company_id,
-      payload: { provider: providerName, version: version.version_number },
+      payload: { provider: providerName, versao: version.version_number },
       timestamp: new Date().toISOString(),
     });
 
@@ -133,7 +120,6 @@ export const agreementAssignmentService = {
       update.signed_at = new Date().toISOString();
       update.signed_document_hash = dto.signed_document_hash;
 
-      // Delegate document storage to DocumentVault
       if (dto.external_document_id) {
         const { data: agr } = await supabase
           .from('employee_agreements')
@@ -196,8 +182,7 @@ export const agreementAssignmentService = {
 
   async autoDispatchForNewEmployee(
     employeeId: string,
-    positionId: string | null,
-    departmentId: string | null,
+    cargoId: string | null,
     companyId: string,
     ctx: SecurityContext,
     scope: QueryScope,
@@ -205,13 +190,13 @@ export const agreementAssignmentService = {
     requirePermission(buildPipeline(ctx, 'create', companyId));
 
     const templates = await agreementTemplateService.list(ctx, scope, { active_only: true });
+
+    // Auto-dispatch obrigatórios + match de cargo
     const autoTemplates = templates.filter(t => {
-      if (!t.auto_send_on_admission) return false;
-      const posMatch = t.applies_to_positions.length === 0 ||
-        (positionId && t.applies_to_positions.includes(positionId));
-      const deptMatch = t.applies_to_departments.length === 0 ||
-        (departmentId && t.applies_to_departments.includes(departmentId));
-      return posMatch && deptMatch;
+      if (!t.obrigatorio) return false;
+      if (t.tipo === 'geral') return true;
+      if (t.tipo === 'funcao' && t.cargo_id && cargoId) return t.cargo_id === cargoId;
+      return false;
     });
 
     let dispatched = 0;

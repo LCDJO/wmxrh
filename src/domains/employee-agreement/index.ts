@@ -28,14 +28,15 @@ export { agreementAuditService, initAgreementAudit } from './agreement-audit.ser
 
 // ── Types ──
 export type {
-  AgreementCategory,
+  AgreementTipo,
   AgreementStatus,
   SignatureProvider,
   AgreementTemplate,
   AgreementTemplateVersion,
   EmployeeAgreement,
   CreateTemplateDTO,
-  CreateVersionDTO,
+  UpdateTemplateDTO,
+  PublishNewVersionDTO,
   SendForSignatureDTO,
   SignatureCallbackDTO,
   AgreementDashboardStats,
