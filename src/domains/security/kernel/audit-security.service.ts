@@ -41,7 +41,10 @@ export type AuditAction =
   | 'identity_cleared'
   | 'identity_established'
   | 'tenant_switched'
-  | 'scope_switched';
+  | 'scope_switched'
+  | 'impersonation_started'
+  | 'impersonation_ended'
+  | 'impersonated_action';
 
 export type AuditResult = 'allowed' | 'blocked' | 'success';
 
@@ -51,13 +54,22 @@ export type SecurityEventType =
   | 'ScopeMismatchDetected'
   | 'RateLimitTriggered'
   | 'FeatureBlocked'
-  | 'MutationBlocked';
+  | 'MutationBlocked'
+  | 'ImpersonationStarted'
+  | 'ImpersonationEnded'
+  | 'ImpersonatedActionExecuted';
 
 export interface AuditEntry {
   /** Auto-mapped from SecurityContext if provided */
   request_id?: string;
   user_id?: string;
   tenant_id?: string;
+  /** The real user behind the action (for impersonation) */
+  real_user_id?: string;
+  /** The active/effective user performing the action */
+  active_user_id?: string;
+  /** Impersonation session reference */
+  impersonation_session_id?: string;
   action: AuditAction;
   resource: string;
   result: AuditResult;
@@ -106,6 +118,9 @@ function persistToDb(entry: AuditEntry): void {
     request_id: entry.request_id || null,
     user_id: entry.user_id || null,
     tenant_id: entry.tenant_id || null,
+    real_user_id: entry.real_user_id || null,
+    active_user_id: entry.active_user_id || null,
+    impersonation_session_id: entry.impersonation_session_id || null,
     action: entry.action,
     resource: entry.resource,
     result: entry.result,
@@ -135,6 +150,9 @@ const ACTION_TO_EVENT: Record<AuditAction, SecurityEventType> = {
   identity_established: 'UnauthorizedAccessAttempt',
   tenant_switched: 'ScopeMismatchDetected',
   scope_switched: 'ScopeMismatchDetected',
+  impersonation_started: 'ImpersonationStarted',
+  impersonation_ended: 'ImpersonationEnded',
+  impersonated_action: 'ImpersonatedActionExecuted',
 };
 
 function buildEntry(
@@ -147,10 +165,15 @@ function buildEntry(
     metadata?: Record<string, unknown>;
   },
 ): AuditEntry {
+  // Auto-enrich with impersonation fields from SecurityContext
+  const isImpersonating = opts.ctx?.is_impersonating;
   return {
     request_id: opts.ctx?.request_id,
     user_id: opts.ctx?.user_id,
     tenant_id: opts.ctx?.tenant_id,
+    real_user_id: isImpersonating ? opts.ctx?.real_identity?.userId : undefined,
+    active_user_id: isImpersonating ? opts.ctx?.active_identity?.userId : undefined,
+    impersonation_session_id: isImpersonating ? (opts.metadata?.impersonationSessionId as string) : undefined,
     action,
     resource: opts.resource,
     result,
@@ -213,6 +236,43 @@ export interface AuditSecurityAPI {
 
   /** Log allowed access (for audit trail of sensitive operations) */
   logAccessAllowed: (opts: { resource: string; action: string; ctx?: SecurityContext | null; metadata?: Record<string, unknown> }) => void;
+
+  // ── Impersonation-specific audit (OBRIGATÓRIO) ──
+
+  /** Log ImpersonationStarted with real_user_id, active_user_id, tenant_id */
+  logImpersonationStarted: (opts: {
+    realUserId: string;
+    activeUserId: string;
+    tenantId: string;
+    sessionId: string;
+    reason: string;
+    simulatedRole: string;
+    platformRole: string;
+    metadata?: Record<string, unknown>;
+  }) => void;
+
+  /** Log ImpersonationEnded */
+  logImpersonationEnded: (opts: {
+    realUserId: string;
+    activeUserId: string;
+    tenantId: string;
+    sessionId: string;
+    endReason: string;
+    durationMs: number;
+    operationCount: number;
+    metadata?: Record<string, unknown>;
+  }) => void;
+
+  /** Log ImpersonatedActionExecuted — every mutation during impersonation */
+  logImpersonatedAction: (opts: {
+    realUserId: string;
+    activeUserId: string;
+    tenantId: string;
+    sessionId: string;
+    resource: string;
+    actionDescription: string;
+    metadata?: Record<string, unknown>;
+  }) => void;
 
   /** Generic log entry */
   log: (entry: AuditEntry) => void;
@@ -279,6 +339,72 @@ export const auditSecurity: AuditSecurityAPI = {
   },
 
   log: (entry) => {
+    emitAndPersist(entry);
+  },
+
+  // ── Impersonation audit methods ──
+
+  logImpersonationStarted: (opts) => {
+    const entry: AuditEntry = {
+      user_id: opts.realUserId,
+      real_user_id: opts.realUserId,
+      active_user_id: opts.activeUserId,
+      tenant_id: opts.tenantId,
+      impersonation_session_id: opts.sessionId,
+      action: 'impersonation_started',
+      resource: 'dual_identity_engine',
+      result: 'success',
+      reason: `Impersonation started: ${opts.platformRole} → tenant ${opts.tenantId} as ${opts.simulatedRole}`,
+      metadata: {
+        ...opts.metadata,
+        sessionId: opts.sessionId,
+        simulatedRole: opts.simulatedRole,
+        platformRole: opts.platformRole,
+        reason: opts.reason,
+      },
+    };
+    emitAndPersist(entry);
+  },
+
+  logImpersonationEnded: (opts) => {
+    const entry: AuditEntry = {
+      user_id: opts.realUserId,
+      real_user_id: opts.realUserId,
+      active_user_id: opts.activeUserId,
+      tenant_id: opts.tenantId,
+      impersonation_session_id: opts.sessionId,
+      action: 'impersonation_ended',
+      resource: 'dual_identity_engine',
+      result: 'success',
+      reason: `Impersonation ended (${opts.endReason}): ${opts.operationCount} ops in ${Math.round(opts.durationMs / 1000)}s`,
+      metadata: {
+        ...opts.metadata,
+        sessionId: opts.sessionId,
+        endReason: opts.endReason,
+        durationMs: opts.durationMs,
+        operationCount: opts.operationCount,
+      },
+    };
+    emitAndPersist(entry);
+  },
+
+  logImpersonatedAction: (opts) => {
+    const entry: AuditEntry = {
+      user_id: opts.realUserId,
+      real_user_id: opts.realUserId,
+      active_user_id: opts.activeUserId,
+      tenant_id: opts.tenantId,
+      impersonation_session_id: opts.sessionId,
+      action: 'impersonated_action',
+      resource: opts.resource,
+      result: 'allowed',
+      reason: `[Impersonated] ${opts.actionDescription}`,
+      metadata: {
+        ...opts.metadata,
+        sessionId: opts.sessionId,
+        impersonated: true,
+      },
+    };
     emitAndPersist(entry);
   },
 
