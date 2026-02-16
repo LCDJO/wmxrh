@@ -1991,6 +1991,75 @@ export type Database = {
           },
         ]
       }
+      experience_profiles: {
+        Row: {
+          available_widgets: string[]
+          branding: Json | null
+          cognitive_context_level: string
+          cognitive_hints_enabled: boolean
+          created_at: string
+          default_dashboard_layout: Json
+          hidden_navigation: string[]
+          id: string
+          locked_navigation: Json
+          plan_id: string
+          resolved_at: string
+          tenant_id: string
+          ui_features: Json
+          updated_at: string
+          visible_navigation: string[]
+        }
+        Insert: {
+          available_widgets?: string[]
+          branding?: Json | null
+          cognitive_context_level?: string
+          cognitive_hints_enabled?: boolean
+          created_at?: string
+          default_dashboard_layout?: Json
+          hidden_navigation?: string[]
+          id?: string
+          locked_navigation?: Json
+          plan_id: string
+          resolved_at?: string
+          tenant_id: string
+          ui_features?: Json
+          updated_at?: string
+          visible_navigation?: string[]
+        }
+        Update: {
+          available_widgets?: string[]
+          branding?: Json | null
+          cognitive_context_level?: string
+          cognitive_hints_enabled?: boolean
+          created_at?: string
+          default_dashboard_layout?: Json
+          hidden_navigation?: string[]
+          id?: string
+          locked_navigation?: Json
+          plan_id?: string
+          resolved_at?: string
+          tenant_id?: string
+          ui_features?: Json
+          updated_at?: string
+          visible_navigation?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experience_profiles_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "experience_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exposure_group_risks: {
         Row: {
           control_measures: string | null
@@ -4973,6 +5042,10 @@ export type Database = {
       }
       seed_salary_rubric_templates: {
         Args: { _tenant_id: string }
+        Returns: undefined
+      }
+      sync_experience_profile: {
+        Args: { p_tenant_id: string }
         Returns: undefined
       }
       sync_tenant_module_access: {
