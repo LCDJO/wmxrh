@@ -29,6 +29,7 @@ export {
   getAccessGraph,
   setAccessGraph,
   clearAccessGraph,
+  accessGraphService,
   requireAtLeastOneRole,
   requireValidScope,
   preventCrossTenantAccess,
@@ -72,6 +73,9 @@ export type {
   GraphEdge,
   NodeType,
   EdgeRelation,
+  InheritedScopes,
+  InheritanceEntry,
+  AccessCheckResult,
 } from './kernel';
 
 // ── Feature Flags Hook ──

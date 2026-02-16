@@ -30,8 +30,7 @@ import {
   featureFlagEngine,
   auditSecurity,
   executeSecurityPipeline,
-  buildAccessGraph,
-  setAccessGraph,
+  accessGraphService,
   type Identity,
   type SecurityContext,
   type PolicyResult,
@@ -40,6 +39,8 @@ import {
   type ResourceTarget,
   type PipelineResult,
   type AccessGraph,
+  type AccessCheckResult,
+  type InheritedScopes,
 } from './kernel';
 
 import type { PermissionAction, PermissionEntity, NavKey } from './permissions';
@@ -79,6 +80,10 @@ export interface UseSecurityKernelReturn {
   // ── Access Graph ──
   /** The precomputed access graph for O(1) authorization checks */
   accessGraph: AccessGraph | null;
+  /** Check access via graph: RBAC + scope in one call */
+  graphCheckAccess: (action: PermissionAction, resource: PermissionEntity, scopeId?: string | null, scopeType?: ScopeType) => AccessCheckResult;
+  /** Resolve all inherited scopes for the current user */
+  resolveInheritedScopes: () => InheritedScopes | null;
 
   // ── Audit ──
   audit: typeof auditSecurity;
@@ -136,16 +141,29 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
   const accessGraph = useMemo((): AccessGraph | null => {
     if (!user || !currentTenant) return null;
 
-    const graph = buildAccessGraph({
+    return accessGraphService.buildUserAccessGraph({
       userId: user.id,
       tenantId: currentTenant.id,
       userRoles,
       membershipRole,
-      companyGroupMap: {}, // populated by caller if needed
+      companyGroupMap: {}, // populated dynamically when companies are loaded
     });
-    setAccessGraph(graph);
-    return graph;
   }, [user, currentTenant, userRoles, membershipRole]);
+
+  const graphCheckAccess = useCallback(
+    (action: PermissionAction, resource: PermissionEntity, scopeId?: string | null, scopeType?: ScopeType): AccessCheckResult => {
+      if (!accessGraph) {
+        return { allowed: false, reason: 'AccessGraph não disponível', decidedBy: 'rbac' };
+      }
+      return accessGraphService.checkAccess(accessGraph, action, resource, scopeId, scopeType);
+    },
+    [accessGraph]
+  );
+
+  const resolveInheritedScopes = useCallback((): InheritedScopes | null => {
+    if (!accessGraph) return null;
+    return accessGraphService.resolveInheritedScopes(accessGraph);
+  }, [accessGraph]);
 
   // ── Permissions (RBAC + ABAC) ──
   const checkPerm = useCallback(
@@ -262,6 +280,8 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     isFeatureEnabled,
     executePipeline,
     accessGraph,
+    graphCheckAccess,
+    resolveInheritedScopes,
     audit: auditSecurity,
     loading: rolesLoading,
     isTenantAdmin,
