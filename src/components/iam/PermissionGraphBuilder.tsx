@@ -6,6 +6,9 @@
  *
  * Features:
  *   - Drag-and-drop node repositioning
+ *   - Drag permission from library to assign to focused role
+ *   - Click resource → CRUD toggle panel
+ *   - Role inheritance with visual edges
  *   - Animated edge flow particles
  *   - Hover highlighting with connection tracing
  *   - Zoom/pan canvas controls
@@ -16,7 +19,7 @@
  * Pure visualization — no security logic lives here.
  */
 import { useState, useMemo, useCallback, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { identityGateway } from '@/domains/iam/identity.gateway';
 import { type CustomRole, type PermissionDefinition, type UserCustomRole, type TenantUser } from '@/domains/iam/iam.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,16 +28,21 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import {
   Shield, Users, Building2, Key, Network, Eye, Layers,
   ZoomIn, ZoomOut, Maximize2, Lock, Move, GripVertical,
   Briefcase, DollarSign, ShieldCheck, Heart, Send, ScrollText,
   Brain, GraduationCap, AlertTriangle, Calculator,
   ChevronDown, ChevronRight, Search, Library,
-  Check, X, Scan,
+  Check, X, Scan, GitBranch, Link2, Plus,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSecurityKernel } from '@/domains/security/use-security-kernel';
 
 // ══════════════════════════════════
 // TYPES
@@ -59,6 +67,15 @@ interface GraphEdge {
   to: string;
   type: EdgeType;
   label?: string;
+}
+
+interface RoleInheritance {
+  id: string;
+  parent_role_id: string;
+  child_role_id: string;
+  tenant_id: string;
+  created_at: string;
+  created_by: string | null;
 }
 
 // ══════════════════════════════════
@@ -135,6 +152,10 @@ const GRID = 10;
 
 const snap = (v: number) => Math.round(v / GRID) * GRID;
 
+// CRUD action labels
+const CRUD_ACTIONS = ['view', 'create', 'update', 'delete'] as const;
+const CRUD_LABELS: Record<string, string> = { view: 'Ler', create: 'Criar', update: 'Editar', delete: 'Excluir' };
+
 // ══════════════════════════════════
 // GRAPH BUILD
 // ══════════════════════════════════
@@ -146,6 +167,7 @@ function buildGraph(
   rolePermMap: Map<string, string[]>,
   focusRoleId: string | null,
   scopeFilter: 'all' | 'tenant' | 'company_group' | 'company' = 'all',
+  inheritances: RoleInheritance[] = [],
 ): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
@@ -155,9 +177,43 @@ function buildGraph(
 
   const visibleRoles = focusRoleId ? roles.filter(r => r.id === focusRoleId) : roles;
 
+  // Also include parent roles for inheritance visualization
+  const inheritedParentIds = new Set<string>();
+  if (focusRoleId) {
+    inheritances.forEach(inh => {
+      if (inh.child_role_id === focusRoleId) inheritedParentIds.add(inh.parent_role_id);
+      if (inh.parent_role_id === focusRoleId) inheritedParentIds.add(inh.child_role_id);
+    });
+  }
+  const allVisibleRoles = focusRoleId
+    ? [...visibleRoles, ...roles.filter(r => inheritedParentIds.has(r.id) && r.id !== focusRoleId)]
+    : visibleRoles;
+
   // Roles — center
-  visibleRoles.forEach((role, i) => {
-    add({ id: `role:${role.id}`, type: 'role', label: role.name, sublabel: role.is_system ? 'Sistema' : 'Custom', x: 420, y: 60 + i * 110, meta: { roleId: role.id, isSystem: role.is_system } });
+  allVisibleRoles.forEach((role, i) => {
+    const isInherited = inheritedParentIds.has(role.id);
+    add({
+      id: `role:${role.id}`, type: 'role',
+      label: role.name,
+      sublabel: isInherited ? '↑ herdado' : role.is_system ? 'Sistema' : 'Custom',
+      x: isInherited ? 240 : 420, y: 60 + i * 110,
+      meta: { roleId: role.id, isSystem: role.is_system, isInherited },
+    });
+  });
+
+  // Inheritance edges
+  inheritances.forEach(inh => {
+    const parentVisible = allVisibleRoles.some(r => r.id === inh.parent_role_id);
+    const childVisible = allVisibleRoles.some(r => r.id === inh.child_role_id);
+    if (parentVisible && childVisible) {
+      edges.push({
+        id: `inh:${inh.id}`,
+        from: `role:${inh.child_role_id}`,
+        to: `role:${inh.parent_role_id}`,
+        type: 'inherits_role',
+        label: 'herda',
+      });
+    }
   });
 
   // Scopes — left
@@ -236,6 +292,9 @@ interface Props {
 
 export function PermissionGraphBuilder({ members, assignments, roles, permissions, tenantId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const kernel = useSecurityKernel();
+  const queryClient = useQueryClient();
 
   // Canvas state
   const [zoom, setZoom] = useState(1);
@@ -254,6 +313,15 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
   const [focusRoleId, setFocusRoleId] = useState<string | null>(null);
   const [scopeFilter, setScopeFilter] = useState<'all' | 'tenant' | 'company_group' | 'company'>('all');
 
+  // CRUD toggle: which resource is expanded
+  const [crudResource, setCrudResource] = useState<string | null>(null);
+
+  // Drag permission from library
+  const [isDragOverCanvas, setIsDragOverCanvas] = useState(false);
+
+  // Inheritance selector
+  const [showInheritanceSelector, setShowInheritanceSelector] = useState(false);
+
   // Load role permissions
   const roleIds = roles.map(r => r.id);
   const { data: allRolePerms = [] } = useQuery({
@@ -265,6 +333,19 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
     enabled: roleIds.length > 0,
   });
 
+  // Load role inheritance
+  const { data: inheritances = [] } = useQuery<RoleInheritance[]>({
+    queryKey: ['role_inheritance', tenantId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('role_inheritance')
+        .select('*')
+        .eq('tenant_id', tenantId);
+      return (data || []) as RoleInheritance[];
+    },
+    enabled: !!tenantId,
+  });
+
   const rolePermMap = useMemo(() => {
     const map = new Map<string, string[]>();
     allRolePerms.forEach(rp => map.set(rp.roleId, rp.perms.map(p => p.permission_id)));
@@ -273,8 +354,8 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
 
   // Build graph (base positions)
   const baseGraph = useMemo(
-    () => buildGraph(roles, permissions, assignments, rolePermMap, focusRoleId, scopeFilter),
-    [roles, permissions, assignments, rolePermMap, focusRoleId, scopeFilter]
+    () => buildGraph(roles, permissions, assignments, rolePermMap, focusRoleId, scopeFilter, inheritances),
+    [roles, permissions, assignments, rolePermMap, focusRoleId, scopeFilter, inheritances]
   );
 
   // Apply drag offsets to nodes
@@ -319,6 +400,63 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
     return `0 0 ${Math.max(maxX, 1200)} ${Math.max(maxY, 600)}`;
   }, [nodes]);
 
+  // ── Permission Toggle Mutation ──
+  const togglePermMutation = useMutation({
+    mutationFn: async ({ roleId, permId, grant }: { roleId: string; permId: string; grant: boolean }) => {
+      const currentPermIds = rolePermMap.get(roleId) || [];
+      const newPermIds = grant
+        ? [...new Set([...currentPermIds, permId])]
+        : currentPermIds.filter(id => id !== permId);
+
+      await identityGateway.updateRolePermissions({
+        role_id: roleId,
+        permission_ids: newPermIds,
+        tenant_id: tenantId,
+        is_tenant_admin: kernel.isTenantAdmin,
+        granted_by: user?.id,
+        ctx: kernel.securityContext,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['iam_graph_role_perms'] });
+      toast.success('Permissão atualizada');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
+
+  // ── Inheritance Mutation ──
+  const addInheritanceMutation = useMutation({
+    mutationFn: async ({ parentRoleId }: { parentRoleId: string }) => {
+      if (!focusRoleId) throw new Error('Selecione um cargo filho');
+      const { error } = await supabase.from('role_inheritance').insert({
+        parent_role_id: parentRoleId,
+        child_role_id: focusRoleId,
+        tenant_id: tenantId,
+        created_by: user?.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['role_inheritance'] });
+      toast.success('Herança adicionada');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const removeInheritanceMutation = useMutation({
+    mutationFn: async ({ inheritanceId }: { inheritanceId: string }) => {
+      const { error } = await supabase.from('role_inheritance').delete().eq('id', inheritanceId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['role_inheritance'] });
+      toast.success('Herança removida');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   // ── Canvas Handlers ──
 
   const getSvgPoint = useCallback((clientX: number, clientY: number) => {
@@ -332,7 +470,6 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
-    // Check if over a drag handle
     const handle = (e.target as HTMLElement).closest('[data-drag-handle]');
     if (handle) {
       const nodeId = handle.getAttribute('data-drag-handle')!;
@@ -344,7 +481,6 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
       e.preventDefault();
       return;
     }
-    // Otherwise start panning
     if (!(e.target as HTMLElement).closest('[data-node]')) {
       setIsPanning(true);
       panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
@@ -385,10 +521,45 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
     setNodePositions(new Map());
   }, []);
 
+  // ── Drag Permission from Library ──
+  const handleCanvasDragOver = useCallback((e: React.DragEvent) => {
+    const permId = e.dataTransfer.types.includes('application/x-perm-id');
+    if (permId && focusRoleId) {
+      e.preventDefault();
+      setIsDragOverCanvas(true);
+    }
+  }, [focusRoleId]);
+
+  const handleCanvasDragLeave = useCallback(() => {
+    setIsDragOverCanvas(false);
+  }, []);
+
+  const handleCanvasDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOverCanvas(false);
+    const permId = e.dataTransfer.getData('application/x-perm-id');
+    if (!permId || !focusRoleId) return;
+    const currentPermIds = rolePermMap.get(focusRoleId) || [];
+    if (currentPermIds.includes(permId)) {
+      toast.info('Permissão já atribuída a este cargo');
+      return;
+    }
+    togglePermMutation.mutate({ roleId: focusRoleId, permId, grant: true });
+  }, [focusRoleId, rolePermMap, togglePermMutation]);
+
+  // ── Resource Click → CRUD toggle ──
+  const handleNodeClick = useCallback((nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (node?.type === 'resource' && focusRoleId) {
+      setCrudResource(prev => prev === (node.meta?.resource as string) ? null : (node.meta?.resource as string));
+    }
+    setSelectedNodeId(prev => prev === nodeId ? null : nodeId);
+  }, [nodes, focusRoleId]);
+
   // Node icon helper
   const getIcon = (node: GraphNode) => {
     switch (node.type) {
-      case 'role': return node.meta?.isSystem ? Lock : Shield;
+      case 'role': return node.meta?.isInherited ? GitBranch : node.meta?.isSystem ? Lock : Shield;
       case 'scope': return Building2;
       case 'resource': return RES_ICONS[node.meta?.resource as string] || Layers;
       case 'permission': return Key;
@@ -415,7 +586,7 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
             Permission Graph
           </h2>
           <p className="text-sm text-muted-foreground">
-            Arraste os nós para reorganizar • Clique para inspecionar • Scroll para zoom
+            Arraste permissões da Library para atribuir • Clique em recurso para CRUD toggle • Scroll para zoom
           </p>
         </div>
         <div className="flex items-center gap-1.5">
@@ -432,12 +603,12 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         </div>
       </div>
 
-      {/* Filters: Role chips + Scope selector */}
+      {/* Filters: Role chips + Scope selector + Inheritance toggle */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Role filter chips */}
         <div className="flex flex-wrap gap-1.5 flex-1">
           <button
-            onClick={() => { setFocusRoleId(null); setNodePositions(new Map()); setSelectedNodeId(null); }}
+            onClick={() => { setFocusRoleId(null); setNodePositions(new Map()); setSelectedNodeId(null); setCrudResource(null); }}
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
               !focusRoleId ? "bg-primary/10 border-primary/30 text-primary shadow-sm" : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
@@ -448,7 +619,7 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
           {roles.map(r => (
             <button
               key={r.id}
-              onClick={() => { setFocusRoleId(prev => prev === r.id ? null : r.id); setNodePositions(new Map()); setSelectedNodeId(null); }}
+              onClick={() => { setFocusRoleId(prev => prev === r.id ? null : r.id); setNodePositions(new Map()); setSelectedNodeId(null); setCrudResource(null); }}
               className={cn(
                 "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5",
                 focusRoleId === r.id ? "bg-primary/10 border-primary/30 text-primary shadow-sm" : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
@@ -456,9 +627,26 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
             >
               {r.is_system ? <Lock className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
               {r.name}
+              {/* Show inheritance badge */}
+              {inheritances.some(inh => inh.child_role_id === r.id || inh.parent_role_id === r.id) && (
+                <GitBranch className="h-3 w-3 text-warning" />
+              )}
             </button>
           ))}
         </div>
+
+        {/* Inheritance button */}
+        {focusRoleId && kernel.isTenantAdmin && (
+          <Button
+            variant={showInheritanceSelector ? "default" : "outline"}
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={() => setShowInheritanceSelector(v => !v)}
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+            Herança
+          </Button>
+        )}
 
         {/* Scope Selector */}
         <div className="flex items-center gap-2">
@@ -498,11 +686,31 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         </div>
       </div>
 
+      {/* Inheritance selector panel */}
+      {showInheritanceSelector && focusRoleId && (
+        <InheritancePanel
+          roles={roles}
+          focusRoleId={focusRoleId}
+          inheritances={inheritances}
+          onAdd={(parentRoleId) => addInheritanceMutation.mutate({ parentRoleId })}
+          onRemove={(inheritanceId) => removeInheritanceMutation.mutate({ inheritanceId })}
+          isLoading={addInheritanceMutation.isPending || removeInheritanceMutation.isPending}
+        />
+      )}
+
       {/* Permission Library + Canvas + Panel */}
       <div className="grid gap-4 lg:grid-cols-[260px_1fr_280px]">
         {/* ── Permission Library ── */}
-        <PermissionLibraryPanel permissions={permissions} rolePermMap={rolePermMap} focusRoleId={focusRoleId} onSelectPermission={(permId) => setSelectedNodeId(`perm:${permId}`)} />
-        <Card className="overflow-hidden border-border/50">
+        <PermissionLibraryPanel
+          permissions={permissions}
+          rolePermMap={rolePermMap}
+          focusRoleId={focusRoleId}
+          onSelectPermission={(permId) => setSelectedNodeId(`perm:${permId}`)}
+          canDrag={!!focusRoleId && kernel.isTenantAdmin}
+        />
+
+        {/* ── Canvas ── */}
+        <Card className={cn("overflow-hidden border-border/50", isDragOverCanvas && "ring-2 ring-primary/40 ring-inset")}>
           <div
             ref={containerRef}
             className={cn(
@@ -515,7 +723,22 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
             onMouseUp={handleCanvasMouseUp}
             onMouseLeave={handleCanvasMouseUp}
             onWheel={handleWheel}
+            onDragOver={handleCanvasDragOver}
+            onDragLeave={handleCanvasDragLeave}
+            onDrop={handleCanvasDrop}
           >
+            {/* Drop indicator overlay */}
+            {isDragOverCanvas && (
+              <div className="absolute inset-0 bg-primary/5 z-10 flex items-center justify-center pointer-events-none">
+                <div className="bg-card/95 backdrop-blur-sm border border-primary/30 rounded-xl px-6 py-3 shadow-lg">
+                  <p className="text-sm font-medium text-primary flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Solte para atribuir permissão ao cargo
+                  </p>
+                </div>
+              </div>
+            )}
+
             <svg
               viewBox={viewBox}
               className="w-full h-full"
@@ -590,7 +813,6 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
                 const isHighlighted = connectedEdgeIds.has(edge.id);
                 const isDimmed = activeId && !isHighlighted;
 
-                // Compute connection points (right side → left side)
                 const fromRight = fromNode.x + NODE_W;
                 const fromY = fromNode.y + NODE_H / 2;
                 const toLeft = toNode.x;
@@ -607,33 +829,15 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
 
                 return (
                   <g key={edge.id} style={{ transition: 'opacity 200ms' }} opacity={isDimmed ? 0.08 : 1}>
-                    {/* Base edge */}
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={style.color}
-                      strokeWidth={isHighlighted ? style.width + 1.2 : style.width}
-                      strokeDasharray={style.dash}
-                      markerEnd={`url(#${markerId})`}
-                    />
-                    {/* Animated flow overlay (only highlighted) */}
+                    <path d={pathD} fill="none" stroke={style.color} strokeWidth={isHighlighted ? style.width + 1.2 : style.width} strokeDasharray={style.dash} markerEnd={`url(#${markerId})`} />
                     {isHighlighted && (
-                      <path
-                        d={pathD}
-                        fill="none"
-                        stroke={`url(#${flowId})`}
-                        strokeWidth={style.width + 2}
-                        strokeLinecap="round"
-                        opacity={0.6}
-                      />
+                      <path d={pathD} fill="none" stroke={`url(#${flowId})`} strokeWidth={style.width + 2} strokeLinecap="round" opacity={0.6} />
                     )}
-                    {/* Flow particle */}
                     {isHighlighted && (
                       <circle r="3.5" fill={style.color} opacity={0.9}>
                         <animateMotion dur="2s" repeatCount="indefinite" path={pathD} />
                       </circle>
                     )}
-                    {/* Edge label */}
                     {edge.label && !isDimmed && (
                       <text x={(fX + tX) / 2} y={(fromY + toY) / 2 - 10} textAnchor="middle" fontSize="9" fontFamily="var(--font-body)" fill="hsl(var(--muted-foreground))" opacity={0.8}>
                         {edge.label}
@@ -652,59 +856,27 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
                 const isDimmed = activeId && !isConnected;
                 const isDragging = dragNodeId === node.id;
                 const NodeIcon = getIcon(node);
+                const isResourceClickable = node.type === 'resource' && focusRoleId;
 
                 return (
                   <g
                     key={node.id}
                     data-node={node.id}
-                    style={{ transition: isDragging ? 'none' : 'opacity 200ms, filter 200ms' }}
+                    style={{ transition: isDragging ? 'none' : 'opacity 200ms, filter 200ms', cursor: isResourceClickable ? 'pointer' : undefined }}
                     opacity={isDimmed ? 0.18 : 1}
                     filter={isSelected ? 'url(#glow-primary)' : undefined}
-                    onClick={(e) => { e.stopPropagation(); setSelectedNodeId(prev => prev === node.id ? null : node.id); }}
+                    onClick={(e) => { e.stopPropagation(); handleNodeClick(node.id); }}
                     onMouseEnter={() => !dragNodeId && setHoveredNodeId(node.id)}
                     onMouseLeave={() => setHoveredNodeId(null)}
                   >
                     {/* Drop shadow */}
-                    <rect
-                      x={node.x + 2}
-                      y={node.y + 3}
-                      width={NODE_W}
-                      height={NODE_H}
-                      rx={14}
-                      fill="hsl(var(--foreground)/0.04)"
-                    />
+                    <rect x={node.x + 2} y={node.y + 3} width={NODE_W} height={NODE_H} rx={14} fill="hsl(var(--foreground)/0.04)" />
                     {/* Node body */}
-                    <rect
-                      x={node.x}
-                      y={node.y}
-                      width={NODE_W}
-                      height={NODE_H}
-                      rx={14}
-                      fill={s.bg}
-                      stroke={isSelected || isHovered ? s.hoverBorder : s.border}
-                      strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1}
-                      className="transition-colors"
-                    />
+                    <rect x={node.x} y={node.y} width={NODE_W} height={NODE_H} rx={14} fill={s.bg} stroke={isSelected || isHovered ? s.hoverBorder : s.border} strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1} className="transition-colors" />
                     {/* Left accent bar */}
-                    <rect
-                      x={node.x}
-                      y={node.y + 8}
-                      width={3.5}
-                      height={NODE_H - 16}
-                      rx={2}
-                      fill={s.text}
-                      opacity={isSelected ? 1 : 0.5}
-                    />
+                    <rect x={node.x} y={node.y + 8} width={3.5} height={NODE_H - 16} rx={2} fill={s.text} opacity={isSelected ? 1 : 0.5} />
                     {/* Icon bg */}
-                    <rect
-                      x={node.x + 14}
-                      y={node.y + (NODE_H - 30) / 2}
-                      width={30}
-                      height={30}
-                      rx={8}
-                      fill={isSelected ? s.text : s.border}
-                      opacity={isSelected ? 0.15 : 0.3}
-                    />
+                    <rect x={node.x + 14} y={node.y + (NODE_H - 30) / 2} width={30} height={30} rx={8} fill={isSelected ? s.text : s.border} opacity={isSelected ? 0.15 : 0.3} />
                     {/* Icon */}
                     <foreignObject x={node.x + 17} y={node.y + (NODE_H - 24) / 2} width={24} height={24}>
                       <div className={cn("flex items-center justify-center w-full h-full", s.icon)}>
@@ -712,15 +884,7 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
                       </div>
                     </foreignObject>
                     {/* Label */}
-                    <text
-                      x={node.x + 52}
-                      y={node.y + (node.sublabel ? 24 : NODE_H / 2 + 4)}
-                      fontSize="12"
-                      fontWeight="600"
-                      fontFamily="var(--font-display)"
-                      fill={s.text}
-                      className="select-none"
-                    >
+                    <text x={node.x + 52} y={node.y + (node.sublabel ? 24 : NODE_H / 2 + 4)} fontSize="12" fontWeight="600" fontFamily="var(--font-display)" fill={s.text} className="select-none">
                       {node.label.length > 15 ? node.label.slice(0, 14) + '…' : node.label}
                     </text>
                     {node.sublabel && (
@@ -729,32 +893,14 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
                       </text>
                     )}
                     {/* Drag handle */}
-                    <foreignObject
-                      x={node.x + NODE_W - 28}
-                      y={node.y + (NODE_H - 20) / 2}
-                      width={20}
-                      height={20}
-                      data-drag-handle={node.id}
-                      className={cn("cursor-grab", isDragging && "cursor-grabbing")}
-                    >
+                    <foreignObject x={node.x + NODE_W - 28} y={node.y + (NODE_H - 20) / 2} width={20} height={20} data-drag-handle={node.id} className={cn("cursor-grab", isDragging && "cursor-grabbing")}>
                       <div className="flex items-center justify-center w-full h-full text-muted-foreground/40 hover:text-muted-foreground/80 transition-colors">
                         <GripVertical size={12} />
                       </div>
                     </foreignObject>
                     {/* Selection indicator */}
                     {isSelected && (
-                      <rect
-                        x={node.x - 4}
-                        y={node.y - 4}
-                        width={NODE_W + 8}
-                        height={NODE_H + 8}
-                        rx={16}
-                        fill="none"
-                        stroke={s.text}
-                        strokeWidth={1.5}
-                        strokeDasharray="5,4"
-                        opacity={0.4}
-                      >
+                      <rect x={node.x - 4} y={node.y - 4} width={NODE_W + 8} height={NODE_H + 8} rx={16} fill="none" stroke={s.text} strokeWidth={1.5} strokeDasharray="5,4" opacity={0.4}>
                         <animate attributeName="stroke-dashoffset" values="0;18" dur="1.5s" repeatCount="indefinite" />
                       </rect>
                     )}
@@ -785,16 +931,28 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
 
             {/* Dragging indicator */}
             {dragNodeId && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-primary/10 border border-primary/30 text-primary text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-200">
-                <Move className="h-3 w-3" />
-                Arrastando nó… solte para fixar
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-card/90 backdrop-blur-sm border border-border/40 rounded-lg px-3 py-1.5 text-[10px] text-muted-foreground shadow-sm pointer-events-none">
+                <Move className="h-3 w-3 inline mr-1 text-primary" /> Arrastando…
               </div>
             )}
           </div>
         </Card>
 
-        {/* Right Panel: Live Access Preview + Node Detail + Stats */}
+        {/* Right Panel: CRUD Toggle + Live Access Preview + Node Detail + Stats */}
         <div className="space-y-3 flex flex-col overflow-hidden" style={{ height: '68vh', minHeight: 460 }}>
+          {/* CRUD Toggle Panel */}
+          {crudResource && focusRoleId && (
+            <CrudTogglePanel
+              resource={crudResource}
+              permissions={permissions}
+              rolePermMap={rolePermMap}
+              focusRoleId={focusRoleId}
+              onToggle={(permId, grant) => togglePermMutation.mutate({ roleId: focusRoleId, permId, grant })}
+              isLoading={togglePermMutation.isPending}
+              onClose={() => setCrudResource(null)}
+            />
+          )}
+
           {/* Live Access Preview */}
           <LiveAccessPreview
             focusRoleId={focusRoleId}
@@ -865,6 +1023,222 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         </div>
       </div>
     </div>
+  );
+}
+
+// ══════════════════════════════════
+// CRUD TOGGLE PANEL
+// ══════════════════════════════════
+
+interface CrudTogglePanelProps {
+  resource: string;
+  permissions: PermissionDefinition[];
+  rolePermMap: Map<string, string[]>;
+  focusRoleId: string;
+  onToggle: (permId: string, grant: boolean) => void;
+  isLoading: boolean;
+  onClose: () => void;
+}
+
+function CrudTogglePanel({ resource, permissions, rolePermMap, focusRoleId, onToggle, isLoading, onClose }: CrudTogglePanelProps) {
+  const resourcePerms = useMemo(() => {
+    return permissions.filter(p => p.resource === resource);
+  }, [permissions, resource]);
+
+  const assignedPermIds = useMemo(() => {
+    return new Set(rolePermMap.get(focusRoleId) || []);
+  }, [rolePermMap, focusRoleId]);
+
+  const ResIcon = RES_ICONS[resource] || Layers;
+
+  return (
+    <Card className="shrink-0 border-primary/20 animate-in fade-in slide-in-from-right-2 duration-200">
+      <CardHeader className="pb-2 pt-3 px-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-foreground/10">
+            <ResIcon className="h-3.5 w-3.5 text-accent-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-xs">{RES_LABELS[resource] || resource}</CardTitle>
+            <p className="text-[10px] text-muted-foreground">Toggle rápido CRUD</p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0 pb-3 px-3">
+        <div className="space-y-1.5">
+          {CRUD_ACTIONS.map(action => {
+            const perm = resourcePerms.find(p => p.action === action);
+            if (!perm) return null;
+            const isGranted = assignedPermIds.has(perm.id);
+            return (
+              <div key={action} className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-2">
+                  {isGranted ? (
+                    <Check className="h-3.5 w-3.5 text-primary" />
+                  ) : (
+                    <X className="h-3.5 w-3.5 text-muted-foreground/40" />
+                  )}
+                  <span className={cn("text-xs font-medium", isGranted ? "text-foreground" : "text-muted-foreground")}>
+                    {CRUD_LABELS[action] || action}
+                  </span>
+                  <span className="text-[9px] text-muted-foreground font-mono">{resource}.{action}</span>
+                </div>
+                <Switch
+                  checked={isGranted}
+                  onCheckedChange={(checked) => onToggle(perm.id, checked)}
+                  disabled={isLoading}
+                  className="scale-75"
+                />
+              </div>
+            );
+          })}
+          {/* Non-CRUD actions */}
+          {resourcePerms.filter(p => !CRUD_ACTIONS.includes(p.action as typeof CRUD_ACTIONS[number])).map(perm => {
+            const isGranted = assignedPermIds.has(perm.id);
+            return (
+              <div key={perm.id} className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-2">
+                  {isGranted ? (
+                    <Check className="h-3.5 w-3.5 text-primary" />
+                  ) : (
+                    <X className="h-3.5 w-3.5 text-muted-foreground/40" />
+                  )}
+                  <span className={cn("text-xs font-medium", isGranted ? "text-foreground" : "text-muted-foreground")}>
+                    {perm.name}
+                  </span>
+                  <span className="text-[9px] text-muted-foreground font-mono">{perm.resource}.{perm.action}</span>
+                </div>
+                <Switch
+                  checked={isGranted}
+                  onCheckedChange={(checked) => onToggle(perm.id, checked)}
+                  disabled={isLoading}
+                  className="scale-75"
+                />
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ══════════════════════════════════
+// INHERITANCE PANEL
+// ══════════════════════════════════
+
+interface InheritancePanelProps {
+  roles: CustomRole[];
+  focusRoleId: string;
+  inheritances: RoleInheritance[];
+  onAdd: (parentRoleId: string) => void;
+  onRemove: (inheritanceId: string) => void;
+  isLoading: boolean;
+}
+
+function InheritancePanel({ roles, focusRoleId, inheritances, onAdd, onRemove, isLoading }: InheritancePanelProps) {
+  const focusedRole = roles.find(r => r.id === focusRoleId);
+
+  // Current parents (roles this role inherits from)
+  const parentInheritances = inheritances.filter(inh => inh.child_role_id === focusRoleId);
+  const parentRoleIds = new Set(parentInheritances.map(inh => inh.parent_role_id));
+
+  // Current children (roles that inherit from this role)
+  const childInheritances = inheritances.filter(inh => inh.parent_role_id === focusRoleId);
+
+  // Available roles to inherit from (exclude self and already inherited)
+  const availableParents = roles.filter(r => r.id !== focusRoleId && !parentRoleIds.has(r.id));
+
+  return (
+    <Card className="border-warning/20 animate-in fade-in slide-in-from-top-2 duration-200">
+      <CardContent className="py-3 px-4">
+        <div className="flex items-center gap-2 mb-3">
+          <GitBranch className="h-4 w-4 text-warning" />
+          <span className="text-sm font-semibold text-foreground">
+            Herança de <span className="text-primary">{focusedRole?.name}</span>
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {/* Parents: roles this inherits FROM */}
+          <div>
+            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
+              Herda de (pais)
+            </p>
+            <div className="space-y-1.5">
+              {parentInheritances.map(inh => {
+                const parentRole = roles.find(r => r.id === inh.parent_role_id);
+                return (
+                  <div key={inh.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-warning/5 border border-warning/20">
+                    <Link2 className="h-3 w-3 text-warning shrink-0" />
+                    <span className="text-xs font-medium text-foreground flex-1">{parentRole?.name || '?'}</span>
+                    <button
+                      onClick={() => onRemove(inh.id)}
+                      disabled={isLoading}
+                      className="text-destructive/60 hover:text-destructive transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+              {parentInheritances.length === 0 && (
+                <p className="text-[10px] text-muted-foreground italic">Nenhuma herança</p>
+              )}
+              {/* Add new parent */}
+              {availableParents.length > 0 && (
+                <Select onValueChange={(v) => onAdd(v)}>
+                  <SelectTrigger className="h-7 text-[11px] bg-muted/20 border-border/40 mt-1">
+                    <Plus className="h-3 w-3 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="Adicionar herança…" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border shadow-lg z-50">
+                    {availableParents.map(r => (
+                      <SelectItem key={r.id} value={r.id} className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-3 w-3 text-primary" />
+                          <span>{r.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+
+          {/* Children: roles that inherit FROM this */}
+          <div>
+            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
+              Herdado por (filhos)
+            </p>
+            <div className="space-y-1.5">
+              {childInheritances.map(inh => {
+                const childRole = roles.find(r => r.id === inh.child_role_id);
+                return (
+                  <div key={inh.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-primary/5 border border-primary/20">
+                    <Shield className="h-3 w-3 text-primary shrink-0" />
+                    <span className="text-xs font-medium text-foreground flex-1">{childRole?.name || '?'}</span>
+                    <button
+                      onClick={() => onRemove(inh.id)}
+                      disabled={isLoading}
+                      className="text-destructive/60 hover:text-destructive transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+              {childInheritances.length === 0 && (
+                <p className="text-[10px] text-muted-foreground italic">Nenhum cargo herda este</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1010,9 +1384,10 @@ interface PermLibProps {
   rolePermMap: Map<string, string[]>;
   focusRoleId: string | null;
   onSelectPermission: (permId: string) => void;
+  canDrag: boolean;
 }
 
-function PermissionLibraryPanel({ permissions, rolePermMap, focusRoleId, onSelectPermission }: PermLibProps) {
+function PermissionLibraryPanel({ permissions, rolePermMap, focusRoleId, onSelectPermission, canDrag }: PermLibProps) {
   const [search, setSearch] = useState('');
   const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set(['HR', 'Security', 'Compensation']));
 
@@ -1027,7 +1402,6 @@ function PermissionLibraryPanel({ permissions, rolePermMap, focusRoleId, onSelec
       if (!map.has(domain)) map.set(domain, []);
       map.get(domain)!.push(p);
     });
-    // Sort domains
     const order: PermDomain[] = ['HR', 'Compensation', 'Tenant', 'Reporting', 'Security', 'Compliance', 'Health'];
     return order.filter(d => map.has(d)).map(d => ({ domain: d, perms: map.get(d)! }));
   }, [permissions, search]);
@@ -1049,6 +1423,11 @@ function PermissionLibraryPanel({ permissions, rolePermMap, focusRoleId, onSelec
   const totalCount = permissions.length;
   const filteredCount = grouped.reduce((s, g) => s + g.perms.length, 0);
 
+  const handleDragStart = (e: React.DragEvent, permId: string) => {
+    e.dataTransfer.setData('application/x-perm-id', permId);
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+
   return (
     <Card className="border-border/50 flex flex-col overflow-hidden" style={{ height: '68vh', minHeight: 460 }}>
       <CardHeader className="pb-2 pt-3 px-3 shrink-0">
@@ -1060,6 +1439,7 @@ function PermissionLibraryPanel({ permissions, rolePermMap, focusRoleId, onSelec
             <CardTitle className="text-xs">Permission Library</CardTitle>
             <p className="text-[10px] text-muted-foreground">
               {filteredCount}/{totalCount} permissões
+              {canDrag && <span className="text-primary ml-1">• arraste para atribuir</span>}
             </p>
           </div>
         </div>
@@ -1096,8 +1476,11 @@ function PermissionLibraryPanel({ permissions, rolePermMap, focusRoleId, onSelec
                         <button
                           key={p.id}
                           onClick={() => onSelectPermission(p.id)}
+                          draggable={canDrag}
+                          onDragStart={canDrag ? (e) => handleDragStart(e, p.id) : undefined}
                           className={cn(
                             "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors",
+                            canDrag && "cursor-grab active:cursor-grabbing",
                             isAssigned
                               ? "bg-primary/5 hover:bg-primary/10"
                               : "hover:bg-muted/30"
@@ -1114,6 +1497,9 @@ function PermissionLibraryPanel({ permissions, rolePermMap, focusRoleId, onSelec
                           </div>
                           {isAssigned && (
                             <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                          )}
+                          {canDrag && !isAssigned && (
+                            <GripVertical className="h-3 w-3 text-muted-foreground/20 shrink-0" />
                           )}
                         </button>
                       );
