@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { AppBreadcrumbs } from './AppBreadcrumbs';
 import { ImpersonationBanner } from './ImpersonationBanner';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { Bell, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -25,15 +26,10 @@ export function AppLayout() {
               : 'bg-background/80 border-border'
           }`}
         >
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
+            <WorkspaceSwitcher />
+            <div className="h-5 w-px bg-border" />
             <AppBreadcrumbs />
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar..."
-                className="pl-10 bg-secondary border-0"
-              />
-            </div>
           </div>
           <div className="flex items-center gap-4">
             <button className="relative p-2 rounded-lg hover:bg-secondary transition-colors">
