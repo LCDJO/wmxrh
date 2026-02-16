@@ -34,7 +34,8 @@ export type PermissionEntity =
   | 'benefit_plans'
   | 'employee_benefits'
   | 'health_programs'
-  | 'health_exams';
+  | 'health_exams'
+  | 'labor_rules';
 
 // ========================
 // ROLE SETS (mirrors DB functions)
@@ -185,13 +186,19 @@ export const PERMISSION_MATRIX: PermissionMatrix = {
     update: EMPLOYEE_MANAGERS,
     delete: [], // Immutable
   },
+  labor_rules: {
+    view: ALL_MEMBERS,
+    create: TENANT_ADMINS,
+    update: TENANT_ADMINS,
+    delete: TENANT_ADMINS,
+  },
 };
 
 // ========================
 // NAV ACCESS (derived from permission matrix)
 // ========================
 
-export type NavKey = 'dashboard' | 'employees' | 'companies' | 'groups' | 'positions' | 'compensation' | 'departments' | 'audit' | 'compliance' | 'benefits' | 'health' | 'labor_dashboard' | 'labor_compliance';
+export type NavKey = 'dashboard' | 'employees' | 'companies' | 'groups' | 'positions' | 'compensation' | 'departments' | 'audit' | 'compliance' | 'benefits' | 'health' | 'labor_dashboard' | 'labor_compliance' | 'labor_rules';
 
 const NAV_ENTITY_MAP: Record<NavKey, PermissionEntity> = {
   dashboard: 'tenants',
@@ -207,6 +214,7 @@ const NAV_ENTITY_MAP: Record<NavKey, PermissionEntity> = {
   health: 'health_programs',
   labor_dashboard: 'health_programs',
   labor_compliance: 'health_programs',
+  labor_rules: 'labor_rules',
 };
 
 /**

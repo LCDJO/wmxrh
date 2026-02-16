@@ -23,6 +23,7 @@ import Benefits from "./pages/Benefits";
 import Health from "./pages/Health";
 import LaborDashboard from "./pages/LaborDashboard";
 import LaborCompliance from "./pages/LaborCompliance";
+import LaborRules from "./pages/LaborRules";
 import Audit from "./pages/Audit";
 import NotFound from "./pages/NotFound";
 
@@ -117,6 +118,11 @@ function AppRoutes() {
         <Route path="/labor-compliance" element={
           <ProtectedRoute navKey="labor_compliance">
             <LaborCompliance />
+          </ProtectedRoute>
+        } />
+        <Route path="/labor-rules" element={
+          <ProtectedRoute navKey="labor_rules">
+            <LaborRules />
           </ProtectedRoute>
         } />
       </Route>

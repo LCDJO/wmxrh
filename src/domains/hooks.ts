@@ -33,6 +33,11 @@ import { salaryStructureService } from '@/domains/compensation/salary-structure.
 import { riskExposureService } from '@/domains/compliance/risk-exposure.service';
 import { pcmsoAlertService, type ExamAlertStatus } from '@/domains/compliance/pcmso-alert.service';
 import { complianceRulesService } from '@/domains/compliance/compliance-rules.service';
+import { laborRulesService } from '@/domains/labor-rules/labor-rules.service';
+import type {
+  CreateLaborRuleSetDTO, CreateLaborRuleDefinitionDTO,
+  CreateCollectiveAgreementDTO, CreateCollectiveAgreementClauseDTO,
+} from '@/domains/labor-rules/types';
 // Types
 import type {
   CreateTenantDTO, CreateCompanyGroupDTO, CreateCompanyDTO,
@@ -101,6 +106,10 @@ export const queryKeys = {
   salaryStructures: (empId: string) => ['salary_structures', empId] as const,
   salaryStructureActive: (empId: string) => ['salary_structure_active', empId] as const,
   salaryStructuresTenant: (tenantId?: string) => ['salary_structures_tenant', tenantId] as const,
+  // Labor Rules Engine
+  laborRuleSets: (tenantId?: string) => ['labor_rule_sets', tenantId] as const,
+  laborRuleDefinitions: (ruleSetId: string) => ['labor_rule_definitions', ruleSetId] as const,
+  collectiveAgreements: (tenantId?: string) => ['collective_agreements', tenantId] as const,
 };
 
 // ========================
@@ -809,5 +818,81 @@ export function useCreateESocialEvent() {
       qc.invalidateQueries({ queryKey: esocialKeys.events(qs?.tenantId) });
       qc.invalidateQueries({ queryKey: esocialKeys.statusCounts(qs?.tenantId) });
     },
+  });
+}
+
+// ========================
+// LABOR RULES ENGINE
+// ========================
+
+const laborRulesKeys = {
+  ruleSets: (tenantId?: string) => queryKeys.laborRuleSets(tenantId),
+  ruleDefinitions: (ruleSetId: string) => queryKeys.laborRuleDefinitions(ruleSetId),
+  agreements: (tenantId?: string) => queryKeys.collectiveAgreements(tenantId),
+};
+
+export function useLaborRuleSets() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: laborRulesKeys.ruleSets(qs?.tenantId),
+    queryFn: () => laborRulesService.listRuleSets(qs!),
+    enabled: !!qs,
+  });
+}
+
+export function useLaborRuleDefinitions(ruleSetId: string) {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: laborRulesKeys.ruleDefinitions(ruleSetId),
+    queryFn: () => laborRulesService.listRuleDefinitions(ruleSetId, qs!),
+    enabled: !!ruleSetId && !!qs,
+  });
+}
+
+export function useCreateLaborRuleSet() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateLaborRuleSetDTO) => laborRulesService.createRuleSet(dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: laborRulesKeys.ruleSets(qs?.tenantId) }),
+  });
+}
+
+export function useCreateLaborRuleDefinition() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateLaborRuleDefinitionDTO) => laborRulesService.createRuleDefinition(dto, qs!),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: laborRulesKeys.ruleDefinitions(vars.rule_set_id) });
+      qc.invalidateQueries({ queryKey: laborRulesKeys.ruleSets(qs?.tenantId) });
+    },
+  });
+}
+
+export function useCollectiveAgreements() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: laborRulesKeys.agreements(qs?.tenantId),
+    queryFn: () => laborRulesService.listAgreements(qs!),
+    enabled: !!qs,
+  });
+}
+
+export function useCreateCollectiveAgreement() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateCollectiveAgreementDTO) => laborRulesService.createAgreement(dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: laborRulesKeys.agreements(qs?.tenantId) }),
+  });
+}
+
+export function useCreateAgreementClause() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateCollectiveAgreementClauseDTO) => laborRulesService.createClause(dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: laborRulesKeys.agreements(qs?.tenantId) }),
   });
 }
