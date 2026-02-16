@@ -1615,10 +1615,14 @@ export type Database = {
           integra_fgts: boolean
           integra_inss: boolean
           integra_irrf: boolean
+          integra_salario: boolean
           is_active: boolean
           is_mandatory: boolean
           legal_basis: string | null
+          limite_horas: number | null
           name: string
+          oncall_tipo: string | null
+          percentual_sobre_hora: number | null
           priority: number
           rule_set_id: string
           tenant_id: string
@@ -1647,10 +1651,14 @@ export type Database = {
           integra_fgts?: boolean
           integra_inss?: boolean
           integra_irrf?: boolean
+          integra_salario?: boolean
           is_active?: boolean
           is_mandatory?: boolean
           legal_basis?: string | null
+          limite_horas?: number | null
           name: string
+          oncall_tipo?: string | null
+          percentual_sobre_hora?: number | null
           priority?: number
           rule_set_id: string
           tenant_id: string
@@ -1679,10 +1687,14 @@ export type Database = {
           integra_fgts?: boolean
           integra_inss?: boolean
           integra_irrf?: boolean
+          integra_salario?: boolean
           is_active?: boolean
           is_mandatory?: boolean
           legal_basis?: string | null
+          limite_horas?: number | null
           name?: string
+          oncall_tipo?: string | null
+          percentual_sobre_hora?: number | null
           priority?: number
           rule_set_id?: string
           tenant_id?: string
