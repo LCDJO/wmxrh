@@ -32,8 +32,8 @@ export type {
 } from './policy-engine';
 
 // ── Scope Resolver ─────────────────────────────────────────
-export { resolveScope } from './scope-resolver';
-export type { ScopeResolution, ScopeResolverInput } from './scope-resolver';
+export { resolveScope, resolveScopeFromContext, buildQueryScope, scopedInsertFromContext } from './scope-resolver';
+export type { ScopeResolution, ScopeResolverInput, ResolvedQueryScope } from './scope-resolver';
 
 // ── Feature Flag Engine ────────────────────────────────────
 export { featureFlagEngine } from './feature-flag-engine';
