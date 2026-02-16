@@ -39,6 +39,12 @@ export {
   requireAtLeastOneRole,
   requireValidScope,
   preventCrossTenantAccess,
+  // IAM Domain Events
+  emitIAMEvent,
+  onIAMEvent,
+  onIAMEventType,
+  getIAMEventLog,
+  clearIAMEventLog,
 } from './kernel';
 export type {
   Identity,
@@ -87,6 +93,14 @@ export type {
   CacheInvalidationEvent,
   GraphEventType,
   GraphEvent,
+  // IAM Events
+  IAMEventType,
+  IAMDomainEvent,
+  UserInvitedPayload,
+  UserRoleAssignedPayload,
+  UserRoleRemovedPayload,
+  RolePermissionsUpdatedPayload,
+  AccessGraphRebuiltPayload,
 } from './kernel';
 
 // ── Feature Flags Hook ──

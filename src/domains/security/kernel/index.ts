@@ -103,3 +103,11 @@ export type {
   IdentitySessionRefreshedPayload,
   UnauthorizedContextSwitchPayload,
 } from './ibl/domain-events';
+
+// ── IAM Domain Events (re-exported for kernel consumers) ───
+export { emitIAMEvent, onIAMEvent, onIAMEventType, getIAMEventLog, clearIAMEventLog } from '@/domains/iam/iam.events';
+export type {
+  IAMEventType, IAMDomainEvent,
+  UserInvitedPayload, UserRoleAssignedPayload, UserRoleRemovedPayload,
+  RolePermissionsUpdatedPayload, AccessGraphRebuiltPayload,
+} from '@/domains/iam/iam.events';
