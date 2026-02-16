@@ -19,8 +19,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, Mail, Phone, Calendar, TrendingUp, Building2, FileText,
-  Plus, Clock, Heart, ShieldAlert, Gift, Activity,
+  Plus, Clock, Heart, ShieldAlert, Gift, Activity, Calculator,
 } from 'lucide-react';
+import { SimulacaoTrabalhistaTab } from '@/components/employee/SimulacaoTrabalhistaTab';
 import { useToast } from '@/hooks/use-toast';
 
 // ── Labels ──
@@ -216,6 +217,7 @@ export default function EmployeeDetail() {
               <TabsTrigger value="beneficios" className="gap-1.5 text-xs"><Gift className="h-3.5 w-3.5" />Benefícios</TabsTrigger>
               <TabsTrigger value="saude" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" />Saúde Ocupacional</TabsTrigger>
               <TabsTrigger value="riscos" className="gap-1.5 text-xs"><ShieldAlert className="h-3.5 w-3.5" />Riscos Ambientais</TabsTrigger>
+              <TabsTrigger value="simulacao" className="gap-1.5 text-xs"><Calculator className="h-3.5 w-3.5" />Simulação Trabalhista</TabsTrigger>
               <TabsTrigger value="timeline" className="gap-1.5 text-xs"><Clock className="h-3.5 w-3.5" />Timeline</TabsTrigger>
             </TabsList>
 
@@ -536,6 +538,11 @@ export default function EmployeeDetail() {
                   </div>
                 ) : <p className="text-sm text-muted-foreground text-center py-8">Nenhuma exposição registrada.</p>}
               </div>
+            </TabsContent>
+
+            {/* ── TAB: Simulação Trabalhista ── */}
+            <TabsContent value="simulacao">
+              <SimulacaoTrabalhistaTab employee={employee} />
             </TabsContent>
 
             {/* ── TAB: Timeline Unificada ── */}
