@@ -420,7 +420,7 @@ function UsersTab({ members, assignments, roles, tenantId, userId, isTenantAdmin
                     <SelectContent>
                       {members.map(m => (
                         <SelectItem key={m.user_id} value={m.user_id}>
-                          {m.user_id.slice(0, 8)}... ({ROLE_LABELS[m.role] || m.role})
+                          {m.name || m.email || m.user_id.slice(0, 8) + '...'} ({ROLE_LABELS[m.role] || m.role})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -454,7 +454,9 @@ function UsersTab({ members, assignments, roles, tenantId, userId, isTenantAdmin
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Usuário</TableHead>
+              <TableHead>Nome</TableHead>
+              <TableHead>E-mail</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Membership</TableHead>
               <TableHead>Cargos Atribuídos</TableHead>
               {isTenantAdmin && <TableHead className="w-[80px]">Ações</TableHead>}
@@ -465,7 +467,13 @@ function UsersTab({ members, assignments, roles, tenantId, userId, isTenantAdmin
               const userRoles = userAssignments.get(m.user_id) || [];
               return (
                 <TableRow key={m.user_id}>
-                  <TableCell className="font-mono text-xs">{m.user_id.slice(0, 12)}...</TableCell>
+                  <TableCell className="font-medium">{m.name || '—'}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{m.email || m.user_id.slice(0, 12) + '...'}</TableCell>
+                  <TableCell>
+                    <Badge variant={m.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">
+                      {m.status === 'active' ? 'Ativo' : m.status === 'invited' ? 'Convidado' : m.status}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline">{ROLE_LABELS[m.role] || m.role}</Badge>
                   </TableCell>
@@ -498,7 +506,7 @@ function UsersTab({ members, assignments, roles, tenantId, userId, isTenantAdmin
             })}
             {members.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   Nenhum membro encontrado.
                 </TableCell>
               </TableRow>

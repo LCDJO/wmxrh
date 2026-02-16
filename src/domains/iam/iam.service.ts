@@ -27,6 +27,8 @@ export interface PermissionDefinition {
   name: string;
   description: string | null;
   module: string;
+  resource: string;
+  action: string;
   created_at: string;
 }
 
@@ -56,9 +58,12 @@ export interface TenantUser {
   id: string;
   user_id: string;
   tenant_id: string;
+  name: string | null;
+  email: string | null;
+  status: string;
   role: string;
+  created_by: string | null;
   created_at: string;
-  email?: string;
 }
 
 // ═══════════════════════════════════
