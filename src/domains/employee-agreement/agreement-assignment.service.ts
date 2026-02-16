@@ -62,12 +62,13 @@ export const agreementAssignmentService = {
 
     const providerName: SignatureProvider = dto.provider ?? 'simulation';
 
+    const callbackUrl = `${window.location.origin}/api/agreement-webhook`;
     const signResult = await digitalSignatureAdapter.send(providerName, {
-      document_title: version.title,
-      document_content_html: version.content_html,
-      signer_name: employee.name,
-      signer_email: employee.email ?? '',
-      signer_cpf: employee.cpf ?? undefined,
+      employee_nome: employee.name,
+      employee_email: employee.email ?? '',
+      documento_html: version.content_html,
+      callback_url: callbackUrl,
+      employee_cpf: employee.cpf ?? undefined,
     });
 
     const row = scopedInsertFromContext({

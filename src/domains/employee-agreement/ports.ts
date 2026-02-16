@@ -11,14 +11,17 @@ import type { EmployeeAgreement, SignatureProvider } from './types';
 // ── Signature Provider Port ──
 
 export interface SignatureRequest {
-  document_title: string;
-  document_content_html: string;
-  signer_name: string;
-  signer_email: string;
-  signer_cpf?: string;
-  callback_url?: string;
-  expires_at?: string;
-  requires_witness?: boolean;
+  /** Nome do colaborador */
+  employee_nome: string;
+  /** E-mail do colaborador */
+  employee_email: string;
+  /** Conteúdo HTML do documento a ser assinado */
+  documento_html: string;
+  /** URL de callback para receber webhook pós-assinatura */
+  callback_url: string;
+  /** CPF do colaborador (opcional) */
+  employee_cpf?: string;
+  /** Metadados adicionais */
   metadata?: Record<string, unknown>;
 }
 
@@ -32,13 +35,13 @@ export interface SignatureResponse {
 
 export interface SignatureStatusResponse {
   external_document_id: string;
-  status: 'pending' | 'viewed' | 'signed' | 'refused' | 'expired';
+  status: 'pending' | 'signed' | 'rejected' | 'expired';
   signed_at?: string;
   signed_document_url?: string;
   signed_document_hash?: string;
   ip_address?: string;
   user_agent?: string;
-  refusal_reason?: string;
+  rejection_reason?: string;
 }
 
 export interface ISignatureProvider {
