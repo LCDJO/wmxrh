@@ -41,6 +41,10 @@ export interface SimulationInput {
   vale_alimentacao?: number;
   vale_refeicao?: number;
   vale_transporte_valor?: number;
+  /** When true, benefit integrates salary (encargos base) instead of being indemnity */
+  vale_alimentacao_salarial?: boolean;
+  vale_refeicao_salarial?: boolean;
+  vale_transporte_salarial?: boolean;
 }
 
 // ── Tax Breakdown ──
