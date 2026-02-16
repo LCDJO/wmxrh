@@ -1,14 +1,15 @@
 /**
  * eSocial Layout Version Manager
  *
- * Manages layout version migrations (S-1.0 → S-1.1 → S-1.2).
- * Tracks compatibility, provides migration paths, and ensures
- * envelopes use the correct version for their event type.
+ * Manages layout version migrations (S-1.0 → S-1.1 → S-1.2 → future).
+ *
+ * Extensible: add new versions via `registerVersion()` and migration
+ * rules via `registerMigration()` — zero changes to the core domain.
  *
  * Pure logic — no I/O.
  */
 
-import type { LayoutVersion, ESocialEnvelope, ESocialCategory } from './types';
+import type { LayoutVersion, ESocialEnvelope } from './types';
 import { CURRENT_LAYOUT_VERSION, EVENT_TYPE_REGISTRY } from './types';
 import { hasMapper } from './layout-mappers';
 
@@ -26,7 +27,22 @@ export interface LayoutVersionInfo {
   breaking_changes: string[];
 }
 
-const VERSION_REGISTRY: LayoutVersionInfo[] = [
+// ════════════════════════════════════
+// MIGRATION RULE
+// ════════════════════════════════════
+
+interface MigrationRule {
+  from: LayoutVersion;
+  to: LayoutVersion;
+  transform: (payload: Record<string, unknown>, eventType: string) => Record<string, unknown>;
+  description: string;
+}
+
+// ════════════════════════════════════
+// INTERNAL REGISTRIES (mutable, extensible)
+// ════════════════════════════════════
+
+const versionRegistry: LayoutVersionInfo[] = [
   {
     version: 'S-1.0',
     release_date: '2018-01-01',
@@ -64,18 +80,7 @@ const VERSION_REGISTRY: LayoutVersionInfo[] = [
   },
 ];
 
-// ════════════════════════════════════
-// MIGRATION PATHS
-// ════════════════════════════════════
-
-interface MigrationRule {
-  from: LayoutVersion;
-  to: LayoutVersion;
-  transform: (payload: Record<string, unknown>) => Record<string, unknown>;
-  description: string;
-}
-
-const MIGRATION_RULES: MigrationRule[] = [
+const migrationRules: MigrationRule[] = [
   {
     from: 'S-1.0',
     to: 'S-1.1',
@@ -103,30 +108,55 @@ const MIGRATION_RULES: MigrationRule[] = [
 // ════════════════════════════════════
 
 export const layoutVersionManager = {
+
+  // ── Registry Extension (no domain changes needed) ──
+
   /**
-   * Get the current active layout version.
+   * Register a new layout version at runtime.
+   * Call this to add future versions (e.g. S-1.3) without touching core types.
    */
+  registerVersion(info: LayoutVersionInfo): void {
+    const existing = versionRegistry.findIndex(v => v.version === info.version);
+    if (existing >= 0) {
+      versionRegistry[existing] = info;
+    } else {
+      versionRegistry.push(info);
+    }
+    // If marking as current, un-mark others
+    if (info.is_current) {
+      for (const v of versionRegistry) {
+        if (v.version !== info.version) v.is_current = false;
+      }
+    }
+  },
+
+  /**
+   * Register a migration rule between two versions.
+   */
+  registerMigration(rule: MigrationRule): void {
+    const existing = migrationRules.findIndex(r => r.from === rule.from && r.to === rule.to);
+    if (existing >= 0) {
+      migrationRules[existing] = rule;
+    } else {
+      migrationRules.push(rule);
+    }
+  },
+
+  // ── Queries ──
+
   getCurrentVersion(): LayoutVersion {
-    return CURRENT_LAYOUT_VERSION;
+    const current = versionRegistry.find(v => v.is_current);
+    return current?.version ?? CURRENT_LAYOUT_VERSION;
   },
 
-  /**
-   * Get info about a specific version.
-   */
   getVersionInfo(version: LayoutVersion): LayoutVersionInfo | null {
-    return VERSION_REGISTRY.find(v => v.version === version) ?? null;
+    return versionRegistry.find(v => v.version === version) ?? null;
   },
 
-  /**
-   * List all known versions.
-   */
   listVersions(): LayoutVersionInfo[] {
-    return [...VERSION_REGISTRY];
+    return [...versionRegistry];
   },
 
-  /**
-   * Check if a version is still supported (not sunset).
-   */
   isSupported(version: LayoutVersion): boolean {
     const info = this.getVersionInfo(version);
     if (!info) return false;
@@ -134,34 +164,24 @@ export const layoutVersionManager = {
     return new Date(info.sunset_date) > new Date();
   },
 
-  /**
-   * Check if a version is deprecated but still functional.
-   */
   isDeprecated(version: LayoutVersion): boolean {
     const info = this.getVersionInfo(version);
     if (!info || !info.deprecation_date) return false;
     return new Date(info.deprecation_date) <= new Date() && this.isSupported(version);
   },
 
-  /**
-   * Check if an event type is supported in a given version.
-   */
   supportsEvent(version: LayoutVersion, eventType: string): boolean {
     const info = this.getVersionInfo(version);
     return info?.supported_events.includes(eventType) ?? false;
   },
 
-  /**
-   * Get the required version for an event type (minimum supported version).
-   */
   getRequiredVersion(eventType: string): LayoutVersion {
     const registry = EVENT_TYPE_REGISTRY[eventType];
-    return registry?.layout_version ?? CURRENT_LAYOUT_VERSION;
+    return registry?.layout_version ?? this.getCurrentVersion();
   },
 
-  /**
-   * Validate that an envelope uses a compatible layout version.
-   */
+  // ── Validation ──
+
   validateEnvelopeVersion(envelope: ESocialEnvelope): {
     valid: boolean;
     errors: string[];
@@ -170,11 +190,12 @@ export const layoutVersionManager = {
   } {
     const errors: string[] = [];
     const warnings: string[] = [];
+    const currentVersion = this.getCurrentVersion();
 
     if (!this.isSupported(envelope.layout_version)) {
       errors.push(`Versão ${envelope.layout_version} não é mais suportada`);
     } else if (this.isDeprecated(envelope.layout_version)) {
-      warnings.push(`Versão ${envelope.layout_version} está depreciada — migrar para ${CURRENT_LAYOUT_VERSION}`);
+      warnings.push(`Versão ${envelope.layout_version} está depreciada — migrar para ${currentVersion}`);
     }
 
     if (!this.supportsEvent(envelope.layout_version, envelope.event_type)) {
@@ -185,19 +206,39 @@ export const layoutVersionManager = {
       warnings.push(`Mapper não implementado para ${envelope.event_type} — usando payload direto`);
     }
 
-    const needsUpgrade = envelope.layout_version !== CURRENT_LAYOUT_VERSION;
+    const needsUpgrade = envelope.layout_version !== currentVersion;
 
     return {
       valid: errors.length === 0,
       errors,
       warnings,
-      suggested_version: needsUpgrade ? CURRENT_LAYOUT_VERSION : null,
+      suggested_version: needsUpgrade ? currentVersion : null,
     };
   },
 
-  /**
-   * Migrate an envelope's payload from one version to another.
-   */
+  // ── Migration ──
+
+  getMigrationPath(from: LayoutVersion, to: LayoutVersion): MigrationRule[] {
+    const path: MigrationRule[] = [];
+    let current = from;
+    const visited = new Set<string>();
+
+    while (current !== to) {
+      if (visited.has(current)) return []; // Cycle detection
+      visited.add(current);
+      const rule = migrationRules.find(r => r.from === current);
+      if (!rule) return [];
+      path.push(rule);
+      current = rule.to;
+    }
+
+    return path;
+  },
+
+  canMigrate(from: LayoutVersion, to: LayoutVersion): boolean {
+    return this.getMigrationPath(from, to).length > 0;
+  },
+
   migrateEnvelope(envelope: ESocialEnvelope, targetVersion: LayoutVersion): ESocialEnvelope {
     if (envelope.layout_version === targetVersion) return envelope;
 
@@ -208,7 +249,7 @@ export const layoutVersionManager = {
 
     let payload = { ...envelope.payload };
     for (const rule of path) {
-      payload = rule.transform(payload);
+      payload = rule.transform(payload, envelope.event_type);
     }
 
     return {
@@ -219,25 +260,36 @@ export const layoutVersionManager = {
   },
 
   /**
-   * Get the migration path between two versions.
+   * Batch-migrate envelopes to the current version.
    */
-  getMigrationPath(from: LayoutVersion, to: LayoutVersion): MigrationRule[] {
-    const path: MigrationRule[] = [];
-    let current = from;
+  migrateAllToCurrent(envelopes: ESocialEnvelope[]): {
+    migrated: ESocialEnvelope[];
+    failed: Array<{ envelope_id: string; error: string }>;
+  } {
+    const currentVersion = this.getCurrentVersion();
+    const migrated: ESocialEnvelope[] = [];
+    const failed: Array<{ envelope_id: string; error: string }> = [];
 
-    while (current !== to) {
-      const rule = MIGRATION_RULES.find(r => r.from === current);
-      if (!rule) return []; // No path found
-      path.push(rule);
-      current = rule.to;
+    for (const env of envelopes) {
+      if (env.layout_version === currentVersion) {
+        migrated.push(env);
+        continue;
+      }
+      try {
+        migrated.push(this.migrateEnvelope(env, currentVersion));
+      } catch (err) {
+        failed.push({
+          envelope_id: env.id,
+          error: err instanceof Error ? err.message : 'Erro de migração',
+        });
+      }
     }
 
-    return path;
+    return { migrated, failed };
   },
 
-  /**
-   * Audit all envelopes for version compliance.
-   */
+  // ── Audit ──
+
   auditVersionCompliance(envelopes: ESocialEnvelope[]): {
     total: number;
     current_version: number;
@@ -245,11 +297,12 @@ export const layoutVersionManager = {
     unsupported: number;
     needs_migration: ESocialEnvelope[];
   } {
+    const currentVersion = this.getCurrentVersion();
     const needsMigration: ESocialEnvelope[] = [];
     let current = 0, deprecated = 0, unsupported = 0;
 
     for (const env of envelopes) {
-      if (env.layout_version === CURRENT_LAYOUT_VERSION) {
+      if (env.layout_version === currentVersion) {
         current++;
       } else if (this.isDeprecated(env.layout_version)) {
         deprecated++;
