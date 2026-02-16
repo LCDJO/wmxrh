@@ -32,6 +32,7 @@ import { payrollSimulationService } from '@/domains/compliance/payroll-simulatio
 import { salaryStructureService } from '@/domains/compensation/salary-structure.service';
 import { riskExposureService } from '@/domains/compliance/risk-exposure.service';
 import { pcmsoAlertService, type ExamAlertStatus } from '@/domains/compliance/pcmso-alert.service';
+import { complianceRulesService } from '@/domains/compliance/compliance-rules.service';
 // Types
 import type {
   CreateTenantDTO, CreateCompanyGroupDTO, CreateCompanyDTO,
@@ -715,5 +716,45 @@ export function usePcmsoAlertCounts() {
     queryKey: pcmsoKeys.counts(qs?.tenantId),
     queryFn: () => pcmsoAlertService.countByStatus(qs!.tenantId),
     enabled: !!qs,
+  });
+}
+
+// ========================
+// COMPLIANCE RULES ENGINE
+// ========================
+
+const complianceKeys = {
+  scan: (tenantId?: string) => ['compliance_scan', tenantId],
+  violations: (tenantId?: string) => ['compliance_violations', tenantId],
+};
+
+export function useComplianceScan() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: complianceKeys.scan(qs?.tenantId),
+    queryFn: () => complianceRulesService.scanViolations(qs!.tenantId),
+    enabled: !!qs,
+  });
+}
+
+export function useComplianceViolations(onlyUnresolved = true) {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: [...complianceKeys.violations(qs?.tenantId), onlyUnresolved],
+    queryFn: () => complianceRulesService.listTrackedViolations(qs!.tenantId, onlyUnresolved),
+    enabled: !!qs,
+  });
+}
+
+export function useResolveViolation() {
+  const qc = useQueryClient();
+  const qs = useQueryScope();
+  return useMutation({
+    mutationFn: ({ id, resolvedBy }: { id: string; resolvedBy: string }) =>
+      complianceRulesService.resolveViolation(id, resolvedBy),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: complianceKeys.violations(qs?.tenantId) });
+      qc.invalidateQueries({ queryKey: complianceKeys.scan(qs?.tenantId) });
+    },
   });
 }
