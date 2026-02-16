@@ -86,17 +86,40 @@ export interface ServiceDescriptor<T = unknown> {
   version: string;
   instance: T;
   status: ServiceStatus;
+  /** Other services this one depends on */
   dependencies: string[];
+  /** Capabilities this service exposes (e.g. 'auth:verify', 'data:encrypt') */
+  capabilities: string[];
+  /** Permissions required to consume this service */
+  required_permissions: string[];
   registered_at: number;
   metadata?: Record<string, unknown>;
 }
 
+export interface ServiceRegistrationOpts {
+  version?: string;
+  dependencies?: string[];
+  /** Capabilities this service exposes for discovery */
+  capabilities?: string[];
+  /** Permissions a caller must hold to use this service */
+  required_permissions?: string[];
+  metadata?: Record<string, unknown>;
+}
+
 export interface ServiceRegistryAPI {
-  register<T>(name: string, instance: T, opts?: { version?: string; dependencies?: string[] }): void;
+  register<T>(name: string, instance: T, opts?: ServiceRegistrationOpts): void;
   resolve<T>(name: string): T | null;
   has(name: string): boolean;
   list(): ServiceDescriptor[];
   dispose(name: string): void;
+
+  // ── Discovery ─────────────────────────────────────────────
+  /** Find all services that expose a given capability */
+  findByCapability(capability: string): ServiceDescriptor[];
+  /** Find all services that depend on a given service */
+  dependentsOf(name: string): ServiceDescriptor[];
+  /** Get the full dependency graph as adjacency list */
+  dependencyGraph(): Record<string, string[]>;
 }
 
 // ══════════════════════════════════════════════════════════════════

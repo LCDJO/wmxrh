@@ -80,37 +80,88 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
 
     try {
       // ── 1. Register Security Kernel services ──────────────────
-      services.register('SecurityKernel.PermissionEngine', permissionEngine, { version: '1.0.0' });
-      services.register('SecurityKernel.PolicyEngine', policyEngine, { version: '1.0.0' });
-      services.register('SecurityKernel.FeatureFlagEngine', featureFlagEngine, { version: '1.0.0' });
-      services.register('SecurityKernel.AuditSecurity', auditSecurity, { version: '1.0.0' });
-      services.register('SecurityKernel.IdentityBoundary', identityBoundary, { version: '1.0.0' });
-      services.register('SecurityKernel.DualIdentityEngine', dualIdentityEngine, { version: '1.0.0' });
+      services.register('SecurityKernel.PermissionEngine', permissionEngine, {
+        version: '1.0.0',
+        capabilities: ['auth:check-permission', 'auth:evaluate-access'],
+        required_permissions: ['platform:security:read'],
+      });
+      services.register('SecurityKernel.PolicyEngine', policyEngine, {
+        version: '1.0.0',
+        capabilities: ['auth:evaluate-policy', 'auth:enforce-rules'],
+        required_permissions: ['platform:security:read'],
+      });
+      services.register('SecurityKernel.FeatureFlagEngine', featureFlagEngine, {
+        version: '1.0.0',
+        capabilities: ['feature:evaluate', 'feature:toggle'],
+        required_permissions: ['platform:features:read'],
+      });
+      services.register('SecurityKernel.AuditSecurity', auditSecurity, {
+        version: '1.0.0',
+        capabilities: ['audit:log', 'audit:query'],
+        required_permissions: ['platform:audit:read'],
+      });
+      services.register('SecurityKernel.IdentityBoundary', identityBoundary, {
+        version: '1.0.0',
+        capabilities: ['identity:resolve', 'identity:context-switch', 'identity:scope-validate'],
+        required_permissions: ['platform:identity:read'],
+      });
+      services.register('SecurityKernel.DualIdentityEngine', dualIdentityEngine, {
+        version: '1.0.0',
+        capabilities: ['identity:impersonate', 'identity:end-impersonation'],
+        required_permissions: ['platform:identity:impersonate'],
+      });
 
       // ── 2. Register Identity Intelligence ─────────────────────
       services.register('IdentityIntelligence', identityIntelligence, {
         version: '1.0.0',
         dependencies: ['SecurityKernel.IdentityBoundary', 'SecurityKernel.DualIdentityEngine'],
+        capabilities: ['intelligence:detect-user-type', 'intelligence:risk-assess', 'intelligence:workspace-resolve'],
+        required_permissions: ['platform:identity:read'],
       });
 
       // ── 3. Register AccessGraph service + cache ───────────────
-      services.register('SecurityKernel.AccessGraphService', accessGraphService, { version: '1.0.0' });
-      services.register('SecurityKernel.AccessGraphCache', accessGraphCache, { version: '1.0.0' });
+      services.register('SecurityKernel.AccessGraphService', accessGraphService, {
+        version: '1.0.0',
+        capabilities: ['graph:build', 'graph:check-access', 'graph:inherit-scopes'],
+        required_permissions: ['platform:security:read'],
+      });
+      services.register('SecurityKernel.AccessGraphCache', accessGraphCache, {
+        version: '1.0.0',
+        capabilities: ['graph:cache-get', 'graph:cache-invalidate'],
+        required_permissions: ['platform:security:read'],
+      });
 
       // ── 4. Register POSL orchestrators ────────────────────────
-      services.register('EventKernel', events, { version: '1.0.0' });
-      services.register('ModuleOrchestrator', modules, { version: '1.0.0' });
+      services.register('EventKernel', events, {
+        version: '1.0.0',
+        capabilities: ['events:emit', 'events:subscribe', 'events:stats'],
+      });
+      services.register('ModuleOrchestrator', modules, {
+        version: '1.0.0',
+        capabilities: ['module:register', 'module:activate', 'module:deactivate', 'module:list'],
+      });
       services.register('IdentityOrchestrator', identity, {
         version: '1.0.0',
         dependencies: ['SecurityKernel.IdentityBoundary', 'IdentityIntelligence'],
+        capabilities: ['identity:snapshot', 'identity:refresh', 'identity:observe'],
       });
-      services.register('NavigationOrchestrator', navigation, { version: '1.0.0' });
+      services.register('NavigationOrchestrator', navigation, {
+        version: '1.0.0',
+        capabilities: ['navigation:navigate', 'navigation:register-routes', 'navigation:suggest'],
+      });
       services.register('FeatureLifecycleManager', features, {
         version: '1.0.0',
         dependencies: ['SecurityKernel.FeatureFlagEngine'],
+        capabilities: ['feature:register', 'feature:check', 'feature:toggle', 'feature:lifecycle'],
       });
-      services.register('CognitiveOrchestrator', cognitive, { version: '1.0.0' });
-      services.register('CognitiveInsightsService', cognitiveService, { version: '1.0.0' });
+      services.register('CognitiveOrchestrator', cognitive, {
+        version: '1.0.0',
+        capabilities: ['cognitive:track-navigation', 'cognitive:track-module', 'cognitive:insights'],
+      });
+      services.register('CognitiveInsightsService', cognitiveService, {
+        version: '1.0.0',
+        capabilities: ['cognitive:generate-insights', 'cognitive:role-suggestion', 'cognitive:permission-risk'],
+      });
 
       // ── 5. Install ALL domain event bridges → GlobalEventKernel
       const teardownBridges = installEventBridges(events);
