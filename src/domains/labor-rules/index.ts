@@ -14,6 +14,8 @@
  */
 
 export { laborRulesService, RULE_CATEGORY_LABELS, CALC_TYPE_LABELS } from './labor-rules.service';
+export { evaluateLaborRules, summarizeRubrics } from './rule-evaluation.engine';
+export type { WorkContext, CalculatedRubric } from './rule-evaluation.engine';
 export type {
   LaborRuleCategory, LaborRuleCalcType,
   LaborRuleSet, LaborRuleSetWithRules, LaborRuleDefinition,
