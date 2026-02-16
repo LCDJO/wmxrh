@@ -24,6 +24,7 @@ import Health from "./pages/Health";
 import LaborDashboard from "./pages/LaborDashboard";
 import LaborCompliance from "./pages/LaborCompliance";
 import LaborRules from "./pages/LaborRules";
+import LegalDashboard from "./pages/LegalDashboard";
 import Audit from "./pages/Audit";
 import NotFound from "./pages/NotFound";
 
@@ -123,6 +124,11 @@ function AppRoutes() {
         <Route path="/labor-rules" element={
           <ProtectedRoute navKey="labor_rules">
             <LaborRules />
+          </ProtectedRoute>
+        } />
+        <Route path="/legal-dashboard" element={
+          <ProtectedRoute navKey="legal_dashboard">
+            <LegalDashboard />
           </ProtectedRoute>
         } />
       </Route>
