@@ -12,7 +12,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Briefcase, TrendingUp, Building2,
-  ChevronLeft, ChevronRight, LogOut, FileText, Heart, ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark, Calculator, Brain, Sparkles,
+  ChevronLeft, ChevronRight, LogOut, FileText, Heart, ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark, Calculator, Brain, Sparkles, Send,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -53,6 +53,7 @@ const allNavItems: NavItem[] = [
   { to: '/workforce-intelligence', icon: Brain, label: 'Inteligência RH', key: 'dashboard' },
   { to: '/strategic-intelligence', icon: Sparkles, label: 'IA Estratégica', key: 'dashboard' },
   { to: '/audit', icon: ScrollText, label: 'Auditoria Legal', key: 'audit' },
+  { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' },
 ];
 
 export function AppSidebar() {

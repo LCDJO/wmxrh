@@ -30,6 +30,7 @@ import PayrollSimulation from "./pages/PayrollSimulation";
 import NotFound from "./pages/NotFound";
 import WorkforceIntelligence from "./pages/WorkforceIntelligence";
 import StrategicIntelligence from "./pages/StrategicIntelligence";
+import ESocialDashboard from "./pages/ESocialDashboard";
 
 const queryClient = new QueryClient();
 
@@ -149,8 +150,12 @@ function AppRoutes() {
             <StrategicIntelligence />
           </ProtectedRoute>
         } />
+        <Route path="/esocial" element={
+          <ProtectedRoute navKey="esocial">
+            <ESocialDashboard />
+          </ProtectedRoute>
+        } />
       </Route>
-      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
