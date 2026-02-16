@@ -32,6 +32,7 @@ export type {
   EncargoEstimateUpdatedPayload,
   SimulationRiskDetectedPayload,
   SimulationRiskLevel,
+  ComplianceContext,
 } from './payroll-simulation.events';
 
 export type {
