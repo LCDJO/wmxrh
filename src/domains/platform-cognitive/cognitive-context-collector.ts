@@ -121,10 +121,18 @@ export class CognitiveContextCollector {
   private readonly TTL_MS = 60_000;
   private moduleSignalLog: CognitiveSignal[] = [];
 
+  // Tenant-scoped event stats cache
+  private statsCache = new Map<string, { data: unknown; ts: number }>();
+  private readonly STATS_TTL_MS = 3 * 60_000; // 3 min
+
+  // Async write queue — batches DB writes to avoid blocking UI
+  private writeQueue: Array<{ event_type: string; event_key: string; metadata: Record<string, unknown>; user_id: string }> = [];
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly FLUSH_INTERVAL_MS = 2_000;
+  private readonly MAX_BATCH = 20;
+
   constructor() {
-    // Register singleton for signal routing
     _collectorInstance = this;
-    // Flush any signals queued before instantiation
     if (_pendingSignals.length > 0) {
       _pendingSignals.splice(0).forEach(s => this.trackModuleSignal(s));
     }
@@ -133,7 +141,6 @@ export class CognitiveContextCollector {
   // ── Event tracking (persisted) ─────────────────────────────────
 
   async trackEvent(eventType: EventType, eventKey: string, metadata?: Record<string, unknown>) {
-    // Safety gate
     if (!isSafe(eventKey)) return;
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -141,11 +148,31 @@ export class CognitiveContextCollector {
 
     const safe = sanitiseMetadata(metadata);
 
-    // Fire-and-forget — don't block the UI
+    // Queue for batched async write — never blocks the UI
+    this.writeQueue.push({ event_type: eventType, event_key: eventKey, metadata: safe, user_id: user.id });
+
+    if (this.writeQueue.length >= this.MAX_BATCH) {
+      this.flushWrites();
+    } else if (!this.flushTimer) {
+      this.flushTimer = setTimeout(() => this.flushWrites(), this.FLUSH_INTERVAL_MS);
+    }
+  }
+
+  private flushWrites() {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+    if (this.writeQueue.length === 0) return;
+
+    const batch = this.writeQueue.splice(0);
+    // Fire-and-forget batch insert
     supabase
       .from('platform_cognitive_events')
-      .insert({ user_id: user.id, event_type: eventType, event_key: eventKey, metadata: safe } as any)
-      .then(({ error }) => { if (error) console.warn('[Cognitive] track error:', error.message); });
+      .insert(batch as any[])
+      .then(({ error }) => {
+        if (error) console.warn('[Cognitive] batch write error:', error.message);
+      });
   }
 
   trackPageView(route: string) {
@@ -192,12 +219,20 @@ export class CognitiveContextCollector {
   // ── Aggregated stats (from DB) ─────────────────────────────────
 
   async getEventStats(daysBack = 30) {
+    // Tenant-scoped cache for stats
+    const ck = `stats_${daysBack}`;
+    const cached = this.statsCache.get(ck);
+    if (cached && Date.now() - cached.ts < this.STATS_TTL_MS) {
+      return cached.data as any;
+    }
+
     const { data, error } = await supabase.rpc('get_cognitive_event_stats', { days_back: daysBack });
     if (error) {
       console.warn('[Cognitive] stats error:', error.message);
       return null;
     }
-    return data as {
+
+    const result = data as {
       top_pages: { page: string; visits: number }[];
       top_modules: { module: string; uses: number }[];
       top_commands: { command: string; executions: number }[];
@@ -205,6 +240,9 @@ export class CognitiveContextCollector {
       active_users: number;
       total_events: number;
     };
+
+    this.statsCache.set(ck, { data: result, ts: Date.now() });
+    return result;
   }
 
   // ── Platform snapshot (cached) ─────────────────────────────────
