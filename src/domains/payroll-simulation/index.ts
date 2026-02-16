@@ -21,6 +21,18 @@ export type { WorkDataOverrides, PayrollSimulationRecord } from './payroll-simul
 export { calculateTaxes, calculateInss, calculateIrrf, calculateFgts } from './tax-calculator';
 export { calculateReflections } from './reflection-calculator';
 export { calculateEmployerCost } from './employer-cost-calculator';
+export {
+  payrollSimulationEventBus,
+  detectSimulationRisks,
+} from './payroll-simulation.events';
+export type {
+  PayrollSimulationEventType,
+  PayrollSimulationEvent,
+  PayrollSimulationCreatedPayload,
+  EncargoEstimateUpdatedPayload,
+  SimulationRiskDetectedPayload,
+  SimulationRiskLevel,
+} from './payroll-simulation.events';
 
 export type {
   SimulationInput,
