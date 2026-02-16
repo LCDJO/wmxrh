@@ -1,14 +1,15 @@
 /**
  * Security Middleware - Route Guard
  * 
- * Wraps routes with permission checks.
- * Shows access denied or loading states.
+ * Uses SecurityContext pipeline for permission checks.
+ * Supports nav-level, entity-level, and feature-flag guards.
  */
 
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { usePermissions } from './use-permissions';
+import { useSecurityKernel } from './use-security-kernel';
 import type { PermissionEntity, PermissionAction, NavKey } from './permissions';
+import type { FeatureKey } from './feature-flags';
 import { ShieldX } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -18,6 +19,8 @@ interface ProtectedRouteProps {
   /** Check entity-level access */
   entity?: PermissionEntity;
   action?: PermissionAction;
+  /** Gate by feature flag */
+  featureFlag?: FeatureKey;
   /** Fallback when denied (default: AccessDenied page) */
   fallback?: ReactNode;
 }
@@ -38,14 +41,31 @@ function AccessDenied() {
   );
 }
 
+function FeatureDisabled() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="text-center space-y-4 animate-fade-in">
+        <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-muted">
+          <ShieldX className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h2 className="text-xl font-bold font-display text-foreground">Módulo Indisponível</h2>
+        <p className="text-muted-foreground max-w-sm">
+          Este módulo não está habilitado para sua organização. Contate o administrador.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function ProtectedRoute({
   children,
   navKey,
   entity,
   action = 'view',
+  featureFlag,
   fallback,
 }: ProtectedRouteProps) {
-  const { canNav, can, loading, isAuthenticated } = usePermissions();
+  const { canNav, can, loading, isAuthenticated, isFeatureEnabled } = useSecurityKernel();
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -57,6 +77,11 @@ export function ProtectedRoute({
         <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
+  }
+
+  // Check feature flag first
+  if (featureFlag && !isFeatureEnabled(featureFlag)) {
+    return <>{fallback || <FeatureDisabled />}</>;
   }
 
   // Check nav-level access
