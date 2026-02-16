@@ -3947,6 +3947,50 @@ export type Database = {
           },
         ]
       }
+      tenant_modules: {
+        Row: {
+          activated_at: string
+          activated_by: string | null
+          created_at: string
+          deactivated_at: string | null
+          id: string
+          is_active: boolean
+          module_key: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string
+          activated_by?: string | null
+          created_at?: string
+          deactivated_at?: string | null
+          id?: string
+          is_active?: boolean
+          module_key: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string
+          activated_by?: string | null
+          created_at?: string
+          deactivated_at?: string | null
+          id?: string
+          is_active?: boolean
+          module_key?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_modules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           address: string | null
