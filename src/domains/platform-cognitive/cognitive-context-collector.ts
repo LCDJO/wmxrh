@@ -1,11 +1,23 @@
 /**
  * CognitiveContextCollector
  *
- * Collects and persists NON-SENSITIVE behavioural events:
+ * Collects and persists NON-SENSITIVE behavioural metadata:
  *  ✅ pages accessed, modules used, commands executed, roles switched
  *  ❌ NEVER financial data, PII, passwords, tokens, salaries
  *
- * Also gathers a PlatformSnapshot for advisor reasoning.
+ * ╔══════════════════════════════════════════════════════════════════╗
+ * ║  LGPD / PRIVACY CONTRACT                                        ║
+ * ║                                                                  ║
+ * ║  1. NO personal data is stored — only aggregated navigation      ║
+ * ║     metadata (route paths, module keys, command names).          ║
+ * ║  2. BLOCKED_PATTERNS reject any key/value containing PII        ║
+ * ║     patterns (CPF, email content, phone, address, salary, etc.) ║
+ * ║  3. Data sent to AI advisors is ANONYMISED — user IDs are       ║
+ * ║     replaced with opaque hashes before leaving the client.      ║
+ * ║  4. Retention: events older than 90 days SHOULD be purged       ║
+ * ║     via scheduled DB function.                                  ║
+ * ║  5. Users can request data deletion per LGPD Art. 18.           ║
+ * ╚══════════════════════════════════════════════════════════════════╝
  */
 import { supabase } from '@/integrations/supabase/client';
 import type { PlatformSnapshot } from './types';
@@ -20,6 +32,8 @@ const BLOCKED_PATTERNS = [
   /ssn/i, /social.?security/i,
   /health.*result/i, /exam.*result/i, /laudo/i,
   /phone/i, /telefone/i, /address/i, /endereco/i,
+  /email.*@/i, /nome.*completo/i, /full.*name/i,
+  /birth/i, /nascimento/i, /data.*nasc/i,
 ];
 
 function isSafe(value: string): boolean {
@@ -32,6 +46,8 @@ function sanitiseMetadata(raw?: Record<string, unknown>): Record<string, unknown
   for (const [k, v] of Object.entries(raw)) {
     if (!isSafe(k)) continue;
     if (typeof v === 'string' && !isSafe(v)) continue;
+    // Strip any value that looks like an email address
+    if (typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) continue;
     clean[k] = v;
   }
   return clean;
