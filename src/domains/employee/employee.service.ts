@@ -2,12 +2,37 @@ import { supabase } from '@/integrations/supabase/client';
 import type { IEmployeeService } from '@/domains/shared';
 import type { Employee, EmployeeWithRelations, CreateEmployeeDTO } from '@/domains/shared';
 
-export const employeeService: IEmployeeService = {
+const EMPLOYEE_SELECT = '*, positions(title), departments(name), companies(name), manager:employees!employees_manager_id_fkey(name)';
+
+export const employeeService: IEmployeeService & {
+  listByGroup(tenantId: string, groupId: string): Promise<EmployeeWithRelations[]>;
+  listByCompany(tenantId: string, companyId: string): Promise<EmployeeWithRelations[]>;
+} = {
   async list(tenantId: string) {
     const { data, error } = await supabase
       .from('employees')
-      .select('*, positions(title), departments(name), companies(name), manager:employees!employees_manager_id_fkey(name)')
+      .select(EMPLOYEE_SELECT)
       .eq('tenant_id', tenantId);
+    if (error) throw error;
+    return (data || []) as EmployeeWithRelations[];
+  },
+
+  async listByGroup(tenantId: string, groupId: string) {
+    const { data, error } = await supabase
+      .from('employees')
+      .select(EMPLOYEE_SELECT)
+      .eq('tenant_id', tenantId)
+      .eq('company_group_id', groupId);
+    if (error) throw error;
+    return (data || []) as EmployeeWithRelations[];
+  },
+
+  async listByCompany(tenantId: string, companyId: string) {
+    const { data, error } = await supabase
+      .from('employees')
+      .select(EMPLOYEE_SELECT)
+      .eq('tenant_id', tenantId)
+      .eq('company_id', companyId);
     if (error) throw error;
     return (data || []) as EmployeeWithRelations[];
   },
@@ -24,7 +49,7 @@ export const employeeService: IEmployeeService = {
   async getById(id: string) {
     const { data, error } = await supabase
       .from('employees')
-      .select('*, positions(title), departments(name), companies(name), manager:employees!employees_manager_id_fkey(name)')
+      .select(EMPLOYEE_SELECT)
       .eq('id', id)
       .maybeSingle();
     if (error) throw error;
