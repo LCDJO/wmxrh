@@ -32,6 +32,7 @@ import {
   type Identity,
   type SecurityContext,
   type PolicyResult,
+  type PolicyEvalContext,
   type PermissionResult,
   type ResourceTarget,
 } from './kernel';
@@ -57,7 +58,10 @@ export interface UseSecurityKernelReturn {
   hasRole: (...roles: TenantRole[]) => boolean;
   effectiveRoles: TenantRole[];
 
-  // ── Policy ──
+  // ── Policy (declarative rules) ──
+  /** Evaluate declarative policy rules for a specific action+resource */
+  evaluateRules: (action: PermissionAction, resource: PermissionEntity, target?: ResourceTarget) => PolicyResult;
+  /** Legacy: evaluate function-based policies */
   evaluatePolicy: () => PolicyResult;
 
   // ── Feature Flags ──
@@ -137,7 +141,26 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     [effectiveRoles]
   );
 
-  // ── Policy ──
+  // ── Policy (declarative rules) ──
+  const evaluateRules = useCallback(
+    (action: PermissionAction, resource: PermissionEntity, target?: ResourceTarget): PolicyResult => {
+      if (!securityContext) {
+        return { decision: 'deny', reason: 'SecurityContext não disponível.', policyId: 'no_context' };
+      }
+      return policyEngine.evaluateRules({
+        securityContext,
+        action,
+        resource,
+        target: target ? {
+          tenant_id: securityContext.tenant_id,
+          company_group_id: target.company_group_id,
+          company_id: target.company_id,
+        } : undefined,
+      });
+    },
+    [securityContext]
+  );
+
   const evaluatePolicy = useCallback((): PolicyResult => {
     if (!securityContext) {
       return { decision: 'deny', reason: 'Contexto não resolvido.', policyId: 'no_context' };
@@ -190,6 +213,7 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     canNav,
     hasRole,
     effectiveRoles,
+    evaluateRules,
     evaluatePolicy,
     isFeatureEnabled,
     audit: auditSecurity,
