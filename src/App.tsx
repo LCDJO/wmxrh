@@ -28,6 +28,7 @@ import LegalDashboard from "./pages/LegalDashboard";
 import Audit from "./pages/Audit";
 import PayrollSimulation from "./pages/PayrollSimulation";
 import NotFound from "./pages/NotFound";
+import WorkforceIntelligence from "./pages/WorkforceIntelligence";
 
 const queryClient = new QueryClient();
 
@@ -135,6 +136,11 @@ function AppRoutes() {
         <Route path="/payroll-simulation" element={
           <ProtectedRoute navKey="compensation">
             <PayrollSimulation />
+          </ProtectedRoute>
+        } />
+        <Route path="/workforce-intelligence" element={
+          <ProtectedRoute navKey="dashboard">
+            <WorkforceIntelligence />
           </ProtectedRoute>
         } />
       </Route>
