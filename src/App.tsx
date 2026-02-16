@@ -31,6 +31,7 @@ import NotFound from "./pages/NotFound";
 import WorkforceIntelligence from "./pages/WorkforceIntelligence";
 import StrategicIntelligence from "./pages/StrategicIntelligence";
 import ESocialDashboard from "./pages/ESocialDashboard";
+import AgreementManagement from "./pages/AgreementManagement";
 
 const queryClient = new QueryClient();
 
@@ -153,6 +154,11 @@ function AppRoutes() {
         <Route path="/esocial" element={
           <ProtectedRoute navKey="esocial">
             <ESocialDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/agreements" element={
+          <ProtectedRoute navKey="employees">
+            <AgreementManagement />
           </ProtectedRoute>
         } />
       </Route>
