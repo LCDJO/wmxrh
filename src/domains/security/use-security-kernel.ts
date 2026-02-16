@@ -52,6 +52,9 @@ import {
   type ImpersonationSession,
 } from './kernel';
 
+import { accessGraphCache } from './kernel/access-graph.cache';
+import { setAccessGraph } from './kernel/access-graph';
+
 import type { PermissionAction, PermissionEntity, NavKey } from './permissions';
 import type { TenantRole, ScopeType } from '@/domains/shared/types';
 import type { SecurityFeatureKey, FeatureKey } from './feature-flags';
@@ -226,12 +229,9 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
   const accessGraph = useMemo((): AccessGraph | null => {
     if (!user || !currentTenant) return null;
 
-    // Check the persistent cache first (survives context switches)
-    const { accessGraphCache } = require('./kernel/access-graph.cache');
     const cached = accessGraphCache.get(user.id, currentTenant.id);
     if (cached) {
       // Reuse cached graph — O(1) lookup, no rebuild
-      const { setAccessGraph } = require('./kernel/access-graph');
       setAccessGraph(cached.graph);
       return cached.graph;
     }
