@@ -48,10 +48,15 @@ export type {
   ResolvedQueryScope,
   FeatureFlagEngineAPI,
   FeatureFlagContext,
+  FeatureFlagRecord,
   AuditSecurityAPI,
   AuditEntry,
   AuditAction,
 } from './kernel';
+
+// ── Feature Flags Hook ──
+export { useFeatureFlags } from './use-feature-flags';
+export type { UseFeatureFlagsReturn } from './use-feature-flags';
 
 // ── Kernel Hook ──
 export { useSecurityKernel } from './use-security-kernel';
@@ -98,7 +103,8 @@ export { securityLogService } from './security-log.service';
 export type { SecurityLog } from './security-log.service';
 
 // Feature Flags
-export { SECURITY_FEATURES } from './feature-flags';
+export { SECURITY_FEATURES, BUSINESS_FEATURES } from './feature-flags';
+export type { SecurityFeatureKey, BusinessFeatureKey, FeatureKey } from './feature-flags';
 
 // Data Masking
 export { maskSalary, maskCPF, maskBankAccount, formatSalary, formatCPF, getMaskingPolicy, displaySalary, displayCPF, displayBankAccount } from './data-masking';

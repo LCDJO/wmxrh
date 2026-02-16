@@ -13,7 +13,7 @@ import type { User, Session } from '@supabase/supabase-js';
 import type { TenantRole, UserRole, ScopeType } from '@/domains/shared/types';
 import { resolveScope, type ScopeResolution } from './scope-resolver';
 import { featureFlagEngine } from './feature-flag-engine';
-import type { SecurityFeatureKey } from '../feature-flags';
+import type { SecurityFeatureKey, FeatureKey } from '../feature-flags';
 
 // ════════════════════════════════════
 // SECURITY CONTEXT — the universal auth envelope
@@ -31,7 +31,7 @@ export interface SecurityContext {
   /** User's effective roles (merged membership + user_roles) */
   roles: TenantRole[];
   /** Active feature flags for this context */
-  features: SecurityFeatureKey[];
+  features: FeatureKey[];
   /** Additional identity metadata */
   meta: {
     email: string | null;

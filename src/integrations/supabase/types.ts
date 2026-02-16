@@ -397,6 +397,64 @@ export type Database = {
           },
         ]
       }
+      feature_flags: {
+        Row: {
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          enabled: boolean
+          feature_name: string
+          id: string
+          metadata: Json | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          feature_name: string
+          id?: string
+          metadata?: Json | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          feature_name?: string
+          id?: string
+          metadata?: Json | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_flags_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_flags_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_flags_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       positions: {
         Row: {
           base_salary: number | null

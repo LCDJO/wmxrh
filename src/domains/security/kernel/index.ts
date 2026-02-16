@@ -37,7 +37,7 @@ export type { ScopeResolution, ScopeResolverInput, ResolvedQueryScope } from './
 
 // ── Feature Flag Engine ────────────────────────────────────
 export { featureFlagEngine } from './feature-flag-engine';
-export type { FeatureFlagEngineAPI, FeatureFlagContext } from './feature-flag-engine';
+export type { FeatureFlagEngineAPI, FeatureFlagContext, FeatureFlagRecord } from './feature-flag-engine';
 
 // ── Audit Security ─────────────────────────────────────────
 export { auditSecurity } from './audit-security.service';

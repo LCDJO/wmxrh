@@ -39,7 +39,7 @@ import {
 
 import type { PermissionAction, PermissionEntity, NavKey } from './permissions';
 import type { TenantRole, ScopeType } from '@/domains/shared/types';
-import type { SecurityFeatureKey } from './feature-flags';
+import type { SecurityFeatureKey, FeatureKey } from './feature-flags';
 
 export interface UseSecurityKernelReturn {
   // ── SecurityContext (the universal auth envelope) ──
@@ -65,7 +65,7 @@ export interface UseSecurityKernelReturn {
   evaluatePolicy: () => PolicyResult;
 
   // ── Feature Flags ──
-  isFeatureEnabled: (feature: SecurityFeatureKey) => boolean;
+  isFeatureEnabled: (feature: FeatureKey) => boolean;
 
   // ── Audit ──
   audit: typeof auditSecurity;
@@ -175,12 +175,15 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
 
   // ── Feature Flags ──
   const isFeatureEnabled = useCallback(
-    (feature: SecurityFeatureKey) =>
-      featureFlagEngine.isEnabled(feature, {
+    (feature: FeatureKey) => {
+      if (securityContext) {
+        return featureFlagEngine.isEnabledForContext(feature, securityContext);
+      }
+      return featureFlagEngine.isEnabled(feature, {
         tenantId: currentTenant?.id,
-        roles: effectiveRoles,
-      }),
-    [currentTenant, effectiveRoles]
+      });
+    },
+    [securityContext, currentTenant]
   );
 
   // ── Convenience ──
