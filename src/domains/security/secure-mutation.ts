@@ -1,21 +1,25 @@
 /**
  * Security Middleware - Secure Mutation Wrapper
  * 
- * Pre-validates permissions and rate limits before executing mutations.
- * Use in React Query mutation hooks for consistent security enforcement.
+ * Integrates with SecurityKernel pipeline.
+ * Pre-validates permissions, policies, and rate limits before executing mutations.
+ * 
+ * Domain services (HR, Compensation) call this instead of checking roles directly.
  */
 
 import { checkRateLimit, RATE_LIMITS } from './rate-limiter';
-import { hasPermission, type PermissionEntity, type PermissionAction } from './permissions';
-import { emitUnauthorizedAccess, emitRateLimitTriggered } from './security-events';
-import type { TenantRole } from '@/domains/shared/types';
+import type { PermissionEntity, PermissionAction } from './permissions';
+import type { SecurityContext } from './kernel/identity.service';
+import type { ResourceTarget } from './kernel/permission-engine';
+import { executeSecurityPipeline } from './kernel/security-pipeline';
+import { auditSecurity } from './kernel/audit-security.service';
 
 export class SecurityError extends Error {
-  public code: 'PERMISSION_DENIED' | 'RATE_LIMITED' | 'UNAUTHENTICATED';
+  public code: 'PERMISSION_DENIED' | 'RATE_LIMITED' | 'UNAUTHENTICATED' | 'POLICY_DENIED';
   public retryAfterMs?: number;
 
   constructor(
-    code: 'PERMISSION_DENIED' | 'RATE_LIMITED' | 'UNAUTHENTICATED',
+    code: 'PERMISSION_DENIED' | 'RATE_LIMITED' | 'UNAUTHENTICATED' | 'POLICY_DENIED',
     message: string,
     retryAfterMs?: number
   ) {
@@ -31,57 +35,54 @@ interface SecureMutationOptions {
   entity: PermissionEntity;
   /** Action being performed */
   action: PermissionAction;
-  /** Current user's effective roles */
-  roles: TenantRole[];
-  /** Whether user is authenticated */
-  isAuthenticated: boolean;
+  /** SecurityContext (preferred over roles) */
+  ctx?: SecurityContext | null;
+  /** Target entity for ABAC scope matching */
+  target?: ResourceTarget;
   /** Rate limit key (defaults to entity:action) */
   rateLimitKey?: string;
-  /** Rate limit config (defaults to RATE_LIMITS.create) */
+  /** Rate limit config */
   rateLimitConfig?: { windowMs: number; maxRequests: number };
 }
 
 /**
- * Validate security constraints before a mutation.
+ * Validate security constraints through the full pipeline.
  * Throws SecurityError if any check fails.
  */
 export function validateMutation(opts: SecureMutationOptions): void {
   const resource = `${opts.entity}:${opts.action}`;
 
-  // 1. Authentication check
-  if (!opts.isAuthenticated) {
-    emitUnauthorizedAccess({
-      resource,
-      reason: 'Usuário não autenticado.',
-      metadata: { entity: opts.entity, action: opts.action },
-    });
-    throw new SecurityError('UNAUTHENTICATED', 'Usuário não autenticado.');
-  }
+  // ── Pipeline: Auth → Scope → Permission → Policy → Audit ──
+  const pipelineResult = executeSecurityPipeline({
+    action: opts.action,
+    resource: opts.entity,
+    ctx: opts.ctx || null,
+    target: opts.target,
+  });
 
-  // 2. Permission check
-  if (!hasPermission(opts.entity, opts.action, opts.roles)) {
-    emitUnauthorizedAccess({
-      resource,
-      reason: `Sem permissão para ${opts.action} em ${opts.entity}.`,
-      metadata: { entity: opts.entity, action: opts.action, roles: opts.roles },
-    });
+  if (pipelineResult.decision === 'deny') {
+    const codeMap: Record<string, SecurityError['code']> = {
+      auth: 'UNAUTHENTICATED',
+      permission: 'PERMISSION_DENIED',
+      policy: 'POLICY_DENIED',
+    };
     throw new SecurityError(
-      'PERMISSION_DENIED',
-      `Sem permissão para ${opts.action} em ${opts.entity}.`
+      codeMap[pipelineResult.deniedBy || 'permission'] || 'PERMISSION_DENIED',
+      pipelineResult.reason || `Acesso negado: ${opts.action} em ${opts.entity}.`,
     );
   }
 
-  // 3. Rate limit check
+  // ── Rate limit check (after permission passes) ──
   const rateLimitKey = opts.rateLimitKey || resource;
   const rateLimitConfig = opts.rateLimitConfig || RATE_LIMITS.create;
   const { allowed, retryAfterMs } = checkRateLimit(rateLimitKey, rateLimitConfig);
 
   if (!allowed) {
-    emitRateLimitTriggered({
+    auditSecurity.logRateLimited({
       resource,
       reason: `Muitas requisições. Tente novamente em ${Math.ceil((retryAfterMs || 0) / 1000)}s.`,
+      ctx: opts.ctx,
       retryAfterMs,
-      metadata: { entity: opts.entity, action: opts.action },
     });
     throw new SecurityError(
       'RATE_LIMITED',
@@ -92,8 +93,7 @@ export function validateMutation(opts: SecureMutationOptions): void {
 }
 
 /**
- * Wraps a mutation function with security validation.
- * Returns a new function that checks permissions and rate limits first.
+ * Wraps a mutation function with full security pipeline validation.
  */
 export function secureMutation<TArgs, TResult>(
   mutationFn: (args: TArgs) => Promise<TResult>,
