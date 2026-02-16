@@ -204,8 +204,20 @@ export interface SalaryGroupStats {
   salary_spread: number; // max/min ratio
 }
 
+/** Per-position salary insight for dashboard consumption */
+export interface SalaryInsight {
+  job_position_id: string;
+  job_position_name: string;
+  headcount: number;
+  media_salarial: number;
+  desvio_padrao: number;
+  indice_equidade: number; // 0–1, 1 = perfectly equitable
+  outliers_acima: string[];
+  outliers_abaixo: string[];
+}
+
 export interface SalaryEquityAlert {
-  alert_type: 'gender_gap' | 'role_disparity' | 'compression' | 'outlier';
+  alert_type: 'gender_gap' | 'role_disparity' | 'compression' | 'outlier' | 'outlier_low';
   severity: 'info' | 'warning' | 'critical';
   group: string;
   message: string;
@@ -218,6 +230,8 @@ export interface SalaryAnalysisOutput {
   groups: SalaryGroupStats[];
   overall: SalaryGroupStats;
   equity_alerts: SalaryEquityAlert[];
+  /** Per-position salary insights (always computed regardless of group_by) */
+  position_insights: SalaryInsight[];
   distribution_skew: 'left' | 'normal' | 'right';
   compa_ratio_avg: number;
 }

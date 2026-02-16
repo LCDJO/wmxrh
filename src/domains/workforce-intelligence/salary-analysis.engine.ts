@@ -11,6 +11,7 @@ import type {
   SalaryAnalysisOutput,
   SalaryGroupStats,
   SalaryEquityAlert,
+  SalaryInsight,
 } from './types';
 
 export function analyzeSalaries(input: SalaryAnalysisInput): SalaryAnalysisOutput {
@@ -46,8 +47,11 @@ export function analyzeSalaries(input: SalaryAnalysisInput): SalaryAnalysisOutpu
   const allFatores = employees.map(e => simMap.get(e.id)?.fator_custo ?? 0).filter(f => f > 0);
   const overall = buildGroupStats('overall', allSalaries, allFatores);
 
-  // Detect equity alerts
+  // Detect equity alerts (includes low outliers now)
   const equity_alerts = detectEquityAlerts(groups, overall, employees, simMap);
+
+  // Build per-position insights (always, regardless of group_by)
+  const position_insights = buildPositionInsights(employees);
 
   // Distribution skew
   const skew = overall.median_salary < overall.avg_salary * 0.95
@@ -61,6 +65,7 @@ export function analyzeSalaries(input: SalaryAnalysisInput): SalaryAnalysisOutpu
     groups,
     overall,
     equity_alerts,
+    position_insights,
     distribution_skew: skew,
     compa_ratio_avg: overall.avg_salary > 0 ? round(overall.median_salary / overall.avg_salary) : 0,
   };
@@ -146,18 +151,34 @@ function detectEquityAlerts(
     }
   }
 
-  // Outliers: employees > 2 std deviations from overall mean
-  const threshold = overall.avg_salary + 2 * overall.std_deviation;
-  const outliers = employees.filter(e => e.current_salary > threshold);
-  if (outliers.length > 0) {
+  // Outliers above: > 2 std deviations
+  const thresholdHigh = overall.avg_salary + 2 * overall.std_deviation;
+  const outliersHigh = employees.filter(e => e.current_salary > thresholdHigh);
+  if (outliersHigh.length > 0) {
     alerts.push({
       alert_type: 'outlier',
       severity: 'info',
       group: 'Geral',
-      message: `${outliers.length} colaborador(es) com salário acima de 2 desvios-padrão da média (>${Math.round(threshold).toLocaleString('pt-BR')}).`,
-      affected_employees: outliers.map(e => e.id),
-      details: { threshold, count: outliers.length },
+      message: `${outliersHigh.length} colaborador(es) com salário acima de 2σ da média (>${Math.round(thresholdHigh).toLocaleString('pt-BR')}).`,
+      affected_employees: outliersHigh.map(e => e.id),
+      details: { threshold: thresholdHigh, count: outliersHigh.length },
     });
+  }
+
+  // Outliers below: < 2 std deviations (only if result > 0)
+  const thresholdLow = overall.avg_salary - 2 * overall.std_deviation;
+  if (thresholdLow > 0) {
+    const outliersLow = employees.filter(e => e.current_salary < thresholdLow);
+    if (outliersLow.length > 0) {
+      alerts.push({
+        alert_type: 'outlier_low',
+        severity: 'warning',
+        group: 'Geral',
+        message: `${outliersLow.length} colaborador(es) com salário abaixo de 2σ da média (<${Math.round(thresholdLow).toLocaleString('pt-BR')}).`,
+        affected_employees: outliersLow.map(e => e.id),
+        details: { threshold: thresholdLow, count: outliersLow.length },
+      });
+    }
   }
 
   return alerts;
@@ -175,8 +196,53 @@ function emptyGroupStats(key: string): SalaryGroupStats {
 function emptyAnalysis(group_by: string): SalaryAnalysisOutput {
   return {
     group_by, groups: [], overall: emptyGroupStats('overall'),
-    equity_alerts: [], distribution_skew: 'normal', compa_ratio_avg: 0,
+    equity_alerts: [], position_insights: [], distribution_skew: 'normal', compa_ratio_avg: 0,
   };
+}
+
+/** Build SalaryInsight[] grouped by position */
+function buildPositionInsights(
+  employees: { id: string; current_salary: number; position?: string; position_id?: string }[],
+): SalaryInsight[] {
+  const byPosition = new Map<string, typeof employees>();
+  for (const e of employees) {
+    const key = e.position_id ?? e.position ?? 'sem_cargo';
+    const list = byPosition.get(key) ?? [];
+    list.push(e);
+    byPosition.set(key, list);
+  }
+
+  const insights: SalaryInsight[] = [];
+  for (const [posKey, emps] of byPosition) {
+    if (emps.length < 1) continue;
+    const salaries = emps.map(e => e.current_salary);
+    const avg = salaries.reduce((s, v) => s + v, 0) / salaries.length;
+    const variance = salaries.length > 1
+      ? salaries.reduce((s, v) => s + Math.pow(v - avg, 2), 0) / salaries.length
+      : 0;
+    const stdDev = Math.sqrt(variance);
+
+    // Equity index: 1 - CV (coefficient of variation), clamped 0–1
+    const cv = avg > 0 ? stdDev / avg : 0;
+    const equidade = round(Math.max(0, Math.min(1, 1 - cv)));
+
+    // Outliers: > 1.5 std dev from mean
+    const hiThreshold = avg + 1.5 * stdDev;
+    const loThreshold = avg - 1.5 * stdDev;
+
+    insights.push({
+      job_position_id: posKey,
+      job_position_name: emps[0].position ?? posKey,
+      headcount: emps.length,
+      media_salarial: round(avg),
+      desvio_padrao: round(stdDev),
+      indice_equidade: equidade,
+      outliers_acima: emps.filter(e => e.current_salary > hiThreshold).map(e => e.id),
+      outliers_abaixo: emps.filter(e => e.current_salary < loThreshold && loThreshold > 0).map(e => e.id),
+    });
+  }
+
+  return insights.sort((a, b) => a.indice_equidade - b.indice_equidade);
 }
 
 function round(v: number): number {
