@@ -27,7 +27,7 @@
  *   surface for coordination, not authorization.
  */
 
-import type { PlatformRuntimeAPI, RuntimeStatus, RuntimePhase, RuntimeHealthCheck } from './types';
+import type { PlatformRuntimeAPI, RuntimeStatus, RuntimePhase, RuntimeHealthCheck, AuthorizationRequest, AuthorizationResult } from './types';
 import { createGlobalEventKernel } from './global-event-kernel';
 import { createServiceRegistry } from './service-registry';
 import { createModuleOrchestrator } from './module-orchestrator';
@@ -48,7 +48,10 @@ import {
   accessGraphCache,
   identityBoundary,
   dualIdentityEngine,
+  executeSecurityPipeline,
+  buildSecurityContext,
 } from '@/domains/security/kernel';
+import type { PermissionAction, PermissionEntity } from '@/domains/security/permissions';
 
 // ── Identity Intelligence ────────────────────────────────────────
 import { identityIntelligence } from '@/domains/security/kernel/identity-intelligence';
@@ -263,10 +266,80 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
     };
   }
 
+  // ── Security delegation ──────────────────────────────────────
+  // INVARIANT: POSL NEVER evaluates permissions directly.
+  // All authorization flows go through the SecurityKernel pipeline.
+
+  function authorize(request: AuthorizationRequest): AuthorizationResult {
+    // Resolve current SecurityContext from the identity orchestrator
+    // POSL does NOT evaluate permissions — it delegates entirely.
+    const snapshot = identity.snapshot();
+
+    // If not authenticated, pipeline will deny at Stage 2
+    const ctx = snapshot.is_authenticated
+      ? services.resolve<any>('SecurityKernel.PermissionEngine')
+        ? (identityBoundary as any)._sessionManager?.session
+          ? buildSecurityContextFromSnapshot(snapshot)
+          : null
+        : null
+      : null;
+
+    const result = executeSecurityPipeline({
+      action: request.action as PermissionAction,
+      resource: request.resource as PermissionEntity,
+      ctx,
+      target: request.target ? {
+        tenant_id: request.target.tenant_id ?? '',
+        company_group_id: request.target.company_group_id ?? null,
+        company_id: request.target.company_id ?? null,
+      } : undefined,
+      skipAccessGraph: request.skipAccessGraph,
+      skipPolicy: request.skipPolicy,
+      skipAudit: request.skipAudit,
+    });
+
+    return {
+      allowed: result.decision === 'allow',
+      reason: result.reason,
+      deniedBy: result.deniedBy,
+      requestId: result.requestId,
+    };
+  }
+
+  /**
+   * Build a minimal SecurityContext from the OperationalIdentitySnapshot.
+   * This is a read-only mapping — no permission logic here.
+   */
+  function buildSecurityContextFromSnapshot(snapshot: import('./types').OperationalIdentitySnapshot) {
+    return {
+      user_id: snapshot.user_id ?? '',
+      tenant_id: snapshot.current_tenant_id ?? '',
+      user_type: snapshot.is_platform_admin ? 'platform' as const : 'tenant' as const,
+      roles: snapshot.effective_roles ? [...snapshot.effective_roles] : [],
+      request_id: `posl-${Date.now().toString(36)}`,
+      meta: {
+        scopeResolution: {
+          tenantId: snapshot.current_tenant_id ?? '',
+          uiScope: {
+            level: snapshot.scope_level ?? 'tenant',
+            groupId: snapshot.current_group_id ?? null,
+            companyId: snapshot.current_company_id ?? null,
+          },
+          effectiveScope: {
+            level: snapshot.scope_level ?? 'tenant',
+            groupId: snapshot.current_group_id ?? null,
+            companyId: snapshot.current_company_id ?? null,
+          },
+        },
+      },
+    } as any;
+  }
+
   return {
     boot,
     shutdown,
     status,
+    authorize,
     events,
     services,
     modules,
