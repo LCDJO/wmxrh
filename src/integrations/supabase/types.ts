@@ -4309,6 +4309,44 @@ export type Database = {
           },
         ]
       }
+      tenant_module_access: {
+        Row: {
+          access_source: string
+          created_at: string
+          expires_at: string | null
+          granted_at: string
+          id: string
+          module_key: string
+          tenant_id: string
+        }
+        Insert: {
+          access_source?: string
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          module_key: string
+          tenant_id: string
+        }
+        Update: {
+          access_source?: string
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          module_key?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_module_access_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_modules: {
         Row: {
           activated_at: string
@@ -4935,6 +4973,10 @@ export type Database = {
       }
       seed_salary_rubric_templates: {
         Args: { _tenant_id: string }
+        Returns: undefined
+      }
+      sync_tenant_module_access: {
+        Args: { p_tenant_id: string }
         Returns: undefined
       }
       user_has_any_role: {
