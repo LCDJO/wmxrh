@@ -248,29 +248,21 @@ function logSecurityEvent(
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!serviceRoleKey) return;
     const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
-    const url = new URL(ctx.request.url);
-    supabaseAdmin.from("audit_logs").insert({
-      tenant_id: ctx.tenantId || null,
+    const result = eventType === "RateLimitTriggered" ? "blocked" : "blocked";
+    supabaseAdmin.from("security_logs").insert({
+      request_id: ctx.requestId,
       user_id: ctx.userId || null,
-      action: `security:${eventType}`,
-      entity_type: "security_event",
-      entity_id: null,
-      metadata: {
-        request_id: ctx.requestId,
-        event_type: eventType,
-        description,
-        method: ctx.request.method,
-        path: url.pathname,
-        roles: ctx.roles,
-        ip: ctx.request.headers.get("x-forwarded-for") || ctx.request.headers.get("cf-connecting-ip") || null,
-        user_agent: ctx.request.headers.get("user-agent") || null,
-        ...metadata,
-      },
+      tenant_id: ctx.tenantId || null,
+      action: eventType,
+      resource: `${ctx.request.method} ${new URL(ctx.request.url).pathname}`,
+      result,
+      ip_address: ctx.request.headers.get("x-forwarded-for") || ctx.request.headers.get("cf-connecting-ip") || null,
+      user_agent: ctx.request.headers.get("user-agent") || null,
     }).then(({ error }) => {
-      if (error) console.error(`[SecurityEvent] Failed to log ${eventType}:`, error.message);
+      if (error) console.error(`[SecurityLog] Failed to log ${eventType}:`, error.message);
     });
   } catch (err) {
-    console.error(`[SecurityEvent] Error logging ${eventType}:`, err);
+    console.error(`[SecurityLog] Error logging ${eventType}:`, err);
   }
 }
 
