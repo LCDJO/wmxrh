@@ -22,6 +22,7 @@ import Compliance from "./pages/Compliance";
 import Benefits from "./pages/Benefits";
 import Health from "./pages/Health";
 import LaborDashboard from "./pages/LaborDashboard";
+import Audit from "./pages/Audit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -105,6 +106,11 @@ function AppRoutes() {
         <Route path="/labor-dashboard" element={
           <ProtectedRoute navKey="labor_dashboard">
             <LaborDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/audit" element={
+          <ProtectedRoute navKey="audit">
+            <Audit />
           </ProtectedRoute>
         } />
       </Route>
