@@ -22,6 +22,9 @@
 // ── Runtime (main entry point) ────────────────────────────────
 export { createPlatformRuntime, getPlatformRuntime, resetPlatformRuntime } from './platform-runtime';
 
+// ── PlatformContext (React) ───────────────────────────────────
+export { PlatformProvider, usePlatformOS, usePlatformContext, usePlatformReady } from './platform-context';
+
 // ── Sub-systems ───────────────────────────────────────────────
 export { createGlobalEventKernel } from './global-event-kernel';
 export { createServiceRegistry } from './service-registry';
