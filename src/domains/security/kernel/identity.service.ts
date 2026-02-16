@@ -14,6 +14,8 @@ import type { TenantRole, UserRole, ScopeType } from '@/domains/shared/types';
 import { resolveScope, type ScopeResolution } from './scope-resolver';
 import { featureFlagEngine } from './feature-flag-engine';
 import { getAccessGraph } from './access-graph';
+import { dualIdentityEngine } from './dual-identity-engine';
+import type { RealIdentity, ActiveIdentity } from './dual-identity-engine.types';
 import type { SecurityFeatureKey, FeatureKey } from '../feature-flags';
 
 // ════════════════════════════════════
@@ -43,6 +45,14 @@ export interface SecurityContext {
   allowed_company_ids: string[];
   /** Precomputed list of group IDs the user can access (for WHERE IN clauses) */
   allowed_group_ids: string[];
+
+  // ── DUAL IDENTITY (impersonation awareness) ──
+  /** The real identity — WHO is actually logged in (immutable) */
+  real_identity: RealIdentity | null;
+  /** The active identity — WHO is currently operating (may differ during impersonation) */
+  active_identity: ActiveIdentity;
+  /** Whether this context is operating under impersonation */
+  is_impersonating: boolean;
 
   /** Additional identity metadata */
   meta: {
@@ -158,16 +168,32 @@ export function buildSecurityContext(input: BuildSecurityContextInput): Security
     allowed_group_ids = Array.from(graph.getReachableGroups());
   }
 
+  // ── Dual Identity resolution ──
+  const realIdentity = dualIdentityEngine.realIdentity;
+  const activeIdentity = dualIdentityEngine.activeIdentity;
+  const isImpersonating = dualIdentityEngine.isImpersonating;
+
+  // If impersonating, override tenant_id and user_type from ActiveIdentity
+  const effectiveTenantId = isImpersonating && activeIdentity.tenantId
+    ? activeIdentity.tenantId
+    : input.tenantId;
+  const effectiveUserType = isImpersonating
+    ? activeIdentity.userType
+    : (input.userType ?? 'tenant');
+
   return {
     request_id: generateRequestId(),
-    user_type: input.userType ?? 'tenant',
+    user_type: effectiveUserType,
     user_id: input.user.id,
-    tenant_id: input.tenantId,
+    tenant_id: effectiveTenantId,
     scopes,
     roles: input.effectiveRoles,
     features,
     allowed_company_ids,
     allowed_group_ids,
+    real_identity: realIdentity,
+    active_identity: activeIdentity,
+    is_impersonating: isImpersonating,
     meta: {
       email: input.user.email ?? null,
       session_id: input.session.access_token?.slice(-8) ?? null,
