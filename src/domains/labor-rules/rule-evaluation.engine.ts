@@ -23,6 +23,8 @@ export interface WorkContext {
   periculosidade?: boolean;
   dias_trabalhados?: number;          // no mês (para DSR)
   domingos_feriados_trabalhados?: number;
+  faltas?: number;
+  bonus_variavel?: number;
 }
 
 // ── Output ──
@@ -72,6 +74,53 @@ export function evaluateLaborRules(
     if (rubric && rubric.valor > 0) {
       results.push(rubric);
     }
+  }
+
+  // ── Synthetic rubrics (not rule-driven) ──
+
+  // Faltas: desconto proporcional ao dia de trabalho
+  if (ctx.faltas && ctx.faltas > 0) {
+    const dailyRate = ctx.salario_base / 30;
+    results.push({
+      rule_id: '__faltas',
+      rule_name: 'Desconto por Faltas',
+      category: 'vale_transporte' as LaborRuleCategory, // treated as deduction
+      codigo_rubrica: null,
+      valor: Math.round(ctx.faltas * dailyRate * 100) / 100,
+      base_calculo: 'salario_base / 30',
+      percentual_aplicado: null,
+      quantidade: ctx.faltas,
+      legal_basis: 'CLT Art. 473',
+      integra_inss: false,
+      integra_irrf: false,
+      integra_fgts: false,
+      integra_ferias: false,
+      integra_13: false,
+      integra_dsr: false,
+      aplica_reflexos: false,
+    });
+  }
+
+  // Bônus variável: provento que integra encargos
+  if (ctx.bonus_variavel && ctx.bonus_variavel > 0) {
+    results.push({
+      rule_id: '__bonus_variavel',
+      rule_name: 'Bônus Variável',
+      category: 'hora_extra' as LaborRuleCategory, // treated as provento
+      codigo_rubrica: null,
+      valor: Math.round(ctx.bonus_variavel * 100) / 100,
+      base_calculo: 'valor informado',
+      percentual_aplicado: null,
+      quantidade: 1,
+      legal_basis: null,
+      integra_inss: true,
+      integra_irrf: true,
+      integra_fgts: true,
+      integra_ferias: false,
+      integra_13: false,
+      integra_dsr: false,
+      aplica_reflexos: false,
+    });
   }
 
   return results;

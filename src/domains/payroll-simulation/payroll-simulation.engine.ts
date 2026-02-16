@@ -52,6 +52,8 @@ export function simulatePayroll(
     periculosidade: input.periculosidade,
     dias_trabalhados: input.dias_trabalhados,
     domingos_feriados_trabalhados: input.domingos_feriados_trabalhados,
+    faltas: input.faltas,
+    bonus_variavel: input.bonus_variavel,
   };
 
   // 2. Evaluate rubrics via LaborRulesEngine
