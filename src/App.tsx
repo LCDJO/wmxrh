@@ -49,6 +49,7 @@ import PlatformModules from "./pages/platform/PlatformModules";
 import PlatformSecurity from "./pages/platform/PlatformSecurity";
 import PlatformAudit from "./pages/platform/PlatformAudit";
 import PlatformUsers from "./pages/platform/PlatformUsers";
+import PlatformPlans from "./pages/platform/PlatformPlans";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +97,7 @@ function AppRoutes() {
         <Route path="modules" element={<PlatformModules />} />
         <Route path="users" element={<PlatformUsers />} />
         <Route path="security" element={<PlatformSecurity />} />
+        <Route path="plans" element={<PlatformPlans />} />
         <Route path="audit" element={<PlatformAudit />} />
       </Route>
 
