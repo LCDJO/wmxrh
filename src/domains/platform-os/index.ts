@@ -94,3 +94,37 @@ export type {
   CognitiveOrchestratorAPI,
   CognitiveState,
 } from './types';
+
+// ── Future extension contracts (type-only) ───────────────────
+export type {
+  // Marketplace
+  MarketplaceAPI,
+  MarketplaceModule,
+  MarketplaceInstallation,
+  MarketplaceCategory,
+  MarketplacePublisher,
+
+  // Plugins
+  PluginManagerAPI,
+  PluginManifest,
+  PluginInstance,
+  PluginPermission,
+  PluginSlot,
+  PluginExtensionPoint,
+  PluginSandboxConfig,
+
+  // SDK
+  PlatformSDK,
+  SDKInitOptions,
+  SDKIdentitySnapshot,
+
+  // Microfrontends
+  MicrofrontendOrchestratorAPI,
+  MicrofrontendDescriptor,
+  MicrofrontendInstance,
+  MicrofrontendLoadingStrategy,
+  MicrofrontendStatus,
+
+  // Aggregate
+  PlatformRuntimeFutureAPI,
+} from './future-types';
