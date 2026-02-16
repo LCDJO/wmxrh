@@ -59,7 +59,42 @@ export function simulatePayroll(
   // 2. Evaluate rubrics via LaborRulesEngine
   const rubrics = evaluateLaborRules(workContext, rules);
 
-  // 3. Summarize into bases
+  // 3. Auto-reflect DSR over rubrics with integra_dsr
+  //    DSR = (soma verbas variáveis / dias úteis) * domingos+feriados
+  const dsrRubrics = rubrics.filter(r => r.integra_dsr && r.valor > 0);
+  const dsrBase = dsrRubrics.reduce((s, r) => s + r.valor, 0);
+  let dsrReflexo = 0;
+
+  if (dsrBase > 0) {
+    const diasUteis = input.dias_trabalhados ?? 22;
+    const domingos = input.domingos_feriados_trabalhados ?? 4;
+    dsrReflexo = round((dsrBase / diasUteis) * domingos);
+
+    // Check if DSR was already calculated by the rules engine to avoid duplication
+    const existingDsr = rubrics.find(r => r.category === 'dsr');
+    if (!existingDsr) {
+      rubrics.push({
+        rule_id: '__dsr_reflexo',
+        rule_name: 'DSR sobre Verbas Variáveis (reflexo automático)',
+        category: 'dsr' as any,
+        codigo_rubrica: null,
+        valor: dsrReflexo,
+        base_calculo: 'soma verbas com integra_dsr',
+        percentual_aplicado: null,
+        quantidade: null,
+        legal_basis: 'CLT Art. 67 / Súmula 172 TST',
+        integra_inss: true,
+        integra_irrf: true,
+        integra_fgts: true,
+        integra_ferias: true,
+        integra_13: true,
+        integra_dsr: false,
+        aplica_reflexos: true,
+      });
+    }
+  }
+
+  // 4. Summarize into bases (after DSR reflexo injection)
   const summary = summarizeRubrics(rubrics);
 
   // Add base salary to proventos (engine only calculates additionals)
