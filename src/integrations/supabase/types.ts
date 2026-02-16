@@ -3039,28 +3039,34 @@ export type Database = {
       }
       permission_definitions: {
         Row: {
+          action: string
           code: string
           created_at: string
           description: string | null
           id: string
           module: string
           name: string
+          resource: string
         }
         Insert: {
+          action: string
           code: string
           created_at?: string
           description?: string | null
           id?: string
           module: string
           name: string
+          resource: string
         }
         Update: {
+          action?: string
           code?: string
           created_at?: string
           description?: string | null
           id?: string
           module?: string
           name?: string
+          resource?: string
         }
         Relationships: []
       }
@@ -3815,22 +3821,34 @@ export type Database = {
       tenant_memberships: {
         Row: {
           created_at: string
+          created_by: string | null
+          email: string | null
           id: string
+          name: string | null
           role: Database["public"]["Enums"]["tenant_role"]
+          status: string
           tenant_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
+          email?: string | null
           id?: string
+          name?: string | null
           role?: Database["public"]["Enums"]["tenant_role"]
+          status?: string
           tenant_id: string
           user_id: string
         }
         Update: {
           created_at?: string
+          created_by?: string | null
+          email?: string | null
           id?: string
+          name?: string | null
           role?: Database["public"]["Enums"]["tenant_role"]
+          status?: string
           tenant_id?: string
           user_id?: string
         }
