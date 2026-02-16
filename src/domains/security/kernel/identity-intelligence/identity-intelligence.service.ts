@@ -116,8 +116,12 @@ export class IdentityIntelligenceService {
   }
 
   syncPhase(): IdentityPhase {
+    const prevPhase = this.router.phase;
     const phase = this.router.syncPhase();
-    this._notifySnapshotListeners();
+    // Only notify if phase actually changed to avoid infinite render loops
+    if (phase !== prevPhase) {
+      this._notifySnapshotListeners();
+    }
     return phase;
   }
 
