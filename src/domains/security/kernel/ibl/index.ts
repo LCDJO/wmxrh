@@ -1,7 +1,7 @@
 /**
  * IBL — Public API barrel export
  * 
- * All 5 IBL components + types accessible from here.
+ * All 5 IBL components + domain events accessible from here.
  */
 
 // ── Components ──
@@ -19,6 +19,16 @@ export type { MultiScopeToken, ScopeToken, QueryFilterSet } from './multi-scope-
 
 export { contextGuard, ContextGuardError } from './context-guard.middleware';
 export type { GuardResult, GuardTarget, GuardCheckName } from './context-guard.middleware';
+
+// ── Domain Events ──
+export { emitIBLEvent, onIBLEvent, onIBLEventType, getIBLEventLog, clearIBLEventLog } from './domain-events';
+export type {
+  IBLDomainEventType, IBLDomainEvent,
+  ContextSwitchedPayload, ContextSnapshotPayload,
+  IdentitySessionStartedPayload,
+  IdentitySessionRefreshedPayload,
+  UnauthorizedContextSwitchPayload,
+} from './domain-events';
 
 // ── Types ──
 export type {
