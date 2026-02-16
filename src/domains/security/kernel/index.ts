@@ -59,3 +59,7 @@ export type { InheritedScopes, InheritanceEntry, AccessCheckResult } from './acc
 // ── Access Graph Cache ─────────────────────────────────────
 export { accessGraphCache } from './access-graph.cache';
 export type { AccessGraphCacheEntry, CacheInvalidationReason, CacheInvalidationEvent } from './access-graph.cache';
+
+// ── Access Graph Events ────────────────────────────────────
+export { emitGraphEvent, onGraphEvent, getGraphEventLog, clearGraphEventLog, graphEvents } from './access-graph.events';
+export type { GraphEventType, GraphEvent } from './access-graph.events';

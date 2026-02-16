@@ -1,14 +1,14 @@
 /**
  * SecurityKernel — PermissionEngine (RBAC + ABAC)
  * 
- * Two-layer authorization:
- *   1. RBAC — Does the user's role allow this action on this resource?
- *   2. ABAC — Does the user's scope grant access to the target entity?
- * 
- * Primary API:
- *   checkPermission(action, resource, securityContext) → PermissionResult
- * 
- * The engine is STATELESS — all state comes from SecurityContext.
+ * ╔══════════════════════════════════════════════════════════════╗
+ * ║  DELEGATES TO ACCESS GRAPH for all authorization checks.    ║
+ * ║                                                              ║
+ * ║  checkPermission() → AccessGraph.canAccess() (O(1))         ║
+ * ║                                                              ║
+ * ║  The engine itself is STATELESS — it reads the precomputed  ║
+ * ║  AccessGraph for O(1) lookups instead of manual traversal.  ║
+ * ╚══════════════════════════════════════════════════════════════╝
  */
 
 import {
@@ -21,6 +21,7 @@ import {
 } from '../permissions';
 import type { TenantRole } from '@/domains/shared/types';
 import type { SecurityContext, SecurityScope } from './identity.service';
+import { getAccessGraph } from './access-graph';
 
 // ════════════════════════════════════
 // TYPES
@@ -48,10 +49,10 @@ export interface ResourceTarget {
 }
 
 // ════════════════════════════════════
-// RBAC LAYER
+// FALLBACK: manual RBAC (when no graph)
 // ════════════════════════════════════
 
-function checkRBAC(
+function checkRBACFallback(
   action: PermissionAction,
   resource: PermissionEntity,
   roles: TenantRole[]
@@ -67,29 +68,18 @@ function checkRBAC(
 }
 
 // ════════════════════════════════════
-// ABAC LAYER (Scope-based)
+// FALLBACK: manual ABAC (when no graph)
 // ════════════════════════════════════
 
-/**
- * Checks if user's scopes grant access to the target resource.
- * 
- * Hierarchy: tenant > company_group > company
- *   - tenant scope → access to everything in the tenant
- *   - company_group scope → access to all companies in that group
- *   - company scope → access to that specific company only
- */
-function checkABAC(
+function checkABACFallback(
   scopes: SecurityScope[],
   target?: ResourceTarget
 ): PermissionResult {
-  // No target specified = no ABAC restriction
   if (!target) return { decision: 'allow' };
 
-  // Tenant-level scope = full access
   const hasTenantScope = scopes.some(s => s.type === 'tenant');
   if (hasTenantScope) return { decision: 'allow' };
 
-  // Check company_group access
   if (target.company_group_id) {
     const hasGroupAccess = scopes.some(
       s => s.type === 'company_group' && s.id === target.company_group_id
@@ -97,22 +87,17 @@ function checkABAC(
     if (hasGroupAccess) return { decision: 'allow' };
   }
 
-  // Check company access
   if (target.company_id) {
     const hasCompanyAccess = scopes.some(
       s => s.type === 'company' && s.id === target.company_id
     );
     if (hasCompanyAccess) return { decision: 'allow' };
 
-    // Group-scoped users can access companies within their groups
-    // (RLS double-checks on the backend)
     const hasAnyGroupScope = scopes.some(s => s.type === 'company_group');
     if (hasAnyGroupScope) return { decision: 'allow' };
   }
 
-  // If target has neither group nor company, it's tenant-level data
   if (!target.company_group_id && !target.company_id) {
-    // Only tenant-scoped users can access tenant-level resources
     return {
       decision: 'deny',
       failedCheck: 'abac',
@@ -128,19 +113,14 @@ function checkABAC(
 }
 
 // ════════════════════════════════════
-// PRIMARY API
+// PRIMARY API — delegates to AccessGraph
 // ════════════════════════════════════
 
 /**
  * checkPermission — The single entry point for authorization.
  * 
- * Evaluates RBAC (role matrix) then ABAC (scope hierarchy).
- * Both must pass for the action to be allowed.
- * 
- * @param action    - What the user wants to do (view, create, update, delete)
- * @param resource  - What entity they want to act on
- * @param ctx       - The SecurityContext (contains roles + scopes)
- * @param target    - Optional: the specific resource's location for ABAC
+ * DELEGATES to AccessGraph when available (O(1) precomputed lookups).
+ * Falls back to manual RBAC+ABAC when graph is not built yet.
  */
 export function checkPermission(
   action: PermissionAction,
@@ -148,12 +128,41 @@ export function checkPermission(
   ctx: SecurityContext,
   target?: ResourceTarget
 ): PermissionResult {
-  // 1. RBAC check
-  const rbacResult = checkRBAC(action, resource, ctx.roles);
+  // ── Try AccessGraph first (O(1) path) ──
+  const graph = getAccessGraph();
+  if (graph) {
+    // RBAC: O(1) hash lookup
+    if (!graph.canPerform(resource, action)) {
+      return {
+        decision: 'deny',
+        failedCheck: 'rbac',
+        reason: `Role insuficiente para ${action} em ${resource}. Roles: [${ctx.roles.join(', ')}]`,
+      };
+    }
+
+    // ABAC: O(1) via canAccess (combines scope check)
+    if (target) {
+      const canAccess = graph.canAccess(resource, action, {
+        company_group_id: target.company_group_id,
+        company_id: target.company_id,
+      });
+      if (!canAccess) {
+        return {
+          decision: 'deny',
+          failedCheck: 'abac',
+          reason: `Escopo insuficiente. Alvo: group=${target.company_group_id}, company=${target.company_id}`,
+        };
+      }
+    }
+
+    return { decision: 'allow' };
+  }
+
+  // ── Fallback: manual RBAC + ABAC (no graph available) ──
+  const rbacResult = checkRBACFallback(action, resource, ctx.roles);
   if (rbacResult.decision === 'deny') return rbacResult;
 
-  // 2. ABAC check (scope-based)
-  const abacResult = checkABAC(ctx.scopes, target);
+  const abacResult = checkABACFallback(ctx.scopes, target);
   if (abacResult.decision === 'deny') return abacResult;
 
   return { decision: 'allow' };
@@ -164,7 +173,7 @@ export function checkPermission(
 // ════════════════════════════════════
 
 export interface PermissionEngineAPI {
-  /** Primary: RBAC + ABAC check using SecurityContext */
+  /** Primary: RBAC + ABAC check using SecurityContext (delegates to AccessGraph) */
   checkPermission: typeof checkPermission;
   /** RBAC-only: check if roles can perform action on entity */
   can: (entity: PermissionEntity, action: PermissionAction, roles: TenantRole[]) => boolean;
@@ -178,28 +187,39 @@ export interface PermissionEngineAPI {
   canAny: (checks: PermissionCheck[], roles: TenantRole[]) => boolean;
   /** Get allowed roles for an entity+action */
   getAllowedRoles: (entity: PermissionEntity, action: PermissionAction) => TenantRole[];
-  /** ABAC-only: check scope access to a target */
+  /** ABAC-only: check scope access to a target (fallback, prefer AccessGraph) */
   checkScopeAccess: (scopes: SecurityScope[], target: ResourceTarget) => PermissionResult;
 }
 
 export const permissionEngine: PermissionEngineAPI = {
   checkPermission,
 
-  can: (entity, action, roles) => hasPermission(entity, action, roles),
+  can: (entity, action, roles) => {
+    // Use AccessGraph if available for O(1) lookup
+    const graph = getAccessGraph();
+    if (graph) return graph.canPerform(entity, action);
+    return hasPermission(entity, action, roles);
+  },
 
   canNav: (navKey, roles) => canAccessNavItem(navKey, roles),
 
   hasAnyRole: (userRoles, ...targetRoles) =>
     userRoles.some(r => targetRoles.includes(r)),
 
-  canAll: (checks, roles) =>
-    checks.every(c => hasPermission(c.entity, c.action, roles)),
+  canAll: (checks, roles) => {
+    const graph = getAccessGraph();
+    if (graph) return checks.every(c => graph.canPerform(c.entity, c.action));
+    return checks.every(c => hasPermission(c.entity, c.action, roles));
+  },
 
-  canAny: (checks, roles) =>
-    checks.some(c => hasPermission(c.entity, c.action, roles)),
+  canAny: (checks, roles) => {
+    const graph = getAccessGraph();
+    if (graph) return checks.some(c => graph.canPerform(c.entity, c.action));
+    return checks.some(c => hasPermission(c.entity, c.action, roles));
+  },
 
   getAllowedRoles: (entity, action) =>
     PERMISSION_MATRIX[entity]?.[action] ?? [],
 
-  checkScopeAccess: (scopes, target) => checkABAC(scopes, target),
+  checkScopeAccess: (scopes, target) => checkABACFallback(scopes, target),
 };

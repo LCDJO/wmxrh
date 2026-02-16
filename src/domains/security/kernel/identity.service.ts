@@ -13,6 +13,7 @@ import type { User, Session } from '@supabase/supabase-js';
 import type { TenantRole, UserRole, ScopeType } from '@/domains/shared/types';
 import { resolveScope, type ScopeResolution } from './scope-resolver';
 import { featureFlagEngine } from './feature-flag-engine';
+import { getAccessGraph } from './access-graph';
 import type { SecurityFeatureKey, FeatureKey } from '../feature-flags';
 
 // ════════════════════════════════════
@@ -32,12 +33,21 @@ export interface SecurityContext {
   roles: TenantRole[];
   /** Active feature flags for this context */
   features: FeatureKey[];
+
+  // ── QUERY OPTIMIZATION (from AccessGraph) ──
+  /** Precomputed list of company IDs the user can access (for WHERE IN clauses) */
+  allowed_company_ids: string[];
+  /** Precomputed list of group IDs the user can access (for WHERE IN clauses) */
+  allowed_group_ids: string[];
+
   /** Additional identity metadata */
   meta: {
     email: string | null;
     session_id: string | null;
     /** Scope resolution result for query builders */
     scopeResolution: ScopeResolution;
+    /** Whether user has full tenant-wide access (bypass company/group filters) */
+    hasTenantScope: boolean;
   };
 }
 
@@ -118,8 +128,8 @@ export function buildSecurityContext(input: BuildSecurityContextInput): Security
   }));
 
   // If user has tenant-wide access via membership, ensure tenant scope is present
-  const hasTenantScope = scopes.some(s => s.type === 'tenant');
-  if (!hasTenantScope && scopeResolution.hasTenantScope) {
+  const hasTenantScope = scopes.some(s => s.type === 'tenant') || scopeResolution.hasTenantScope;
+  if (!scopes.some(s => s.type === 'tenant') && scopeResolution.hasTenantScope) {
     scopes.unshift({ type: 'tenant', id: null });
   }
 
@@ -132,6 +142,17 @@ export function buildSecurityContext(input: BuildSecurityContextInput): Security
     })
   );
 
+  // Resolve allowed IDs from AccessGraph
+  const graph = getAccessGraph();
+
+  let allowed_company_ids: string[] = [];
+  let allowed_group_ids: string[] = [];
+
+  if (graph) {
+    allowed_company_ids = Array.from(graph.getReachableCompanies());
+    allowed_group_ids = Array.from(graph.getReachableGroups());
+  }
+
   return {
     request_id: generateRequestId(),
     user_id: input.user.id,
@@ -139,10 +160,13 @@ export function buildSecurityContext(input: BuildSecurityContextInput): Security
     scopes,
     roles: input.effectiveRoles,
     features,
+    allowed_company_ids,
+    allowed_group_ids,
     meta: {
       email: input.user.email ?? null,
       session_id: input.session.access_token?.slice(-8) ?? null,
       scopeResolution,
+      hasTenantScope,
     },
   };
 }
