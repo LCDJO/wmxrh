@@ -28,6 +28,8 @@ export interface SimulationInput {
   periculosidade?: boolean;
   dias_trabalhados?: number;
   domingos_feriados_trabalhados?: number;
+  faltas?: number;
+  bonus_variavel?: number;
 
   /** Number of dependents for IRRF deduction */
   dependentes_irrf?: number;
