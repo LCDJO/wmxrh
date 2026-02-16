@@ -298,7 +298,7 @@ export const agreementAssignmentService = {
 
     const byStatus: Record<AgreementStatus, number> = {
       pending: 0, sent: 0, signed: 0,
-      rejected: 0, expired: 0,
+      rejected: 0, expired: 0, renewed: 0,
     };
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
     let signedThisMonth = 0;

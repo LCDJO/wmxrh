@@ -7,14 +7,15 @@
 
 // ── Enums ──
 
-export type AgreementTipo = 'geral' | 'funcao' | 'empresa' | 'risco';
+export type AgreementTipo = 'geral' | 'funcao' | 'empresa' | 'risco' | 'lgpd';
 
 export type AgreementStatus =
   | 'pending'
   | 'sent'
   | 'signed'
   | 'rejected'
-  | 'expired';
+  | 'expired'
+  | 'renewed';
 
 export type SignatureProvider =
   | 'clicksign'
@@ -23,7 +24,8 @@ export type SignatureProvider =
   | 'docusign'
   | 'opensign'
   | 'manual'
-  | 'simulation';
+  | 'simulation'
+  | 'internal_advanced';
 
 // ── Entities ──
 
@@ -138,4 +140,124 @@ export interface AgreementDashboardStats {
   pending_signatures: number;
   signed_this_month: number;
   compliance_rate: number; // % of mandatory signed
+}
+
+// ════════════════════════════════════════════════
+// FUTURE-READY TYPES (preparação futura)
+// ════════════════════════════════════════════════
+
+// ── 1. Assinatura Interna Avançada ──
+
+/**
+ * Prepared for internal advanced signature (without external provider).
+ * Uses biometric/OTP + geolocation + device fingerprint.
+ */
+export interface InternalSignatureMetadata {
+  method: 'otp_email' | 'otp_sms' | 'biometric' | 'password_confirm';
+  device_fingerprint: string | null;
+  geolocation: { lat: number; lng: number } | null;
+  otp_validated_at: string | null;
+  signature_image_url: string | null;
+}
+
+// ── 2. Versionamento Jurídico ──
+
+/**
+ * Tracks legal version diffs for compliance auditing.
+ * When a template is updated, the diff between versions is stored.
+ */
+export interface LegalVersionDiff {
+  version_from: number;
+  version_to: number;
+  diff_html: string;
+  legal_review_status: 'pending_review' | 'approved' | 'rejected';
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  legal_notes: string | null;
+}
+
+export interface LegalVersionPolicy {
+  /** If true, employees must re-sign when a new version is published */
+  requires_re_signature: boolean;
+  /** Grace period in days for re-signature after new version */
+  re_signature_grace_days: number;
+  /** If true, old version remains valid until grace period expires */
+  old_version_valid_during_grace: boolean;
+}
+
+// ── 3. Renovação Automática de Termos ──
+
+export type RenewalFrequency = 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'biennial';
+
+export interface RenewalPolicy {
+  /** Enable auto-renewal for this template */
+  auto_renew: boolean;
+  /** How often the term should be renewed */
+  frequency: RenewalFrequency;
+  /** Days before expiry to send renewal notification */
+  notify_days_before: number;
+  /** Days before expiry to auto-send new agreement */
+  auto_send_days_before: number;
+  /** Maximum number of auto-renewals (null = unlimited) */
+  max_renewals: number | null;
+  /** If true, requires explicit re-signature (not just tacit renewal) */
+  requires_explicit_signature: boolean;
+}
+
+export interface RenewalRecord {
+  agreement_id: string;
+  original_agreement_id: string;
+  renewal_number: number;
+  renewed_at: string;
+  next_renewal_date: string | null;
+  renewal_trigger: 'automatic' | 'manual' | 'version_change';
+}
+
+// ── 4. Integração LGPD — Consentimento ──
+
+export type ConsentPurpose =
+  | 'data_processing'
+  | 'image_usage'
+  | 'biometric_collection'
+  | 'health_data_sharing'
+  | 'marketing'
+  | 'third_party_sharing'
+  | 'analytics';
+
+export type ConsentLegalBasis =
+  | 'consent'           // Art. 7, I — consentimento
+  | 'legal_obligation'  // Art. 7, II — obrigação legal
+  | 'legitimate_interest' // Art. 7, IX — interesse legítimo
+  | 'contract_execution'  // Art. 7, V — execução de contrato
+  | 'health_protection';  // Art. 7, VIII — tutela da saúde
+
+export interface LgpdConsentRecord {
+  id: string;
+  employee_id: string;
+  tenant_id: string;
+  purpose: ConsentPurpose;
+  legal_basis: ConsentLegalBasis;
+  /** Link to the agreement that records this consent */
+  agreement_id: string | null;
+  granted_at: string;
+  revoked_at: string | null;
+  /** If revoked, the reason */
+  revocation_reason: string | null;
+  /** Data retention period in months */
+  retention_months: number;
+  /** ISO date when data must be deleted */
+  data_expiry_date: string;
+  /** Controller and DPO info */
+  controller_name: string;
+  dpo_contact: string | null;
+}
+
+export interface LgpdDataSubjectRequest {
+  type: 'access' | 'rectification' | 'deletion' | 'portability' | 'revoke_consent';
+  employee_id: string;
+  tenant_id: string;
+  requested_at: string;
+  fulfilled_at: string | null;
+  status: 'pending' | 'in_progress' | 'fulfilled' | 'denied';
+  denial_reason: string | null;
 }
