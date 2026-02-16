@@ -26,6 +26,7 @@ import LaborCompliance from "./pages/LaborCompliance";
 import LaborRules from "./pages/LaborRules";
 import LegalDashboard from "./pages/LegalDashboard";
 import Audit from "./pages/Audit";
+import PayrollSimulation from "./pages/PayrollSimulation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -129,6 +130,11 @@ function AppRoutes() {
         <Route path="/legal-dashboard" element={
           <ProtectedRoute navKey="legal_dashboard">
             <LegalDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/payroll-simulation" element={
+          <ProtectedRoute navKey="compensation">
+            <PayrollSimulation />
           </ProtectedRoute>
         } />
       </Route>
