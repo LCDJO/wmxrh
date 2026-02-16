@@ -70,6 +70,7 @@ const navStructure: NavEntry[] = [
     label: 'Funcionários',
     children: [
       { to: '/employees', icon: Users, label: 'Cadastro', key: 'employees' },
+      { to: '/agreements', icon: ScrollText, label: 'Termos e Acordos', key: 'employees' },
       { to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation' },
       { to: '/benefits', icon: ShieldCheck, label: 'Benefícios', key: 'benefits' },
       { to: '/health', icon: Heart, label: 'Saúde Ocupacional', key: 'health' },
