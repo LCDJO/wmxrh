@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.agreement-webhook]
 verify_jwt = false
+
+[functions.platform-cognitive]
+verify_jwt = false
+
+[functions.manage-platform-user]
+verify_jwt = false
