@@ -157,6 +157,78 @@ const CRUD_ACTIONS = ['view', 'create', 'update', 'delete'] as const;
 const CRUD_LABELS: Record<string, string> = { view: 'Ler', create: 'Criar', update: 'Editar', delete: 'Excluir' };
 
 // ══════════════════════════════════
+// VISUAL VALIDATIONS
+// ══════════════════════════════════
+
+/** Resources considered financial / elevated access */
+const FINANCIAL_RESOURCES = new Set(['salary', 'payroll', 'benefits']);
+/** Actions considered critical / dangerous */
+const CRITICAL_ACTIONS = new Set(['delete', 'manage']);
+/** Resources considered critical regardless of action */
+const CRITICAL_RESOURCES = new Set(['iam', 'audit']);
+
+/** Check if a permission key (resource.action) is critical */
+function isCriticalPerm(resource: string, action: string): boolean {
+  return CRITICAL_ACTIONS.has(action) || (CRITICAL_RESOURCES.has(resource) && action !== 'view');
+}
+
+/** Check if a permission key is financial */
+function isFinancialPerm(resource: string): boolean {
+  return FINANCIAL_RESOURCES.has(resource);
+}
+
+interface PolicyConflict {
+  type: 'missing_view' | 'elevated_without_audit' | 'delete_without_update';
+  severity: 'warn' | 'error';
+  message: string;
+  resource: string;
+}
+
+/** Detect policy conflicts for a role's granted permissions */
+function detectPolicyConflicts(grantedKeys: Set<string>): PolicyConflict[] {
+  const conflicts: PolicyConflict[] = [];
+  const resourceActions = new Map<string, Set<string>>();
+
+  grantedKeys.forEach(key => {
+    const [res, act] = key.split('.');
+    if (!resourceActions.has(res)) resourceActions.set(res, new Set());
+    resourceActions.get(res)!.add(act);
+  });
+
+  resourceActions.forEach((actions, resource) => {
+    // Has create/update/delete but no view
+    if (!actions.has('view') && (actions.has('create') || actions.has('update') || actions.has('delete'))) {
+      conflicts.push({
+        type: 'missing_view',
+        severity: 'error',
+        message: `${RES_LABELS[resource] || resource}: pode modificar mas não pode visualizar`,
+        resource,
+      });
+    }
+    // Has delete but no update (unusual)
+    if (actions.has('delete') && !actions.has('update')) {
+      conflicts.push({
+        type: 'delete_without_update',
+        severity: 'warn',
+        message: `${RES_LABELS[resource] || resource}: pode excluir mas não editar`,
+        resource,
+      });
+    }
+  });
+
+  // IAM manage without audit view
+  if (grantedKeys.has('iam.manage') && !grantedKeys.has('audit.view')) {
+    conflicts.push({
+      type: 'elevated_without_audit',
+      severity: 'warn',
+      message: 'Gerencia acesso (IAM) sem visibilidade de auditoria',
+      resource: 'iam',
+    });
+  }
+
+  return conflicts;
+}
+// ══════════════════════════════════
 // GRAPH BUILD
 // ══════════════════════════════════
 
@@ -938,8 +1010,16 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
           </div>
         </Card>
 
-        {/* Right Panel: CRUD Toggle + Live Access Preview + Node Detail + Stats */}
+        {/* Right Panel: Validations + CRUD Toggle + Live Access Preview + Node Detail + Stats */}
         <div className="space-y-3 flex flex-col overflow-hidden" style={{ height: '68vh', minHeight: 460 }}>
+          {/* ── Validation Alerts ── */}
+          <ValidationAlerts
+            focusRoleId={focusRoleId}
+            roles={roles}
+            permissions={permissions}
+            rolePermMap={rolePermMap}
+          />
+
           {/* CRUD Toggle Panel */}
           {crudResource && focusRoleId && (
             <CrudTogglePanel
@@ -1348,15 +1428,34 @@ function LiveAccessPreview({ focusRoleId, roles, permissions, rolePermMap }: Liv
       </CardHeader>
       <ScrollArea className="flex-1 px-1.5">
         <div className="space-y-0.5 pb-3">
-          {granted.map(r => (
-            <div key={`${r.resource}.${r.action}`} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md">
-              <div className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-primary/10 shrink-0">
-                <Check className="h-3 w-3 text-primary" />
+          {granted.map(r => {
+            const critical = isCriticalPerm(r.resource, r.action);
+            const financial = isFinancialPerm(r.resource);
+            return (
+              <div key={`${r.resource}.${r.action}`} className={cn(
+                "flex items-center gap-2 px-2.5 py-1.5 rounded-md",
+                critical && "bg-destructive/5 border border-destructive/10",
+                financial && !critical && "bg-warning/5 border border-warning/10",
+              )}>
+                <div className={cn(
+                  "flex h-[18px] w-[18px] items-center justify-center rounded-full shrink-0",
+                  critical ? "bg-destructive/15" : financial ? "bg-warning/15" : "bg-primary/10"
+                )}>
+                  {critical ? (
+                    <AlertTriangle className="h-3 w-3 text-destructive" />
+                  ) : financial ? (
+                    <DollarSign className="h-3 w-3 text-warning" />
+                  ) : (
+                    <Check className="h-3 w-3 text-primary" />
+                  )}
+                </div>
+                <span className={cn("text-[11px] flex-1", critical ? "text-destructive font-semibold" : financial ? "text-warning font-medium" : "text-foreground")}>{r.label}</span>
+                {critical && <Badge variant="destructive" className="text-[8px] h-3.5 px-1">CRÍTICO</Badge>}
+                {financial && !critical && <Badge className="text-[8px] h-3.5 px-1 bg-warning/15 text-warning border-warning/20">FINANCEIRO</Badge>}
+                <span className="text-[9px] text-muted-foreground font-mono">{r.resource}.{r.action}</span>
               </div>
-              <span className="text-[11px] text-foreground flex-1">{r.label}</span>
-              <span className="text-[9px] text-muted-foreground font-mono">{r.resource}.{r.action}</span>
-            </div>
-          ))}
+            );
+          })}
           {granted.length > 0 && denied.length > 0 && (
             <div className="border-t border-border/30 my-1.5" />
           )}
@@ -1486,15 +1585,27 @@ function PermissionLibraryPanel({ permissions, rolePermMap, focusRoleId, onSelec
                               : "hover:bg-muted/30"
                           )}
                         >
-                          <Key className={cn("h-3 w-3 shrink-0", isAssigned ? "text-primary" : "text-muted-foreground/40")} />
+                          <Key className={cn("h-3 w-3 shrink-0",
+                            isCriticalPerm(p.resource, p.action) ? "text-destructive" :
+                            isFinancialPerm(p.resource) ? "text-warning" :
+                            isAssigned ? "text-primary" : "text-muted-foreground/40"
+                          )} />
                           <div className="flex-1 min-w-0">
                             <p className={cn(
                               "text-[11px] font-mono truncate",
+                              isCriticalPerm(p.resource, p.action) ? "text-destructive font-semibold" :
+                              isFinancialPerm(p.resource) ? "text-warning font-medium" :
                               isAssigned ? "text-primary font-medium" : "text-foreground"
                             )}>
                               {key}
                             </p>
                           </div>
+                          {isCriticalPerm(p.resource, p.action) && (
+                            <AlertTriangle className="h-2.5 w-2.5 text-destructive shrink-0" />
+                          )}
+                          {isFinancialPerm(p.resource) && !isCriticalPerm(p.resource, p.action) && (
+                            <DollarSign className="h-2.5 w-2.5 text-warning shrink-0" />
+                          )}
                           {isAssigned && (
                             <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
                           )}
@@ -1518,6 +1629,106 @@ function PermissionLibraryPanel({ permissions, rolePermMap, focusRoleId, onSelec
         </div>
       </ScrollArea>
     </Card>
+  );
+}
+
+// ══════════════════════════════════
+// VALIDATION ALERTS
+// ══════════════════════════════════
+
+interface ValidationAlertsProps {
+  focusRoleId: string | null;
+  roles: CustomRole[];
+  permissions: PermissionDefinition[];
+  rolePermMap: Map<string, string[]>;
+}
+
+function ValidationAlerts({ focusRoleId, roles, permissions, rolePermMap }: ValidationAlertsProps) {
+  const focusedRole = focusRoleId ? roles.find(r => r.id === focusRoleId) : null;
+
+  const analysis = useMemo(() => {
+    if (!focusRoleId) return { hasFinancial: false, criticalCount: 0, conflicts: [] as PolicyConflict[] };
+
+    const permIds = rolePermMap.get(focusRoleId) || [];
+    const grantedKeys = new Set<string>();
+    let hasFinancial = false;
+    let criticalCount = 0;
+
+    permIds.forEach(pid => {
+      const p = permissions.find(pp => pp.id === pid);
+      if (!p) return;
+      grantedKeys.add(`${p.resource}.${p.action}`);
+      if (isFinancialPerm(p.resource)) hasFinancial = true;
+      if (isCriticalPerm(p.resource, p.action)) criticalCount++;
+    });
+
+    const conflicts = detectPolicyConflicts(grantedKeys);
+    return { hasFinancial, criticalCount, conflicts };
+  }, [focusRoleId, rolePermMap, permissions]);
+
+  if (!focusedRole) return null;
+
+  const { hasFinancial, criticalCount, conflicts } = analysis;
+  const hasAny = hasFinancial || criticalCount > 0 || conflicts.length > 0;
+  if (!hasAny) return null;
+
+  return (
+    <div className="space-y-1.5 shrink-0 animate-in fade-in slide-in-from-right-2 duration-200">
+      {/* Financial access warning */}
+      {hasFinancial && (
+        <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-warning/8 border border-warning/20">
+          <DollarSign className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-semibold text-warning">Acesso financeiro elevado</p>
+            <p className="text-[10px] text-muted-foreground">
+              <span className="font-medium text-foreground">{focusedRole.name}</span> tem acesso a dados financeiros sensíveis (salário, folha, benefícios).
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Critical permissions count */}
+      {criticalCount > 0 && (
+        <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-destructive/8 border border-destructive/20">
+          <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-semibold text-destructive">
+              {criticalCount} permissão{criticalCount !== 1 ? 'ões' : ''} crítica{criticalCount !== 1 ? 's' : ''}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              Inclui ações de exclusão, gerenciamento ou acesso privilegiado.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Policy conflicts */}
+      {conflicts.map((conflict, i) => (
+        <div
+          key={i}
+          className={cn(
+            "flex items-start gap-2 px-3 py-2 rounded-lg border",
+            conflict.severity === 'error'
+              ? "bg-destructive/8 border-destructive/20"
+              : "bg-warning/8 border-warning/20"
+          )}
+        >
+          <ShieldCheck className={cn("h-3.5 w-3.5 shrink-0 mt-0.5", conflict.severity === 'error' ? "text-destructive" : "text-warning")} />
+          <div className="flex-1 min-w-0">
+            <p className={cn("text-[11px] font-semibold", conflict.severity === 'error' ? "text-destructive" : "text-warning")}>
+              Conflito de Policy
+            </p>
+            <p className="text-[10px] text-muted-foreground">{conflict.message}</p>
+          </div>
+          <Badge
+            variant={conflict.severity === 'error' ? "destructive" : "secondary"}
+            className="text-[8px] h-3.5 px-1 shrink-0"
+          >
+            {conflict.severity === 'error' ? 'ERRO' : 'AVISO'}
+          </Badge>
+        </div>
+      ))}
+    </div>
   );
 }
 
