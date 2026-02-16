@@ -172,6 +172,189 @@ export type Database = {
           },
         ]
       }
+      collective_agreement_clauses: {
+        Row: {
+          agreement_id: string
+          applies_to_rule_id: string | null
+          category: Database["public"]["Enums"]["labor_rule_category"] | null
+          clause_number: string
+          created_at: string
+          description: string | null
+          id: string
+          is_mandatory: boolean
+          override_config: Json | null
+          override_fixed_value: number | null
+          override_percentage: number | null
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agreement_id: string
+          applies_to_rule_id?: string | null
+          category?: Database["public"]["Enums"]["labor_rule_category"] | null
+          clause_number: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_mandatory?: boolean
+          override_config?: Json | null
+          override_fixed_value?: number | null
+          override_percentage?: number | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agreement_id?: string
+          applies_to_rule_id?: string | null
+          category?: Database["public"]["Enums"]["labor_rule_category"] | null
+          clause_number?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_mandatory?: boolean
+          override_config?: Json | null
+          override_fixed_value?: number | null
+          override_percentage?: number | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collective_agreement_clauses_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "collective_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collective_agreement_clauses_applies_to_rule_id_fkey"
+            columns: ["applies_to_rule_id"]
+            isOneToOne: false
+            referencedRelation: "labor_rule_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collective_agreement_clauses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collective_agreements: {
+        Row: {
+          agreement_type: string
+          annual_readjustment_pct: number | null
+          base_date_month: number | null
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          document_url: string | null
+          employer_union_name: string | null
+          id: string
+          metadata: Json | null
+          notes: string | null
+          registration_number: string | null
+          rule_set_id: string | null
+          salary_ceiling: number | null
+          salary_floor: number | null
+          status: string
+          tenant_id: string
+          union_cnpj: string | null
+          union_name: string
+          updated_at: string
+          valid_from: string
+          valid_until: string
+        }
+        Insert: {
+          agreement_type?: string
+          annual_readjustment_pct?: number | null
+          base_date_month?: number | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          document_url?: string | null
+          employer_union_name?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          registration_number?: string | null
+          rule_set_id?: string | null
+          salary_ceiling?: number | null
+          salary_floor?: number | null
+          status?: string
+          tenant_id: string
+          union_cnpj?: string | null
+          union_name: string
+          updated_at?: string
+          valid_from: string
+          valid_until: string
+        }
+        Update: {
+          agreement_type?: string
+          annual_readjustment_pct?: number | null
+          base_date_month?: number | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          document_url?: string | null
+          employer_union_name?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          registration_number?: string | null
+          rule_set_id?: string | null
+          salary_ceiling?: number | null
+          salary_floor?: number | null
+          status?: string
+          tenant_id?: string
+          union_cnpj?: string | null
+          union_name?: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collective_agreements_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collective_agreements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collective_agreements_rule_set_id_fkey"
+            columns: ["rule_set_id"]
+            isOneToOne: false
+            referencedRelation: "labor_rule_sets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collective_agreements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           address: string | null
@@ -1409,6 +1592,193 @@ export type Database = {
           },
         ]
       }
+      labor_rule_definitions: {
+        Row: {
+          base_percentage: number | null
+          calc_type: Database["public"]["Enums"]["labor_rule_calc_type"]
+          category: Database["public"]["Enums"]["labor_rule_category"]
+          clt_article: string | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          effective_from: string
+          effective_until: string | null
+          esocial_rubric_code: string | null
+          fixed_value: number | null
+          formula_expression: string | null
+          id: string
+          integra_13: boolean
+          integra_ferias: boolean
+          integra_fgts: boolean
+          integra_inss: boolean
+          integra_irrf: boolean
+          is_active: boolean
+          is_mandatory: boolean
+          legal_basis: string | null
+          name: string
+          priority: number
+          rule_set_id: string
+          tenant_id: string
+          tiered_config: Json | null
+          updated_at: string
+        }
+        Insert: {
+          base_percentage?: number | null
+          calc_type?: Database["public"]["Enums"]["labor_rule_calc_type"]
+          category: Database["public"]["Enums"]["labor_rule_category"]
+          clt_article?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          esocial_rubric_code?: string | null
+          fixed_value?: number | null
+          formula_expression?: string | null
+          id?: string
+          integra_13?: boolean
+          integra_ferias?: boolean
+          integra_fgts?: boolean
+          integra_inss?: boolean
+          integra_irrf?: boolean
+          is_active?: boolean
+          is_mandatory?: boolean
+          legal_basis?: string | null
+          name: string
+          priority?: number
+          rule_set_id: string
+          tenant_id: string
+          tiered_config?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          base_percentage?: number | null
+          calc_type?: Database["public"]["Enums"]["labor_rule_calc_type"]
+          category?: Database["public"]["Enums"]["labor_rule_category"]
+          clt_article?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          esocial_rubric_code?: string | null
+          fixed_value?: number | null
+          formula_expression?: string | null
+          id?: string
+          integra_13?: boolean
+          integra_ferias?: boolean
+          integra_fgts?: boolean
+          integra_inss?: boolean
+          integra_irrf?: boolean
+          is_active?: boolean
+          is_mandatory?: boolean
+          legal_basis?: string | null
+          name?: string
+          priority?: number
+          rule_set_id?: string
+          tenant_id?: string
+          tiered_config?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labor_rule_definitions_rule_set_id_fkey"
+            columns: ["rule_set_id"]
+            isOneToOne: false
+            referencedRelation: "labor_rule_sets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labor_rule_definitions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      labor_rule_sets: {
+        Row: {
+          base_monthly_hours: number
+          cct_number: string | null
+          cct_valid_from: string | null
+          cct_valid_until: string | null
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          tenant_id: string
+          union_code: string | null
+          union_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          base_monthly_hours?: number
+          cct_number?: string | null
+          cct_valid_from?: string | null
+          cct_valid_until?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          tenant_id: string
+          union_code?: string | null
+          union_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          base_monthly_hours?: number
+          cct_number?: string | null
+          cct_valid_from?: string | null
+          cct_valid_until?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          tenant_id?: string
+          union_code?: string | null
+          union_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labor_rule_sets_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labor_rule_sets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labor_rule_sets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       occupational_risk_factors: {
         Row: {
           category: Database["public"]["Enums"]["risk_category"]
@@ -2381,6 +2751,10 @@ export type Database = {
           violation_type: string
         }[]
       }
+      seed_default_labor_rules: {
+        Args: { _tenant_id: string }
+        Returns: undefined
+      }
       seed_default_rubrics: { Args: { _tenant_id: string }; Returns: undefined }
       seed_esocial_mappings: {
         Args: { _tenant_id: string }
@@ -2456,6 +2830,34 @@ export type Database = {
         | "mudanca_funcao"
         | "retorno_trabalho"
       health_program_type: "pcmso" | "pgr" | "ltcat" | "ppra"
+      labor_rule_calc_type:
+        | "percentage"
+        | "fixed_value"
+        | "tiered"
+        | "formula"
+        | "reference_table"
+      labor_rule_category:
+        | "hora_extra"
+        | "adicional_noturno"
+        | "insalubridade"
+        | "periculosidade"
+        | "sobreaviso"
+        | "plantao"
+        | "intervalo_intrajornada"
+        | "dsr"
+        | "ferias"
+        | "decimo_terceiro"
+        | "aviso_previo"
+        | "fgts"
+        | "contribuicao_sindical"
+        | "vale_transporte"
+        | "salario_familia"
+        | "licenca_maternidade"
+        | "licenca_paternidade"
+        | "piso_salarial"
+        | "reajuste_anual"
+        | "banco_horas"
+        | "custom"
       payroll_incidence:
         | "inss"
         | "irrf"
@@ -2666,6 +3068,36 @@ export const Constants = {
         "retorno_trabalho",
       ],
       health_program_type: ["pcmso", "pgr", "ltcat", "ppra"],
+      labor_rule_calc_type: [
+        "percentage",
+        "fixed_value",
+        "tiered",
+        "formula",
+        "reference_table",
+      ],
+      labor_rule_category: [
+        "hora_extra",
+        "adicional_noturno",
+        "insalubridade",
+        "periculosidade",
+        "sobreaviso",
+        "plantao",
+        "intervalo_intrajornada",
+        "dsr",
+        "ferias",
+        "decimo_terceiro",
+        "aviso_previo",
+        "fgts",
+        "contribuicao_sindical",
+        "vale_transporte",
+        "salario_familia",
+        "licenca_maternidade",
+        "licenca_paternidade",
+        "piso_salarial",
+        "reajuste_anual",
+        "banco_horas",
+        "custom",
+      ],
       payroll_incidence: [
         "inss",
         "irrf",
