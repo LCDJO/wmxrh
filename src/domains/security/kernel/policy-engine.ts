@@ -238,6 +238,44 @@ export const BUILTIN_RULES: PolicyRule[] = [
     priority: 0,
   },
 
+  // ── Impersonation Financial Block ──
+  {
+    id: 'deny_impersonation_financial_mutations',
+    effect: 'deny',
+    roles: [], // any role during impersonation
+    actions: ['create', 'update', 'delete'],
+    resources: ['salary_adjustments', 'salary_contracts', 'salary_additionals', 'compensation'],
+    condition: {
+      custom: (ctx) => ctx.securityContext.is_impersonating === true,
+    },
+    description: 'Ações financeiras críticas são bloqueadas durante impersonação',
+    priority: 0, // highest priority deny
+  },
+  {
+    id: 'deny_impersonation_benefit_mutations',
+    effect: 'deny',
+    roles: [],
+    actions: ['create', 'update', 'delete'],
+    resources: ['benefit_plans', 'employee_benefits'],
+    condition: {
+      custom: (ctx) => ctx.securityContext.is_impersonating === true,
+    },
+    description: 'Gestão de benefícios bloqueada durante impersonação',
+    priority: 0,
+  },
+  {
+    id: 'deny_impersonation_iam_mutations',
+    effect: 'deny',
+    roles: [],
+    actions: ['create', 'update', 'delete'],
+    resources: ['user_roles'],
+    condition: {
+      custom: (ctx) => ctx.securityContext.is_impersonating === true,
+    },
+    description: 'Gestão de IAM/permissões bloqueada durante impersonação',
+    priority: 0,
+  },
+
   // ── IAM-Specific Rules ──
   {
     id: 'iam_admin_manage_roles',

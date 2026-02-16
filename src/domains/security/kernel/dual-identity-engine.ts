@@ -284,7 +284,7 @@ export class DualIdentityEngine {
     this._activeSession = null;
     this._clearTimer();
 
-    // ── Audit (dedicated impersonation method) ──
+    // ── Audit ──
     auditSecurity.logImpersonationEnded({
       realUserId: session.realIdentity.userId,
       activeUserId: session.realIdentity.userId,
@@ -296,17 +296,29 @@ export class DualIdentityEngine {
       metadata: { targetTenantName: session.targetTenantName, simulatedRole: session.simulatedRole },
     });
 
-    // ── Event ──
-    emitImpersonationEvent({
-      type: 'ImpersonationEnded',
-      timestamp: Date.now(),
-      sessionId: session.id,
-      realUserId: session.realIdentity.userId,
-      targetTenantId: session.targetTenantId,
-      endReason,
-      durationMs,
-      operationCount: session.operationCount,
-    });
+    // ── Event: distinct ImpersonationExpired vs ImpersonationEnded ──
+    if (endReason === 'expired') {
+      emitImpersonationEvent({
+        type: 'ImpersonationExpired',
+        timestamp: Date.now(),
+        sessionId: session.id,
+        realUserId: session.realIdentity.userId,
+        targetTenantId: session.targetTenantId,
+        durationMs,
+        operationCount: session.operationCount,
+      });
+    } else {
+      emitImpersonationEvent({
+        type: 'ImpersonationEnded',
+        timestamp: Date.now(),
+        sessionId: session.id,
+        realUserId: session.realIdentity.userId,
+        targetTenantId: session.targetTenantId,
+        endReason, // 'manual' | 'forced'
+        durationMs,
+        operationCount: session.operationCount,
+      });
+    }
 
     return {
       success: true,
