@@ -1,25 +1,26 @@
 /**
- * SecurityKernel — Middleware Pipeline (v3)
+ * SecurityKernel — Middleware Pipeline (v4)
  * 
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║  UNIFIED REQUEST PIPELINE — branches by user_type:                  ║
+ * ║  UNIFIED REQUEST PIPELINE                                           ║
  * ║                                                                      ║
- * ║  1. RequestId               → generate unique request identifier    ║
- * ║  2. IdentityResolver        → validate auth (SecurityContext)       ║
- * ║  3. UserTypeResolver        → route to platform or tenant pipeline  ║
+ * ║  1. RequestId                → generate unique request identifier    ║
+ * ║  2. PlatformIdentityResolver → validate auth (SecurityContext)       ║
+ * ║  3. UserTypeResolver         → detect platform vs tenant             ║
+ * ║  4. ImpersonationResolver    → resolve dual identity, override ctx   ║
  * ║                                                                      ║
- * ║  ┌─ PLATFORM PATH (user_type === 'platform') ──────────────────┐   ║
- * ║  │  4P. PlatformPermissionGuard → check PlatformPermissionMatrix│   ║
- * ║  │  5P. AuditSecurity           → log result                   │   ║
+ * ║  ┌─ PLATFORM PATH (platform, NOT impersonating) ────────────────┐   ║
+ * ║  │  5P. PlatformPermissionGuard → check PlatformPermissionMatrix│   ║
+ * ║  │  6P. AuditSecurity           → log result                   │   ║
  * ║  └─────────────────────────────────────────────────────────────┘   ║
  * ║                                                                      ║
- * ║  ┌─ TENANT PATH (user_type === 'tenant') ──────────────────────┐   ║
- * ║  │  4T. IdentitySessionManager  → validate IBL session          │   ║
- * ║  │  5T. ContextResolver         → validate OperationalContext   │   ║
- * ║  │  6T. AccessGraph             → O(1) scope reachability       │   ║
- * ║  │  7T. PermissionEngine        → RBAC + ABAC check             │   ║
- * ║  │  8T. PolicyEngine            → declarative rule evaluation   │   ║
- * ║  │  9T. AuditSecurity           → log result                   │   ║
+ * ║  ┌─ TENANT PATH (tenant OR impersonating) ──────────────────────┐   ║
+ * ║  │  5T. IdentitySessionManager  → validate IBL session          │   ║
+ * ║  │  6T. ContextResolver         → validate OperationalContext   │   ║
+ * ║  │  7T. AccessGraph             → O(1) scope reachability       │   ║
+ * ║  │  8T. PermissionEngine        → RBAC + ABAC check             │   ║
+ * ║  │  9T. PolicyEngine            → declarative rule evaluation   │   ║
+ * ║  │ 10T. AuditSecurity           → log result (+ impersonation)  │   ║
  * ║  └─────────────────────────────────────────────────────────────┘   ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
@@ -105,13 +106,7 @@ export function executeSecurityPipeline(input: PipelineInput): PipelineResult {
   // ── Stage 1: RequestId ──
   const requestId = ctx?.request_id || `anon-${Date.now().toString(36)}`;
 
-  // ── Impersonation awareness: track operations ──
-  const impersonationMeta = dualIdentityEngine.getAuditMetadata();
-  if (impersonationMeta) {
-    dualIdentityEngine.recordOperation();
-  }
-
-  // ── Stage 2: IdentityResolver — validate auth ──
+  // ── Stage 2: PlatformIdentityResolver — validate auth ──
   if (!ctx) {
     return denyAndAudit({
       decision: 'deny',
@@ -119,16 +114,64 @@ export function executeSecurityPipeline(input: PipelineInput): PipelineResult {
       deniedAtStage: 2,
       reason: 'Usuário não autenticado.',
       requestId,
-      impersonationMetadata: impersonationMeta,
     }, input.resource, input.action, skipAudit);
   }
 
-  // ── Stage 3: UserTypeResolver — branch ──
-  if (ctx.user_type === 'platform' && !dualIdentityEngine.isImpersonating) {
+  // ── Stage 3: UserTypeResolver — detect platform vs tenant ──
+  const rawUserType = ctx.user_type;
+
+  // ── Stage 4: ImpersonationResolver — resolve dual identity ──
+  const impersonationMeta = resolveImpersonationContext(ctx, requestId);
+
+  // Route: platform user NOT impersonating → platform path
+  if (rawUserType === 'platform' && !dualIdentityEngine.isImpersonating) {
     return executePlatformPipeline(input, ctx, requestId, impersonationMeta);
   }
 
+  // Route: tenant user OR impersonating platform user → tenant path
   return executeTenantPipeline(input, ctx, requestId, impersonationMeta);
+}
+
+// ════════════════════════════════════
+// STAGE 4: IMPERSONATION RESOLVER MIDDLEWARE
+// ════════════════════════════════════
+
+/**
+ * ImpersonationResolverMiddleware
+ * 
+ * Resolves dual identity state and returns audit metadata.
+ * When impersonating:
+ *   - Records the operation count
+ *   - Validates session hasn't expired
+ *   - Returns metadata to be injected into all audit entries
+ *   - Logs impersonation context for traceability
+ */
+function resolveImpersonationContext(
+  ctx: SecurityContext,
+  requestId: string,
+): Record<string, unknown> | null {
+  // Fast path: no impersonation
+  if (!dualIdentityEngine.isImpersonating) {
+    return null;
+  }
+
+  // Record this operation in the session counter
+  dualIdentityEngine.recordOperation();
+
+  // Get audit metadata (real user, session, reason, etc.)
+  const meta = dualIdentityEngine.getAuditMetadata();
+
+  // Log trace for every impersonated operation
+  if (meta) {
+    console.debug(
+      `[ImpersonationResolver] requestId=${requestId} ` +
+      `realUser=${meta.impersonatedBy} → tenant=${ctx.tenant_id} ` +
+      `session=${meta.impersonationSessionId} ` +
+      `op#=${dualIdentityEngine.currentSession?.operationCount ?? 0}`
+    );
+  }
+
+  return meta;
 }
 
 // ════════════════════════════════════
@@ -143,14 +186,14 @@ function executePlatformPipeline(
 ): PipelineResult {
   const { action, resource, skipAudit = false, platformPermission, platformRole } = input;
 
-  // ── Stage 4P: PlatformPermissionGuard ──
+  // ── Stage 5P: PlatformPermissionGuard ──
   if (platformPermission) {
     const allowed = hasPlatformPermission(platformRole ?? null, platformPermission);
     if (!allowed) {
       const result: PipelineResult = {
         decision: 'deny',
         deniedBy: 'permission',
-        deniedAtStage: '4P',
+        deniedAtStage: '5P',
         reason: `Permissão de plataforma negada: ${platformPermission} para role ${platformRole ?? 'unknown'}.`,
         requestId,
         path: 'platform',
@@ -160,14 +203,14 @@ function executePlatformPipeline(
           resource: `platform:${platformPermission}`,
           reason: result.reason!,
           ctx,
-          metadata: { platformRole, stage: '4P' },
+          metadata: { platformRole, stage: '5P' },
         });
       }
       return result;
     }
   }
 
-  // ── Stage 5P: Audit (success) ──
+  // ── Stage 6P: Audit (success) ──
   if (!skipAudit) {
     auditSecurity.logAccessAllowed({
       resource: `platform:${platformPermission ?? `${resource}:${action}`}`,
@@ -195,19 +238,19 @@ function executeTenantPipeline(
     skipAccessGraph = false, skipPolicy = false, skipAudit = false,
   } = input;
 
-  // ── Stage 4T: IdentitySessionManager — validate IBL session ──
+  // ── Stage 5T: IdentitySessionManager — validate IBL session ──
   if (!identityBoundary.isEstablished) {
     return denyAndAudit({
       decision: 'deny',
       deniedBy: 'identity_session',
-      deniedAtStage: '4T',
+      deniedAtStage: '5T',
       reason: 'Sessão de identidade não estabelecida no IBL.',
       requestId,
       path: 'tenant',
     }, resource, action, skipAudit, ctx);
   }
 
-  // ── Stage 5T: ContextResolver — validate OperationalContext ──
+  // ── Stage 6T: ContextResolver — validate OperationalContext ──
   const guardResult = contextGuard.validate(
     identityBoundary.identity,
     identityBoundary.operationalContext,
@@ -217,14 +260,14 @@ function executeTenantPipeline(
     return denyAndAudit({
       decision: 'deny',
       deniedBy: 'context',
-      deniedAtStage: '5T',
+      deniedAtStage: '6T',
       reason: guardResult.reason,
       requestId,
       path: 'tenant',
     }, resource, action, skipAudit, ctx);
   }
 
-  // ── Stage 6T: AccessGraph — O(1) scope reachability ──
+  // ── Stage 7T: AccessGraph — O(1) scope reachability ──
   if (!skipAccessGraph && target) {
     const graph = getAccessGraph();
     if (graph) {
@@ -233,7 +276,7 @@ function executeTenantPipeline(
         return denyAndAudit({
           decision: 'deny',
           deniedBy: 'access_graph',
-          deniedAtStage: '6T',
+          deniedAtStage: '7T',
           reason: `Escopo não alcançável no AccessGraph: company=${target.company_id ?? '?'}, group=${target.company_group_id ?? '?'}`,
           requestId,
           path: 'tenant',
@@ -242,13 +285,13 @@ function executeTenantPipeline(
     }
   }
 
-  // ── Stage 7T: PermissionEngine (RBAC + ABAC) ──
+  // ── Stage 8T: PermissionEngine (RBAC + ABAC) ──
   const permResult = checkPermission(action, resource, ctx, target);
   if (permResult.decision === 'deny') {
     const result: PipelineResult = {
       decision: 'deny',
       deniedBy: 'permission',
-      deniedAtStage: '7T',
+      deniedAtStage: '8T',
       reason: permResult.reason || `Permissão negada: ${action} em ${resource}.`,
       permissionResult: permResult,
       requestId,
@@ -259,13 +302,13 @@ function executeTenantPipeline(
         resource: `${resource}:${action}`,
         reason: result.reason!,
         ctx,
-        metadata: { failedCheck: permResult.failedCheck, target, stage: '7T' },
+        metadata: { failedCheck: permResult.failedCheck, target, stage: '8T', ...impersonationMeta },
       });
     }
     return result;
   }
 
-  // ── Stage 8T: PolicyEngine (declarative rules) ──
+  // ── Stage 9T: PolicyEngine (declarative rules) ──
   if (!skipPolicy) {
     const policyResult = policyEngine.evaluateRules({
       securityContext: ctx,
@@ -282,7 +325,7 @@ function executeTenantPipeline(
       const result: PipelineResult = {
         decision: 'deny',
         deniedBy: 'policy',
-        deniedAtStage: '8T',
+        deniedAtStage: '9T',
         reason: policyResult.reason || `Policy negou: ${action} em ${resource}.`,
         policyResult,
         requestId,
@@ -294,20 +337,20 @@ function executeTenantPipeline(
           reason: result.reason!,
           policyId: policyResult.policyId,
           ctx,
-          metadata: { evaluatedRules: policyResult.evaluatedRules, target, stage: '8T' },
+          metadata: { evaluatedRules: policyResult.evaluatedRules, target, stage: '9T', ...impersonationMeta },
         });
       }
       return result;
     }
   }
 
-  // ── Stage 9T: AuditSecurity (success) ──
+  // ── Stage 10T: AuditSecurity (success) ──
   if (!skipAudit) {
     auditSecurity.logAccessAllowed({
       resource: `${resource}:${action}`,
       action,
       ctx,
-      metadata: { target, path: 'tenant', stagesCleared: '9T', ...impersonationMeta },
+      metadata: { target, path: 'tenant', stagesCleared: '10T', ...impersonationMeta },
     });
   }
 
