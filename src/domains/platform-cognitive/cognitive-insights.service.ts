@@ -66,8 +66,20 @@ export class CognitiveInsightsService {
     const payload = await this.routeToAdvisor(intent, caller.role, params);
 
     // 3. Call edge function (read-only — returns suggestions only)
+    // PRIVACY: anonymise caller before sending to AI
+    const anonymisedCaller = {
+      role: caller.role,
+      // Never send real email to AI — use opaque identifier
+      email: `user_${btoa(caller.email).slice(0, 8)}`,
+    };
+
     const { data, error } = await supabase.functions.invoke('platform-cognitive', {
-      body: { intent, advisor_payload: payload, context: params },
+      body: {
+        intent,
+        advisor_payload: payload,
+        context: this.stripPiiFromContext(params),
+        caller: anonymisedCaller,
+      },
     });
 
     if (error) {
@@ -105,23 +117,47 @@ export class CognitiveInsightsService {
     const snapshot = (this.collector as any).snapshotCache;
     if (!snapshot) return null;
 
+    // PRIVACY: anonymise emails in snapshot before advisor processing
+    const anonSnapshot = {
+      ...snapshot,
+      users: snapshot.users.map((u: any) => ({
+        ...u,
+        email: `user_${btoa(u.email || '').slice(0, 8)}`,
+      })),
+    };
+
     const profile = await this.behavior.fullProfile();
 
     switch (intent) {
       case 'suggest-permissions':
-        return this.permAdvisor.build(snapshot, callerRole, params?.role_name as string | undefined);
+        return this.permAdvisor.build(anonSnapshot, callerRole, params?.role_name as string | undefined);
       case 'audit-permissions':
-        return this.permAdvisor.buildAudit(snapshot, callerRole);
+        return this.permAdvisor.buildAudit(anonSnapshot, callerRole);
       case 'recommend-dashboards':
-        return this.navAdvisor.buildDashboards(snapshot, callerRole, profile);
+        return this.navAdvisor.buildDashboards(anonSnapshot, callerRole, profile);
       case 'suggest-shortcuts':
-        return this.navAdvisor.buildShortcuts(snapshot, callerRole, profile);
+        return this.navAdvisor.buildShortcuts(anonSnapshot, callerRole, profile);
       case 'detect-patterns':
-        return this.roleEngine.buildPatternDetection(snapshot, callerRole);
+        return this.roleEngine.buildPatternDetection(anonSnapshot, callerRole);
       case 'quick-setup':
-        return this.roleEngine.buildQuickSetup(snapshot, callerRole);
+        return this.roleEngine.buildQuickSetup(anonSnapshot, callerRole);
       default:
         return null;
     }
+  }
+
+  /**
+   * Strip PII from context params before sending to AI.
+   */
+  private stripPiiFromContext(params?: Record<string, unknown>): Record<string, unknown> | undefined {
+    if (!params) return undefined;
+    const PII_KEYS = /email|cpf|cnpj|phone|telefone|name|nome|address|endereco|birth|nascimento/i;
+    const clean: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(params)) {
+      if (PII_KEYS.test(k)) continue;
+      if (typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) continue;
+      clean[k] = v;
+    }
+    return clean;
   }
 }

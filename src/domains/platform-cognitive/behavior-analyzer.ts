@@ -4,6 +4,14 @@
  * Combines in-session tracking with persisted DB stats.
  * Detects access patterns and suggests roles based on behaviour.
  *
+ * ╔══════════════════════════════════════════════════════════════════╗
+ * ║  LGPD / PRIVACY                                                 ║
+ * ║  This analyzer works ONLY with navigation metadata (routes,     ║
+ * ║  module keys, command names). It NEVER accesses, stores, or     ║
+ * ║  processes personal data (names, emails, CPF, salaries, etc.)   ║
+ * ║  Events are anonymous behavioral signals only.                  ║
+ * ╚══════════════════════════════════════════════════════════════════╝
+ *
  * Pattern detection logic:
  *  1. Aggregate page/command events per user
  *  2. Match against known role fingerprints
