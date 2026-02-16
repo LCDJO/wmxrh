@@ -43,6 +43,8 @@ import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
+import { emitIAMEvent } from '@/domains/iam/iam.events';
+import { graphEvents, accessGraphCache } from '@/domains/security/kernel';
 
 // ══════════════════════════════════
 // TYPES
@@ -489,8 +491,37 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         ctx: kernel.securityContext,
       });
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['iam_graph_role_perms'] });
+
+      // ── Emit RolePermissionsUpdated event ──
+      const permCount = (rolePermMap.get(variables.roleId) || []).length + (variables.grant ? 1 : -1);
+      emitIAMEvent({
+        type: 'RolePermissionsUpdated',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        role_id: variables.roleId,
+        permission_count: Math.max(0, permCount),
+        granted_by: user?.id,
+      });
+
+      // ── Trigger Access Graph rebuild & cache invalidation ──
+      graphEvents.userRoleChanged(tenantId, user?.id || '', variables.roleId, 'update');
+      accessGraphCache.invalidateTenant(tenantId, 'ROLE_CHANGED', {
+        entity: 'custom_role',
+        entityId: variables.roleId,
+        action: 'update',
+      });
+
+      // ── Emit AccessGraphRebuilt event ──
+      emitIAMEvent({
+        type: 'AccessGraphRebuilt',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        user_id: null,
+        reason: 'RolePermissionsUpdated',
+      });
+
       toast.success('Permissão atualizada');
     },
     onError: (err: Error) => {
