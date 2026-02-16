@@ -1,37 +1,15 @@
-import { useTenant } from '@/contexts/TenantContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useEmployeesSimple, useSalaryHistoryByTenant } from '@/domains/hooks';
 import { TrendingUp, DollarSign } from 'lucide-react';
 import { StatsCard } from '@/components/shared/StatsCard';
 
 export default function Compensation() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const { data: employees = [] } = useEmployeesSimple();
+  const { data: history = [] } = useSalaryHistoryByTenant();
 
-  const { data: employees = [] } = useQuery({
-    queryKey: ['employees', tenantId],
-    queryFn: async () => {
-      if (!tenantId) return [];
-      const { data } = await supabase.from('employees').select('id, name, current_salary, status, company_id').eq('tenant_id', tenantId);
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
-
-  const { data: history = [] } = useQuery({
-    queryKey: ['salary_history_all', tenantId],
-    queryFn: async () => {
-      if (!tenantId) return [];
-      const { data } = await supabase.from('salary_history').select('*, employees(name)').eq('tenant_id', tenantId).order('effective_date', { ascending: false });
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
-
-  const active = employees.filter((e: any) => e.status === 'active');
-  const totalPayroll = active.reduce((sum: number, e: any) => sum + (e.current_salary || 0), 0);
+  const active = employees.filter(e => e.status === 'active');
+  const totalPayroll = active.reduce((sum, e) => sum + (e.current_salary || 0), 0);
   const avgSalary = active.length > 0 ? Math.round(totalPayroll / active.length) : 0;
-  const maxSalary = active.length > 0 ? Math.max(...active.map((e: any) => e.current_salary || 0)) : 0;
+  const maxSalary = active.length > 0 ? Math.max(...active.map(e => e.current_salary || 0)) : 0;
 
   return (
     <div className="space-y-6">
@@ -61,7 +39,7 @@ export default function Compensation() {
                 </tr>
               </thead>
               <tbody>
-                {history.map((h: any) => {
+                {history.map(h => {
                   const increase = (((h.new_salary - h.previous_salary) / h.previous_salary) * 100).toFixed(1);
                   return (
                     <tr key={h.id} className="border-b border-border/50 last:border-0">

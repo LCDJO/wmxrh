@@ -1,32 +1,23 @@
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useTenant } from '@/contexts/TenantContext';
+import { useCreateTenant } from '@/domains/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Building2, Plus, ArrowRight } from 'lucide-react';
+import { Building2, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function TenantOnboarding() {
   const [name, setName] = useState('');
   const [document, setDocument] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { refreshTenants } = useTenant();
   const { toast } = useToast();
+  const createMutation = useCreateTenant();
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
-    const { error } = await supabase.from('tenants').insert({ name, document: document || null });
-
-    if (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Organização criada!', description: 'Sua organização foi criada com sucesso.' });
-      await refreshTenants();
-    }
-    setLoading(false);
+    createMutation.mutate({ name, document: document || null }, {
+      onSuccess: () => toast({ title: 'Organização criada!', description: 'Sua organização foi criada com sucesso.' }),
+      onError: (err) => toast({ title: 'Erro', description: err.message, variant: 'destructive' }),
+    });
   };
 
   return (
@@ -51,9 +42,9 @@ export default function TenantOnboarding() {
             <Label htmlFor="doc">CNPJ / CPF</Label>
             <Input id="doc" placeholder="00.000.000/0000-00" value={document} onChange={e => setDocument(e.target.value)} />
           </div>
-          <Button type="submit" className="w-full gap-2" disabled={loading}>
+          <Button type="submit" className="w-full gap-2" disabled={createMutation.isPending}>
             <Plus className="h-4 w-4" />
-            {loading ? 'Criando...' : 'Criar Organização'}
+            {createMutation.isPending ? 'Criando...' : 'Criar Organização'}
           </Button>
         </form>
       </div>

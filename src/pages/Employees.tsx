@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEmployees, useCompaniesSimple, useCreateEmployee } from '@/domains/hooks';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -18,7 +17,6 @@ export default function Employees() {
   const tenantId = currentTenant?.id;
   const navigate = useNavigate();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [companyFilter, setCompanyFilter] = useState<string>('all');
@@ -29,53 +27,34 @@ export default function Employees() {
   const [formCompany, setFormCompany] = useState('');
   const [formSalary, setFormSalary] = useState('');
 
-  const { data: employees = [] } = useQuery({
-    queryKey: ['employees', tenantId],
-    queryFn: async () => {
-      if (!tenantId) return [];
-      const { data } = await supabase.from('employees').select('*, positions(title), departments(name), companies(name)').eq('tenant_id', tenantId);
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
+  const { data: employees = [] } = useEmployees();
+  const { data: companies = [] } = useCompaniesSimple();
+  const createMutation = useCreateEmployee();
 
-  const { data: companies = [] } = useQuery({
-    queryKey: ['companies', tenantId],
-    queryFn: async () => {
-      if (!tenantId) return [];
-      const { data } = await supabase.from('companies').select('id, name').eq('tenant_id', tenantId);
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      if (!tenantId || !formCompany) throw new Error('Preencha todos os campos obrigatórios');
-      const salary = parseFloat(formSalary) || 0;
-      const { error } = await supabase.from('employees').insert({
-        tenant_id: tenantId,
-        company_id: formCompany,
-        name: formName,
-        email: formEmail || null,
-        phone: formPhone || null,
-        base_salary: salary,
-        current_salary: salary,
-        hire_date: new Date().toISOString().split('T')[0],
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees', tenantId] });
-      toast({ title: 'Funcionário cadastrado!' });
-      setOpen(false);
-      setFormName(''); setFormEmail(''); setFormPhone(''); setFormCompany(''); setFormSalary('');
-    },
-    onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
-  });
+  const handleCreate = () => {
+    if (!tenantId || !formCompany) { toast({ title: 'Erro', description: 'Preencha os campos obrigatórios', variant: 'destructive' }); return; }
+    const salary = parseFloat(formSalary) || 0;
+    createMutation.mutate({
+      tenant_id: tenantId,
+      company_id: formCompany,
+      name: formName,
+      email: formEmail || null,
+      phone: formPhone || null,
+      base_salary: salary,
+      current_salary: salary,
+      hire_date: new Date().toISOString().split('T')[0],
+    }, {
+      onSuccess: () => {
+        toast({ title: 'Funcionário cadastrado!' });
+        setOpen(false);
+        setFormName(''); setFormEmail(''); setFormPhone(''); setFormCompany(''); setFormSalary('');
+      },
+      onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+    });
+  };
 
   const filtered = useMemo(() => {
-    return employees.filter((e: any) => {
+    return employees.filter(e => {
       const matchSearch = e.name.toLowerCase().includes(search.toLowerCase()) || (e.email || '').toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === 'all' || e.status === statusFilter;
       const matchCompany = companyFilter === 'all' || e.company_id === companyFilter;
@@ -96,7 +75,7 @@ export default function Employees() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Novo Funcionário</DialogTitle></DialogHeader>
-            <form onSubmit={e => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4">
+            <form onSubmit={e => { e.preventDefault(); handleCreate(); }} className="space-y-4">
               <div className="space-y-2"><Label>Nome *</Label><Input value={formName} onChange={e => setFormName(e.target.value)} required /></div>
               <div className="space-y-2"><Label>Email</Label><Input type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} /></div>
               <div className="space-y-2"><Label>Telefone</Label><Input value={formPhone} onChange={e => setFormPhone(e.target.value)} /></div>
@@ -104,7 +83,7 @@ export default function Employees() {
                 <Label>Empresa *</Label>
                 <Select value={formCompany} onValueChange={setFormCompany}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{companies.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>{companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2"><Label>Salário</Label><Input type="number" value={formSalary} onChange={e => setFormSalary(e.target.value)} placeholder="0.00" /></div>
@@ -133,7 +112,7 @@ export default function Employees() {
             <SelectTrigger className="w-[180px] bg-card"><SelectValue placeholder="Empresa" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
-              {companies.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
         )}
@@ -151,11 +130,11 @@ export default function Employees() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((emp: any) => (
+            {filtered.map(emp => (
               <tr key={emp.id} onClick={() => navigate(`/employees/${emp.id}`)} className="border-b border-border/50 last:border-0 hover:bg-secondary/50 cursor-pointer transition-colors">
                 <td className="py-3.5 px-5">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9"><AvatarFallback className="bg-accent text-accent-foreground text-xs font-semibold">{emp.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('')}</AvatarFallback></Avatar>
+                    <Avatar className="h-9 w-9"><AvatarFallback className="bg-accent text-accent-foreground text-xs font-semibold">{emp.name.split(' ').map(n => n[0]).slice(0, 2).join('')}</AvatarFallback></Avatar>
                     <div>
                       <p className="text-sm font-medium text-card-foreground">{emp.name}</p>
                       <p className="text-xs text-muted-foreground">{emp.email || '—'}</p>

@@ -1,7 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
-import { useTenant } from '@/contexts/TenantContext';
+import { useEmployee, useSalaryHistoryByEmployee } from '@/domains/hooks';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -10,25 +8,9 @@ import { ArrowLeft, Mail, Phone, Calendar, TrendingUp, Building2 } from 'lucide-
 export default function EmployeeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentTenant } = useTenant();
 
-  const { data: employee } = useQuery({
-    queryKey: ['employee', id],
-    queryFn: async () => {
-      const { data } = await supabase.from('employees').select('*, positions(title), departments(name), companies(name)').eq('id', id!).maybeSingle();
-      return data;
-    },
-    enabled: !!id,
-  });
-
-  const { data: history = [] } = useQuery({
-    queryKey: ['salary_history', id],
-    queryFn: async () => {
-      const { data } = await supabase.from('salary_history').select('*').eq('employee_id', id!).order('effective_date', { ascending: false });
-      return data || [];
-    },
-    enabled: !!id,
-  });
+  const { data: employee } = useEmployee(id!);
+  const { data: history = [] } = useSalaryHistoryByEmployee(id!);
 
   if (!employee) {
     return (
@@ -39,7 +21,7 @@ export default function EmployeeDetail() {
     );
   }
 
-  const initials = employee.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('');
+  const initials = employee.name.split(' ').map(n => n[0]).slice(0, 2).join('');
   const salaryIncrease = (employee.current_salary || 0) - (employee.base_salary || 0);
   const salaryIncreasePercent = employee.base_salary ? ((salaryIncrease / employee.base_salary) * 100).toFixed(1) : '0';
 
@@ -90,7 +72,7 @@ export default function EmployeeDetail() {
             </div>
             {history.length > 0 ? (
               <div className="space-y-4">
-                {history.map((h: any) => (
+                {history.map(h => (
                   <div key={h.id} className="flex items-start gap-4 py-3 border-b border-border/50 last:border-0">
                     <div className="h-2 w-2 rounded-full bg-primary mt-2 shrink-0" />
                     <div className="flex-1">
