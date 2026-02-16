@@ -33,6 +33,7 @@ import StrategicIntelligence from "./pages/StrategicIntelligence";
 import ESocialDashboard from "./pages/ESocialDashboard";
 import AgreementManagement from "./pages/AgreementManagement";
 import DocumentSignatureIntegrations from "./pages/DocumentSignatureIntegrations";
+import OccupationalCompliance from "./pages/OccupationalCompliance";
 
 const queryClient = new QueryClient();
 
@@ -165,6 +166,11 @@ function AppRoutes() {
         <Route path="/document-signature" element={
           <ProtectedRoute navKey="esocial">
             <DocumentSignatureIntegrations />
+          </ProtectedRoute>
+        } />
+        <Route path="/occupational-compliance" element={
+          <ProtectedRoute navKey="health">
+            <OccupationalCompliance />
           </ProtectedRoute>
         } />
       </Route>
