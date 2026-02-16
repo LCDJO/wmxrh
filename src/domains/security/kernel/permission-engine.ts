@@ -52,11 +52,22 @@ export interface ResourceTarget {
 // FALLBACK: manual RBAC (when no graph)
 // ════════════════════════════════════
 
+/** Roles that bypass ALL permission checks (full tenant access) */
+const FULL_ACCESS_ROLES: TenantRole[] = ['superadmin', 'owner', 'admin', 'tenant_admin'];
+
+function isTenantAdmin(roles: TenantRole[]): boolean {
+  return roles.some(r => FULL_ACCESS_ROLES.includes(r));
+}
+
 function checkRBACFallback(
   action: PermissionAction,
   resource: PermissionEntity,
   roles: TenantRole[]
 ): PermissionResult {
+  // TenantAdmin bypass: full access to all resources
+  if (isTenantAdmin(roles)) {
+    return { decision: 'allow' };
+  }
   if (hasPermission(resource, action, roles)) {
     return { decision: 'allow' };
   }
@@ -128,10 +139,14 @@ export function checkPermission(
   ctx: SecurityContext,
   target?: ResourceTarget
 ): PermissionResult {
+  // ── TenantAdmin bypass: full access to all resources ──
+  if (isTenantAdmin(ctx.roles)) {
+    return { decision: 'allow' };
+  }
+
   // ── Try AccessGraph first (O(1) path) ──
   const graph = getAccessGraph();
   if (graph) {
-    // RBAC: O(1) hash lookup
     if (!graph.canPerform(resource, action)) {
       return {
         decision: 'deny',
@@ -140,7 +155,6 @@ export function checkPermission(
       };
     }
 
-    // ABAC: O(1) via canAccess (combines scope check)
     if (target) {
       const canAccess = graph.canAccess(resource, action, {
         company_group_id: target.company_group_id,
@@ -167,6 +181,8 @@ export function checkPermission(
 
   return { decision: 'allow' };
 }
+
+
 
 // ════════════════════════════════════
 // ENGINE API (backward compat + extras)
@@ -195,24 +211,30 @@ export const permissionEngine: PermissionEngineAPI = {
   checkPermission,
 
   can: (entity, action, roles) => {
-    // Use AccessGraph if available for O(1) lookup
+    // TenantAdmin bypass
+    if (isTenantAdmin(roles)) return true;
     const graph = getAccessGraph();
     if (graph) return graph.canPerform(entity, action);
     return hasPermission(entity, action, roles);
   },
 
-  canNav: (navKey, roles) => canAccessNavItem(navKey, roles),
+  canNav: (navKey, roles) => {
+    if (isTenantAdmin(roles)) return true;
+    return canAccessNavItem(navKey, roles);
+  },
 
   hasAnyRole: (userRoles, ...targetRoles) =>
     userRoles.some(r => targetRoles.includes(r)),
 
   canAll: (checks, roles) => {
+    if (isTenantAdmin(roles)) return true;
     const graph = getAccessGraph();
     if (graph) return checks.every(c => graph.canPerform(c.entity, c.action));
     return checks.every(c => hasPermission(c.entity, c.action, roles));
   },
 
   canAny: (checks, roles) => {
+    if (isTenantAdmin(roles)) return true;
     const graph = getAccessGraph();
     if (graph) return checks.some(c => graph.canPerform(c.entity, c.action));
     return checks.some(c => hasPermission(c.entity, c.action, roles));
