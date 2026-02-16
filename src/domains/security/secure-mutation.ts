@@ -7,6 +7,7 @@
 
 import { checkRateLimit, RATE_LIMITS } from './rate-limiter';
 import { hasPermission, type PermissionEntity, type PermissionAction } from './permissions';
+import { emitUnauthorizedAccess, emitRateLimitTriggered } from './security-events';
 import type { TenantRole } from '@/domains/shared/types';
 
 export class SecurityError extends Error {
@@ -45,13 +46,25 @@ interface SecureMutationOptions {
  * Throws SecurityError if any check fails.
  */
 export function validateMutation(opts: SecureMutationOptions): void {
+  const resource = `${opts.entity}:${opts.action}`;
+
   // 1. Authentication check
   if (!opts.isAuthenticated) {
+    emitUnauthorizedAccess({
+      resource,
+      reason: 'Usuário não autenticado.',
+      metadata: { entity: opts.entity, action: opts.action },
+    });
     throw new SecurityError('UNAUTHENTICATED', 'Usuário não autenticado.');
   }
 
   // 2. Permission check
   if (!hasPermission(opts.entity, opts.action, opts.roles)) {
+    emitUnauthorizedAccess({
+      resource,
+      reason: `Sem permissão para ${opts.action} em ${opts.entity}.`,
+      metadata: { entity: opts.entity, action: opts.action, roles: opts.roles },
+    });
     throw new SecurityError(
       'PERMISSION_DENIED',
       `Sem permissão para ${opts.action} em ${opts.entity}.`
@@ -59,11 +72,17 @@ export function validateMutation(opts: SecureMutationOptions): void {
   }
 
   // 3. Rate limit check
-  const rateLimitKey = opts.rateLimitKey || `${opts.entity}:${opts.action}`;
+  const rateLimitKey = opts.rateLimitKey || resource;
   const rateLimitConfig = opts.rateLimitConfig || RATE_LIMITS.create;
   const { allowed, retryAfterMs } = checkRateLimit(rateLimitKey, rateLimitConfig);
 
   if (!allowed) {
+    emitRateLimitTriggered({
+      resource,
+      reason: `Muitas requisições. Tente novamente em ${Math.ceil((retryAfterMs || 0) / 1000)}s.`,
+      retryAfterMs,
+      metadata: { entity: opts.entity, action: opts.action },
+    });
     throw new SecurityError(
       'RATE_LIMITED',
       `Muitas requisições. Tente novamente em ${Math.ceil((retryAfterMs || 0) / 1000)}s.`,

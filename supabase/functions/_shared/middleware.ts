@@ -174,14 +174,20 @@ function validateScopeAccess(ctx: MiddlewareContext): void {
   if (hasTenantScope) return;
   if (requestedGroupId) {
     const hasGroupAccess = ctx.permissionScopes.some(s => s.scope_type === "company_group" && s.scope_id === requestedGroupId);
-    if (!hasGroupAccess) throw new MiddlewareError(403, "SCOPE_CROSS_GROUP", `Access denied to group ${requestedGroupId}`);
+    if (!hasGroupAccess) {
+      logSecurityEvent(ctx, "ScopeViolationDetected", `Cross-group access attempt: group ${requestedGroupId}`, { requested_group_id: requestedGroupId });
+      throw new MiddlewareError(403, "SCOPE_CROSS_GROUP", `Access denied to group ${requestedGroupId}`);
+    }
   }
   if (requestedCompanyId) {
     const hasCompanyAccess = ctx.permissionScopes.some(s =>
       (s.scope_type === "company" && s.scope_id === requestedCompanyId) ||
       (s.scope_type === "company_group")
     );
-    if (!hasCompanyAccess) throw new MiddlewareError(403, "SCOPE_CROSS_COMPANY", `Access denied to company ${requestedCompanyId}`);
+    if (!hasCompanyAccess) {
+      logSecurityEvent(ctx, "ScopeViolationDetected", `Cross-company access attempt: company ${requestedCompanyId}`, { requested_company_id: requestedCompanyId });
+      throw new MiddlewareError(403, "SCOPE_CROSS_COMPANY", `Access denied to company ${requestedCompanyId}`);
+    }
   }
 }
 
@@ -199,7 +205,7 @@ const RATE_LIMIT_CONFIGS: Record<RateLimitTier, { maxRequests: number; windowMs:
 
 const rateLimitStore = new Map<string, { timestamps: number[] }>();
 
-function checkRateLimit(userId: string, tier: RateLimitTier): void {
+function checkRateLimit(userId: string, tier: RateLimitTier, ctx?: MiddlewareContext): void {
   const config = RATE_LIMIT_CONFIGS[tier];
   const key = `${userId}:${tier}`;
   const now = Date.now();
@@ -209,6 +215,9 @@ function checkRateLimit(userId: string, tier: RateLimitTier): void {
   entry.timestamps = entry.timestamps.filter(t => t > windowStart);
   if (entry.timestamps.length >= config.maxRequests) {
     const retryAfterMs = entry.timestamps[0] + config.windowMs - now;
+    if (ctx) {
+      logSecurityEvent(ctx, "RateLimitTriggered", `Rate limit exceeded (${tier}: ${config.maxRequests}/${config.windowMs / 1000}s)`, { tier, retryAfterMs });
+    }
     throw new MiddlewareError(429, "RATE_LIMITED",
       `Rate limit exceeded (${tier}: ${config.maxRequests}/${config.windowMs / 1000}s). Retry after ${Math.ceil(retryAfterMs / 1000)}s`);
   }
@@ -222,6 +231,48 @@ setInterval(() => {
     if (entry.timestamps.length === 0) rateLimitStore.delete(key);
   }
 }, 300_000);
+
+// ═══════════════════════════════════
+// Security Event Logger (backend)
+// ═══════════════════════════════════
+
+type SecurityEventType = "UnauthorizedAccessAttempt" | "ScopeViolationDetected" | "RateLimitTriggered";
+
+function logSecurityEvent(
+  ctx: MiddlewareContext,
+  eventType: SecurityEventType,
+  description: string,
+  metadata?: Record<string, unknown>
+): void {
+  try {
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!serviceRoleKey) return;
+    const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
+    const url = new URL(ctx.request.url);
+    supabaseAdmin.from("audit_logs").insert({
+      tenant_id: ctx.tenantId || null,
+      user_id: ctx.userId || null,
+      action: `security:${eventType}`,
+      entity_type: "security_event",
+      entity_id: null,
+      metadata: {
+        request_id: ctx.requestId,
+        event_type: eventType,
+        description,
+        method: ctx.request.method,
+        path: url.pathname,
+        roles: ctx.roles,
+        ip: ctx.request.headers.get("x-forwarded-for") || ctx.request.headers.get("cf-connecting-ip") || null,
+        user_agent: ctx.request.headers.get("user-agent") || null,
+        ...metadata,
+      },
+    }).then(({ error }) => {
+      if (error) console.error(`[SecurityEvent] Failed to log ${eventType}:`, error.message);
+    });
+  } catch (err) {
+    console.error(`[SecurityEvent] Error logging ${eventType}:`, err);
+  }
+}
 
 // ═══════════════════════════════════
 // 6) AuditMiddleware
@@ -692,7 +743,7 @@ export function createHandler(handler: HandlerFn, options: HandlerOptions = {}):
       // 4) ScopeGuard
       validateScopeAccess(ctx);
       // 5) RateLimit
-      checkRateLimit(userId, options.rateLimit || "standard");
+      checkRateLimit(userId, options.rateLimit || "standard", ctx);
 
       console.log(`[Middleware] req=${requestId} user=${userId} tenant=${tenantId} roles=[${roles.join(",")}]`);
 
@@ -726,6 +777,7 @@ export function createHandler(handler: HandlerFn, options: HandlerOptions = {}):
 
 export function requireRoles(ctx: MiddlewareContext, ...requiredRoles: string[]): void {
   if (!ctx.roles.some(r => requiredRoles.includes(r))) {
+    logSecurityEvent(ctx, "UnauthorizedAccessAttempt", `Missing required roles: ${requiredRoles.join(", ")}`, { required_roles: requiredRoles, user_roles: ctx.roles });
     throw new MiddlewareError(403, "INSUFFICIENT_PERMISSIONS", `Requires one of: ${requiredRoles.join(", ")}`);
   }
 }
@@ -740,7 +792,10 @@ export function requireScopedAccess(
     if (entityType === "company" && scope.scope_type === "company_group") return true;
     return false;
   });
-  if (!hasAccess) throw new MiddlewareError(403, "SCOPE_ACCESS_DENIED", `No ${entityType} access for entity ${entityId}`);
+  if (!hasAccess) {
+    logSecurityEvent(ctx, "ScopeViolationDetected", `No ${entityType} access for entity ${entityId}`, { entity_type: entityType, entity_id: entityId, required_roles: requiredRoles });
+    throw new MiddlewareError(403, "SCOPE_ACCESS_DENIED", `No ${entityType} access for entity ${entityId}`);
+  }
 }
 
 export function jsonResponse(ctx: MiddlewareContext, data: unknown, status = 200): Response {
