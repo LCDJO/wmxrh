@@ -16,6 +16,7 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 import { CognitiveContextCollector } from './cognitive-context-collector';
+import { platformEvents } from '@/domains/platform/platform-events';
 import { BehaviorAnalyzer } from './behavior-analyzer';
 import { PermissionAdvisor } from './permission-advisor';
 import { NavigationAdvisor } from './navigation-advisor';
@@ -35,8 +36,11 @@ export class CognitiveInsightsService {
 
   // ── Public API ───────────────────────────────────────────────────
 
-  trackNavigation(route: string) {
+  trackNavigation(route: string, userId?: string) {
     this.behavior.track('navigate', route);
+    if (userId) {
+      platformEvents.userBehaviorTracked(userId, { route, eventType: 'navigate' });
+    }
   }
 
   trackModuleUse(moduleKey: string) {
@@ -99,6 +103,62 @@ export class CognitiveInsightsService {
         _requires_user_confirmation: true,
       },
     }));
+
+    // ── Emit domain events based on intent ──────────────────────
+    const actorId = caller.email || 'unknown';
+
+    if (intent === 'suggest-permissions' && response.suggestions.length > 0) {
+      // Check for permission risks in suggestions
+      const riskySuggestions = response.suggestions.filter(
+        s => s.confidence >= 0.7 && s.metadata?.permission_code &&
+        /salary|payroll|iam\.delete|admin/i.test(String(s.metadata.permission_code))
+      );
+      riskySuggestions.forEach(s => {
+        platformEvents.permissionRiskDetected(actorId, {
+          riskType: 'sensitive_permission_suggested',
+          role: String(params?.role_name ?? 'unknown'),
+          details: `AI suggested sensitive permission: ${s.metadata?.permission_code}`,
+          severity: s.confidence >= 0.85 ? 'high' : 'medium',
+        });
+      });
+    }
+
+    if (intent === 'audit-permissions') {
+      response.suggestions
+        .filter(s => s.confidence >= 0.6)
+        .forEach(s => {
+          platformEvents.permissionRiskDetected(actorId, {
+            riskType: 'audit_finding',
+            role: String(s.metadata?.role ?? 'multiple'),
+            details: s.description,
+            severity: s.confidence >= 0.8 ? 'high' : s.confidence >= 0.6 ? 'medium' : 'low',
+          });
+        });
+    }
+
+    if (intent === 'detect-patterns') {
+      const roles = response.suggestions
+        .filter(s => s.type === 'pattern')
+        .map(s => s.title);
+      if (roles.length > 0) {
+        platformEvents.roleSuggestionGenerated(actorId, {
+          suggestedRoles: roles,
+          confidence: response.suggestions.map(s => s.confidence),
+          signalCount: response.suggestions.length,
+        });
+      }
+    }
+
+    if (intent === 'suggest-shortcuts') {
+      response.suggestions.forEach(s => {
+        const route = String(s.metadata?.route ?? s.title);
+        platformEvents.navigationHintCreated(actorId, {
+          route,
+          label: s.title,
+          source: 'ai',
+        });
+      });
+    }
 
     return response;
   }
