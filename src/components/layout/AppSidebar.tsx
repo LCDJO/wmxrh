@@ -1,18 +1,13 @@
 /**
- * App Sidebar — Dynamic, AccessGraph-aware
- * 
- * Navigation is filtered by SecurityKernel:
- *   - FeatureFlags: hides modules not enabled for tenant
- *   - Permissions: hides nav items user can't access
- * 
- * Context switching (Tenant/Group/Company) is handled by ContextSelector.
- * Switching context does NOT logout or regenerate tokens.
+ * App Sidebar — Grouped navigation with collapsible parent menus
  */
 
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Briefcase, TrendingUp, Building2,
-  ChevronLeft, ChevronRight, LogOut, FileText, Heart, ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark, Calculator, Brain, Sparkles, Send,
+  ChevronLeft, ChevronRight, ChevronDown, LogOut, FileText, Heart,
+  ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
+  Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -23,10 +18,10 @@ import type { NavKey } from '@/domains/security/permissions';
 import type { FeatureKey } from '@/domains/security/feature-flags';
 
 // ════════════════════════════════════
-// NAV ITEMS (top-level modules)
+// TYPES
 // ════════════════════════════════════
 
-interface NavItem {
+interface NavChild {
   to: string;
   icon: typeof LayoutDashboard;
   label: string;
@@ -34,41 +29,203 @@ interface NavItem {
   featureFlag?: FeatureKey;
 }
 
-const allNavItems: NavItem[] = [
+interface NavGroup {
+  id: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  children: NavChild[];
+}
+
+type NavEntry = NavChild | NavGroup;
+
+function isGroup(entry: NavEntry): entry is NavGroup {
+  return 'children' in entry;
+}
+
+// ════════════════════════════════════
+// NAV STRUCTURE
+// ════════════════════════════════════
+
+const navStructure: NavEntry[] = [
+  // ── Standalone ──
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', key: 'dashboard' },
-  { to: '/employees', icon: Users, label: 'Funcionários', key: 'employees' },
-  { to: '/companies', icon: Building2, label: 'Empresas', key: 'companies' },
-  { to: '/groups', icon: Building2, label: 'Grupos', key: 'groups' },
-  { to: '/positions', icon: Briefcase, label: 'Cargos', key: 'positions' },
-  { to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation' },
-  { to: '/departments', icon: Building2, label: 'Departamentos', key: 'departments' },
-  { to: '/compliance', icon: FileText, label: 'Rubricas', key: 'compliance' },
-  { to: '/benefits', icon: ShieldCheck, label: 'Benefícios', key: 'benefits' },
-  { to: '/health', icon: Heart, label: 'Saúde Ocupacional', key: 'health' },
-  { to: '/labor-dashboard', icon: ClipboardCheck, label: 'Painel Trabalhista', key: 'labor_dashboard' },
-  { to: '/labor-compliance', icon: Scale, label: 'Conformidade Trabalhista', key: 'labor_compliance' },
-  { to: '/labor-rules', icon: Gavel, label: 'Regras Trabalhistas', key: 'labor_rules' },
-  { to: '/legal-dashboard', icon: Landmark, label: 'Dashboard Legal', key: 'legal_dashboard' },
-  { to: '/payroll-simulation', icon: Calculator, label: 'Simulação Folha', key: 'compensation' },
-  { to: '/workforce-intelligence', icon: Brain, label: 'Inteligência RH', key: 'dashboard' },
-  { to: '/strategic-intelligence', icon: Sparkles, label: 'IA Estratégica', key: 'dashboard' },
-  { to: '/audit', icon: ScrollText, label: 'Auditoria Legal', key: 'audit' },
-  { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' },
+
+  // ── Empresa ──
+  {
+    id: 'empresa',
+    icon: Building2,
+    label: 'Empresa',
+    children: [
+      { to: '/companies', icon: Building2, label: 'Empresas', key: 'companies' },
+      { to: '/groups', icon: Building2, label: 'Grupos', key: 'groups' },
+      { to: '/departments', icon: Briefcase, label: 'Departamentos', key: 'departments' },
+      { to: '/positions', icon: Briefcase, label: 'Cargos', key: 'positions' },
+    ],
+  },
+
+  // ── Funcionário ──
+  {
+    id: 'funcionario',
+    icon: Users,
+    label: 'Funcionários',
+    children: [
+      { to: '/employees', icon: Users, label: 'Cadastro', key: 'employees' },
+      { to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation' },
+      { to: '/benefits', icon: ShieldCheck, label: 'Benefícios', key: 'benefits' },
+      { to: '/health', icon: Heart, label: 'Saúde Ocupacional', key: 'health' },
+      { to: '/compliance', icon: FileText, label: 'Rubricas', key: 'compliance' },
+      { to: '/payroll-simulation', icon: Calculator, label: 'Simulação Folha', key: 'compensation' },
+    ],
+  },
+
+  // ── Trabalhista & Legal ──
+  {
+    id: 'trabalhista',
+    icon: Scale,
+    label: 'Trabalhista',
+    children: [
+      { to: '/labor-dashboard', icon: ClipboardCheck, label: 'Painel Trabalhista', key: 'labor_dashboard' },
+      { to: '/labor-compliance', icon: Scale, label: 'Conformidade', key: 'labor_compliance' },
+      { to: '/labor-rules', icon: Gavel, label: 'Regras Trabalhistas', key: 'labor_rules' },
+      { to: '/legal-dashboard', icon: Landmark, label: 'Dashboard Legal', key: 'legal_dashboard' },
+      { to: '/audit', icon: ScrollText, label: 'Auditoria', key: 'audit' },
+    ],
+  },
+
+  // ── Inteligência ──
+  {
+    id: 'inteligencia',
+    icon: Brain,
+    label: 'Inteligência',
+    children: [
+      { to: '/workforce-intelligence', icon: Brain, label: 'Inteligência RH', key: 'dashboard' },
+      { to: '/strategic-intelligence', icon: Sparkles, label: 'IA Estratégica', key: 'dashboard' },
+    ],
+  },
+
+  // ── Integrações ──
+  {
+    id: 'integracoes',
+    icon: Plug,
+    label: 'Integrações',
+    children: [
+      { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' },
+    ],
+  },
 ];
+
+// ════════════════════════════════════
+// SIDEBAR COMPONENT
+// ════════════════════════════════════
 
 export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const location = useLocation();
   const { signOut } = useAuth();
   const { canNav, isFeatureEnabled, effectiveRoles, loading } = useSecurityKernel();
 
-  // Filter nav items: FeatureFlags first, then Permissions
-  const navItems = loading
-    ? allNavItems
-    : allNavItems.filter(item => {
-        if (item.featureFlag && !isFeatureEnabled(item.featureFlag)) return false;
-        return canNav(item.key);
-      });
+  const isVisible = (item: NavChild) => {
+    if (loading) return true;
+    if (item.featureFlag && !isFeatureEnabled(item.featureFlag)) return false;
+    return canNav(item.key);
+  };
+
+  const isActive = (to: string) =>
+    location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+
+  const isGroupActive = (group: NavGroup) =>
+    group.children.some(c => isActive(c.to));
+
+  const toggleGroup = (id: string) => {
+    setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const isGroupOpen = (group: NavGroup) =>
+    openGroups[group.id] ?? isGroupActive(group);
+
+  const renderChild = (item: NavChild) => {
+    if (!isVisible(item)) return null;
+    const active = isActive(item.to);
+    return (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+          collapsed ? "justify-center" : "pl-10",
+          active
+            ? "bg-sidebar-accent text-sidebar-primary"
+            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+        )}
+      >
+        <item.icon className={cn("h-4 w-4 shrink-0", active && "text-sidebar-primary")} />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </NavLink>
+    );
+  };
+
+  const renderEntry = (entry: NavEntry, idx: number) => {
+    // Standalone item
+    if (!isGroup(entry)) {
+      if (!isVisible(entry)) return null;
+      const active = isActive(entry.to);
+      return (
+        <NavLink
+          key={entry.to}
+          to={entry.to}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+            active
+              ? "bg-sidebar-accent text-sidebar-primary"
+              : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+          )}
+        >
+          <entry.icon className={cn("h-5 w-5 shrink-0", active && "text-sidebar-primary")} />
+          {!collapsed && <span>{entry.label}</span>}
+        </NavLink>
+      );
+    }
+
+    // Group — hide if no visible children
+    const visibleChildren = entry.children.filter(isVisible);
+    if (visibleChildren.length === 0) return null;
+
+    const groupActive = isGroupActive(entry);
+    const open = isGroupOpen(entry);
+
+    return (
+      <div key={entry.id}>
+        <button
+          onClick={() => collapsed ? undefined : toggleGroup(entry.id)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 w-full",
+            groupActive
+              ? "text-sidebar-primary"
+              : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+          )}
+        >
+          <entry.icon className={cn("h-5 w-5 shrink-0", groupActive && "text-sidebar-primary")} />
+          {!collapsed && (
+            <>
+              <span className="flex-1 text-left truncate">{entry.label}</span>
+              <ChevronDown className={cn(
+                "h-4 w-4 shrink-0 transition-transform duration-200",
+                open ? "rotate-0" : "-rotate-90"
+              )} />
+            </>
+          )}
+        </button>
+
+        {/* Children */}
+        {(collapsed || open) && (
+          <div className={cn("space-y-0.5", !collapsed && "mt-0.5")}>
+            {visibleChildren.map(renderChild)}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <aside className={cn(
@@ -87,7 +244,7 @@ export function AppSidebar() {
         )}
       </div>
 
-      {/* ── Context Selector (Tenant ▼ / Group ▼ / Company ▼) ── */}
+      {/* ── Context Selector ── */}
       <ContextSelector collapsed={collapsed} />
 
       {/* ── Role badges ── */}
@@ -108,24 +265,7 @@ export function AppSidebar() {
 
       {/* ── Navigation ── */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.to || (item.to !== '/' && location.pathname.startsWith(item.to));
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-primary"
-                  : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-              )}
-            >
-              <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-sidebar-primary")} />
-              {!collapsed && <span className="animate-fade-in">{item.label}</span>}
-            </NavLink>
-          );
-        })}
+        {navStructure.map((entry, idx) => renderEntry(entry, idx))}
       </nav>
 
       {/* ── Footer ── */}
