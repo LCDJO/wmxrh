@@ -37,6 +37,17 @@ export { createCognitiveOrchestrator } from './cognitive-orchestrator';
 // ── Event Bridges (domain → kernel) ──────────────────────────
 export { installEventBridges } from './event-bridges';
 
+// ── Canonical Platform Events ────────────────────────────────
+export { PLATFORM_EVENTS } from './platform-events';
+export type {
+  PlatformEventType,
+  PlatformBootstrappedPayload,
+  ModuleRegisteredPayload,
+  IdentitySnapshotUpdatedPayload,
+  NavigationTreeUpdatedPayload,
+  FeatureLifecycleChangedPayload,
+} from './platform-events';
+
 // ── Types ─────────────────────────────────────────────────────
 export type {
   // Runtime

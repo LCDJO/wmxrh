@@ -15,6 +15,8 @@ import type {
   ModuleStatus,
   GlobalEventKernelAPI,
 } from './types';
+import { PLATFORM_EVENTS } from './platform-events';
+import type { ModuleRegisteredPayload } from './platform-events';
 
 interface InternalModule extends ModuleDescriptor {
   _onActivate?: () => void | Promise<void>;
@@ -64,6 +66,13 @@ export function createModuleOrchestrator(events: GlobalEventKernelAPI): ModuleOr
       label: mod.label,
       is_core: mod.is_core ?? false,
     });
+
+    // ── Canonical: ModuleRegistered ─────────────────────────
+    events.emit<ModuleRegisteredPayload>(
+      PLATFORM_EVENTS.ModuleRegistered,
+      'ModuleOrchestrator',
+      { key: mod.key, label: mod.label, enabled: false },
+    );
   }
 
   // ── Activation / Deactivation ────────────────────────────────

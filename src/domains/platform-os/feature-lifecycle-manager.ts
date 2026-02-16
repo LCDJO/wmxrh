@@ -20,6 +20,8 @@ import type {
   GlobalEventKernelAPI,
 } from './types';
 import { featureFlagEngine } from '@/domains/security/kernel/feature-flag-engine';
+import { PLATFORM_EVENTS } from './platform-events';
+import type { FeatureLifecycleChangedPayload } from './platform-events';
 
 // ════════════════════════════════════
 // Phase transition rules (valid edges)
@@ -69,6 +71,11 @@ export function createFeatureLifecycleManager(events: GlobalEventKernelAPI): Fea
       phase: feature.phase,
       module: feature.module ?? null,
     });
+    events.emit<FeatureLifecycleChangedPayload>(
+      PLATFORM_EVENTS.FeatureLifecycleChanged,
+      'FeatureLifecycleManager',
+      { key: feature.key, change: 'registered', enabled: feature.enabled, phase: feature.phase },
+    );
   }
 
   // ── Query ─────────────────────────────────────────────────
@@ -116,6 +123,11 @@ export function createFeatureLifecycleManager(events: GlobalEventKernelAPI): Fea
     descriptor.enabled = enabled;
     descriptor.toggled_at = Date.now();
     events.emit('feature:toggled', 'FeatureLifecycleManager', { key, enabled, phase: descriptor.phase });
+    events.emit<FeatureLifecycleChangedPayload>(
+      PLATFORM_EVENTS.FeatureLifecycleChanged,
+      'FeatureLifecycleManager',
+      { key, change: 'toggled', enabled, phase: descriptor.phase },
+    );
   }
 
   function transitionPhase(key: string, newPhase: FeaturePhase): void {
@@ -149,6 +161,11 @@ export function createFeatureLifecycleManager(events: GlobalEventKernelAPI): Fea
       to: newPhase,
       module: descriptor.module ?? null,
     });
+    events.emit<FeatureLifecycleChangedPayload>(
+      PLATFORM_EVENTS.FeatureLifecycleChanged,
+      'FeatureLifecycleManager',
+      { key, change: 'phase_transitioned', phase: newPhase, previous_phase: previousPhase },
+    );
   }
 
   // ── List / Filter ─────────────────────────────────────────

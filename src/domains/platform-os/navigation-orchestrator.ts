@@ -18,6 +18,8 @@ import type {
   MergedNavigationTree,
   GlobalEventKernelAPI,
 } from './types';
+import { PLATFORM_EVENTS } from './platform-events';
+import type { NavigationTreeUpdatedPayload } from './platform-events';
 
 const MAX_HISTORY = 50;
 const MAX_COGNITIVE_HINTS = 5;
@@ -37,8 +39,21 @@ export function createNavigationOrchestrator(events: GlobalEventKernelAPI): Navi
 
   // ── Tree merge ─────────────────────────────────────────────
 
-  function invalidateTree(): void {
+  function invalidateTree(trigger: NavigationTreeUpdatedPayload['trigger'] = 'navigate'): void {
     cachedTree = null;
+    // Emit canonical event
+    const tree = buildMergedTree();
+    events.emit<NavigationTreeUpdatedPayload>(
+      PLATFORM_EVENTS.NavigationTreeUpdated,
+      'NavigationOrchestrator',
+      {
+        core_count: tree.core.length,
+        module_count: tree.modules.length,
+        cognitive_count: tree.cognitive.length,
+        pinned_count: tree.pinned.length,
+        trigger,
+      },
+    );
   }
 
   function buildMergedTree(): MergedNavigationTree {
@@ -123,20 +138,20 @@ export function createNavigationOrchestrator(events: GlobalEventKernelAPI): Navi
         coreRoutes.push(tagged);
       }
     }
-    invalidateTree();
+    invalidateTree('core_registered');
     events.emit('navigation:core_routes_registered', 'NavigationOrchestrator', { count: entries.length });
   }
 
   function registerModuleRoutes(moduleKey: string, entries: NavigationEntry[]): void {
     const tagged = entries.map(e => ({ ...e, source: 'module' as const, module: moduleKey }));
     moduleRoutes.set(moduleKey, tagged);
-    invalidateTree();
+    invalidateTree('module_registered');
     events.emit('navigation:module_routes_registered', 'NavigationOrchestrator', { moduleKey, count: entries.length });
   }
 
   function removeModuleRoutes(moduleKey: string): void {
     moduleRoutes.delete(moduleKey);
-    invalidateTree();
+    invalidateTree('module_removed');
     events.emit('navigation:module_routes_removed', 'NavigationOrchestrator', { moduleKey });
   }
 
@@ -146,19 +161,19 @@ export function createNavigationOrchestrator(events: GlobalEventKernelAPI): Navi
       .slice(0, MAX_COGNITIVE_HINTS)
       .map(e => ({ ...e, source: 'cognitive' as const }));
     cognitiveHints.push(...tagged);
-    invalidateTree();
+    invalidateTree('cognitive_hints');
     events.emit('navigation:cognitive_hints_updated', 'NavigationOrchestrator', { count: cognitiveHints.length });
   }
 
   function pin(path: string): void {
     pinned.add(path);
-    invalidateTree();
+    invalidateTree('pin_change');
     events.emit('navigation:pinned', 'NavigationOrchestrator', { path });
   }
 
   function unpin(path: string): void {
     pinned.delete(path);
-    invalidateTree();
+    invalidateTree('pin_change');
     events.emit('navigation:unpinned', 'NavigationOrchestrator', { path });
   }
 
