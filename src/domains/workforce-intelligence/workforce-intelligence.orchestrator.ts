@@ -18,6 +18,7 @@ import type {
 import { projectCosts } from './cost-projection.engine';
 import { analyzeSalaries } from './salary-analysis.engine';
 import { detectRisks } from './risk-detection.engine';
+import { computeHealthScore } from './health-score.engine';
 import { generateInsights } from './insight-generator.engine';
 
 export interface IntelligenceConfig {
@@ -88,6 +89,14 @@ export function generateIntelligenceReport(
     riskDetection,
   });
 
+  // 5. Health Score (composite indicator)
+  const health_score = computeHealthScore({
+    dataset,
+    riskDetection,
+    costProjection,
+    salaryAnalysis,
+  });
+
   return {
     tenant_id: dataset.tenant_id,
     generated_at: new Date().toISOString(),
@@ -96,6 +105,7 @@ export function generateIntelligenceReport(
     salary_analysis: salaryAnalysis,
     risk_detection: riskDetection,
     insights,
+    health_score,
     is_intelligence_report: true,
   };
 }

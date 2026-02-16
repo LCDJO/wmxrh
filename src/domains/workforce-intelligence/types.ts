@@ -320,6 +320,31 @@ export interface InsightGenerationOutput {
 }
 
 // ══════════════════════════════════════════════════════════════
+// WORKFORCE HEALTH SCORE — composite indicator 0–100
+// ══════════════════════════════════════════════════════════════
+
+export interface WorkforceHealthScore {
+  /** Overall composite score 0–100 */
+  overall_score: number;
+  /** Sub-scores 0–100 */
+  compliance_score: number;
+  custo_score: number;
+  risco_trabalhista_score: number;
+  estabilidade_forca_trabalho: number;
+  /** Classification based on overall_score */
+  classification: 'critical' | 'poor' | 'fair' | 'good' | 'excellent';
+  /** Breakdown details for transparency */
+  breakdown: Record<string, number>;
+}
+
+export interface HealthScoreInput {
+  dataset: WorkforceDataset;
+  riskDetection: RiskDetectionOutput;
+  costProjection: CostProjectionOutput;
+  salaryAnalysis: SalaryAnalysisOutput;
+}
+
+// ══════════════════════════════════════════════════════════════
 // FULL INTELLIGENCE REPORT
 // ══════════════════════════════════════════════════════════════
 
@@ -331,5 +356,6 @@ export interface WorkforceIntelligenceReport {
   salary_analysis: SalaryAnalysisOutput;
   risk_detection: RiskDetectionOutput;
   insights: InsightGenerationOutput;
+  health_score: WorkforceHealthScore;
   is_intelligence_report: true;
 }

@@ -26,6 +26,7 @@ export { projectCosts } from './cost-projection.engine';
 export { analyzeSalaries } from './salary-analysis.engine';
 export { detectRisks } from './risk-detection.engine';
 export { generateInsights } from './insight-generator.engine';
+export { computeHealthScore } from './health-score.engine';
 
 // ── Read Models (data sources) ──
 export * from './read-models';
@@ -44,19 +45,28 @@ export type {
   CostProjectionOutput,
   MonthlyCostProjection,
   CostDriver,
+  CostProjectionSummary,
   ProjectionHorizon,
+  ScheduledAdjustment,
+  ActiveCCT,
 
   // Salary analysis
   SalaryAnalysisInput,
   SalaryAnalysisOutput,
   SalaryGroupStats,
   SalaryEquityAlert,
+  SalaryInsight,
 
   // Risk detection
   RiskDetectionInput,
   RiskDetectionOutput,
   LaborRisk,
   RiskCategory,
+  WorkforceInsightType,
+
+  // Health score
+  WorkforceHealthScore,
+  HealthScoreInput,
 
   // Insights
   InsightGenerationOutput,
