@@ -1,21 +1,32 @@
 /**
  * /auth/login — Unified SaaS Login
  * 
- * Detects user type after authentication:
- *   PlatformUser → /platform (SaaS admin panel)
- *   TenantUser   → / (tenant workspace)
+ * Login Intent Detection:
+ *   PlatformUser only  → /platform/dashboard
+ *   TenantUser only    → / (tenant workspace)
+ *   Both               → Workspace Selector dialog
  */
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { platformEvents } from '@/domains/platform/platform-events';
+import { identityIntelligence } from '@/domains/security/kernel/identity-intelligence';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Shield, Mail, Lock, ArrowRight, Loader2, KeyRound } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Shield, Mail, Lock, ArrowRight, Loader2, KeyRound, Building2, Crown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+
+type LoginIntent = 'platform' | 'tenant' | 'both';
+
+interface DetectedIntent {
+  intent: LoginIntent;
+  platformRole?: string | null;
+  tenantCount: number;
+}
 
 export default function Auth() {
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
@@ -23,36 +34,111 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [detectedIntent, setDetectedIntent] = useState<DetectedIntent | null>(null);
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  /**
+   * Detect login intent: PlatformUser, TenantUser, or Both.
+   */
+  const detectLoginIntent = async (userId: string, userEmail?: string | null): Promise<DetectedIntent> => {
+    // Parallel lookups: platform_users + tenant_memberships
+    const [platformRes, tenantRes] = await Promise.all([
+      supabase
+        .from('platform_users')
+        .select('id, role, status')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .maybeSingle(),
+      supabase
+        .from('tenant_memberships')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(5),
+    ]);
+
+    const isPlatform = !!platformRes.data;
+    const tenantCount = tenantRes.data?.length ?? 0;
+    const isTenant = tenantCount > 0;
+
+    // Feed the LoginIntentDetector
+    if (isPlatform) {
+      identityIntelligence.setDetectedUserType(
+        isTenant ? 'platform' : 'platform',
+        'db_lookup',
+        platformRes.data?.role ?? null,
+      );
+    } else if (isTenant) {
+      identityIntelligence.setDetectedUserType('tenant', 'db_lookup');
+    }
+
+    if (isPlatform && isTenant) {
+      return { intent: 'both', platformRole: platformRes.data?.role, tenantCount };
+    }
+    if (isPlatform) {
+      return { intent: 'platform', platformRole: platformRes.data?.role, tenantCount: 0 };
+    }
+    return { intent: 'tenant', tenantCount };
+  };
+
+  /**
+   * Route based on detected intent.
+   */
+  const routeByIntent = (intent: DetectedIntent) => {
+    switch (intent.intent) {
+      case 'platform':
+        platformEvents.userLoggedIn('', email);
+        navigate('/platform/dashboard', { replace: true });
+        break;
+      case 'tenant':
+        navigate('/', { replace: true });
+        break;
+      case 'both':
+        // Show workspace selector
+        setDetectedIntent(intent);
+        setSelectorOpen(true);
+        break;
+    }
+  };
+
+  const handleSelectWorkspace = (choice: 'platform' | 'tenant') => {
+    setSelectorOpen(false);
+    if (choice === 'platform') {
+      platformEvents.userLoggedIn('', email);
+      navigate('/platform/dashboard', { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     const { error } = await signIn(email, password);
-
     if (error) {
       toast({ title: 'Erro de autenticação', description: error.message, variant: 'destructive' });
       setLoading(false);
       return;
     }
 
-    // Check if user is a platform user
+    // Step 1: Try JWT-level detection
+    const { data: { session } } = await supabase.auth.getSession();
+    const jwtDetection = identityIntelligence.detectUserTypeFromJwt(session?.access_token);
+
+    // Step 2: If JWT didn't resolve, do DB lookup
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const { data: platformUser } = await supabase
-        .from('platform_users')
-        .select('id, role, status')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (platformUser && platformUser.status === 'active') {
-        platformEvents.userLoggedIn(user.id, user.email);
-        navigate('/platform', { replace: true });
+      if (jwtDetection.detectedType !== 'unknown') {
+        // JWT resolved — but still check for dual identity
+        const intent = await detectLoginIntent(user.id, user.email);
+        routeByIntent(intent);
       } else {
-        navigate('/', { replace: true });
+        // Fallback: DB lookup
+        const intent = await detectLoginIntent(user.id, user.email);
+        routeByIntent(intent);
       }
     }
 
@@ -367,6 +453,64 @@ export default function Auth() {
           </p>
         </div>
       </div>
+
+      {/* ═══ Workspace Selector Dialog (dual-identity users) ═══ */}
+      <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-display">Selecionar Workspace</DialogTitle>
+            <DialogDescription>
+              Sua conta possui acesso a múltiplos ambientes. Escolha onde deseja entrar.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-3 pt-2">
+            {/* Platform option */}
+            <button
+              onClick={() => handleSelectWorkspace('platform')}
+              className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-accent/50 hover:border-primary/30 transition-all text-left group"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500 group-hover:bg-purple-500/15 transition-colors">
+                <Crown className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-foreground">Modo Plataforma</p>
+                <p className="text-sm text-muted-foreground truncate">
+                  Painel administrativo SaaS
+                  {detectedIntent?.platformRole && (
+                    <span className="ml-1 text-xs text-purple-500">
+                      · {detectedIntent.platformRole.replace('platform_', '').replace('_', ' ')}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </button>
+
+            {/* Tenant option */}
+            <button
+              onClick={() => handleSelectWorkspace('tenant')}
+              className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-accent/50 hover:border-primary/30 transition-all text-left group"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
+                <Building2 className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-foreground">Workspace Tenant</p>
+                <p className="text-sm text-muted-foreground">
+                  Área operacional
+                  {detectedIntent?.tenantCount && detectedIntent.tenantCount > 0 && (
+                    <span className="ml-1 text-xs text-primary">
+                      · {detectedIntent.tenantCount} {detectedIntent.tenantCount === 1 ? 'tenant' : 'tenants'}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
