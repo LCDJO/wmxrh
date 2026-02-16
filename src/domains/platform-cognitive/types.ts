@@ -65,3 +65,13 @@ export interface BehaviorProfile {
   avg_session_minutes: number;
   most_used_features: string[];
 }
+
+// ── Role suggestion (from BehaviorAnalyzer pattern detection) ──────
+export interface RoleSuggestionMatch {
+  role: string;
+  label: string;
+  description: string;
+  confidence: number;
+  matched_signals: string[];
+  event_count: number;
+}
