@@ -3415,6 +3415,59 @@ export type Database = {
           },
         ]
       }
+      saas_plans: {
+        Row: {
+          allowed_modules: string[]
+          allowed_payment_methods: string[]
+          billing_cycle: string
+          created_at: string
+          description: string | null
+          feature_flags: string[]
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          allowed_modules?: string[]
+          allowed_payment_methods?: string[]
+          billing_cycle?: string
+          created_at?: string
+          description?: string | null
+          feature_flags?: string[]
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          allowed_modules?: string[]
+          allowed_payment_methods?: string[]
+          billing_cycle?: string
+          created_at?: string
+          description?: string | null
+          feature_flags?: string[]
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_plans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salary_additionals: {
         Row: {
           additional_type: Database["public"]["Enums"]["salary_additional_type"]
