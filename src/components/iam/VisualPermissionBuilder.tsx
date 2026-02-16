@@ -5,6 +5,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { RoleSuggestionPanel } from '@/components/iam/RoleSuggestionPanel';
+import { PermissionWarnings } from '@/components/iam/PermissionWarnings';
 import { useRolePermissionsMatrixView, useRolePermissionsCached } from '@/domains/iam/read-models';
 import { identityGateway } from '@/domains/iam/identity.gateway';
 import { type CustomRole, type PermissionDefinition } from '@/domains/iam/iam.service';
@@ -601,6 +602,13 @@ export function VisualPermissionBuilder({ roles, permissions, tenantId, userId, 
 
           {/* Access Preview Panel */}
           <div className="space-y-4">
+            {/* Permission Warnings */}
+            <PermissionWarnings
+              selectedPermissionIds={selected}
+              permissions={permissions}
+              roleName={selectedRole?.name}
+            />
+
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
