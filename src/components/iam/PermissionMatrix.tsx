@@ -127,7 +127,7 @@ export function PermissionMatrix({ role, permissions, userId, isTenantAdmin, onC
   };
 
   const saveMutation = useMutation({
-    mutationFn: () => identityGateway.updateRolePermissions({ role_id: role.id, permission_ids: Array.from(selected), scope_type: 'tenant', granted_by: userId, tenant_id: role.tenant_id }),
+    mutationFn: () => identityGateway.updateRolePermissions({ role_id: role.id, permission_ids: Array.from(selected), scope_type: 'tenant', granted_by: userId, tenant_id: role.tenant_id, is_tenant_admin: isTenantAdmin }),
     onSuccess: () => {
       toast({ title: 'Permissões salvas!' });
       qc.invalidateQueries({ queryKey: ['iam_role_perms', role.id] });

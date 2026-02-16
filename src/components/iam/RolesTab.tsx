@@ -35,7 +35,7 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
 
   const createRoleMut = useMutation({
     mutationFn: (dto: { tenant_id: string; name: string; description?: string; created_by?: string }) =>
-      identityGateway.createRole(dto),
+      identityGateway.createRole({ ...dto, is_tenant_admin: isTenantAdmin }),
     onSuccess: () => {
       toast({ title: 'Cargo criado!' });
       setCreateOpen(false); setName(''); setDescription('');
@@ -46,7 +46,7 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
 
   const cloneRoleMut = useMutation({
     mutationFn: ({ sourceId, newName }: { sourceId: string; newName: string }) =>
-      identityGateway.cloneRole({ source_role_id: sourceId, tenant_id: tenantId, new_name: newName, created_by: userId }),
+      identityGateway.cloneRole({ source_role_id: sourceId, tenant_id: tenantId, new_name: newName, created_by: userId, is_tenant_admin: isTenantAdmin }),
     onSuccess: () => {
       toast({ title: 'Cargo clonado com sucesso!' });
       setCloneOpen(null);
@@ -57,7 +57,7 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
   });
 
   const deleteRoleMut = useMutation({
-    mutationFn: (id: string) => identityGateway.deleteRole({ role_id: id }),
+    mutationFn: (id: string) => identityGateway.deleteRole({ role_id: id, tenant_id: tenantId, is_tenant_admin: isTenantAdmin }),
     onSuccess: () => { toast({ title: 'Cargo removido!' }); onInvalidate(); },
     onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
