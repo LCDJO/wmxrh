@@ -3,7 +3,9 @@
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
+import { platformEvents } from '@/domains/platform/platform-events';
 import { PLATFORM_MODULES, type ModuleKey } from '@/domains/platform/platform-modules';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,6 +50,7 @@ type DialogMode = 'create' | 'view' | 'modules' | null;
 
 export default function PlatformTenants() {
   const { can } = usePlatformPermissions();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +99,8 @@ export default function PlatformTenants() {
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
+      const tenantId = typeof data === 'object' && data !== null ? (data as any).tenant_id : '';
+      platformEvents.tenantCreated(user?.id ?? '', tenantId, form.name.trim());
       toast({ title: 'Tenant criado', description: `${form.name} criado com role TenantAdmin e convite enviado.` });
       setForm({ name: '', document: '', email: '', phone: '', adminEmail: '', adminName: '' });
       setDialogMode(null);
@@ -114,6 +119,11 @@ export default function PlatformTenants() {
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
+      if (newStatus === 'suspended') {
+        platformEvents.tenantSuspended(user?.id ?? '', tenant.id, tenant.name);
+      } else {
+        platformEvents.tenantReactivated(user?.id ?? '', tenant.id, tenant.name);
+      }
       toast({ title: newStatus === 'suspended' ? 'Tenant suspenso' : 'Tenant reativado' });
       fetchTenants();
     }
