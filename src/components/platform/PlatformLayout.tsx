@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Zap,
   Users,
+  Package,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { to: '/platform/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/platform/tenants', label: 'Tenants', icon: Building2 },
   { to: '/platform/modules', label: 'Módulos', icon: Puzzle },
+  { to: '/platform/plans', label: 'Planos', icon: Package },
   { to: '/platform/users', label: 'Usuários', icon: Users },
   { to: '/platform/security', label: 'Segurança', icon: ShieldCheck },
   { to: '/platform/audit', label: 'Auditoria', icon: ScrollText },
