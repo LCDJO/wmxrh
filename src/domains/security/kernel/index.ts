@@ -75,6 +75,19 @@ export type {
   AccessCapabilities, AccessGraphInputExtended,
 } from './access-graph.capabilities';
 
+// ── Dual Identity Engine ───────────────────────────────────
+export { DualIdentityEngine, dualIdentityEngine, onImpersonationEvent, getImpersonationEventLog } from './dual-identity-engine';
+export {
+  IMPERSONATION_ALLOWED_ROLES, DEFAULT_SIMULATED_ROLE,
+  MAX_IMPERSONATION_DURATION_MINUTES, DEFAULT_IMPERSONATION_DURATION_MINUTES,
+} from './dual-identity-engine.types';
+export type {
+  RealIdentity, ActiveIdentity, ImpersonationSession,
+  StartImpersonationRequest, StartImpersonationResult, EndImpersonationResult,
+  ImpersonationDenialReason, ImpersonationEvent,
+  ImpersonationStartedPayload, ImpersonationEndedPayload, ImpersonationDeniedPayload,
+} from './dual-identity-engine.types';
+
 // ── Identity Boundary Layer ────────────────────────────────
 export { IdentityBoundaryLayer, identityBoundary } from './identity-boundary';
 export { IdentitySessionManager } from './identity-boundary';

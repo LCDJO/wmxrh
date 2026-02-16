@@ -16,6 +16,7 @@
 
 import type { ScopeType, TenantRole } from '@/domains/shared/types';
 import type { IdentityProvider, AllowedScopes } from '../identity-boundary.types';
+import type { ImpersonationStartedPayload, ImpersonationEndedPayload, ImpersonationDeniedPayload } from '../dual-identity-engine.types';
 
 // ════════════════════════════════════
 // EVENT TYPES
@@ -25,7 +26,10 @@ export type IBLDomainEventType =
   | 'ContextSwitched'
   | 'IdentitySessionStarted'
   | 'IdentitySessionRefreshed'
-  | 'UnauthorizedContextSwitch';
+  | 'UnauthorizedContextSwitch'
+  | 'ImpersonationStarted'
+  | 'ImpersonationEnded'
+  | 'ImpersonationDenied';
 
 // ── ContextSwitched ──
 
@@ -93,7 +97,10 @@ export type IBLDomainEvent =
   | ContextSwitchedPayload
   | IdentitySessionStartedPayload
   | IdentitySessionRefreshedPayload
-  | UnauthorizedContextSwitchPayload;
+  | UnauthorizedContextSwitchPayload
+  | ImpersonationStartedPayload
+  | ImpersonationEndedPayload
+  | ImpersonationDeniedPayload;
 
 // ════════════════════════════════════
 // EVENT BUS (synchronous, in-memory)

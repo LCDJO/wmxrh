@@ -37,6 +37,7 @@ import { identityBoundary } from './identity-boundary';
 import { getAccessGraph } from './access-graph';
 import { hasPlatformPermission, type PlatformPermission } from '@/domains/platform/platform-permissions';
 import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
+import { dualIdentityEngine } from './dual-identity-engine';
 
 // ════════════════════════════════════
 // PIPELINE TYPES
@@ -67,6 +68,8 @@ export interface PipelineResult {
   requestId: string;
   /** Which pipeline path was taken */
   path?: 'platform' | 'tenant';
+  /** If this operation was performed under impersonation */
+  impersonationMetadata?: Record<string, unknown> | null;
 }
 
 export interface PipelineInput {
@@ -102,6 +105,12 @@ export function executeSecurityPipeline(input: PipelineInput): PipelineResult {
   // ── Stage 1: RequestId ──
   const requestId = ctx?.request_id || `anon-${Date.now().toString(36)}`;
 
+  // ── Impersonation awareness: track operations ──
+  const impersonationMeta = dualIdentityEngine.getAuditMetadata();
+  if (impersonationMeta) {
+    dualIdentityEngine.recordOperation();
+  }
+
   // ── Stage 2: IdentityResolver — validate auth ──
   if (!ctx) {
     return denyAndAudit({
@@ -110,15 +119,16 @@ export function executeSecurityPipeline(input: PipelineInput): PipelineResult {
       deniedAtStage: 2,
       reason: 'Usuário não autenticado.',
       requestId,
+      impersonationMetadata: impersonationMeta,
     }, input.resource, input.action, skipAudit);
   }
 
   // ── Stage 3: UserTypeResolver — branch ──
-  if (ctx.user_type === 'platform') {
-    return executePlatformPipeline(input, ctx, requestId);
+  if (ctx.user_type === 'platform' && !dualIdentityEngine.isImpersonating) {
+    return executePlatformPipeline(input, ctx, requestId, impersonationMeta);
   }
 
-  return executeTenantPipeline(input, ctx, requestId);
+  return executeTenantPipeline(input, ctx, requestId, impersonationMeta);
 }
 
 // ════════════════════════════════════
@@ -129,6 +139,7 @@ function executePlatformPipeline(
   input: PipelineInput,
   ctx: SecurityContext,
   requestId: string,
+  impersonationMeta?: Record<string, unknown> | null,
 ): PipelineResult {
   const { action, resource, skipAudit = false, platformPermission, platformRole } = input;
 
@@ -177,6 +188,7 @@ function executeTenantPipeline(
   input: PipelineInput,
   ctx: SecurityContext,
   requestId: string,
+  impersonationMeta?: Record<string, unknown> | null,
 ): PipelineResult {
   const {
     action, resource, target, guardTarget,
@@ -295,7 +307,7 @@ function executeTenantPipeline(
       resource: `${resource}:${action}`,
       action,
       ctx,
-      metadata: { target, path: 'tenant', stagesCleared: '9T' },
+      metadata: { target, path: 'tenant', stagesCleared: '9T', ...impersonationMeta },
     });
   }
 
@@ -304,6 +316,7 @@ function executeTenantPipeline(
     requestId,
     permissionResult: permResult,
     path: 'tenant',
+    impersonationMetadata: impersonationMeta,
   };
 }
 
