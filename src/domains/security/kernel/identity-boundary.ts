@@ -2,485 +2,184 @@
  * SecurityKernel — Identity Boundary Layer (IBL)
  * 
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║  IDENTITY BOUNDARY LAYER                                            ║
+ * ║  IDENTITY BOUNDARY LAYER — COMPOSITOR                               ║
+ * ║                                                                      ║
+ * ║  Composes 5 specialized components:                                  ║
+ * ║    1. IdentitySessionManager  → session lifecycle                    ║
+ * ║    2. ContextSwitcherService  → validated context switching          ║
+ * ║    3. ContextResolver         → stateless role/scope computation     ║
+ * ║    4. MultiScopeTokenBuilder  → query-ready scope tokens             ║
+ * ║    5. ContextGuardMiddleware  → pre-operation validation chain       ║
  * ║                                                                      ║
  * ║  CONCEITO CENTRAL:                                                   ║
- * ║                                                                      ║
- * ║  IdentitySession (imutável por sessão):                              ║
- * ║    user_id = 123                                                     ║
- * ║    tenant_scopes = [T1, T2]                                          ║
- * ║                                                                      ║
- * ║  OperationalContext (mutável, validado):                              ║
- * ║    active_tenant_id = T1                                             ║
- * ║    active_group_id  = G3                                             ║
- * ║    active_company_id = C9                                            ║
- * ║                                                                      ║
- * ║  ┌──────────────────────────────────────────────────────────────┐    ║
- * ║  │              IdentitySession (frozen)                       │    ║
- * ║  │  userId, email, sessionFingerprint, authenticatedAt         │    ║
- * ║  │  tenantScopes: [{ tenantId, tenantName, role }]             │    ║
- * ║  │  allUserRoles: across ALL tenants (preloaded)               │    ║
- * ║  ├──────────────────────────────────────────────────────────────┤    ║
- * ║  │            OperationalContext (switchable)                   │    ║
- * ║  │  activeTenantId, activeGroupId, activeCompanyId             │    ║
- * ║  │  effectiveRoles (computed: membership + user_roles)         │    ║
- * ║  │  scopeLevel: 'tenant' | 'company_group' | 'company'        │    ║
- * ║  └──────────────────────────────────────────────────────────────┘    ║
- * ║                                                                      ║
- * ║  INVARIANTS:                                                         ║
- * ║    1. IdentitySession never changes without re-authentication        ║
- * ║    2. Context switches validate against tenantScopes                 ║
- * ║    3. Every switch emits an audit event                              ║
- * ║    4. SecurityContext is rebuilt atomically on switch                 ║
- * ║                                                                      ║
- * ║  FUTURE-READY:                                                       ║
- * ║    - Delegated Access: switchContext validates delegation grants      ║
- * ║    - Temporary Permissions: expiresAt on OperationalContext           ║
- * ║    - Access Expiration: TTL-based auto-revocation                    ║
- * ║    - External IdP: IdentitySession populated from SAML/OIDC claims   ║
+ * ║    IdentitySession  → WHO (immutable per auth session)               ║
+ * ║    OperationalContext → WHERE (mutable, validated)                    ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
 
-import type { Session, User } from '@supabase/supabase-js';
-import type { TenantRole, UserRole, ScopeType } from '@/domains/shared/types';
-import { auditSecurity } from './audit-security.service';
+// ── Re-export all types from the shared type file ──
+export type {
+  IdentitySession,
+  TenantScope,
+  BoundaryIdentity,
+  TenantMembership,
+  IdentityProvider,
+  OperationalContext,
+  ContextSwitchRequest,
+  ContextSwitchResult,
+  IdentityBoundarySnapshot,
+} from './identity-boundary.types';
+
+// ── Re-export components ──
+export { IdentitySessionManager } from './ibl/identity-session-manager';
+export type { EstablishIdentityInput, RefreshScopesInput } from './ibl/identity-session-manager';
+export { ContextSwitcherService } from './ibl/context-switcher.service';
+export { contextResolver } from './ibl/context-resolver';
+export type { ResolvedContext, ScopeValidation } from './ibl/context-resolver';
+export { multiScopeTokenBuilder } from './ibl/multi-scope-token-builder';
+export type { ScopeToken, QueryFilterSet } from './ibl/multi-scope-token-builder';
+export { contextGuard, ContextGuardError } from './ibl/context-guard.middleware';
+export type { GuardResult, GuardTarget, GuardCheckName } from './ibl/context-guard.middleware';
+
+// ── Components ──
+import { IdentitySessionManager } from './ibl/identity-session-manager';
+import type { EstablishIdentityInput } from './ibl/identity-session-manager';
+import { ContextSwitcherService } from './ibl/context-switcher.service';
+import { contextGuard } from './ibl/context-guard.middleware';
+import { multiScopeTokenBuilder } from './ibl/multi-scope-token-builder';
+import type {
+  IdentitySession,
+  TenantScope,
+  OperationalContext,
+  ContextSwitchRequest,
+  ContextSwitchResult,
+  IdentityBoundarySnapshot,
+} from './identity-boundary.types';
+import type { ScopeToken, QueryFilterSet } from './ibl/multi-scope-token-builder';
+import type { GuardResult, GuardTarget } from './ibl/context-guard.middleware';
 
 // ════════════════════════════════════
-// IDENTITY SESSION — immutable per auth session
-// ════════════════════════════════════
-
-/**
- * IdentitySession: WHO the user is.
- * Frozen on establish(), never mutated until sign-out.
- * 
- * @example
- * {
- *   userId: '123',
- *   tenantScopes: [
- *     { tenantId: 'T1', tenantName: 'Acme Corp', role: 'admin' },
- *     { tenantId: 'T2', tenantName: 'Beta Inc', role: 'viewer' },
- *   ]
- * }
- */
-export interface IdentitySession {
-  /** Supabase auth user ID */
-  readonly userId: string;
-  /** User email from JWT */
-  readonly email: string | null;
-  /** Session fingerprint (last 8 chars of access_token) */
-  readonly sessionFingerprint: string | null;
-  /** When this identity was established */
-  readonly authenticatedAt: number;
-  /** Tenants this user can operate in (immutable list of grants) */
-  readonly tenantScopes: ReadonlyArray<TenantScope>;
-  /** All user_roles across ALL tenants (preloaded for instant switching) */
-  readonly allUserRoles: ReadonlyArray<UserRole>;
-  /** Identity provider source (for future external IdP) */
-  readonly provider: IdentityProvider;
-}
-
-/** A single tenant grant: the user's membership in one tenant */
-export interface TenantScope {
-  readonly tenantId: string;
-  readonly tenantName: string;
-  readonly role: TenantRole;
-}
-
-/** @deprecated Use IdentitySession instead */
-export type BoundaryIdentity = IdentitySession;
-/** @deprecated Use TenantScope instead */
-export type TenantMembership = TenantScope;
-
-export type IdentityProvider = 
-  | { type: 'supabase'; method: 'email' | 'oauth' }
-  | { type: 'external'; providerId: string; method: 'saml' | 'oidc' };
-
-// ════════════════════════════════════
-// OPERATIONAL CONTEXT — WHERE the user is operating
-// ════════════════════════════════════
-
-/**
- * OperationalContext: WHERE the user is operating right now.
- * Rebuilt on every tenant/scope switch. Always validated against IdentitySession.
- * 
- * @example
- * {
- *   activeTenantId: 'T1',
- *   activeGroupId: 'G3',
- *   activeCompanyId: 'C9',
- *   effectiveRoles: ['admin', 'rh'],
- *   scopeLevel: 'company',
- * }
- */
-export interface OperationalContext {
-  /** Currently active tenant */
-  readonly activeTenantId: string;
-  readonly activeTenantName: string;
-  /** Active membership role for this tenant */
-  readonly membershipRole: TenantRole;
-  /** Scoped user_roles for the active tenant only */
-  readonly activeUserRoles: ReadonlyArray<UserRole>;
-  /** Effective roles = membership + tenant-scoped user_roles */
-  readonly effectiveRoles: ReadonlyArray<TenantRole>;
-  /** Current scope drill-down */
-  readonly scopeLevel: ScopeType;
-  readonly activeGroupId: string | null;
-  readonly activeCompanyId: string | null;
-  /** When this context was activated */
-  readonly activatedAt: number;
-  /** Optional TTL for context expiration (future: temporary access) */
-  readonly expiresAt: number | null;
-}
-
-// ════════════════════════════════════
-// CONTEXT SWITCH REQUEST
-// ════════════════════════════════════
-
-export interface ContextSwitchRequest {
-  /** Target tenant to switch to */
-  targetTenantId?: string;
-  /** Target scope level */
-  targetScopeLevel?: ScopeType;
-  /** Target group (if narrowing scope) */
-  targetGroupId?: string | null;
-  /** Target company (if narrowing scope) */
-  targetCompanyId?: string | null;
-}
-
-export interface ContextSwitchResult {
-  success: boolean;
-  newContext: OperationalContext | null;
-  reason: string;
-  /** Which validation failed */
-  failedValidation?: 'NO_IDENTITY' | 'NO_MEMBERSHIP' | 'SCOPE_DENIED' | 'EXPIRED';
-}
-
-// ════════════════════════════════════
-// IDENTITY BOUNDARY LAYER
+// COMPOSITOR CLASS
 // ════════════════════════════════════
 
 export class IdentityBoundaryLayer {
-  private _identity: BoundaryIdentity | null = null;
-  private _operationalContext: OperationalContext | null = null;
-  private _switchCount = 0;
+  private readonly _sessionManager = new IdentitySessionManager();
+  private readonly _switcher = new ContextSwitcherService();
 
-  // ── IDENTITY LIFECYCLE ──
+  // ── IdentitySessionManager delegates ──
 
-  /**
-   * Establish identity from authentication state.
-   * Called once on login / session restore. Identity is frozen until sign-out.
-   */
   establish(input: EstablishIdentityInput): IdentitySession {
-    this._identity = Object.freeze({
-      userId: input.user.id,
-      email: input.user.email ?? null,
-      sessionFingerprint: input.session.access_token?.slice(-8) ?? null,
-      authenticatedAt: Date.now(),
-      tenantScopes: Object.freeze(input.tenantMemberships.map(m => Object.freeze(m))),
-      allUserRoles: Object.freeze([...input.allUserRoles]),
-      provider: input.provider ?? { type: 'supabase', method: 'email' },
-    }) as IdentitySession;
-
-    return this._identity;
+    return this._sessionManager.establish(input);
   }
 
-  /**
-   * Clear identity on sign-out.
-   */
   clear(): void {
-    if (this._identity) {
-      auditSecurity.log({
-        action: 'identity_cleared',
-        resource: 'identity_boundary',
-        result: 'success',
-        reason: 'Identity cleared on sign-out',
-        user_id: this._identity.userId,
-      });
-    }
-    this._identity = null;
-    this._operationalContext = null;
-    this._switchCount = 0;
+    this._sessionManager.clear();
+    this._switcher.clear();
   }
 
-  // ── CONTEXT SWITCHING ──
-
-  /**
-   * Switch operational context (tenant, group, or company).
-   * Validates against the established identity grants.
-   * 
-   * @example
-   * // Switch tenant
-   * ibl.switchContext({ targetTenantId: 'tenant-2' });
-   * 
-   * // Narrow scope within current tenant
-   * ibl.switchContext({ targetScopeLevel: 'company', targetCompanyId: 'company-x' });
-   */
-  switchContext(request: ContextSwitchRequest): ContextSwitchResult {
-    // ── Validation 1: Identity must exist ──
-    if (!this._identity) {
-      return {
-        success: false,
-        newContext: null,
-        reason: 'Nenhuma identidade estabelecida. Autentique-se primeiro.',
-        failedValidation: 'NO_IDENTITY',
-      };
-    }
-
-    const identity = this._identity;
-    const targetTenantId = request.targetTenantId ?? this._operationalContext?.activeTenantId;
-
-    if (!targetTenantId) {
-      return {
-        success: false,
-        newContext: null,
-        reason: 'Nenhum tenant alvo especificado e nenhum contexto ativo.',
-        failedValidation: 'NO_MEMBERSHIP',
-      };
-    }
-
-    // ── Validation 2: User must have membership in target tenant ──
-    const membership = identity.tenantScopes.find(m => m.tenantId === targetTenantId);
-    if (!membership) {
-      auditSecurity.logAccessDenied({
-        resource: `tenant:${targetTenantId}`,
-        reason: 'Tentativa de troca para tenant sem membership',
-      });
-      return {
-        success: false,
-        newContext: null,
-        reason: `Sem acesso ao tenant ${targetTenantId}.`,
-        failedValidation: 'NO_MEMBERSHIP',
-      };
-    }
-
-    // ── Resolve roles for target tenant ──
-    const tenantUserRoles = identity.allUserRoles.filter(
-      r => r.tenant_id === targetTenantId
-    );
-
-    const effectiveRoles = computeEffectiveRoles(membership.role, tenantUserRoles);
-
-    // ── Validation 3: Scope access ──
-    const scopeLevel = request.targetScopeLevel ?? this._operationalContext?.scopeLevel ?? 'tenant';
-    const groupId = request.targetGroupId ?? (request.targetTenantId ? null : this._operationalContext?.activeGroupId ?? null);
-    const companyId = request.targetCompanyId ?? (request.targetTenantId ? null : this._operationalContext?.activeCompanyId ?? null);
-
-    const scopeValidation = validateScopeAccess(
-      effectiveRoles as TenantRole[],
-      tenantUserRoles,
-      scopeLevel,
-      groupId,
-      companyId,
-    );
-
-    if (!scopeValidation.allowed) {
-      auditSecurity.logAccessDenied({
-        resource: `scope:${scopeLevel}:${groupId || companyId || 'tenant'}`,
-        reason: scopeValidation.reason,
-      });
-      return {
-        success: false,
-        newContext: null,
-        reason: scopeValidation.reason,
-        failedValidation: 'SCOPE_DENIED',
-      };
-    }
-
-    // ── Build new context ──
-    const previousTenantId = this._operationalContext?.activeTenantId;
-    const isTenantSwitch = previousTenantId && previousTenantId !== targetTenantId;
-
-    this._operationalContext = Object.freeze({
-      activeTenantId: targetTenantId,
-      activeTenantName: membership.tenantName,
-      membershipRole: membership.role,
-      activeUserRoles: Object.freeze([...tenantUserRoles]),
-      effectiveRoles: Object.freeze(effectiveRoles),
-      scopeLevel,
-      activeGroupId: groupId,
-      activeCompanyId: companyId,
-      activatedAt: Date.now(),
-      expiresAt: null, // Future: temporary access TTL
-    }) as OperationalContext;
-
-    this._switchCount++;
-
-    // ── Audit ──
-    auditSecurity.log({
-      action: isTenantSwitch ? 'tenant_switched' : 'scope_switched',
-      resource: 'identity_boundary',
-      result: 'success',
-      reason: isTenantSwitch ? 'Tenant switched' : 'Scope switched',
-      user_id: identity.userId,
-      tenant_id: targetTenantId,
-      metadata: {
-        fromTenant: previousTenantId,
-        toTenant: targetTenantId,
-        scopeLevel,
-        groupId,
-        companyId,
-        switchCount: this._switchCount,
-      },
-    });
-
-    return {
-      success: true,
-      newContext: this._operationalContext,
-      reason: isTenantSwitch
-        ? `Contexto trocado para tenant ${membership.tenantName}`
-        : `Escopo atualizado para ${scopeLevel}${groupId ? `:${groupId}` : ''}${companyId ? `:${companyId}` : ''}`,
-    };
-  }
-
-  // ── ACCESSORS ──
-
-  get identity(): BoundaryIdentity | null {
-    return this._identity;
-  }
-
-  get operationalContext(): OperationalContext | null {
-    // Check expiration (future: temporary permissions)
-    if (this._operationalContext?.expiresAt) {
-      if (Date.now() > this._operationalContext.expiresAt) {
-        this._operationalContext = null;
-        return null;
-      }
-    }
-    return this._operationalContext;
+  get identity(): IdentitySession | null {
+    return this._sessionManager.session;
   }
 
   get isEstablished(): boolean {
-    return this._identity !== null;
+    return this._sessionManager.isEstablished;
+  }
+
+  // ── ContextSwitcherService delegates ──
+
+  switchContext(request: ContextSwitchRequest): ContextSwitchResult {
+    return this._switcher.switch(this._sessionManager.session, request);
+  }
+
+  get operationalContext(): OperationalContext | null {
+    return this._switcher.currentContext;
   }
 
   get hasActiveContext(): boolean {
-    return this._operationalContext !== null;
+    return this._switcher.currentContext !== null;
   }
 
   get switchCount(): number {
-    return this._switchCount;
+    return this._switcher.switchCount;
   }
 
-  /**
-   * Get available tenants for context switching.
-   */
+  // ── ContextGuardMiddleware delegates ──
+
+  guard(target?: GuardTarget): GuardResult {
+    return contextGuard.validate(
+      this._sessionManager.session,
+      this._switcher.currentContext,
+      target,
+    );
+  }
+
+  requireContext(target?: GuardTarget): void {
+    contextGuard.require(
+      this._sessionManager.session,
+      this._switcher.currentContext,
+      target,
+    );
+  }
+
+  get isReady(): boolean {
+    return contextGuard.isReady(
+      this._sessionManager.session,
+      this._switcher.currentContext,
+    );
+  }
+
+  // ── MultiScopeTokenBuilder delegates ──
+
+  buildScopeToken(): ScopeToken | null {
+    const session = this._sessionManager.session;
+    const context = this._switcher.currentContext;
+    if (!session || !context) return null;
+    return multiScopeTokenBuilder.buildScopeToken(session, context);
+  }
+
+  buildQueryFilters(): QueryFilterSet | null {
+    const token = this.buildScopeToken();
+    if (!token) return null;
+    return multiScopeTokenBuilder.buildQueryFilters(token);
+  }
+
+  // ── Convenience ──
+
   getAvailableTenants(): ReadonlyArray<TenantScope> {
-    return this._identity?.tenantScopes ?? [];
+    return this._sessionManager.session?.tenantScopes ?? [];
   }
 
-  /**
-   * Check if user can switch to a specific tenant (O(1)).
-   */
   canSwitchToTenant(tenantId: string): boolean {
-    return this._identity?.tenantScopes.some(m => m.tenantId === tenantId) ?? false;
+    return this._sessionManager.session?.tenantScopes.some(
+      m => m.tenantId === tenantId
+    ) ?? false;
   }
 
-  /**
-   * Snapshot for debugging / audit trail.
-   */
   snapshot(): IdentityBoundarySnapshot {
+    const session = this._sessionManager.session;
+    const context = this._switcher.currentContext;
     return {
       hasIdentity: this.isEstablished,
-      userId: this._identity?.userId ?? null,
-      provider: this._identity?.provider ?? null,
-      authenticatedAt: this._identity?.authenticatedAt ?? null,
-      tenantCount: this._identity?.tenantScopes.length ?? 0,
-      activeTenantId: this._operationalContext?.activeTenantId ?? null,
-      scopeLevel: this._operationalContext?.scopeLevel ?? null,
-      effectiveRoles: this._operationalContext?.effectiveRoles
-        ? [...this._operationalContext.effectiveRoles]
-        : [],
-      switchCount: this._switchCount,
+      userId: session?.userId ?? null,
+      provider: session?.provider ?? null,
+      authenticatedAt: session?.authenticatedAt ?? null,
+      tenantCount: session?.tenantScopes.length ?? 0,
+      activeTenantId: context?.activeTenantId ?? null,
+      scopeLevel: context?.scopeLevel ?? null,
+      effectiveRoles: context?.effectiveRoles ? [...context.effectiveRoles] : [],
+      switchCount: this._switcher.switchCount,
     };
   }
-}
 
-export interface IdentityBoundarySnapshot {
-  hasIdentity: boolean;
-  userId: string | null;
-  provider: IdentityProvider | null;
-  authenticatedAt: number | null;
-  tenantCount: number;
-  activeTenantId: string | null;
-  scopeLevel: ScopeType | null;
-  effectiveRoles: TenantRole[];
-  switchCount: number;
-}
+  // ── Direct component access (for advanced usage) ──
 
-// ════════════════════════════════════
-// INPUT TYPES
-// ════════════════════════════════════
-
-export interface EstablishIdentityInput {
-  user: User;
-  session: Session;
-  tenantMemberships: TenantMembership[];
-  allUserRoles: UserRole[];
-  provider?: IdentityProvider;
-}
-
-// ════════════════════════════════════
-// HELPERS
-// ════════════════════════════════════
-
-const TENANT_WIDE_ROLES: TenantRole[] = [
-  'superadmin', 'owner', 'admin', 'tenant_admin',
-];
-
-function computeEffectiveRoles(
-  membershipRole: TenantRole,
-  userRoles: ReadonlyArray<UserRole>,
-): TenantRole[] {
-  const roles = new Set<TenantRole>();
-  roles.add(membershipRole);
-  for (const ur of userRoles) {
-    roles.add(ur.role);
-  }
-  return Array.from(roles);
-}
-
-function validateScopeAccess(
-  effectiveRoles: TenantRole[],
-  userRoles: ReadonlyArray<UserRole>,
-  scopeLevel: ScopeType,
-  groupId: string | null,
-  companyId: string | null,
-): { allowed: boolean; reason: string } {
-  // Tenant-wide roles can access any scope
-  if (effectiveRoles.some(r => TENANT_WIDE_ROLES.includes(r))) {
-    return { allowed: true, reason: 'Tenant-wide access' };
+  get sessionManager(): IdentitySessionManager {
+    return this._sessionManager;
   }
 
-  // Tenant level requires tenant-wide role
-  if (scopeLevel === 'tenant') {
-    return { allowed: true, reason: 'Tenant scope allowed (RLS enforces data access)' };
+  get switcher(): ContextSwitcherService {
+    return this._switcher;
   }
-
-  // Group scope: user must have a role scoped to this group
-  if (scopeLevel === 'company_group' && groupId) {
-    const hasGroupAccess = userRoles.some(
-      r => r.scope_type === 'company_group' && r.scope_id === groupId
-    ) || userRoles.some(r => r.scope_type === 'tenant');
-
-    if (!hasGroupAccess) {
-      return { allowed: false, reason: `Sem acesso ao grupo ${groupId}` };
-    }
-  }
-
-  // Company scope: user must have a role scoped to this company or its parent group
-  if (scopeLevel === 'company' && companyId) {
-    const hasCompanyAccess = userRoles.some(
-      r => r.scope_type === 'company' && r.scope_id === companyId
-    ) || userRoles.some(
-      r => r.scope_type === 'company_group' // group admins inherit company access
-    ) || userRoles.some(r => r.scope_type === 'tenant');
-
-    if (!hasCompanyAccess) {
-      return { allowed: false, reason: `Sem acesso à empresa ${companyId}` };
-    }
-  }
-
-  return { allowed: true, reason: 'Scope access validated' };
 }
 
 // ════════════════════════════════════
