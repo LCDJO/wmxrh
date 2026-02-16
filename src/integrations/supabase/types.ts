@@ -989,6 +989,156 @@ export type Database = {
           },
         ]
       }
+      esocial_event_mappings: {
+        Row: {
+          auto_generate: boolean
+          category: Database["public"]["Enums"]["esocial_event_category"]
+          created_at: string
+          description: string | null
+          esocial_event_type: string
+          id: string
+          is_active: boolean
+          payload_template: Json | null
+          tenant_id: string
+          trigger_action: string
+          trigger_conditions: Json | null
+          trigger_table: string
+          updated_at: string
+        }
+        Insert: {
+          auto_generate?: boolean
+          category: Database["public"]["Enums"]["esocial_event_category"]
+          created_at?: string
+          description?: string | null
+          esocial_event_type: string
+          id?: string
+          is_active?: boolean
+          payload_template?: Json | null
+          tenant_id: string
+          trigger_action: string
+          trigger_conditions?: Json | null
+          trigger_table: string
+          updated_at?: string
+        }
+        Update: {
+          auto_generate?: boolean
+          category?: Database["public"]["Enums"]["esocial_event_category"]
+          created_at?: string
+          description?: string | null
+          esocial_event_type?: string
+          id?: string
+          is_active?: boolean
+          payload_template?: Json | null
+          tenant_id?: string
+          trigger_action?: string
+          trigger_conditions?: Json | null
+          trigger_table?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "esocial_event_mappings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      esocial_events: {
+        Row: {
+          category: Database["public"]["Enums"]["esocial_event_category"]
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          effective_date: string | null
+          entity_id: string | null
+          entity_type: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          receipt_number: string | null
+          reference_period: string | null
+          response_payload: Json | null
+          retry_count: number
+          sent_at: string | null
+          status: Database["public"]["Enums"]["esocial_event_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["esocial_event_category"]
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          receipt_number?: string | null
+          reference_period?: string | null
+          response_payload?: Json | null
+          retry_count?: number
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["esocial_event_status"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["esocial_event_category"]
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          receipt_number?: string | null
+          reference_period?: string | null
+          response_payload?: Json | null
+          retry_count?: number
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["esocial_event_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "esocial_events_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "esocial_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "esocial_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exposure_group_risks: {
         Row: {
           control_measures: string | null
@@ -2232,6 +2382,10 @@ export type Database = {
         }[]
       }
       seed_default_rubrics: { Args: { _tenant_id: string }; Returns: undefined }
+      seed_esocial_mappings: {
+        Args: { _tenant_id: string }
+        Returns: undefined
+      }
       user_has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["tenant_role"][]
@@ -2280,6 +2434,20 @@ export type Database = {
         | "additional_added"
         | "job_changed"
       employee_status: "active" | "inactive" | "on_leave"
+      esocial_event_category:
+        | "tabelas"
+        | "nao_periodicos"
+        | "periodicos"
+        | "sst"
+        | "gfip_fgts"
+      esocial_event_status:
+        | "pending"
+        | "processing"
+        | "sent"
+        | "accepted"
+        | "rejected"
+        | "error"
+        | "cancelled"
       exam_result: "apto" | "inapto" | "apto_restricao"
       exam_type:
         | "admissional"
@@ -2473,6 +2641,22 @@ export const Constants = {
         "job_changed",
       ],
       employee_status: ["active", "inactive", "on_leave"],
+      esocial_event_category: [
+        "tabelas",
+        "nao_periodicos",
+        "periodicos",
+        "sst",
+        "gfip_fgts",
+      ],
+      esocial_event_status: [
+        "pending",
+        "processing",
+        "sent",
+        "accepted",
+        "rejected",
+        "error",
+        "cancelled",
+      ],
       exam_result: ["apto", "inapto", "apto_restricao"],
       exam_type: [
         "admissional",

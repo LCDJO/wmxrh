@@ -758,3 +758,56 @@ export function useResolveViolation() {
     },
   });
 }
+
+// ========================
+// eSocial EVENT HOOKS
+// ========================
+
+import { esocialEventService } from '@/domains/esocial/esocial-event.service';
+import type { ESocialEventStatus, ESocialEventCategory, CreateESocialEventDTO } from '@/domains/shared/types';
+
+const esocialKeys = {
+  events: (tenantId?: string, filters?: string) => ['esocial_events', tenantId, filters] as const,
+  statusCounts: (tenantId?: string) => ['esocial_status_counts', tenantId] as const,
+  mappings: (tenantId?: string) => ['esocial_mappings', tenantId] as const,
+};
+
+export function useESocialEvents(opts?: { status?: ESocialEventStatus; category?: ESocialEventCategory; event_type?: string; reference_period?: string; limit?: number }) {
+  const qs = useQueryScope();
+  const filterKey = JSON.stringify(opts || {});
+  return useQuery({
+    queryKey: esocialKeys.events(qs?.tenantId, filterKey),
+    queryFn: () => esocialEventService.list(qs!, opts),
+    enabled: !!qs,
+  });
+}
+
+export function useESocialStatusCounts() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: esocialKeys.statusCounts(qs?.tenantId),
+    queryFn: () => esocialEventService.getStatusCounts(qs!),
+    enabled: !!qs,
+  });
+}
+
+export function useESocialMappings() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: esocialKeys.mappings(qs?.tenantId),
+    queryFn: () => esocialEventService.listMappings(qs!),
+    enabled: !!qs,
+  });
+}
+
+export function useCreateESocialEvent() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateESocialEventDTO) => esocialEventService.create(dto, qs!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: esocialKeys.events(qs?.tenantId) });
+      qc.invalidateQueries({ queryKey: esocialKeys.statusCounts(qs?.tenantId) });
+    },
+  });
+}
