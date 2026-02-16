@@ -33,8 +33,8 @@ export {
 } from './transmission-controller';
 
 // ── XML Generator ──
-export { generateXML, generateBatchXML, validateXMLStructure } from './xml-generator';
-export type { XMLGenerationResult } from './xml-generator';
+export { generateEventXML, generateLoteXML, validateXMLStructure, generateXML, generateBatchXML } from './xml-generator';
+export type { ESocialEventXML, ESocialLoteXML, XMLValidationResult, XMLGenerationResult } from './xml-generator';
 
 // ── Digital Signer (Port + Simulation Adapter) ──
 export { simulationSigner } from './digital-signer';
