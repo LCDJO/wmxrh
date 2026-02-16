@@ -79,7 +79,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* ═══ PLATFORM ROUTES — SECURITY: tenant active_identity blocked ═══ */}
+      {/* ═══ PLATFORM ROUTES — always mounted, guarded internally ═══ */}
       <Route
         path="/platform"
         element={
@@ -96,12 +96,17 @@ function AppRoutes() {
         <Route path="audit" element={<PlatformAudit />} />
       </Route>
 
+      <Route path="/auth/login" element={<Navigate to="/" replace />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
       {/* ═══ TENANT ROUTES ═══ */}
-      {!currentTenant && !isPlatformUser ? (
-        <Route path="*" element={<TenantOnboarding />} />
-      ) : !currentTenant && isPlatformUser ? (
-        /* Platform user with no tenant → redirect to platform */
-        <Route path="*" element={<Navigate to="/platform/dashboard" replace />} />
+      {!currentTenant ? (
+        isPlatformUser ? (
+          /* Platform user with no tenant → redirect to platform */
+          <Route path="*" element={<Navigate to="/platform/dashboard" replace />} />
+        ) : (
+          <Route path="*" element={<TenantOnboarding />} />
+        )
       ) : (
         <Route element={<AppLayout />}>
           <Route path="/" element={
@@ -185,9 +190,6 @@ function AppRoutes() {
           } />
         </Route>
       )}
-
-      <Route path="/auth/login" element={<Navigate to="/" replace />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
     </Routes>
   );
 }
