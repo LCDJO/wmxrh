@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Shield, Users, Building2, Key, Network, Eye, Layers,
   ZoomIn, ZoomOut, Maximize2, Lock, Move, GripVertical,
@@ -143,6 +144,7 @@ function buildGraph(
   assignments: UserCustomRole[],
   rolePermMap: Map<string, string[]>,
   focusRoleId: string | null,
+  scopeFilter: 'all' | 'tenant' | 'company_group' | 'company' = 'all',
 ): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
@@ -161,6 +163,7 @@ function buildGraph(
   const scopeSet = new Map<string, { type: string; id: string | null }>();
   assignments.forEach(a => {
     if (focusRoleId && a.role_id !== focusRoleId) return;
+    if (scopeFilter !== 'all' && a.scope_type !== scopeFilter) return;
     const key = `${a.scope_type}:${a.scope_id || 'all'}`;
     scopeSet.set(key, { type: a.scope_type, id: a.scope_id });
     edges.push({ id: `se:${a.role_id}:${key}`, from: `role:${a.role_id}`, to: `scope:${key}`, type: 'scoped_to' });
@@ -248,6 +251,7 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [focusRoleId, setFocusRoleId] = useState<string | null>(null);
+  const [scopeFilter, setScopeFilter] = useState<'all' | 'tenant' | 'company_group' | 'company'>('all');
 
   // Load role permissions
   const roleIds = roles.map(r => r.id);
@@ -268,8 +272,8 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
 
   // Build graph (base positions)
   const baseGraph = useMemo(
-    () => buildGraph(roles, permissions, assignments, rolePermMap, focusRoleId),
-    [roles, permissions, assignments, rolePermMap, focusRoleId]
+    () => buildGraph(roles, permissions, assignments, rolePermMap, focusRoleId, scopeFilter),
+    [roles, permissions, assignments, rolePermMap, focusRoleId, scopeFilter]
   );
 
   // Apply drag offsets to nodes
@@ -427,30 +431,70 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         </div>
       </div>
 
-      {/* Role filter */}
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          onClick={() => { setFocusRoleId(null); setNodePositions(new Map()); setSelectedNodeId(null); }}
-          className={cn(
-            "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
-            !focusRoleId ? "bg-primary/10 border-primary/30 text-primary shadow-sm" : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
-          )}
-        >
-          Todos os cargos
-        </button>
-        {roles.map(r => (
+      {/* Filters: Role chips + Scope selector */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Role filter chips */}
+        <div className="flex flex-wrap gap-1.5 flex-1">
           <button
-            key={r.id}
-            onClick={() => { setFocusRoleId(prev => prev === r.id ? null : r.id); setNodePositions(new Map()); setSelectedNodeId(null); }}
+            onClick={() => { setFocusRoleId(null); setNodePositions(new Map()); setSelectedNodeId(null); }}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5",
-              focusRoleId === r.id ? "bg-primary/10 border-primary/30 text-primary shadow-sm" : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+              "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+              !focusRoleId ? "bg-primary/10 border-primary/30 text-primary shadow-sm" : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
             )}
           >
-            {r.is_system ? <Lock className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
-            {r.name}
+            Todos os cargos
           </button>
-        ))}
+          {roles.map(r => (
+            <button
+              key={r.id}
+              onClick={() => { setFocusRoleId(prev => prev === r.id ? null : r.id); setNodePositions(new Map()); setSelectedNodeId(null); }}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5",
+                focusRoleId === r.id ? "bg-primary/10 border-primary/30 text-primary shadow-sm" : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+              )}
+            >
+              {r.is_system ? <Lock className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
+              {r.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Scope Selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider whitespace-nowrap">Escopo:</span>
+          <Select value={scopeFilter} onValueChange={(v) => { setScopeFilter(v as typeof scopeFilter); setNodePositions(new Map()); }}>
+            <SelectTrigger className="h-8 w-[160px] text-xs bg-card border-border/50">
+              <Building2 className="h-3.5 w-3.5 text-muted-foreground mr-1.5 shrink-0" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover border-border shadow-lg z-50">
+              <SelectItem value="all" className="text-xs">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Todos os escopos</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="tenant" className="text-xs">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-3.5 w-3.5 text-warning" />
+                  <span>Tenant</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="company_group" className="text-xs">
+                <div className="flex items-center gap-2">
+                  <Users className="h-3.5 w-3.5 text-info" />
+                  <span>Group</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="company" className="text-xs">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-3.5 w-3.5 text-primary" />
+                  <span>Company</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Permission Library + Canvas + Panel */}
