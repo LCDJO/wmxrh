@@ -373,6 +373,34 @@ export interface CognitiveState {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// Security Delegation (POSL → SecurityKernel)
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ * AuthorizationRequest — Simplified facade for POSL consumers.
+ *
+ * POSL NEVER evaluates permissions itself.
+ * All authorization flows delegate to SecurityKernel.authorize().
+ */
+export interface AuthorizationRequest {
+  action: string;
+  resource: string;
+  /** Optional ABAC target (company/group scoping) */
+  target?: { tenant_id?: string; company_group_id?: string; company_id?: string };
+  /** Skip expensive checks for high-frequency reads */
+  skipAccessGraph?: boolean;
+  skipPolicy?: boolean;
+  skipAudit?: boolean;
+}
+
+export interface AuthorizationResult {
+  allowed: boolean;
+  reason?: string;
+  deniedBy?: string;
+  requestId: string;
+}
+
+// ══════════════════════════════════════════════════════════════════
 // PlatformRuntime (main façade)
 // ══════════════════════════════════════════════════════════════════
 
@@ -381,6 +409,15 @@ export interface PlatformRuntimeAPI {
   boot(): Promise<void>;
   shutdown(): void;
   status(): RuntimeStatus;
+
+  // ── Security delegation ───────────────────────────────────
+  /**
+   * Authorize an action by delegating to SecurityKernel.
+   *
+   * INVARIANT: POSL NEVER evaluates permissions directly.
+   * This is the ONLY authorization entry point from the POSL.
+   */
+  authorize(request: AuthorizationRequest): AuthorizationResult;
 
   // Sub-systems (typed accessors)
   events: GlobalEventKernelAPI;
