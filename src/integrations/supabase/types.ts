@@ -4516,6 +4516,8 @@ export type Database = {
         | "platform_super_admin"
         | "platform_support"
         | "platform_finance"
+        | "platform_operations"
+        | "platform_read_only"
       risk_category:
         | "fisico"
         | "quimico"
@@ -4762,6 +4764,8 @@ export const Constants = {
         "platform_super_admin",
         "platform_support",
         "platform_finance",
+        "platform_operations",
+        "platform_read_only",
       ],
       risk_category: [
         "fisico",
