@@ -92,8 +92,35 @@ function requireTenantAdmin(isTenantAdmin: boolean, action: string, tenantId?: s
 function enforceIAMAccess(
   action: 'create' | 'update' | 'delete',
   gatewayAction: string,
-  opts: { ctx?: SecurityContext | null; isTenantAdmin: boolean; tenantId?: string },
+  opts: {
+    ctx?: SecurityContext | null;
+    isTenantAdmin: boolean;
+    tenantId?: string;
+    /** If true, GroupAdmin with matching scope is also allowed */
+    allowGroupAdmin?: boolean;
+    isGroupAdmin?: boolean;
+    groupId?: string | null;
+    /** If true, CompanyAdmin is explicitly blocked */
+    blockCompanyAdmin?: boolean;
+    isCompanyAdmin?: boolean;
+  },
 ): void {
+  // Explicit block for CompanyAdmin on certain operations
+  if (opts.blockCompanyAdmin && opts.isCompanyAdmin && !opts.isTenantAdmin) {
+    auditSecurity.logAccessDenied({
+      resource: 'iam',
+      reason: `CompanyAdmin bloqueado de executar ${gatewayAction}`,
+      metadata: { tenant_id: opts.tenantId },
+    });
+    throw new IAMAuthorizationError(gatewayAction, 'CompanyAdmin não tem permissão para esta ação');
+  }
+
+  // GroupAdmin path
+  if (opts.allowGroupAdmin && opts.isGroupAdmin && opts.groupId && !opts.isTenantAdmin) {
+    // GroupAdmin is allowed — RLS will enforce scope at DB level
+    return;
+  }
+
   if (opts.ctx) {
     requirePipelineAllow(action, gatewayAction, opts.ctx, opts.tenantId);
   } else {
@@ -137,6 +164,10 @@ export interface CreateRoleCommand {
   description?: string;
   created_by?: string;
   is_tenant_admin: boolean;
+  /** GroupAdmin creating a group-scoped role */
+  is_group_admin?: boolean;
+  scope_type?: 'tenant' | 'company_group' | 'company';
+  scope_id?: string | null;
   ctx?: SecurityContext | null;
 }
 
@@ -175,6 +206,8 @@ export interface CreateRoleInheritanceCommand {
   tenant_id: string;
   created_by?: string;
   is_tenant_admin: boolean;
+  /** Explicitly block CompanyAdmin from creating inheritance */
+  is_company_admin?: boolean;
   ctx?: SecurityContext | null;
 }
 
@@ -182,6 +215,7 @@ export interface RemoveRoleInheritanceCommand {
   inheritance_id: string;
   tenant_id: string;
   is_tenant_admin: boolean;
+  is_company_admin?: boolean;
   ctx?: SecurityContext | null;
 }
 
@@ -320,6 +354,9 @@ export const identityGateway = {
       ctx: cmd.ctx,
       isTenantAdmin: cmd.is_tenant_admin,
       tenantId: cmd.tenant_id,
+      allowGroupAdmin: true,
+      isGroupAdmin: cmd.is_group_admin,
+      groupId: cmd.scope_id,
     });
 
     const slug = cmd.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '');
@@ -329,6 +366,8 @@ export const identityGateway = {
       slug,
       description: cmd.description,
       created_by: cmd.created_by,
+      scope_type: cmd.scope_type || 'tenant',
+      scope_id: cmd.scope_id || null,
     });
   },
 
@@ -408,6 +447,8 @@ export const identityGateway = {
       ctx: cmd.ctx,
       isTenantAdmin: cmd.is_tenant_admin,
       tenantId: cmd.tenant_id,
+      blockCompanyAdmin: true,
+      isCompanyAdmin: cmd.is_company_admin,
     });
 
     const { error } = await supabase.from('role_inheritance').insert({
@@ -436,6 +477,8 @@ export const identityGateway = {
       ctx: cmd.ctx,
       isTenantAdmin: cmd.is_tenant_admin,
       tenantId: cmd.tenant_id,
+      blockCompanyAdmin: true,
+      isCompanyAdmin: cmd.is_company_admin,
     });
 
     const { error } = await supabase.from('role_inheritance').delete().eq('id', cmd.inheritance_id);

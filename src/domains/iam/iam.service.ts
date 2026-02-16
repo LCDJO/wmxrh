@@ -84,7 +84,7 @@ export const iamService = {
     return (data || []) as CustomRole[];
   },
 
-  async createRole(dto: { tenant_id: string; name: string; slug: string; description?: string; created_by?: string }): Promise<CustomRole> {
+  async createRole(dto: { tenant_id: string; name: string; slug: string; description?: string; created_by?: string; scope_type?: string; scope_id?: string | null }): Promise<CustomRole> {
     const { data, error } = await supabase
       .from('custom_roles')
       .insert([dto])
