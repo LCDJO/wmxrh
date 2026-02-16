@@ -108,6 +108,26 @@ export interface EmployerCostResult {
   fator_custo: number;
 }
 
+// ── Encargo Estimate (SIMULAÇÃO) ──
+
+/**
+ * Estimated tax/charges summary.
+ * ⚠️ SIMULAÇÃO — valores estimados, NÃO substitui cálculos oficiais de folha.
+ */
+export interface EncargoEstimate {
+  /** ⚠️ Always true — marks this as simulation, not official payroll */
+  is_simulacao: true;
+  disclaimer: string;
+  base_inss: number;
+  valor_inss_estimado: number;
+  base_irrf: number;
+  valor_irrf_estimado: number;
+  base_fgts: number;
+  valor_fgts_estimado: number;
+  /** Total estimated charges (INSS + IRRF + FGTS) */
+  total_encargos_estimados: number;
+}
+
 // ── Full Simulation Output ──
 
 export interface PayrollSimulationOutput {
@@ -122,6 +142,8 @@ export interface PayrollSimulationOutput {
     baseIrrf: number;
   };
   taxes: TaxResult;
+  /** ⚠️ SIMULAÇÃO — estimated charges, not official */
+  encargos: EncargoEstimate;
   reflections: ReflectionResult;
   employerCost: EmployerCostResult;
   /** Timestamp of simulation */
