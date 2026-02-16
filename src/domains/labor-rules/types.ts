@@ -69,6 +69,10 @@ export interface LaborRuleDefinition {
   base_calculo: string | null;
   integra_dsr: boolean;
   aplica_reflexos: boolean;
+  percentual_sobre_hora: number | null;
+  limite_horas: number | null;
+  integra_salario: boolean;
+  oncall_tipo: 'plantao_presencial' | 'sobreaviso' | null;
   effective_from: string;
   effective_until: string | null;
   is_mandatory: boolean;
@@ -166,6 +170,10 @@ export interface CreateLaborRuleDefinitionDTO {
   base_calculo?: string | null;
   integra_dsr?: boolean;
   aplica_reflexos?: boolean;
+  percentual_sobre_hora?: number | null;
+  limite_horas?: number | null;
+  integra_salario?: boolean;
+  oncall_tipo?: 'plantao_presencial' | 'sobreaviso' | null;
   effective_from?: string;
   effective_until?: string | null;
   is_mandatory?: boolean;
