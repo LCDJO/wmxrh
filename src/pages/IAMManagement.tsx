@@ -6,19 +6,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { iamService, type CustomRole, type PermissionDefinition, type RolePermission, type UserCustomRole, type TenantUser } from '@/domains/iam/iam.service';
+import { iamService, type CustomRole, type PermissionDefinition, type UserCustomRole, type TenantUser } from '@/domains/iam/iam.service';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Shield, Users, Key, Pencil, Trash2, ShieldCheck, Lock } from 'lucide-react';
+import { Plus, Shield, Users, Key, Trash2, Lock } from 'lucide-react';
+import { PermissionMatrix } from '@/components/iam/PermissionMatrix';
 
 const MODULE_LABELS: Record<string, string> = {
   empresa: 'Empresa',
@@ -215,7 +215,7 @@ function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, onInval
       </div>
 
       {editingRole && (
-        <PermissionEditor
+        <PermissionMatrix
           role={editingRole}
           permissions={permissions}
           userId={userId}
@@ -225,129 +225,6 @@ function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, onInval
         />
       )}
     </div>
-  );
-}
-
-// ═══════════════════════════════════
-// PERMISSION EDITOR DIALOG
-// ═══════════════════════════════════
-
-function PermissionEditor({ role, permissions, userId, isTenantAdmin, onClose, onSaved }: {
-  role: CustomRole;
-  permissions: PermissionDefinition[];
-  userId?: string;
-  isTenantAdmin: boolean;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const { toast } = useToast();
-  const { data: rolePerms = [], isLoading } = useQuery({
-    queryKey: ['iam_role_perms', role.id],
-    queryFn: () => iamService.listRolePermissions(role.id),
-  });
-  const qc = useQueryClient();
-
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [initialized, setInitialized] = useState(false);
-
-  // Init selected from current role permissions
-  if (!initialized && !isLoading && rolePerms.length >= 0) {
-    setSelected(new Set(rolePerms.map(rp => rp.permission_id)));
-    setInitialized(true);
-  }
-
-  const grouped = useMemo(() => {
-    const map = new Map<string, PermissionDefinition[]>();
-    permissions.forEach(p => {
-      const list = map.get(p.module) || [];
-      list.push(p);
-      map.set(p.module, list);
-    });
-    return map;
-  }, [permissions]);
-
-  const saveMutation = useMutation({
-    mutationFn: () => iamService.setRolePermissions(role.id, Array.from(selected), 'tenant', userId),
-    onSuccess: () => {
-      toast({ title: 'Permissões salvas!' });
-      qc.invalidateQueries({ queryKey: ['iam_role_perms', role.id] });
-      onSaved();
-      onClose();
-    },
-    onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
-  });
-
-  const toggle = (id: string) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleModule = (module: string) => {
-    const modulePerms = grouped.get(module) || [];
-    const allSelected = modulePerms.every(p => selected.has(p.id));
-    setSelected(prev => {
-      const next = new Set(prev);
-      modulePerms.forEach(p => allSelected ? next.delete(p.id) : next.add(p.id));
-      return next;
-    });
-  };
-
-  return (
-    <Dialog open onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-            Permissões — {role.name}
-          </DialogTitle>
-        </DialogHeader>
-
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Carregando...</p>
-        ) : (
-          <div className="space-y-6">
-            {Array.from(grouped.entries()).map(([module, perms]) => {
-              const allSelected = perms.every(p => selected.has(p.id));
-              const someSelected = perms.some(p => selected.has(p.id));
-              return (
-                <div key={module} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={allSelected ? true : someSelected ? 'indeterminate' : false}
-                      onCheckedChange={() => toggleModule(module)}
-                      disabled={!isTenantAdmin}
-                    />
-                    <span className="text-sm font-semibold text-foreground">{MODULE_LABELS[module] || module}</span>
-                    <Badge variant="outline" className="text-[10px]">{perms.filter(p => selected.has(p.id)).length}/{perms.length}</Badge>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 pl-6">
-                    {perms.map(p => (
-                      <label key={p.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer hover:bg-accent/30 rounded px-2">
-                        <Checkbox
-                          checked={selected.has(p.id)}
-                          onCheckedChange={() => toggle(p.id)}
-                          disabled={!isTenantAdmin}
-                        />
-                        <span className="text-foreground">{p.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-
-            {isTenantAdmin && (
-              <Button className="w-full" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? 'Salvando...' : `Salvar (${selected.size} permissões)`}
-              </Button>
-            )}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }
 
