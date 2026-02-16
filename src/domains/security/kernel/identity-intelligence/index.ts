@@ -21,6 +21,16 @@ export { LoginIntentDetector } from './login-intent-detector';
 export { useIdentityIntelligence } from './use-identity-intelligence';
 export type { UseIdentityIntelligenceReturn } from './use-identity-intelligence';
 
+// ── Future Modules ──
+export { multiSessionService } from './multi-session';
+export type { OrgSession, MultiSessionState, MultiSessionEvent } from './multi-session';
+
+export { workspaceTabsService } from './workspace-tabs';
+export type { WorkspaceTab, TabStripState, TabEvent } from './workspace-tabs';
+
+export { aiIdentityAssistant } from './ai-assistant';
+export type { AssistantQuery, AssistantResponse, AssistantSuggestion } from './ai-assistant';
+
 // ── Types ──
 export type {
   // Core session object
