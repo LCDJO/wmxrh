@@ -9,7 +9,8 @@ import { useRolePermissionsMatrixView, useAccessGraphSummaryView, useIAMScopeInv
 import { RolesTab } from '@/components/iam/RolesTab';
 import { AccessGraphTab } from '@/components/iam/AccessGraphTab';
 import { VisualPermissionBuilder } from '@/components/iam/VisualPermissionBuilder';
-import { Shield, Network, Layers } from 'lucide-react';
+import { PermissionGraphBuilder } from '@/components/iam/PermissionGraphBuilder';
+import { Shield, Network, Layers, GitBranch } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function SettingsRoles() {
@@ -38,9 +39,10 @@ export default function SettingsRoles() {
       <Tabs defaultValue="builder" className="space-y-4">
         <TabsList>
           <TabsTrigger value="builder" className="gap-1.5"><Layers className="h-4 w-4" />Permission Builder</TabsTrigger>
+          <TabsTrigger value="graph" className="gap-1.5"><GitBranch className="h-4 w-4" />Permission Graph</TabsTrigger>
           <TabsTrigger value="roles" className="gap-1.5"><Shield className="h-4 w-4" />Cargos</TabsTrigger>
           {isTenantAdmin && (
-            <TabsTrigger value="graph" className="gap-1.5"><Network className="h-4 w-4" />Access Graph</TabsTrigger>
+            <TabsTrigger value="access" className="gap-1.5"><Network className="h-4 w-4" />Access Graph</TabsTrigger>
           )}
         </TabsList>
 
@@ -53,6 +55,16 @@ export default function SettingsRoles() {
             canEdit={isTenantAdmin}
             onInvalidate={invalidateAll}
             securityContext={securityContext}
+          />
+        </TabsContent>
+
+        <TabsContent value="graph">
+          <PermissionGraphBuilder
+            members={graphView.members}
+            assignments={graphView.assignments}
+            roles={roles}
+            permissions={permissions}
+            tenantId={tenantId!}
           />
         </TabsContent>
 
@@ -69,7 +81,7 @@ export default function SettingsRoles() {
         </TabsContent>
 
         {isTenantAdmin && (
-          <TabsContent value="graph">
+          <TabsContent value="access">
             <AccessGraphTab
               members={graphView.members}
               assignments={graphView.assignments}
