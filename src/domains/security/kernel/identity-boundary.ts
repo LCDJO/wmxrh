@@ -37,7 +37,7 @@ export { IdentitySessionManager } from './ibl/identity-session-manager';
 export type { EstablishIdentityInput, RefreshScopesInput } from './ibl/identity-session-manager';
 export { ContextSwitcherService } from './ibl/context-switcher.service';
 export { contextResolver } from './ibl/context-resolver';
-export type { ResolvedContext, ScopeValidation } from './ibl/context-resolver';
+export type { ResolvedContext, ScopeValidation, ResolutionStrategy, InitialContextResolution, PersistedContext } from './ibl/context-resolver';
 export { multiScopeTokenBuilder } from './ibl/multi-scope-token-builder';
 export type { ScopeToken, QueryFilterSet } from './ibl/multi-scope-token-builder';
 export { contextGuard, ContextGuardError } from './ibl/context-guard.middleware';
