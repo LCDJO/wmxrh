@@ -5,14 +5,17 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
+import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
 import { platformEvents } from '@/domains/platform/platform-events';
 import { PLATFORM_MODULES, type ModuleKey } from '@/domains/platform/platform-modules';
+import { dualIdentityEngine } from '@/domains/security/kernel/dual-identity-engine';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
@@ -22,7 +25,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import {
   Building2, Plus, Search, Ban, CheckCircle, Eye, Puzzle,
-  Loader2, MoreHorizontal, Users, Calendar,
+  Loader2, MoreHorizontal, Users, Calendar, UserCog, Shield, Clock,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
@@ -46,10 +49,11 @@ interface TenantModule {
   is_active: boolean;
 }
 
-type DialogMode = 'create' | 'view' | 'modules' | null;
+type DialogMode = 'create' | 'view' | 'modules' | 'impersonate' | null;
 
 export default function PlatformTenants() {
   const { can } = usePlatformPermissions();
+  const { identity: platformIdentity } = usePlatformIdentity();
   const { user } = useAuth();
   const { toast } = useToast();
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -65,6 +69,11 @@ export default function PlatformTenants() {
   // Modules
   const [tenantModules, setTenantModules] = useState<TenantModule[]>([]);
   const [modulesLoading, setModulesLoading] = useState(false);
+
+  // Impersonation
+  const [impersonateReason, setImpersonateReason] = useState('');
+  const [impersonateDuration, setImpersonateDuration] = useState(30);
+  const [impersonating, setImpersonating] = useState(false);
 
   const fetchTenants = async () => {
     setLoading(true);
@@ -167,6 +176,74 @@ export default function PlatformTenants() {
 
   const isModuleActive = (key: string) => tenantModules.find(m => m.module_key === key)?.is_active ?? false;
 
+  // ── Impersonation ──
+  const openImpersonate = (tenant: Tenant) => {
+    setSelectedTenant(tenant);
+    setImpersonateReason('');
+    setImpersonateDuration(30);
+    setDialogMode('impersonate');
+  };
+
+  const handleStartImpersonation = async () => {
+    if (!selectedTenant || !user || !platformIdentity) return;
+    setImpersonating(true);
+
+    // 1. Set real identity on the engine
+    dualIdentityEngine.setRealIdentity({
+      userId: user.id,
+      email: user.email ?? null,
+      userType: 'platform',
+      platformRole: platformIdentity.role,
+      authenticatedAt: Date.now(),
+    });
+
+    // 2. Start impersonation (validates permissions internally)
+    const result = dualIdentityEngine.startImpersonation({
+      targetTenantId: selectedTenant.id,
+      targetTenantName: selectedTenant.name,
+      reason: impersonateReason.trim(),
+      maxDurationMinutes: impersonateDuration,
+    });
+
+    if (!result.success) {
+      toast({ title: 'Impersonação negada', description: result.reason, variant: 'destructive' });
+      setImpersonating(false);
+      return;
+    }
+
+    // 3. Persist to DB
+    const expiresAt = new Date(Date.now() + impersonateDuration * 60_000).toISOString();
+    const { error: dbError } = await supabase
+      .from('impersonation_sessions')
+      .insert({
+        platform_user_id: user.id,
+        tenant_id: selectedTenant.id,
+        reason: impersonateReason.trim(),
+        expires_at: expiresAt,
+        status: 'active',
+        simulated_role: 'tenant_admin',
+        metadata: {
+          session_id: result.session?.id,
+          platform_role: platformIdentity.role,
+        },
+      } as any);
+
+    if (dbError) {
+      console.warn('[Impersonation] DB persist failed:', dbError.message);
+    }
+
+    toast({
+      title: 'Impersonação iniciada',
+      description: `Operando como TenantAdmin em ${selectedTenant.name}. Expira em ${impersonateDuration} min.`,
+    });
+
+    setDialogMode(null);
+    setImpersonating(false);
+
+    // 4. Navigate to tenant dashboard
+    window.location.href = '/';
+  };
+
   const statusBadge = (status: string) => {
     if (status === 'active') return <Badge variant="default" className="bg-primary/10 text-primary border-0">Ativo</Badge>;
     if (status === 'suspended') return <Badge variant="destructive" className="bg-destructive/10 text-destructive border-0">Suspenso</Badge>;
@@ -223,8 +300,8 @@ export default function PlatformTenants() {
         </Card>
         <Card>
           <CardContent className="pt-5 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-info/10">
-              <Users className="h-4 w-4 text-info" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+              <Users className="h-4 w-4 text-muted-foreground" />
             </div>
             <div>
               <p className="text-2xl font-bold font-display">{tenants.length}</p>
@@ -298,6 +375,11 @@ export default function PlatformTenants() {
                           {can('module.enable') && (
                             <DropdownMenuItem onClick={() => openModules(tenant)}>
                               <Puzzle className="h-4 w-4 mr-2" /> Módulos
+                            </DropdownMenuItem>
+                          )}
+                          {can('tenant.impersonate') && tenant.status === 'active' && (
+                            <DropdownMenuItem onClick={() => openImpersonate(tenant)}>
+                              <UserCog className="h-4 w-4 mr-2" /> Entrar como Tenant
                             </DropdownMenuItem>
                           )}
                           {can('tenant.suspend') && (
@@ -453,6 +535,109 @@ export default function PlatformTenants() {
               })}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ Impersonate Tenant Dialog ═══ */}
+      <Dialog open={dialogMode === 'impersonate'} onOpenChange={open => !open && setDialogMode(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <Shield className="h-5 w-5 text-amber-500" />
+              Entrar como Tenant
+            </DialogTitle>
+            <DialogDescription>
+              Você irá operar como <span className="font-semibold text-foreground">TenantAdmin</span> no ambiente de{' '}
+              <span className="font-semibold text-foreground">{selectedTenant?.name}</span>.
+              Todas as ações serão auditadas.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Warning banner */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <Shield className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+              <div className="text-xs text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">Impersonação controlada</p>
+                <ul className="space-y-0.5">
+                  <li>• Sua identidade real será preservada</li>
+                  <li>• Todas as operações serão tagueadas no audit trail</li>
+                  <li>• A sessão expira automaticamente</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Reason */}
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                Motivo da impersonação *
+              </Label>
+              <Textarea
+                value={impersonateReason}
+                onChange={e => setImpersonateReason(e.target.value)}
+                placeholder="Ex: Investigação de ticket #1234 — usuário reportou erro na folha"
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+
+            {/* Duration */}
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                Duração (minutos)
+              </Label>
+              <div className="flex items-center gap-3">
+                {[15, 30, 60, 120].map(min => (
+                  <Button
+                    key={min}
+                    size="sm"
+                    variant={impersonateDuration === min ? 'default' : 'outline'}
+                    onClick={() => setImpersonateDuration(min)}
+                    className="flex-1"
+                  >
+                    {min}m
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Session info */}
+            <div className="rounded-lg border border-border/60 p-3 space-y-2 text-xs">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Identidade real</span>
+                <span className="font-mono text-foreground">{user?.email}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Role de plataforma</span>
+                <Badge variant="outline" className="text-[10px] h-5">{platformIdentity?.role}</Badge>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Tenant alvo</span>
+                <span className="font-medium text-foreground">{selectedTenant?.name}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Role simulada</span>
+                <Badge variant="outline" className="text-[10px] h-5 bg-amber-500/10 text-amber-600 border-amber-500/30">tenant_admin</Badge>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogMode(null)}>Cancelar</Button>
+            <Button
+              onClick={handleStartImpersonation}
+              disabled={impersonating || !impersonateReason.trim()}
+              className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {impersonating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <UserCog className="h-4 w-4" />
+              )}
+              Iniciar Impersonação
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

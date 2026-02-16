@@ -15,6 +15,7 @@ export const PLATFORM_PERMISSIONS = [
   'tenant.edit',
   'tenant.suspend',
   'tenant.delete',
+  'tenant.impersonate',
   'module.view',
   'module.enable',
   'module.disable',
@@ -58,6 +59,7 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
 
   platform_support: [
     'tenant.view',
+    'tenant.impersonate',
     'audit.view',
     'module.view',
     'platform_user.view',
