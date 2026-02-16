@@ -82,6 +82,16 @@ export interface TrainingAssignment {
   waiver_approved_by: string | null;
   /** Linked employee agreement (training acknowledgment term) */
   agreement_id: string | null;
+  /** Data de realização do treinamento */
+  data_realizacao: string | null;
+  /** Data de validade do treinamento */
+  data_validade: string | null;
+  /** Nome do instrutor */
+  instrutor: string | null;
+  /** URL do certificado de conclusão (blob storage) */
+  certificado_url: string | null;
+  /** URL do termo de ciência assinado (blob storage) */
+  termo_assinado_url: string | null;
   created_at: string;
   updated_at: string;
 }
