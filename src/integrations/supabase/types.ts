@@ -4390,6 +4390,7 @@ export type Database = {
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
+      get_user_type_from_jwt: { Args: never; Returns: string }
       has_platform_role: {
         Args: {
           _role: Database["public"]["Enums"]["platform_role"]
