@@ -143,7 +143,16 @@ export interface ModuleDescriptor {
   cognitive_signals: string[];
   registered_at: number;
   activated_at: number | null;
+  deactivated_at: number | null;
   error?: string;
+
+  // ── Tenant-scoped activation ──────────────────────────────
+  /** Tenants for which this module is explicitly enabled (empty = all) */
+  enabled_tenants: string[];
+  /** Tenants for which this module is explicitly disabled */
+  disabled_tenants: string[];
+  /** Whether this module is a core module (always active, cannot be deactivated) */
+  is_core: boolean;
 }
 
 export interface ModuleRegistration {
@@ -154,8 +163,14 @@ export interface ModuleRegistration {
   required_permissions?: string[];
   dependencies?: (ModuleKey | string)[];
   cognitive_signals?: string[];
+  /** Mark as core module — always active, cannot be deactivated */
+  is_core?: boolean;
+  /** Restrict activation to specific tenants (empty = all tenants) */
+  enabled_tenants?: string[];
+  /** Lifecycle hooks */
   onActivate?: () => void | Promise<void>;
   onDeactivate?: () => void | Promise<void>;
+  onError?: (error: Error) => void;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -267,6 +282,26 @@ export interface ModuleOrchestratorAPI {
   get(key: string): ModuleDescriptor | null;
   list(): ModuleDescriptor[];
   listActive(): ModuleDescriptor[];
+
+  // ── Tenant-scoped ─────────────────────────────────────────
+  /** Check if a module is enabled for a specific tenant */
+  isEnabledForTenant(key: string, tenantId: string): boolean;
+  /** Enable a module for a specific tenant */
+  enableForTenant(key: string, tenantId: string): void;
+  /** Disable a module for a specific tenant */
+  disableForTenant(key: string, tenantId: string): void;
+  /** List modules available for a specific tenant */
+  listForTenant(tenantId: string): ModuleDescriptor[];
+
+  // ── Dependency graph ──────────────────────────────────────
+  /** Get the dependency tree (who depends on whom) */
+  dependencyGraph(): Record<string, string[]>;
+  /** Get topological activation order for a module and its deps */
+  activationOrder(key: string): string[];
+  /** Activate a module and all its unresolved dependencies (cascading) */
+  activateWithDeps(key: string): Promise<void>;
+  /** Deactivate a module and all its dependents (cascading) */
+  deactivateWithDeps(key: string): Promise<void>;
 }
 
 export interface IdentityOrchestratorAPI {
