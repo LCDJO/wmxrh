@@ -3,10 +3,14 @@
  *
  * Reactive hook that exposes both the UnifiedIdentitySession (primary API)
  * and the full IdentitySnapshot (diagnostic) from the Identity Intelligence Layer.
+ *
+ * PXE Integration: enriches active_context with active_plan + allowed_modules
+ * from tenant_plans and tenant_module_access tables.
  */
 
-import { useSyncExternalStore, useCallback, useMemo } from 'react';
+import { useSyncExternalStore, useCallback, useMemo, useEffect, useState } from 'react';
 import { identityIntelligence } from './identity-intelligence.service';
+import { supabase } from '@/integrations/supabase/client';
 import type {
   IdentitySnapshot,
   UnifiedIdentitySession,
@@ -17,6 +21,7 @@ import type {
   RecentContext,
   UserTypeDetection,
   ActiveContext,
+  ActivePlanInfo,
   TenantWorkspace,
 } from './types';
 
@@ -107,6 +112,64 @@ function subscribeBump(onStoreChange: () => void): () => void {
 export function useIdentityIntelligence(): UseIdentityIntelligenceReturn {
   const state = useSyncExternalStore(subscribeBump, getState, getState);
 
+  // ── PXE enrichment: fetch active_plan + allowed_modules ──
+  const [planInfo, setPlanInfo] = useState<ActivePlanInfo | null>(null);
+  const [allowedModules, setAllowedModules] = useState<readonly string[]>([]);
+  const tenantId = state.session.active_context?.tenant_id ?? null;
+
+  useEffect(() => {
+    if (!tenantId) {
+      setPlanInfo(null);
+      setAllowedModules([]);
+      return;
+    }
+    let cancelled = false;
+
+    // Fetch plan + modules in parallel
+    const planPromise = supabase
+      .from('tenant_plans')
+      .select('id, plan_id, status, billing_cycle')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    const modulesPromise = (supabase
+      .from('tenant_module_access' as any)
+      .select('module_key')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)) as any;
+
+    Promise.all([planPromise, modulesPromise]).then(([planRes, modulesRes]: [any, any]) => {
+      if (cancelled) return;
+      if (planRes.data) {
+        const d = planRes.data as any;
+        setPlanInfo({
+          plan_id: d.plan_id,
+          plan_name: d.plan_id, // plan name resolved from plan_id
+          tier: 'active',
+          status: d.status,
+          billing_cycle: d.billing_cycle,
+        });
+      } else {
+        setPlanInfo(null);
+      }
+      setAllowedModules((modulesRes.data ?? []).map((m: any) => m.module_key));
+    });
+
+    return () => { cancelled = true; };
+  }, [tenantId]);
+
+  // ── Enrich active_context with PXE data ──
+  const enrichedContext: ActiveContext | null = useMemo(() => {
+    const ctx = state.session.active_context;
+    if (!ctx) return null;
+    return {
+      ...ctx,
+      active_plan: planInfo,
+      allowed_modules: allowedModules,
+    };
+  }, [state.session.active_context, planInfo, allowedModules]);
+
   const evaluate = useCallback(
     (action?: string, resource?: string) => identityIntelligence.evaluate(action, resource),
     [],
@@ -137,7 +200,7 @@ export function useIdentityIntelligence(): UseIdentityIntelligenceReturn {
     isPlatformUser: state.session.real_identity.user_type === 'platform',
     isTenantUser: state.session.real_identity.user_type === 'tenant',
     userTypeDetection: state.session.real_identity.detection,
-    activeContext: state.session.active_context,
+    activeContext: enrichedContext,
     availableTenants: state.session.available_tenants,
     availableWorkspaces: state.snapshot.availableWorkspaces,
     recentContexts: state.session.recent_contexts,
@@ -147,5 +210,5 @@ export function useIdentityIntelligence(): UseIdentityIntelligenceReturn {
     evaluate,
     syncPhase,
     debug,
-  }), [state, evaluate, syncPhase, debug, switchWorkspace, restoreLastWorkspace]);
+  }), [state, enrichedContext, evaluate, syncPhase, debug, switchWorkspace, restoreLastWorkspace]);
 }
