@@ -270,6 +270,73 @@ export type Database = {
           },
         ]
       }
+      compliance_violations: {
+        Row: {
+          company_id: string | null
+          description: string
+          detected_at: string
+          employee_id: string
+          id: string
+          is_resolved: boolean
+          metadata: Json | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          tenant_id: string
+          violation_type: string
+        }
+        Insert: {
+          company_id?: string | null
+          description: string
+          detected_at?: string
+          employee_id: string
+          id?: string
+          is_resolved?: boolean
+          metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id: string
+          violation_type: string
+        }
+        Update: {
+          company_id?: string | null
+          description?: string
+          detected_at?: string
+          employee_id?: string
+          id?: string
+          is_resolved?: boolean
+          metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id?: string
+          violation_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_violations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_violations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_violations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           budget: number | null
@@ -2152,6 +2219,17 @@ export type Database = {
       is_tenant_member: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
+      }
+      scan_employee_compliance: {
+        Args: { _tenant_id: string }
+        Returns: {
+          company_id: string
+          description: string
+          employee_id: string
+          employee_name: string
+          severity: string
+          violation_type: string
+        }[]
       }
       seed_default_rubrics: { Args: { _tenant_id: string }; Returns: undefined }
       user_has_any_role: {
