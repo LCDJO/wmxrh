@@ -17,9 +17,13 @@ export const tenantService: ITenantService = {
   },
 
   async create(dto: CreateTenantDTO) {
-    const { data, error } = await supabase.from('tenants').insert(dto).select().single();
+    // NOTE: Cannot use .select().single() here because the SELECT RLS policy
+    // (is_tenant_member) fails before the AFTER INSERT trigger creates the membership.
+    const { error } = await supabase.from('tenants').insert(dto);
     if (error) throw error;
-    return data as Tenant;
+    // The AFTER INSERT trigger auto_add_tenant_owner creates the membership.
+    // The caller (refreshTenants) will reload memberships to pick up the new tenant.
+    return { id: '', name: dto.name } as Tenant;
   },
 
   async getMemberships(userId: string) {
