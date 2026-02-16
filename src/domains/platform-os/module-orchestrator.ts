@@ -54,6 +54,7 @@ export function createModuleOrchestrator(events: GlobalEventKernelAPI): ModuleOr
       activated_at: null,
       deactivated_at: null,
       is_core: mod.is_core ?? false,
+      lazy: mod.lazy ?? false,
       enabled_tenants: mod.enabled_tenants ?? [],
       disabled_tenants: [],
       _onActivate: mod.onActivate,
@@ -266,6 +267,18 @@ export function createModuleOrchestrator(events: GlobalEventKernelAPI): ModuleOr
     await deactivate(key);
   }
 
+  // ── Lazy activation ──────────────────────────────────────────
+
+  async function activateIfNeeded(key: string): Promise<void> {
+    const mod = modules.get(key);
+    if (!mod) return;
+    if (mod.status === 'active' || mod.status === 'activating') return;
+    // Only lazy modules are activated on-demand; non-lazy must use activate() explicitly
+    if (!mod.lazy && mod.status === 'registered') return;
+    await activateWithDeps(key);
+    events.emit('module:lazy_activated', 'ModuleOrchestrator', { key });
+  }
+
   return {
     register,
     activate,
@@ -273,6 +286,7 @@ export function createModuleOrchestrator(events: GlobalEventKernelAPI): ModuleOr
     get,
     list,
     listActive,
+    activateIfNeeded,
     isEnabledForTenant,
     enableForTenant,
     disableForTenant,

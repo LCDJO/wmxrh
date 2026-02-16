@@ -21,9 +21,17 @@ export function createServiceRegistry(): ServiceRegistryAPI {
   // ── Capability index (capability → service names) ────────
   const capabilityIndex = new Map<string, Set<string>>();
 
+  // ── Cached snapshots ─────────────────────────────────────
+  let listCache: ServiceDescriptor[] | null = null;
+  let graphCache: Record<string, string[]> | null = null;
+
+  function invalidateCaches(): void {
+    listCache = null;
+    graphCache = null;
+  }
+
   function register<T>(name: string, instance: T, opts?: ServiceRegistrationOpts): void {
     if (services.has(name)) {
-      // Remove old capability entries before overwriting
       const old = services.get(name)!;
       for (const cap of old.capabilities) {
         capabilityIndex.get(cap)?.delete(name);
@@ -31,7 +39,6 @@ export function createServiceRegistry(): ServiceRegistryAPI {
       console.warn(`[ServiceRegistry] overwriting service "${name}"`);
     }
 
-    // Validate dependencies exist
     const deps = opts?.dependencies ?? [];
     const missing = deps.filter(d => !services.has(d));
     if (missing.length > 0) {
@@ -53,13 +60,14 @@ export function createServiceRegistry(): ServiceRegistryAPI {
       metadata: opts?.metadata,
     });
 
-    // Update capability index
     for (const cap of capabilities) {
       if (!capabilityIndex.has(cap)) {
         capabilityIndex.set(cap, new Set());
       }
       capabilityIndex.get(cap)!.add(name);
     }
+
+    invalidateCaches();
   }
 
   function resolve<T>(name: string): T | null {
@@ -73,18 +81,20 @@ export function createServiceRegistry(): ServiceRegistryAPI {
   }
 
   function list(): ServiceDescriptor[] {
-    return [...services.values()];
+    if (listCache) return listCache;
+    listCache = [...services.values()];
+    return listCache;
   }
 
   function dispose(name: string): void {
     const desc = services.get(name);
     if (desc) {
-      // Remove from capability index
       for (const cap of desc.capabilities) {
         capabilityIndex.get(cap)?.delete(name);
       }
       desc.status = 'disposed';
       desc.instance = null;
+      invalidateCaches();
     }
   }
 
@@ -99,18 +109,20 @@ export function createServiceRegistry(): ServiceRegistryAPI {
   }
 
   function dependentsOf(name: string): ServiceDescriptor[] {
-    return [...services.values()].filter(
+    return list().filter(
       s => s.dependencies.includes(name) && s.status !== 'disposed',
     );
   }
 
   function dependencyGraph(): Record<string, string[]> {
+    if (graphCache) return graphCache;
     const graph: Record<string, string[]> = {};
     for (const [svcName, desc] of services) {
       if (desc.status !== 'disposed') {
         graph[svcName] = [...desc.dependencies];
       }
     }
+    graphCache = graph;
     return graph;
   }
 

@@ -61,6 +61,7 @@ import { identityIntelligence } from '@/domains/security/kernel/identity-intelli
 export function createPlatformRuntime(): PlatformRuntimeAPI {
   let phase: RuntimePhase = 'idle';
   let bootedAt: number | null = null;
+  let bootPromise: Promise<void> | null = null;
   const disposers: Array<() => void> = [];
 
   // ── Sub-systems ──────────────────────────────────────────────
@@ -79,10 +80,16 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
 
   async function boot(): Promise<void> {
     if (phase === 'ready') return;
+    // Deduplicate concurrent boot calls — return existing promise
+    if (phase === 'booting' && bootPromise) return bootPromise;
 
     phase = 'booting';
-    events.emit('runtime:booting', 'PlatformRuntime', {});
+    bootPromise = doBoot();
+    return bootPromise;
+  }
 
+  async function doBoot(): Promise<void> {
+    events.emit('runtime:booting', 'PlatformRuntime', {});
     try {
       // ── 1. Register Security Kernel services ──────────────────
       services.register('SecurityKernel.PermissionEngine', permissionEngine, {

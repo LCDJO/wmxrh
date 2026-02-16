@@ -153,6 +153,8 @@ export interface ModuleDescriptor {
   disabled_tenants: string[];
   /** Whether this module is a core module (always active, cannot be deactivated) */
   is_core: boolean;
+  /** Whether this module uses lazy activation (activated on first access) */
+  lazy: boolean;
 }
 
 export interface ModuleRegistration {
@@ -165,6 +167,8 @@ export interface ModuleRegistration {
   cognitive_signals?: string[];
   /** Mark as core module — always active, cannot be deactivated */
   is_core?: boolean;
+  /** Lazy activation — module stays registered until first access via activateIfNeeded() */
+  lazy?: boolean;
   /** Restrict activation to specific tenants (empty = all tenants) */
   enabled_tenants?: string[];
   /** Lifecycle hooks */
@@ -445,6 +449,10 @@ export interface ModuleOrchestratorAPI {
   get(key: string): ModuleDescriptor | null;
   list(): ModuleDescriptor[];
   listActive(): ModuleDescriptor[];
+
+  // ── Lazy activation ───────────────────────────────────────
+  /** Activate a module only if it was registered as lazy and is not yet active */
+  activateIfNeeded(key: string): Promise<void>;
 
   // ── Tenant-scoped ─────────────────────────────────────────
   /** Check if a module is enabled for a specific tenant */
