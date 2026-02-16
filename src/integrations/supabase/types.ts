@@ -910,6 +910,53 @@ export type Database = {
           },
         ]
       }
+      custom_roles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+          slug: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name: string
+          slug: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name?: string
+          slug?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           budget: number | null
@@ -2990,6 +3037,33 @@ export type Database = {
           },
         ]
       }
+      permission_definitions: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          module: string
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module: string
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          module?: string
+          name?: string
+        }
+        Relationships: []
+      }
       positions: {
         Row: {
           base_salary: number | null
@@ -3053,6 +3127,48 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_permissions: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          id: string
+          permission_id: string
+          role_id: string
+          scope_type: Database["public"]["Enums"]["permission_scope"]
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          permission_id: string
+          role_id: string
+          scope_type?: Database["public"]["Enums"]["permission_scope"]
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          permission_id?: string
+          role_id?: string
+          scope_type?: Database["public"]["Enums"]["permission_scope"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permission_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
             referencedColumns: ["id"]
           },
         ]
@@ -3892,6 +4008,54 @@ export type Database = {
           },
         ]
       }
+      user_custom_roles: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          role_id: string
+          scope_id: string | null
+          scope_type: Database["public"]["Enums"]["permission_scope"]
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          role_id: string
+          scope_id?: string | null
+          scope_type?: Database["public"]["Enums"]["permission_scope"]
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          role_id?: string
+          scope_id?: string | null
+          scope_type?: Database["public"]["Enums"]["permission_scope"]
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_custom_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_custom_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -4228,6 +4392,7 @@ export type Database = {
         | "none"
       payroll_item_nature: "fixed" | "variable" | "informational"
       payroll_item_type: "provento" | "desconto"
+      permission_scope: "tenant" | "company_group" | "company"
       risk_category:
         | "fisico"
         | "quimico"
@@ -4469,6 +4634,7 @@ export const Constants = {
       ],
       payroll_item_nature: ["fixed", "variable", "informational"],
       payroll_item_type: ["provento", "desconto"],
+      permission_scope: ["tenant", "company_group", "company"],
       risk_category: [
         "fisico",
         "quimico",
