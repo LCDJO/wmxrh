@@ -2407,6 +2407,181 @@ export type Database = {
           },
         ]
       }
+      nr_training_assignments: {
+        Row: {
+          agreement_id: string | null
+          blocking_level: string
+          cbo_code: string | null
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          due_date: string | null
+          employee_id: string
+          id: string
+          is_renewal: boolean
+          legal_basis: string | null
+          nr_number: number
+          previous_assignment_id: string | null
+          renewal_number: number
+          required_hours: number
+          status: string
+          tenant_id: string
+          training_name: string
+          trigger: string
+          updated_at: string
+          validity_months: number | null
+          waiver_approved_by: string | null
+          waiver_reason: string | null
+        }
+        Insert: {
+          agreement_id?: string | null
+          blocking_level?: string
+          cbo_code?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          due_date?: string | null
+          employee_id: string
+          id?: string
+          is_renewal?: boolean
+          legal_basis?: string | null
+          nr_number: number
+          previous_assignment_id?: string | null
+          renewal_number?: number
+          required_hours?: number
+          status?: string
+          tenant_id: string
+          training_name: string
+          trigger?: string
+          updated_at?: string
+          validity_months?: number | null
+          waiver_approved_by?: string | null
+          waiver_reason?: string | null
+        }
+        Update: {
+          agreement_id?: string | null
+          blocking_level?: string
+          cbo_code?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          due_date?: string | null
+          employee_id?: string
+          id?: string
+          is_renewal?: boolean
+          legal_basis?: string | null
+          nr_number?: number
+          previous_assignment_id?: string | null
+          renewal_number?: number
+          required_hours?: number
+          status?: string
+          tenant_id?: string
+          training_name?: string
+          trigger?: string
+          updated_at?: string
+          validity_months?: number | null
+          waiver_approved_by?: string | null
+          waiver_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nr_training_assignments_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nr_training_assignments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nr_training_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nr_training_assignments_previous_assignment_id_fkey"
+            columns: ["previous_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "nr_training_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nr_training_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nr_training_audit_log: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          employee_id: string
+          from_status: string | null
+          id: string
+          metadata: Json | null
+          performed_by: string | null
+          reason: string | null
+          tenant_id: string
+          to_status: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          employee_id: string
+          from_status?: string | null
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          reason?: string | null
+          tenant_id: string
+          to_status: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          employee_id?: string
+          from_status?: string | null
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          reason?: string | null
+          tenant_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nr_training_audit_log_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "nr_training_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nr_training_audit_log_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nr_training_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nr_training_catalog: {
         Row: {
           base_legal: string | null
@@ -2462,6 +2637,91 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "nr_training_catalog_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nr_training_completions: {
+        Row: {
+          assignment_id: string
+          certificate_number: string | null
+          certificate_url: string | null
+          completed_at: string
+          created_at: string
+          employee_id: string
+          expires_at: string | null
+          hours_completed: number
+          id: string
+          instructor_name: string | null
+          location: string | null
+          methodology: string | null
+          observations: string | null
+          passed: boolean
+          provider_name: string | null
+          registered_by: string | null
+          score: number | null
+          tenant_id: string
+        }
+        Insert: {
+          assignment_id: string
+          certificate_number?: string | null
+          certificate_url?: string | null
+          completed_at: string
+          created_at?: string
+          employee_id: string
+          expires_at?: string | null
+          hours_completed: number
+          id?: string
+          instructor_name?: string | null
+          location?: string | null
+          methodology?: string | null
+          observations?: string | null
+          passed?: boolean
+          provider_name?: string | null
+          registered_by?: string | null
+          score?: number | null
+          tenant_id: string
+        }
+        Update: {
+          assignment_id?: string
+          certificate_number?: string | null
+          certificate_url?: string | null
+          completed_at?: string
+          created_at?: string
+          employee_id?: string
+          expires_at?: string | null
+          hours_completed?: number
+          id?: string
+          instructor_name?: string | null
+          location?: string | null
+          methodology?: string | null
+          observations?: string | null
+          passed?: boolean
+          provider_name?: string | null
+          registered_by?: string | null
+          score?: number | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nr_training_completions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "nr_training_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nr_training_completions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nr_training_completions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
