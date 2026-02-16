@@ -15,7 +15,7 @@ export { contextResolver } from './context-resolver';
 export type { ResolvedContext, ScopeValidation, ResolutionStrategy, InitialContextResolution, PersistedContext } from './context-resolver';
 
 export { multiScopeTokenBuilder } from './multi-scope-token-builder';
-export type { ScopeToken, QueryFilterSet } from './multi-scope-token-builder';
+export type { MultiScopeToken, ScopeToken, QueryFilterSet } from './multi-scope-token-builder';
 
 export { contextGuard, ContextGuardError } from './context-guard.middleware';
 export type { GuardResult, GuardTarget, GuardCheckName } from './context-guard.middleware';

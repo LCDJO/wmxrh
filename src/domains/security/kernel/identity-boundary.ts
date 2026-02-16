@@ -39,7 +39,7 @@ export { ContextSwitcherService } from './ibl/context-switcher.service';
 export { contextResolver } from './ibl/context-resolver';
 export type { ResolvedContext, ScopeValidation, ResolutionStrategy, InitialContextResolution, PersistedContext } from './ibl/context-resolver';
 export { multiScopeTokenBuilder } from './ibl/multi-scope-token-builder';
-export type { ScopeToken, QueryFilterSet } from './ibl/multi-scope-token-builder';
+export type { MultiScopeToken, ScopeToken, QueryFilterSet } from './ibl/multi-scope-token-builder';
 export { contextGuard, ContextGuardError } from './ibl/context-guard.middleware';
 export type { GuardResult, GuardTarget, GuardCheckName } from './ibl/context-guard.middleware';
 
@@ -57,7 +57,7 @@ import type {
   ContextSwitchResult,
   IdentityBoundarySnapshot,
 } from './identity-boundary.types';
-import type { ScopeToken, QueryFilterSet } from './ibl/multi-scope-token-builder';
+import type { MultiScopeToken, QueryFilterSet } from './ibl/multi-scope-token-builder';
 import type { GuardResult, GuardTarget } from './ibl/context-guard.middleware';
 
 // ════════════════════════════════════
@@ -132,17 +132,22 @@ export class IdentityBoundaryLayer {
 
   // ── MultiScopeTokenBuilder delegates ──
 
-  buildScopeToken(): ScopeToken | null {
+  buildToken(): MultiScopeToken | null {
     const session = this._sessionManager.session;
-    const context = this._switcher.currentContext;
-    if (!session || !context) return null;
-    return multiScopeTokenBuilder.buildScopeToken(session, context);
+    if (!session) return null;
+    return multiScopeTokenBuilder.buildToken(session);
+  }
+
+  /** @deprecated Use buildToken() */
+  buildScopeToken(): MultiScopeToken | null {
+    return this.buildToken();
   }
 
   buildQueryFilters(): QueryFilterSet | null {
-    const token = this.buildScopeToken();
-    if (!token) return null;
-    return multiScopeTokenBuilder.buildQueryFilters(token);
+    const token = this.buildToken();
+    const context = this._switcher.currentContext;
+    if (!token || !context) return null;
+    return multiScopeTokenBuilder.buildQueryFilters(token, context);
   }
 
   // ── Convenience ──

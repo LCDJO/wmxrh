@@ -2,74 +2,89 @@
  * IBL Component 4 — MultiScopeTokenBuilder
  * 
  * ╔══════════════════════════════════════════════════════════════╗
- * ║  Builds tokens/payloads that encode multi-scope access:      ║
+ * ║  CONCEITO CENTRAL:                                           ║
  * ║                                                              ║
- * ║    - ScopeToken: lightweight object passed to query builders ║
- * ║    - SecurityContextPayload: enriched payload for pipeline   ║
- * ║    - QueryFilterSet: precomputed WHERE clause fragments      ║
+ * ║  O token (MultiScopeToken) carrega IDENTIDADE + ACESSO:      ║
+ * ║    { user_id, tenant_ids[], roles[], graph_version,          ║
+ * ║      session_id }                                            ║
  * ║                                                              ║
- * ║  Consumed by: ScopedQuery, SecureQuery, SecurityPipeline     ║
+ * ║  O OperationalContext NÃO fica no token.                     ║
+ * ║  Ele é derivado do IdentitySession em runtime.               ║
+ * ║                                                              ║
+ * ║  O token é MULTI-SCOPE — carrega TODOS os tenants/roles.    ║
+ * ║                                                              ║
+ * ║  QueryFilterSet é construído separadamente combinando:       ║
+ * ║    MultiScopeToken + OperationalContext (do caller)          ║
  * ╚══════════════════════════════════════════════════════════════╝
  */
 
-import type { TenantRole, UserRole, ScopeType } from '@/domains/shared/types';
-import type { IdentitySession, OperationalContext } from '../identity-boundary.types';
+import type { TenantRole, ScopeType } from '@/domains/shared/types';
+import type {
+  IdentitySession,
+  OperationalContext,
+  AllowedScopes,
+} from '../identity-boundary.types';
 
 // ════════════════════════════════════
-// TYPES
+// MULTI-SCOPE TOKEN (identity-level, NOT context-level)
 // ════════════════════════════════════
 
 /**
- * Lightweight token encoding the user's multi-scope access.
- * Passed to query builders for efficient WHERE clause construction.
+ * The primary token that travels through the system.
+ * 
+ * IMPORTANT: This token does NOT contain OperationalContext.
+ * It encodes WHO the user is and WHAT they can access across ALL tenants.
+ * The WHERE (active scope) comes from OperationalContext at query time.
  */
-export interface ScopeToken {
-  /** Currently active tenant */
-  tenantId: string;
-  /** Active scope level */
-  scopeLevel: ScopeType;
-  /** Active group ID (if drilled down) */
-  groupId: string | null;
-  /** Active company ID (if drilled down) */
-  companyId: string | null;
-  /** Whether user has tenant-wide access */
-  hasTenantScope: boolean;
-  /** All group IDs the user can access */
-  allowedGroupIds: string[];
-  /** All company IDs the user can access */
-  allowedCompanyIds: string[];
-  /** Effective roles for the current tenant */
-  effectiveRoles: TenantRole[];
+export interface MultiScopeToken {
+  /** Authenticated user ID */
+  user_id: string;
+  /** ALL tenant IDs the user has access to */
+  tenant_ids: string[];
+  /** ALL merged roles across all scopes */
+  roles: TenantRole[];
+  /** AccessGraph version at token build time (for cache invalidation) */
+  graph_version: number | null;
+  /** Session fingerprint for tracing */
+  session_id: string | null;
+  /** Precomputed allowed scopes from IdentitySession */
+  allowed_scopes: AllowedScopes;
   /** Token generation timestamp */
-  issuedAt: number;
+  issued_at: number;
 }
+
+// ════════════════════════════════════
+// QUERY FILTER SET (derived at query time from token + context)
+// ════════════════════════════════════
 
 /**
  * Precomputed filter set for database queries.
- * Avoids recomputing scope filters on every query.
+ * Built by combining MultiScopeToken (identity) + OperationalContext (where).
+ * 
+ * This separation means the token stays stable while the user
+ * switches between tenants/groups/companies freely.
  */
 export interface QueryFilterSet {
-  /** Always filter by tenant */
+  /** Active tenant (from OperationalContext) */
   tenantId: string;
-  /** If true, no group/company filters needed */
+  /** If true, no group/company filters needed (tenant-wide access) */
   bypassScopeFilters: boolean;
-  /** Group IDs to filter by (empty if tenant-wide) */
+  /** Group IDs to filter by */
   groupIds: string[];
-  /** Company IDs to filter by (empty if tenant-wide) */
+  /** Company IDs to filter by */
   companyIds: string[];
-  /** For UI-narrowed scope: specific group */
+  /** Currently selected group in UI */
   activeGroupId: string | null;
-  /** For UI-narrowed scope: specific company */
+  /** Currently selected company in UI */
   activeCompanyId: string | null;
 }
 
 // ════════════════════════════════════
-// CONSTANTS
+// LEGACY COMPAT — ScopeToken (deprecated)
 // ════════════════════════════════════
 
-const TENANT_WIDE_ROLES: TenantRole[] = [
-  'superadmin', 'owner', 'admin', 'tenant_admin',
-];
+/** @deprecated Use MultiScopeToken instead */
+export type ScopeToken = MultiScopeToken;
 
 // ════════════════════════════════════
 // BUILDER (stateless)
@@ -77,117 +92,106 @@ const TENANT_WIDE_ROLES: TenantRole[] = [
 
 export const multiScopeTokenBuilder = {
   /**
-   * Build a ScopeToken from IdentitySession + OperationalContext.
-   * This is the primary token used across the system.
+   * Build a MultiScopeToken from IdentitySession.
+   * 
+   * IMPORTANT: Does NOT require OperationalContext.
+   * The token is identity-scoped, not context-scoped.
    */
-  buildScopeToken(
-    identity: IdentitySession,
-    context: OperationalContext,
-  ): ScopeToken {
-    const hasTenantScope = context.effectiveRoles.some(
-      r => TENANT_WIDE_ROLES.includes(r)
-    );
-
-    const tenantUserRoles = identity.allUserRoles.filter(
-      r => r.tenant_id === context.activeTenantId
-    );
-
-    const { allowedGroupIds, allowedCompanyIds } = extractAllowedScopes(
-      tenantUserRoles,
-      hasTenantScope,
-    );
-
+  buildToken(identity: IdentitySession): MultiScopeToken {
     return {
-      tenantId: context.activeTenantId,
-      scopeLevel: context.scopeLevel,
-      groupId: context.activeGroupId,
-      companyId: context.activeCompanyId,
-      hasTenantScope,
-      allowedGroupIds,
-      allowedCompanyIds,
-      effectiveRoles: [...context.effectiveRoles],
-      issuedAt: Date.now(),
+      user_id: identity.userId,
+      tenant_ids: [...identity.tenantIds],
+      roles: [...identity.roles],
+      graph_version: identity.accessGraphSnapshot?.version ?? null,
+      session_id: identity.sessionFingerprint,
+      allowed_scopes: identity.allowedScopes,
+      issued_at: Date.now(),
     };
   },
 
   /**
-   * Build a QueryFilterSet for efficient database queries.
-   * Precomputes all the scope filters so query builders
-   * don't need to recompute on every call.
+   * @deprecated Use buildToken(identity) instead.
+   * Kept for backward compatibility — builds from identity only.
    */
-  buildQueryFilters(token: ScopeToken): QueryFilterSet {
-    // If user has a specific scope selected in UI, narrow to that
-    if (token.companyId) {
+  buildScopeToken(
+    identity: IdentitySession,
+    _context?: OperationalContext,
+  ): MultiScopeToken {
+    return this.buildToken(identity);
+  },
+
+  /**
+   * Build a QueryFilterSet for database queries.
+   * 
+   * Combines:
+   *   - MultiScopeToken (identity: who can access what)
+   *   - OperationalContext (where the user is operating right now)
+   * 
+   * The token stays the same; only the context changes on scope switch.
+   */
+  buildQueryFilters(
+    token: MultiScopeToken,
+    context: OperationalContext,
+  ): QueryFilterSet {
+    const tenantId = context.activeTenantId;
+    const bypassScopeFilters = token.allowed_scopes.hasTenantWideAccess;
+
+    // If user selected a specific company in UI
+    if (context.activeCompanyId) {
       return {
-        tenantId: token.tenantId,
+        tenantId,
         bypassScopeFilters: false,
         groupIds: [],
-        companyIds: [token.companyId],
-        activeGroupId: token.groupId,
-        activeCompanyId: token.companyId,
+        companyIds: [context.activeCompanyId],
+        activeGroupId: context.activeGroupId,
+        activeCompanyId: context.activeCompanyId,
       };
     }
 
-    if (token.groupId) {
+    // If user selected a specific group in UI
+    if (context.activeGroupId) {
       return {
-        tenantId: token.tenantId,
+        tenantId,
         bypassScopeFilters: false,
-        groupIds: [token.groupId],
+        groupIds: [context.activeGroupId],
         companyIds: [],
-        activeGroupId: token.groupId,
+        activeGroupId: context.activeGroupId,
         activeCompanyId: null,
       };
     }
 
-    // No UI narrowing: use full allowed scope set
+    // No UI narrowing: use full allowed scope set from token
     return {
-      tenantId: token.tenantId,
-      bypassScopeFilters: token.hasTenantScope,
-      groupIds: token.allowedGroupIds,
-      companyIds: token.allowedCompanyIds,
+      tenantId,
+      bypassScopeFilters,
+      groupIds: [...token.allowed_scopes.groupIds],
+      companyIds: [...token.allowed_scopes.companyIds],
       activeGroupId: null,
       activeCompanyId: null,
     };
   },
 
   /**
-   * Build a compact token fingerprint for caching.
-   * Two identical access profiles will produce the same fingerprint.
+   * Build a compact fingerprint for caching.
+   * Two identical access profiles produce the same fingerprint.
+   * 
+   * Note: fingerprint is identity-level (no context),
+   * so it stays valid across scope switches.
    */
-  fingerprint(token: ScopeToken): string {
-    const roles = [...token.effectiveRoles].sort().join(',');
-    const groups = token.allowedGroupIds.sort().join(',');
-    const companies = token.allowedCompanyIds.sort().join(',');
-    return `${token.tenantId}:${roles}:${groups}:${companies}:${token.scopeLevel}:${token.groupId || '*'}:${token.companyId || '*'}`;
+  fingerprint(token: MultiScopeToken): string {
+    const tenants = [...token.tenant_ids].sort().join(',');
+    const roles = [...token.roles].sort().join(',');
+    const groups = [...token.allowed_scopes.groupIds].sort().join(',');
+    const companies = [...token.allowed_scopes.companyIds].sort().join(',');
+    return `${token.user_id}:${tenants}:${roles}:${groups}:${companies}:v${token.graph_version ?? '?'}`;
+  },
+
+  /**
+   * Check if a token is still valid against the current AccessGraph version.
+   * If graph_version changed, the token should be rebuilt.
+   */
+  isStale(token: MultiScopeToken, currentGraphVersion: number | null): boolean {
+    if (token.graph_version === null || currentGraphVersion === null) return false;
+    return token.graph_version !== currentGraphVersion;
   },
 };
-
-// ════════════════════════════════════
-// HELPERS
-// ════════════════════════════════════
-
-function extractAllowedScopes(
-  userRoles: ReadonlyArray<UserRole>,
-  hasTenantScope: boolean,
-): { allowedGroupIds: string[]; allowedCompanyIds: string[] } {
-  if (hasTenantScope) {
-    return { allowedGroupIds: [], allowedCompanyIds: [] };
-  }
-
-  const groupIds = new Set<string>();
-  const companyIds = new Set<string>();
-
-  for (const r of userRoles) {
-    if (r.scope_type === 'company_group' && r.scope_id) {
-      groupIds.add(r.scope_id);
-    }
-    if (r.scope_type === 'company' && r.scope_id) {
-      companyIds.add(r.scope_id);
-    }
-  }
-
-  return {
-    allowedGroupIds: Array.from(groupIds),
-    allowedCompanyIds: Array.from(companyIds),
-  };
-}
