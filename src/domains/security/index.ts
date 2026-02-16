@@ -24,6 +24,11 @@ export {
   executeSecurityPipeline,
   requirePermission,
   SecurityPipelineError,
+  AccessGraph,
+  buildAccessGraph,
+  getAccessGraph,
+  setAccessGraph,
+  clearAccessGraph,
   requireAtLeastOneRole,
   requireValidScope,
   preventCrossTenantAccess,
@@ -62,6 +67,11 @@ export type {
   PipelineResult,
   PipelineInput,
   PipelineDecision,
+  AccessGraphInput,
+  GraphNode,
+  GraphEdge,
+  NodeType,
+  EdgeRelation,
 } from './kernel';
 
 // ── Feature Flags Hook ──
