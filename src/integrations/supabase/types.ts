@@ -592,6 +592,69 @@ export type Database = {
           },
         ]
       }
+      company_cnae_profiles: {
+        Row: {
+          cnae_principal: string
+          cnaes_secundarios: string[]
+          cnpj: string
+          company_id: string
+          created_at: string
+          descricao_atividade: string
+          grau_risco_sugerido: number
+          id: string
+          raw_response: Json | null
+          resolved_at: string | null
+          source: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cnae_principal: string
+          cnaes_secundarios?: string[]
+          cnpj: string
+          company_id: string
+          created_at?: string
+          descricao_atividade?: string
+          grau_risco_sugerido?: number
+          id?: string
+          raw_response?: Json | null
+          resolved_at?: string | null
+          source?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cnae_principal?: string
+          cnaes_secundarios?: string[]
+          cnpj?: string
+          company_id?: string
+          created_at?: string
+          descricao_atividade?: string
+          grau_risco_sugerido?: number
+          id?: string
+          raw_response?: Json | null
+          resolved_at?: string | null
+          source?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_cnae_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_cnae_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_groups: {
         Row: {
           created_at: string

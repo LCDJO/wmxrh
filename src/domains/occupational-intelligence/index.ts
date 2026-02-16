@@ -16,6 +16,8 @@ export { classifyCnae, mapRiskCategories, getGrauRiscoLabel, parseCnaeDivision }
 export { suggestCbos, getCboByCode } from './cbo-suggester';
 export { getApplicableNrs, getTrainingRequirements, estimateTrainingHours } from './nr-training-mapper';
 export { generateRecommendations } from './compliance-recommender';
+export { cnpjDataResolverService } from './cnpj-data-resolver.service';
+export type { CompanyCNAEProfile, ResolvedCNPJData, UpsertCNAEProfileDTO } from './cnpj-data-resolver.service';
 
 export type {
   GrauRisco,
