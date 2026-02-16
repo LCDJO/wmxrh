@@ -79,6 +79,20 @@ export type {
   CertificateValidationResult,
 } from './training-provider.adapter';
 
+// Future Integration Ports
+export {
+  lmsIntegrationRegistry,
+  eadPlatformRegistry,
+  biometricAttendanceRegistry,
+  certificateUploadRegistry,
+} from './ports';
+export type {
+  LmsIntegrationPort, LmsCourse, LmsEnrollment, LmsWebhookPayload,
+  EadPlatformPort, EadCourse, EadLearnerProgress, EadCertificate,
+  BiometricAttendancePort, AttendanceRecord, PresenceProof,
+  CertificateUploadPort, CertificateUploadRequest, ProcessedCertificate,
+} from './ports';
+
 // Types
 export type {
   TrainingLifecycleStatus,
