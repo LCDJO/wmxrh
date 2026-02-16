@@ -16,6 +16,7 @@
  */
 
 import { iamService, type CustomRole, type PermissionDefinition, type RolePermission, type UserCustomRole, type TenantUser } from '@/domains/iam/iam.service';
+import { supabase } from '@/integrations/supabase/client';
 import { emitIAMEvent } from '@/domains/iam/iam.events';
 import { graphEvents } from '@/domains/security/kernel/access-graph.events';
 import { accessGraphService } from '@/domains/security/kernel/access-graph.service';
@@ -165,6 +166,25 @@ export interface UpdateRolePermissionsCommand {
   ctx?: SecurityContext | null;
 }
 
+/** Graph-aware permission update — same as UpdateRolePermissionsCommand but semantically for graph builder */
+export type UpdateRolePermissionsGraphCommand = UpdateRolePermissionsCommand;
+
+export interface CreateRoleInheritanceCommand {
+  parent_role_id: string;
+  child_role_id: string;
+  tenant_id: string;
+  created_by?: string;
+  is_tenant_admin: boolean;
+  ctx?: SecurityContext | null;
+}
+
+export interface RemoveRoleInheritanceCommand {
+  inheritance_id: string;
+  tenant_id: string;
+  is_tenant_admin: boolean;
+  ctx?: SecurityContext | null;
+}
+
 // ═══════════════════════════════════
 // QUERY TYPES
 // ═══════════════════════════════════
@@ -175,6 +195,15 @@ export interface GetPermissionsMatrixQuery { role_id: string; }
 export interface GetAllPermissionsQuery {}
 export interface GetUserAssignmentsQuery { tenant_id: string; }
 export interface GetScopeOptionsQuery { tenant_id: string; }
+
+/** Fetches all role permissions for the graph visualization */
+export interface GetPermissionGraphQuery { tenant_id: string; role_ids: string[]; }
+
+/** Fetches roles + inheritance for graph visualization */
+export interface GetRoleGraphQuery { tenant_id: string; }
+
+/** Preview what a role can access (read-only) */
+export interface PreviewRoleAccessQuery { role_id: string; tenant_id: string; }
 
 // ═══════════════════════════════════
 // QUERY RESULTS
@@ -369,6 +398,60 @@ export const identityGateway = {
     }
   },
 
+  /** Alias for graph builder — delegates to updateRolePermissions */
+  async updateRolePermissionsGraph(cmd: UpdateRolePermissionsGraphCommand): Promise<void> {
+    return identityGateway.updateRolePermissions(cmd);
+  },
+
+  async createRoleInheritance(cmd: CreateRoleInheritanceCommand): Promise<void> {
+    enforceIAMAccess('create', 'createRoleInheritance', {
+      ctx: cmd.ctx,
+      isTenantAdmin: cmd.is_tenant_admin,
+      tenantId: cmd.tenant_id,
+    });
+
+    const { error } = await supabase.from('role_inheritance').insert({
+      parent_role_id: cmd.parent_role_id,
+      child_role_id: cmd.child_role_id,
+      tenant_id: cmd.tenant_id,
+      created_by: cmd.created_by || null,
+    });
+    if (error) throw error;
+
+    // Invalidate graph — inheritance changes affect all users
+    accessGraphService.invalidateTenant(cmd.tenant_id, 'ROLE_CHANGED' as any);
+    graphEvents.userRoleChanged(cmd.tenant_id, cmd.created_by || '', cmd.child_role_id, 'update');
+
+    emitIAMEvent({
+      type: 'AccessGraphRebuilt',
+      timestamp: Date.now(),
+      tenant_id: cmd.tenant_id,
+      user_id: null,
+      reason: 'RolePermissionsUpdated',
+    });
+  },
+
+  async removeRoleInheritance(cmd: RemoveRoleInheritanceCommand): Promise<void> {
+    enforceIAMAccess('delete', 'removeRoleInheritance', {
+      ctx: cmd.ctx,
+      isTenantAdmin: cmd.is_tenant_admin,
+      tenantId: cmd.tenant_id,
+    });
+
+    const { error } = await supabase.from('role_inheritance').delete().eq('id', cmd.inheritance_id);
+    if (error) throw error;
+
+    accessGraphService.invalidateTenant(cmd.tenant_id, 'ROLE_CHANGED' as any);
+
+    emitIAMEvent({
+      type: 'AccessGraphRebuilt',
+      timestamp: Date.now(),
+      tenant_id: cmd.tenant_id,
+      user_id: null,
+      reason: 'RolePermissionsUpdated',
+    });
+  },
+
   // ── Queries (read-only — no side-effects) ──
 
   async getTenantUsers(query: GetTenantUsersQuery): Promise<TenantUser[]> {
@@ -397,5 +480,54 @@ export const identityGateway = {
       iamService.listCompanyGroups(query.tenant_id),
     ]);
     return { companies, companyGroups };
+  },
+
+  /** Get the full permission graph for visualization (all roles' permissions) */
+  async getPermissionGraph(query: GetPermissionGraphQuery): Promise<{ roleId: string; perms: RolePermission[] }[]> {
+    const results = await Promise.all(
+      query.role_ids.map(id => iamService.listRolePermissions(id)),
+    );
+    return query.role_ids.map((id, i) => ({ roleId: id, perms: results[i] }));
+  },
+
+  /** Get roles + inheritance for graph visualization */
+  async getRoleGraph(query: GetRoleGraphQuery): Promise<{ roles: CustomRole[]; inheritances: any[] }> {
+    const [roles, inhData] = await Promise.all([
+      iamService.listRoles(query.tenant_id),
+      supabase.from('role_inheritance').select('*').eq('tenant_id', query.tenant_id),
+    ]);
+    return { roles, inheritances: inhData.data || [] };
+  },
+
+  /** Preview what a role can access (permission codes) */
+  async previewRoleAccess(query: PreviewRoleAccessQuery): Promise<{ permissions: PermissionDefinition[]; inheritedFrom: string[] }> {
+    const directPerms = await iamService.listRolePermissions(query.role_id);
+    const directPermIds = new Set(directPerms.map(p => p.permission_id));
+
+    // Check for inherited permissions
+    const { data: inheritances } = await supabase
+      .from('role_inheritance')
+      .select('parent_role_id')
+      .eq('child_role_id', query.role_id)
+      .eq('tenant_id', query.tenant_id);
+
+    const inheritedFrom: string[] = [];
+    const allPermIds = new Set(directPermIds);
+
+    for (const inh of (inheritances || [])) {
+      const parentPerms = await iamService.listRolePermissions(inh.parent_role_id);
+      parentPerms.forEach(p => {
+        if (!allPermIds.has(p.permission_id)) {
+          allPermIds.add(p.permission_id);
+          inheritedFrom.push(inh.parent_role_id);
+        }
+      });
+    }
+
+    const allPerms = await iamService.listPermissions();
+    return {
+      permissions: allPerms.filter(p => allPermIds.has(p.id)),
+      inheritedFrom: [...new Set(inheritedFrom)],
+    };
   },
 };

@@ -43,8 +43,6 @@ import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
-import { emitIAMEvent } from '@/domains/iam/iam.events';
-import { graphEvents, accessGraphCache } from '@/domains/security/kernel';
 
 // ══════════════════════════════════
 // TYPES
@@ -400,10 +398,7 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
   const roleIds = roles.map(r => r.id);
   const { data: allRolePerms = [] } = useQuery({
     queryKey: ['iam_graph_role_perms', tenantId],
-    queryFn: async () => {
-      const results = await Promise.all(roleIds.map(id => identityGateway.getPermissionsMatrix({ role_id: id })));
-      return roleIds.map((id, i) => ({ roleId: id, perms: results[i] }));
-    },
+    queryFn: () => identityGateway.getPermissionGraph({ tenant_id: tenantId, role_ids: roleIds }),
     enabled: roleIds.length > 0,
   });
 
@@ -491,37 +486,9 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         ctx: kernel.securityContext,
       });
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['iam_graph_role_perms'] });
-
-      // ── Emit RolePermissionsUpdated event ──
-      const permCount = (rolePermMap.get(variables.roleId) || []).length + (variables.grant ? 1 : -1);
-      emitIAMEvent({
-        type: 'RolePermissionsUpdated',
-        timestamp: Date.now(),
-        tenant_id: tenantId,
-        role_id: variables.roleId,
-        permission_count: Math.max(0, permCount),
-        granted_by: user?.id,
-      });
-
-      // ── Trigger Access Graph rebuild & cache invalidation ──
-      graphEvents.userRoleChanged(tenantId, user?.id || '', variables.roleId, 'update');
-      accessGraphCache.invalidateTenant(tenantId, 'ROLE_CHANGED', {
-        entity: 'custom_role',
-        entityId: variables.roleId,
-        action: 'update',
-      });
-
-      // ── Emit AccessGraphRebuilt event ──
-      emitIAMEvent({
-        type: 'AccessGraphRebuilt',
-        timestamp: Date.now(),
-        tenant_id: tenantId,
-        user_id: null,
-        reason: 'RolePermissionsUpdated',
-      });
-
+      // Events + cache invalidation handled by identityGateway.updateRolePermissions
       toast.success('Permissão atualizada');
     },
     onError: (err: Error) => {
@@ -529,20 +496,22 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
     },
   });
 
-  // ── Inheritance Mutation ──
+  // ── Inheritance Mutations (via Gateway) ──
   const addInheritanceMutation = useMutation({
     mutationFn: async ({ parentRoleId }: { parentRoleId: string }) => {
       if (!focusRoleId) throw new Error('Selecione um cargo filho');
-      const { error } = await supabase.from('role_inheritance').insert({
+      await identityGateway.createRoleInheritance({
         parent_role_id: parentRoleId,
         child_role_id: focusRoleId,
         tenant_id: tenantId,
         created_by: user?.id,
+        is_tenant_admin: kernel.isTenantAdmin,
+        ctx: kernel.securityContext,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['role_inheritance'] });
+      queryClient.invalidateQueries({ queryKey: ['iam_graph_role_perms'] });
       toast.success('Herança adicionada');
     },
     onError: (err: Error) => toast.error(err.message),
@@ -550,11 +519,16 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
 
   const removeInheritanceMutation = useMutation({
     mutationFn: async ({ inheritanceId }: { inheritanceId: string }) => {
-      const { error } = await supabase.from('role_inheritance').delete().eq('id', inheritanceId);
-      if (error) throw error;
+      await identityGateway.removeRoleInheritance({
+        inheritance_id: inheritanceId,
+        tenant_id: tenantId,
+        is_tenant_admin: kernel.isTenantAdmin,
+        ctx: kernel.securityContext,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['role_inheritance'] });
+      queryClient.invalidateQueries({ queryKey: ['iam_graph_role_perms'] });
       toast.success('Herança removida');
     },
     onError: (err: Error) => toast.error(err.message),
