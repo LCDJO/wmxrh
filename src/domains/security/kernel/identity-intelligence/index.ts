@@ -10,6 +10,13 @@ export {
   getIILEventLog,
 } from './identity-intelligence.service';
 
+// ── Sub-components ──
+export { IdentityRouter } from './identity-router';
+export { WorkspaceResolver } from './workspace-resolver';
+export { ContextMemoryService } from './context-memory.service';
+export { UnifiedSessionManager } from './unified-session-manager';
+export { LoginIntentDetector } from './login-intent-detector';
+
 // ── Hook ──
 export { useIdentityIntelligence } from './use-identity-intelligence';
 export type { UseIdentityIntelligenceReturn } from './use-identity-intelligence';
