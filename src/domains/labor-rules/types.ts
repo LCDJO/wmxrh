@@ -66,6 +66,9 @@ export interface LaborRuleDefinition {
   integra_fgts: boolean;
   integra_ferias: boolean;
   integra_13: boolean;
+  base_calculo: string | null;
+  integra_dsr: boolean;
+  aplica_reflexos: boolean;
   effective_from: string;
   effective_until: string | null;
   is_mandatory: boolean;
@@ -160,6 +163,9 @@ export interface CreateLaborRuleDefinitionDTO {
   integra_fgts?: boolean;
   integra_ferias?: boolean;
   integra_13?: boolean;
+  base_calculo?: string | null;
+  integra_dsr?: boolean;
+  aplica_reflexos?: boolean;
   effective_from?: string;
   effective_until?: string | null;
   is_mandatory?: boolean;

@@ -1594,6 +1594,8 @@ export type Database = {
       }
       labor_rule_definitions: {
         Row: {
+          aplica_reflexos: boolean
+          base_calculo: string | null
           base_percentage: number | null
           calc_type: Database["public"]["Enums"]["labor_rule_calc_type"]
           category: Database["public"]["Enums"]["labor_rule_category"]
@@ -1608,6 +1610,7 @@ export type Database = {
           formula_expression: string | null
           id: string
           integra_13: boolean
+          integra_dsr: boolean
           integra_ferias: boolean
           integra_fgts: boolean
           integra_inss: boolean
@@ -1623,6 +1626,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aplica_reflexos?: boolean
+          base_calculo?: string | null
           base_percentage?: number | null
           calc_type?: Database["public"]["Enums"]["labor_rule_calc_type"]
           category: Database["public"]["Enums"]["labor_rule_category"]
@@ -1637,6 +1642,7 @@ export type Database = {
           formula_expression?: string | null
           id?: string
           integra_13?: boolean
+          integra_dsr?: boolean
           integra_ferias?: boolean
           integra_fgts?: boolean
           integra_inss?: boolean
@@ -1652,6 +1658,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aplica_reflexos?: boolean
+          base_calculo?: string | null
           base_percentage?: number | null
           calc_type?: Database["public"]["Enums"]["labor_rule_calc_type"]
           category?: Database["public"]["Enums"]["labor_rule_category"]
@@ -1666,6 +1674,7 @@ export type Database = {
           formula_expression?: string | null
           id?: string
           integra_13?: boolean
+          integra_dsr?: boolean
           integra_ferias?: boolean
           integra_fgts?: boolean
           integra_inss?: boolean
