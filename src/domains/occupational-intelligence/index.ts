@@ -28,6 +28,8 @@ export { occupationalComplianceGenerator } from './occupational-compliance-gener
 export type { ComplianceGenerationResult } from './occupational-compliance-generator';
 export { occupationalEvents } from './occupational-compliance.events';
 export type { CompanyRiskProfileGeneratedEvent, CBOSuggestionsGeneratedEvent, TrainingRequirementCreatedEvent, OccupationalComplianceEvent } from './occupational-compliance.events';
+export { externalDataService } from './external-data.service';
+export type { ExternalCnpjResult, CnaeDivision, NrVersionInfo } from './external-data.service';
 
 export type {
   GrauRisco,
