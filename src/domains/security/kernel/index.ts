@@ -46,7 +46,7 @@ export type { AuditSecurityAPI, AuditEntry, AuditAction, AuditResult, SecurityEv
 
 // ── Security Pipeline ──────────────────────────────────────
 export { executeSecurityPipeline, requirePermission, SecurityPipelineError } from './security-pipeline';
-export type { PipelineResult, PipelineInput, PipelineDecision } from './security-pipeline';
+export type { PipelineResult, PipelineInput, PipelineDecision, PipelineDeniedBy } from './security-pipeline';
 
 // ── Access Graph ───────────────────────────────────────────
 export { AccessGraph, buildAccessGraph, getAccessGraph, setAccessGraph, clearAccessGraph } from './access-graph';
