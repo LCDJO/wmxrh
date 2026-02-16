@@ -8,7 +8,8 @@ import { useSecurityKernel } from '@/domains/security/use-security-kernel';
 import { useRolePermissionsMatrixView, useAccessGraphSummaryView, useIAMScopeInvalidation } from '@/domains/iam/read-models';
 import { RolesTab } from '@/components/iam/RolesTab';
 import { AccessGraphTab } from '@/components/iam/AccessGraphTab';
-import { Shield, Network } from 'lucide-react';
+import { VisualPermissionBuilder } from '@/components/iam/VisualPermissionBuilder';
+import { Shield, Network, Layers } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function SettingsRoles() {
@@ -33,13 +34,25 @@ export default function SettingsRoles() {
         </div>
       </div>
 
-      <Tabs defaultValue="roles" className="space-y-4">
+      <Tabs defaultValue="builder" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="builder" className="gap-1.5"><Layers className="h-4 w-4" />Permission Builder</TabsTrigger>
           <TabsTrigger value="roles" className="gap-1.5"><Shield className="h-4 w-4" />Cargos</TabsTrigger>
           {isTenantAdmin && (
             <TabsTrigger value="graph" className="gap-1.5"><Network className="h-4 w-4" />Access Graph</TabsTrigger>
           )}
         </TabsList>
+
+        <TabsContent value="builder">
+          <VisualPermissionBuilder
+            roles={roles}
+            permissions={permissions}
+            tenantId={tenantId!}
+            userId={user?.id}
+            isTenantAdmin={isTenantAdmin}
+            onInvalidate={invalidateAll}
+          />
+        </TabsContent>
 
         <TabsContent value="roles">
           <RolesTab
