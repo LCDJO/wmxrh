@@ -17,6 +17,7 @@ import type {
   TenantSetupConfig,
   RoleBootstrapPlan,
   ModuleSetupOption,
+  FlowResolverContext,
 } from '@/domains/adaptive-onboarding/types';
 import type { PlanTier } from '@/domains/platform-experience/types';
 
@@ -32,14 +33,17 @@ function getEngine(): AdaptiveOnboardingEngineAPI {
 interface UseAdaptiveOnboardingOptions {
   tenantId: string;
   planTier: PlanTier;
+  allowedModules?: string[];
+  userRole?: string;
   config?: TenantSetupConfig;
 }
 
-export function useAdaptiveOnboarding({ tenantId, planTier, config }: UseAdaptiveOnboardingOptions) {
+export function useAdaptiveOnboarding({ tenantId, planTier, allowedModules, userRole, config }: UseAdaptiveOnboardingOptions) {
   const engine = getEngine();
 
   const [flow, setFlow] = useState<OnboardingFlow>(() => {
-    return engine.flowResolver.resolveFlow(tenantId, planTier, config);
+    const ctx: FlowResolverContext = { planTier, allowedModules, userRole, config };
+    return engine.flowResolver.resolveFlow(tenantId, ctx);
   });
 
   const [progress, setProgress] = useState<OnboardingProgress>(() => {
