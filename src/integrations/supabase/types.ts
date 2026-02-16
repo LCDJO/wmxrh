@@ -3749,8 +3749,10 @@ export type Database = {
           cbo_codigo: string
           company_group_id: string | null
           company_id: string
+          condicional_por_risco: boolean
           created_at: string
           deleted_at: string | null
+          grau_risco_minimo: number
           id: string
           nr_codigo: number
           obrigatorio: boolean
@@ -3763,8 +3765,10 @@ export type Database = {
           cbo_codigo: string
           company_group_id?: string | null
           company_id: string
+          condicional_por_risco?: boolean
           created_at?: string
           deleted_at?: string | null
+          grau_risco_minimo?: number
           id?: string
           nr_codigo: number
           obrigatorio?: boolean
@@ -3777,8 +3781,10 @@ export type Database = {
           cbo_codigo?: string
           company_group_id?: string | null
           company_id?: string
+          condicional_por_risco?: boolean
           created_at?: string
           deleted_at?: string | null
+          grau_risco_minimo?: number
           id?: string
           nr_codigo?: number
           obrigatorio?: boolean
