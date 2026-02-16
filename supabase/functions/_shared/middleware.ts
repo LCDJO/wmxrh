@@ -102,35 +102,32 @@ function resolveRequestId(req: Request): string {
 }
 
 // ═══════════════════════════════════
-// 2) TenantResolverMiddleware
+// 2) TenantResolverMiddleware (from JWT claims)
 // ═══════════════════════════════════
 
 interface TenantInfo { tenantId: string; tenantName: string; }
 
-async function resolveTenant(supabase: SupabaseClient, userId: string, req: Request): Promise<TenantInfo> {
+function resolveTenantFromClaims(claims: Record<string, unknown>, req: Request): TenantInfo {
+  // Prefer x-tenant-id header for multi-tenant switching, fall back to JWT claim
   const headerTenantId = req.headers.get("x-tenant-id");
-  if (headerTenantId) {
-    const { data: membership, error } = await supabase
-      .from("tenant_memberships").select("tenant_id, tenants(name)")
-      .eq("user_id", userId).eq("tenant_id", headerTenantId).maybeSingle();
-    if (error || !membership) throw new MiddlewareError(403, "TENANT_ACCESS_DENIED", "You do not have access to this tenant");
-    return { tenantId: headerTenantId, tenantName: (membership as any).tenants?.name || "Unknown" };
-  }
-  const { data: memberships, error } = await supabase
-    .from("tenant_memberships").select("tenant_id, tenants(name)")
-    .eq("user_id", userId).limit(1);
-  if (error || !memberships?.length) throw new MiddlewareError(403, "NO_TENANT", "User has no tenant membership");
-  const first = memberships[0];
-  return { tenantId: first.tenant_id, tenantName: (first as any).tenants?.name || "Unknown" };
+  const claimTenantId = claims.tenant_id as string | undefined;
+  const tenantId = headerTenantId || claimTenantId;
+  if (!tenantId) throw new MiddlewareError(403, "NO_TENANT", "No tenant found in JWT claims or headers");
+  return { tenantId, tenantName: "" };
 }
 
 // ═══════════════════════════════════
 // 3) AuthMiddleware
 // ═══════════════════════════════════
 
-interface AuthInfo { userId: string; email: string; supabase: SupabaseClient; }
+interface AuthResult {
+  userId: string;
+  email: string;
+  supabase: SupabaseClient;
+  claims: Record<string, unknown>;
+}
 
-async function authenticateRequest(req: Request): Promise<AuthInfo> {
+async function authenticateRequest(req: Request): Promise<AuthResult> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) throw new MiddlewareError(401, "MISSING_TOKEN", "Authorization header is required");
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -139,18 +136,36 @@ async function authenticateRequest(req: Request): Promise<AuthInfo> {
   const token = authHeader.replace("Bearer ", "");
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
   if (claimsError || !claimsData?.claims) throw new MiddlewareError(401, "INVALID_TOKEN", "JWT validation failed");
-  const claims = claimsData.claims;
+  const claims = claimsData.claims as Record<string, unknown>;
   const userId = claims.sub as string;
   const email = (claims.email as string) || "";
   if (!userId) throw new MiddlewareError(401, "INVALID_TOKEN", "Token missing subject claim");
   const exp = claims.exp as number;
   if (exp && exp < Math.floor(Date.now() / 1000)) throw new MiddlewareError(401, "TOKEN_EXPIRED", "JWT has expired");
-  return { userId, email, supabase };
+  return { userId, email, supabase, claims };
 }
 
+/**
+ * Extract roles and scopes directly from JWT claims (injected by custom_access_token_hook).
+ * Falls back to DB query if claims are missing (e.g. tokens issued before hook was enabled).
+ */
 async function resolvePermissionScopes(
-  supabase: SupabaseClient, userId: string, tenantId: string
+  supabase: SupabaseClient, userId: string, tenantId: string, claims: Record<string, unknown>
 ): Promise<{ roles: string[]; scopes: PermissionScope[] }> {
+  // Try JWT claims first
+  const claimRoles = claims.roles as string[] | undefined;
+  const claimScopes = claims.scopes as Array<{ type: string; id: string }> | undefined;
+
+  if (Array.isArray(claimRoles) && claimRoles.length > 0 && Array.isArray(claimScopes)) {
+    const scopes: PermissionScope[] = claimScopes.map(s => ({
+      role: "", // not needed per-scope since roles are flat
+      scope_type: s.type,
+      scope_id: s.id || null,
+    }));
+    return { roles: claimRoles, scopes };
+  }
+
+  // Fallback: query DB (for tokens issued before the hook)
   const { data: userRoles, error } = await supabase
     .from("user_roles").select("role, scope_type, scope_id")
     .eq("user_id", userId).eq("tenant_id", tenantId);
@@ -721,11 +736,11 @@ export function createHandler(handler: HandlerFn, options: HandlerOptions = {}):
       }
 
       // 3) Auth
-      const { userId, email, supabase } = await authenticateRequest(req);
-      // 2) Tenant
-      const { tenantId, tenantName } = await resolveTenant(supabase, userId, req);
-      // 3 cont.) Scopes
-      const { roles, scopes } = await resolvePermissionScopes(supabase, userId, tenantId);
+      const { userId, email, supabase, claims } = await authenticateRequest(req);
+      // 2) Tenant (from JWT claims)
+      const { tenantId, tenantName } = resolveTenantFromClaims(claims, req);
+      // 3 cont.) Scopes (from JWT claims, fallback to DB)
+      const { roles, scopes } = await resolvePermissionScopes(supabase, userId, tenantId, claims);
 
       const ctx: MiddlewareContext = {
         requestId, userId, email, tenantId, tenantName,
