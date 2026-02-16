@@ -32,6 +32,7 @@ import {
   executeSecurityPipeline,
   accessGraphService,
   identityBoundary,
+  dualIdentityEngine,
   type Identity,
   type SecurityContext,
   type PolicyResult,
@@ -46,6 +47,9 @@ import {
   type OperationalContext,
   type ContextSwitchResult,
   type IdentityBoundarySnapshot,
+  type RealIdentity,
+  type ActiveIdentity,
+  type ImpersonationSession,
 } from './kernel';
 
 import type { PermissionAction, PermissionEntity, NavKey } from './permissions';
@@ -92,6 +96,12 @@ export interface UseSecurityKernelReturn {
 
   // ── Audit ──
   audit: typeof auditSecurity;
+
+  // ── Dual Identity / Impersonation ──
+  realIdentity: RealIdentity | null;
+  activeIdentity: ActiveIdentity;
+  isImpersonating: boolean;
+  impersonationSession: ImpersonationSession | null;
 
   // ── Loading ──
   loading: boolean;
@@ -366,6 +376,10 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     graphCheckAccess,
     resolveInheritedScopes,
     audit: auditSecurity,
+    realIdentity: dualIdentityEngine.realIdentity,
+    activeIdentity: dualIdentityEngine.activeIdentity,
+    isImpersonating: dualIdentityEngine.isImpersonating,
+    impersonationSession: dualIdentityEngine.currentSession,
     loading: rolesLoading,
     isTenantAdmin,
     canManageEmployees,
