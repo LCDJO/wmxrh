@@ -21,6 +21,7 @@ import Departments from "./pages/Departments";
 import Compliance from "./pages/Compliance";
 import Benefits from "./pages/Benefits";
 import Health from "./pages/Health";
+import LaborDashboard from "./pages/LaborDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -99,6 +100,11 @@ function AppRoutes() {
         <Route path="/health" element={
           <ProtectedRoute navKey="health">
             <Health />
+          </ProtectedRoute>
+        } />
+        <Route path="/labor-dashboard" element={
+          <ProtectedRoute navKey="labor_dashboard">
+            <LaborDashboard />
           </ProtectedRoute>
         } />
       </Route>
