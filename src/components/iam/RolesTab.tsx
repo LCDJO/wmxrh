@@ -1,11 +1,13 @@
 /**
- * IAM Roles Tab — Create, edit permissions (matrix), clone roles
+ * IAM Roles Tab — Create, edit permissions (matrix), clone roles.
+ * Integrates RoleSuggestionPanel for AI-powered permission hints on create.
  */
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { identityGateway } from '@/domains/iam/identity.gateway';
 import { type CustomRole, type PermissionDefinition } from '@/domains/iam/iam.service';
 import { PermissionMatrix } from '@/components/iam/PermissionMatrix';
+import { RoleSuggestionPanel } from '@/components/iam/RoleSuggestionPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,13 +35,14 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [cloneName, setCloneName] = useState('');
+  const [suggestedCodes, setSuggestedCodes] = useState<string[]>([]);
 
   const createRoleMut = useMutation({
     mutationFn: (dto: { tenant_id: string; name: string; description?: string; created_by?: string }) =>
       identityGateway.createRole({ ...dto, is_tenant_admin: isTenantAdmin, ctx: securityContext }),
     onSuccess: () => {
       toast({ title: 'Cargo criado!' });
-      setCreateOpen(false); setName(''); setDescription('');
+      setCreateOpen(false); setName(''); setDescription(''); setSuggestedCodes([]);
       onInvalidate();
     },
     onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
@@ -76,7 +79,7 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" />Novo Cargo</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg">
               <DialogHeader><DialogTitle>Criar Cargo</DialogTitle></DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -87,6 +90,31 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
                   <Label>Descrição</Label>
                   <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrição do cargo" />
                 </div>
+
+                {/* AI Suggestion Panel */}
+                <RoleSuggestionPanel
+                  roleName={name}
+                  onApplySuggestions={(codes) => setSuggestedCodes(prev => [...new Set([...prev, ...codes])])}
+                />
+
+                {suggestedCodes.length > 0 && (
+                  <div className="rounded-md bg-muted/50 p-2.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Permissões pré-selecionadas ({suggestedCodes.length})
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {suggestedCodes.map(c => (
+                        <span key={c} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono">
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1.5">
+                      Serão aplicadas após criar o cargo.
+                    </p>
+                  </div>
+                )}
+
                 <Button className="w-full" disabled={!name || createRoleMut.isPending} onClick={handleCreate}>
                   {createRoleMut.isPending ? 'Criando...' : 'Criar Cargo'}
                 </Button>
