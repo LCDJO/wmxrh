@@ -21,8 +21,8 @@ export { resolveIdentity, buildSecurityContext } from './identity.service';
 export type { Identity, SecurityContext, SecurityScope, BuildSecurityContextInput } from './identity.service';
 
 // ── Permission Engine ──────────────────────────────────────
-export { permissionEngine } from './permission-engine';
-export type { PermissionEngineAPI, PermissionCheck } from './permission-engine';
+export { permissionEngine, checkPermission } from './permission-engine';
+export type { PermissionEngineAPI, PermissionCheck, PermissionResult, PermissionDecision, ResourceTarget } from './permission-engine';
 
 // ── Policy Engine ──────────────────────────────────────────
 export { policyEngine, requireAtLeastOneRole, requireValidScope, preventCrossTenantAccess } from './policy-engine';

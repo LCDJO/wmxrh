@@ -25,12 +25,15 @@ import {
   resolveIdentity,
   buildSecurityContext,
   permissionEngine,
+  checkPermission,
   policyEngine,
   featureFlagEngine,
   auditSecurity,
   type Identity,
   type SecurityContext,
   type PolicyResult,
+  type PermissionResult,
+  type ResourceTarget,
 } from './kernel';
 
 import type { PermissionAction, PermissionEntity, NavKey } from './permissions';
@@ -45,7 +48,10 @@ export interface UseSecurityKernelReturn {
   identity: Identity | null;
   isAuthenticated: boolean;
 
-  // ── Permissions ──
+  // ── Permissions (RBAC + ABAC) ──
+  /** RBAC+ABAC: full permission check against SecurityContext */
+  checkPermission: (action: PermissionAction, resource: PermissionEntity, target?: ResourceTarget) => PermissionResult;
+  /** RBAC-only shortcut (backward compat) */
   can: (entity: PermissionEntity, action: PermissionAction) => boolean;
   canNav: (navKey: NavKey) => boolean;
   hasRole: (...roles: TenantRole[]) => boolean;
@@ -109,7 +115,17 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     });
   }, [user, session, currentTenant, effectiveRoles, userRoles, membershipRole, uiScope]);
 
-  // ── Permissions (bound to current roles) ──
+  // ── Permissions (RBAC + ABAC) ──
+  const checkPerm = useCallback(
+    (action: PermissionAction, resource: PermissionEntity, target?: ResourceTarget): PermissionResult => {
+      if (!securityContext) {
+        return { decision: 'deny', failedCheck: 'rbac', reason: 'SecurityContext não disponível.' };
+      }
+      return checkPermission(action, resource, securityContext, target);
+    },
+    [securityContext]
+  );
+
   const can = useCallback(
     (entity: PermissionEntity, action: PermissionAction) =>
       permissionEngine.can(entity, action, effectiveRoles),
@@ -169,6 +185,7 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     securityContext,
     identity,
     isAuthenticated: !!user,
+    checkPermission: checkPerm,
     can,
     canNav,
     hasRole,
