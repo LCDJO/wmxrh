@@ -26,6 +26,8 @@ export { projectCosts } from './cost-projection.engine';
 export { analyzeSalaries } from './salary-analysis.engine';
 export { detectRisks } from './risk-detection.engine';
 export { generateInsights } from './insight-generator.engine';
+export { persistInsightsFromReport } from './workforce-insight.persistence';
+export { emitWorkforceEvent, onWorkforceEvent } from './workforce-intelligence.events';
 export { computeHealthScore } from './health-score.engine';
 
 // ── Read Models (data sources) ──
