@@ -4,13 +4,13 @@ import type { Company, CompanyWithRelations, CreateCompanyDTO } from '@/domains/
 
 export const companyService: ICompanyService = {
   async list(tenantId: string) {
-    const { data, error } = await supabase.from('companies').select('*, company_groups(name)').eq('tenant_id', tenantId);
+    const { data, error } = await supabase.from('companies').select('*, company_groups(name)').eq('tenant_id', tenantId).is('deleted_at', null);
     if (error) throw error;
     return (data || []) as CompanyWithRelations[];
   },
 
   async listSimple(tenantId: string) {
-    const { data, error } = await supabase.from('companies').select('id, name').eq('tenant_id', tenantId);
+    const { data, error } = await supabase.from('companies').select('id, name').eq('tenant_id', tenantId).is('deleted_at', null);
     if (error) throw error;
     return data || [];
   },

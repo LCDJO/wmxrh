@@ -86,6 +86,7 @@ export type Database = {
           address: string | null
           company_group_id: string | null
           created_at: string
+          deleted_at: string | null
           document: string | null
           email: string | null
           id: string
@@ -99,6 +100,7 @@ export type Database = {
           address?: string | null
           company_group_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           document?: string | null
           email?: string | null
           id?: string
@@ -112,6 +114,7 @@ export type Database = {
           address?: string | null
           company_group_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           document?: string | null
           email?: string | null
           id?: string
@@ -141,6 +144,7 @@ export type Database = {
       company_groups: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
           name: string
@@ -149,6 +153,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           name: string
@@ -157,6 +162,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           name?: string
@@ -176,8 +182,10 @@ export type Database = {
       departments: {
         Row: {
           budget: number | null
+          company_group_id: string | null
           company_id: string
           created_at: string
+          deleted_at: string | null
           id: string
           name: string
           tenant_id: string
@@ -185,8 +193,10 @@ export type Database = {
         }
         Insert: {
           budget?: number | null
+          company_group_id?: string | null
           company_id: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name: string
           tenant_id: string
@@ -194,14 +204,23 @@ export type Database = {
         }
         Update: {
           budget?: number | null
+          company_group_id?: string | null
           company_id?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name?: string
           tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "departments_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "departments_company_id_fkey"
             columns: ["company_id"]
@@ -277,6 +296,7 @@ export type Database = {
           cpf: string | null
           created_at: string
           current_salary: number | null
+          deleted_at: string | null
           department_id: string | null
           email: string | null
           hire_date: string | null
@@ -297,6 +317,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           current_salary?: number | null
+          deleted_at?: string | null
           department_id?: string | null
           email?: string | null
           hire_date?: string | null
@@ -317,6 +338,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           current_salary?: number | null
+          deleted_at?: string | null
           department_id?: string | null
           email?: string | null
           hire_date?: string | null
@@ -378,8 +400,10 @@ export type Database = {
       positions: {
         Row: {
           base_salary: number | null
+          company_group_id: string | null
           company_id: string
           created_at: string
+          deleted_at: string | null
           id: string
           level: string | null
           max_salary: number | null
@@ -389,8 +413,10 @@ export type Database = {
         }
         Insert: {
           base_salary?: number | null
+          company_group_id?: string | null
           company_id: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           level?: string | null
           max_salary?: number | null
@@ -400,8 +426,10 @@ export type Database = {
         }
         Update: {
           base_salary?: number | null
+          company_group_id?: string | null
           company_id?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           level?: string | null
           max_salary?: number | null
@@ -410,6 +438,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "positions_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "positions_company_id_fkey"
             columns: ["company_id"]
@@ -430,8 +465,11 @@ export type Database = {
         Row: {
           additional_type: Database["public"]["Enums"]["salary_additional_type"]
           amount: number
+          company_group_id: string | null
+          company_id: string | null
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           description: string | null
           employee_id: string
           end_date: string | null
@@ -443,8 +481,11 @@ export type Database = {
         Insert: {
           additional_type: Database["public"]["Enums"]["salary_additional_type"]
           amount: number
+          company_group_id?: string | null
+          company_id?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           employee_id: string
           end_date?: string | null
@@ -456,8 +497,11 @@ export type Database = {
         Update: {
           additional_type?: Database["public"]["Enums"]["salary_additional_type"]
           amount?: number
+          company_group_id?: string | null
+          company_id?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           employee_id?: string
           end_date?: string | null
@@ -467,6 +511,20 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "salary_additionals_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_additionals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "salary_additionals_employee_id_fkey"
             columns: ["employee_id"]
@@ -486,9 +544,12 @@ export type Database = {
       salary_adjustments: {
         Row: {
           adjustment_type: Database["public"]["Enums"]["salary_adjustment_type"]
+          company_group_id: string | null
+          company_id: string | null
           contract_id: string
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           employee_id: string
           id: string
           new_salary: number
@@ -499,9 +560,12 @@ export type Database = {
         }
         Insert: {
           adjustment_type: Database["public"]["Enums"]["salary_adjustment_type"]
+          company_group_id?: string | null
+          company_id?: string | null
           contract_id: string
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           employee_id: string
           id?: string
           new_salary: number
@@ -512,9 +576,12 @@ export type Database = {
         }
         Update: {
           adjustment_type?: Database["public"]["Enums"]["salary_adjustment_type"]
+          company_group_id?: string | null
+          company_id?: string | null
           contract_id?: string
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           employee_id?: string
           id?: string
           new_salary?: number
@@ -524,6 +591,20 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "salary_adjustments_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_adjustments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "salary_adjustments_contract_id_fkey"
             columns: ["contract_id"]
@@ -550,8 +631,11 @@ export type Database = {
       salary_contracts: {
         Row: {
           base_salary: number
+          company_group_id: string | null
+          company_id: string | null
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           employee_id: string
           end_date: string | null
           id: string
@@ -561,8 +645,11 @@ export type Database = {
         }
         Insert: {
           base_salary: number
+          company_group_id?: string | null
+          company_id?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           employee_id: string
           end_date?: string | null
           id?: string
@@ -572,8 +659,11 @@ export type Database = {
         }
         Update: {
           base_salary?: number
+          company_group_id?: string | null
+          company_id?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           employee_id?: string
           end_date?: string | null
           id?: string
@@ -582,6 +672,20 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "salary_contracts_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_contracts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "salary_contracts_employee_id_fkey"
             columns: ["employee_id"]
@@ -601,7 +705,10 @@ export type Database = {
       salary_history: {
         Row: {
           approved_by: string | null
+          company_group_id: string | null
+          company_id: string | null
           created_at: string
+          deleted_at: string | null
           effective_date: string
           employee_id: string
           id: string
@@ -612,7 +719,10 @@ export type Database = {
         }
         Insert: {
           approved_by?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           effective_date: string
           employee_id: string
           id?: string
@@ -623,7 +733,10 @@ export type Database = {
         }
         Update: {
           approved_by?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           effective_date?: string
           employee_id?: string
           id?: string
@@ -633,6 +746,20 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "salary_history_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "salary_history_employee_id_fkey"
             columns: ["employee_id"]

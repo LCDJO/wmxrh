@@ -4,7 +4,7 @@ import type { Position, PositionWithRelations, CreatePositionDTO } from '@/domai
 
 export const positionService: IPositionService = {
   async list(tenantId: string) {
-    const { data, error } = await supabase.from('positions').select('*, companies(name)').eq('tenant_id', tenantId);
+    const { data, error } = await supabase.from('positions').select('*, companies(name)').eq('tenant_id', tenantId).is('deleted_at', null);
     if (error) throw error;
     return (data || []) as PositionWithRelations[];
   },

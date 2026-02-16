@@ -2,7 +2,6 @@
  * Domain Types - Shared Kernel
  * Central type definitions for the HR domain model.
  * These types are infrastructure-agnostic and represent the domain contract.
- * When migrating to microservices, these become the API contract types.
  */
 
 // ========================
@@ -14,6 +13,14 @@ export type TenantRole = 'owner' | 'admin' | 'manager' | 'viewer' | 'superadmin'
 export type EmployeeEventType = 'company_transfer' | 'position_change' | 'department_change' | 'status_change' | 'manager_change' | 'salary_change' | 'employee_hired' | 'salary_contract_started' | 'salary_adjusted' | 'additional_added' | 'job_changed';
 export type SalaryAdjustmentType = 'annual' | 'promotion' | 'adjustment' | 'merit' | 'correction';
 export type SalaryAdditionalType = 'bonus' | 'commission' | 'allowance' | 'hazard_pay' | 'overtime' | 'other';
+
+// ========================
+// SOFT DELETE MIXIN
+// ========================
+
+export interface SoftDeletable {
+  deleted_at: string | null;
+}
 
 // ========================
 // ENTITIES
@@ -53,7 +60,7 @@ export interface UserRole {
   created_at: string;
 }
 
-export interface CompanyGroup {
+export interface CompanyGroup extends SoftDeletable {
   id: string;
   tenant_id: string;
   name: string;
@@ -62,7 +69,7 @@ export interface CompanyGroup {
   updated_at: string;
 }
 
-export interface Company {
+export interface Company extends SoftDeletable {
   id: string;
   tenant_id: string;
   company_group_id: string | null;
@@ -76,20 +83,22 @@ export interface Company {
   updated_at: string;
 }
 
-export interface Department {
+export interface Department extends SoftDeletable {
   id: string;
   tenant_id: string;
   company_id: string;
+  company_group_id: string | null;
   name: string;
   budget: number | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface Position {
+export interface Position extends SoftDeletable {
   id: string;
   tenant_id: string;
   company_id: string;
+  company_group_id: string | null;
   title: string;
   level: string | null;
   base_salary: number | null;
@@ -98,7 +107,7 @@ export interface Position {
   updated_at: string;
 }
 
-export interface Employee {
+export interface Employee extends SoftDeletable {
   id: string;
   tenant_id: string;
   company_id: string;
@@ -131,10 +140,12 @@ export interface EmployeeEvent {
   created_at: string;
 }
 
-export interface SalaryHistory {
+export interface SalaryHistory extends SoftDeletable {
   id: string;
   tenant_id: string;
   employee_id: string;
+  company_id: string | null;
+  company_group_id: string | null;
   previous_salary: number;
   new_salary: number;
   reason: string | null;
@@ -147,10 +158,12 @@ export interface SalaryHistory {
 // COMPENSATION ENGINE ENTITIES
 // ========================
 
-export interface SalaryContract {
+export interface SalaryContract extends SoftDeletable {
   id: string;
   tenant_id: string;
   employee_id: string;
+  company_id: string | null;
+  company_group_id: string | null;
   base_salary: number;
   start_date: string;
   end_date: string | null;
@@ -159,10 +172,12 @@ export interface SalaryContract {
   created_at: string;
 }
 
-export interface SalaryAdjustment {
+export interface SalaryAdjustment extends SoftDeletable {
   id: string;
   tenant_id: string;
   employee_id: string;
+  company_id: string | null;
+  company_group_id: string | null;
   contract_id: string;
   adjustment_type: SalaryAdjustmentType;
   percentage: number | null;
@@ -173,10 +188,12 @@ export interface SalaryAdjustment {
   created_at: string;
 }
 
-export interface SalaryAdditional {
+export interface SalaryAdditional extends SoftDeletable {
   id: string;
   tenant_id: string;
   employee_id: string;
+  company_id: string | null;
+  company_group_id: string | null;
   additional_type: SalaryAdditionalType;
   amount: number;
   is_recurring: boolean;
@@ -279,6 +296,7 @@ export interface CreateCompanyGroupDTO {
 export interface CreateDepartmentDTO {
   tenant_id: string;
   company_id: string;
+  company_group_id?: string | null;
   name: string;
   budget?: number;
 }
@@ -286,6 +304,7 @@ export interface CreateDepartmentDTO {
 export interface CreatePositionDTO {
   tenant_id: string;
   company_id: string;
+  company_group_id?: string | null;
   title: string;
   level?: string | null;
   base_salary?: number;
@@ -300,6 +319,8 @@ export interface CreateTenantDTO {
 export interface CreateSalaryHistoryDTO {
   tenant_id: string;
   employee_id: string;
+  company_id?: string | null;
+  company_group_id?: string | null;
   previous_salary: number;
   new_salary: number;
   reason?: string | null;
@@ -310,6 +331,8 @@ export interface CreateSalaryHistoryDTO {
 export interface CreateSalaryContractDTO {
   tenant_id: string;
   employee_id: string;
+  company_id?: string | null;
+  company_group_id?: string | null;
   base_salary: number;
   start_date: string;
   created_by?: string | null;
@@ -318,6 +341,8 @@ export interface CreateSalaryContractDTO {
 export interface CreateSalaryAdjustmentDTO {
   tenant_id: string;
   employee_id: string;
+  company_id?: string | null;
+  company_group_id?: string | null;
   contract_id: string;
   adjustment_type: SalaryAdjustmentType;
   percentage?: number | null;
@@ -330,6 +355,8 @@ export interface CreateSalaryAdjustmentDTO {
 export interface CreateSalaryAdditionalDTO {
   tenant_id: string;
   employee_id: string;
+  company_id?: string | null;
+  company_group_id?: string | null;
   additional_type: SalaryAdditionalType;
   amount: number;
   is_recurring?: boolean;

@@ -4,7 +4,7 @@ import type { CompanyGroup, CreateCompanyGroupDTO } from '@/domains/shared';
 
 export const companyGroupService: ICompanyGroupService = {
   async list(tenantId: string) {
-    const { data, error } = await supabase.from('company_groups').select('*').eq('tenant_id', tenantId);
+    const { data, error } = await supabase.from('company_groups').select('*').eq('tenant_id', tenantId).is('deleted_at', null);
     if (error) throw error;
     return (data || []) as CompanyGroup[];
   },
