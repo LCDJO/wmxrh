@@ -31,6 +31,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
+import { PlanBadge } from '@/components/shared/PlanBadge';
 
 interface Tenant {
   id: string;
@@ -87,6 +88,28 @@ export default function PlatformTenants() {
   // Modules
   const [tenantModules, setTenantModules] = useState<TenantModule[]>([]);
   const [modulesLoading, setModulesLoading] = useState(false);
+
+  // ── Tenant → Plan mapping ──
+  const [tenantPlanMap, setTenantPlanMap] = useState<Record<string, { planName: string; tier: string }>>({});
+
+  useEffect(() => {
+    supabase
+      .from('tenant_plans')
+      .select('tenant_id, status, saas_plans(name, price)')
+      .eq('status', 'active')
+      .then(({ data }) => {
+        const map: Record<string, { planName: string; tier: string }> = {};
+        ((data ?? []) as any[]).forEach(row => {
+          const price = row.saas_plans?.price ?? 0;
+          const name = row.saas_plans?.name ?? 'Free';
+          map[row.tenant_id] = {
+            planName: name,
+            tier: price === 0 ? 'free' : price <= 199 ? 'starter' : price <= 499 ? 'pro' : 'enterprise',
+          };
+        });
+        setTenantPlanMap(map);
+      });
+  }, []);
 
   // Impersonation
   const [impersonateReason, setImpersonateReason] = useState('');
@@ -384,7 +407,7 @@ export default function PlatformTenants() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>CNPJ</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Plano</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Criado em</TableHead>
                   <TableHead className="w-[50px]" />
@@ -397,8 +420,16 @@ export default function PlatformTenants() {
                     <TableCell className="text-muted-foreground font-mono text-xs">
                       {tenant.document || '—'}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {tenant.email || '—'}
+                    <TableCell>
+                      {tenantPlanMap[tenant.id] ? (
+                        <PlanBadge
+                          tier={tenantPlanMap[tenant.id].tier}
+                          planName={tenantPlanMap[tenant.id].planName}
+                          size="sm"
+                        />
+                      ) : (
+                        <PlanBadge tier="free" size="sm" />
+                      )}
                     </TableCell>
                     <TableCell>{statusBadge(tenant.status)}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">
