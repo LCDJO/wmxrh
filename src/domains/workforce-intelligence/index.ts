@@ -41,6 +41,7 @@ export type {
   ComplianceSnapshot,
   BenefitSnapshot,
   WorkforceDataset,
+  NrTrainingSnapshot,
 
   // Cost projection
   CostProjectionInput,

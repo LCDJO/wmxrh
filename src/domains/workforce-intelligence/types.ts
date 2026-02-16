@@ -99,6 +99,17 @@ export interface CboAssignmentSnapshot {
   cbo_code?: string;
 }
 
+/** Snapshot of NR training assignment per employee */
+export interface NrTrainingSnapshot {
+  employee_id: string;
+  nr_number: number;
+  training_name: string;
+  status: string; // assigned | in_progress | completed | expired | overdue
+  data_validade?: string;
+  blocking_level: string; // none | warning | soft_block | hard_block
+  company_id?: string;
+}
+
 /** Full workforce dataset for analysis */
 export interface WorkforceDataset {
   tenant_id: string;
@@ -111,6 +122,8 @@ export interface WorkforceDataset {
   occupational?: OccupationalSnapshot[];
   /** CBO assignments per employee (optional, enriches risk detection) */
   cbo_assignments?: CboAssignmentSnapshot[];
+  /** NR training assignments per employee (optional, enriches risk detection) */
+  nr_trainings?: NrTrainingSnapshot[];
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -272,7 +285,10 @@ export type RiskCategory =
   | 'cost_anomaly'
   | 'turnover_risk'
   | 'occupational_training'
-  | 'cbo_gap';
+  | 'cbo_gap'
+  | 'nr_compliance'
+  | 'training_gap'
+  | 'operational_risk';
 
 /** Insight type for persistence to workforce_insights table */
 export type WorkforceInsightType = 'LEGAL_RISK' | 'FINANCIAL_RISK' | 'COMPLIANCE_WARNING';
