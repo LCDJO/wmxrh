@@ -20,6 +20,8 @@ export { cnpjDataResolverService } from './cnpj-data-resolver.service';
 export type { CompanyCNAEProfile, ResolvedCNPJData, UpsertCNAEProfileDTO } from './cnpj-data-resolver.service';
 export { cnaeRiskMappingService } from './cnae-risk-mapping.service';
 export type { CnaeRiskMapping, RiskProfile, UpsertCnaeRiskMappingDTO } from './cnae-risk-mapping.service';
+export { cboSuggestionService } from './cbo-suggestion.service';
+export type { CboCatalogRecord, CnaeCboMappingRecord } from './cbo-suggestion.service';
 
 export type {
   GrauRisco,
