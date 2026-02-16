@@ -1,15 +1,18 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
-import { useCompanies, useEmployeesSimple, useCreateCompany } from '@/domains/hooks';
+import { useCompanies, useEmployeesSimple, useCreateCompany, useCompanyCnaeProfiles } from '@/domains/hooks';
 import { usePermissions } from '@/domains/security';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Building2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Building2, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CnpjConsultaPanel } from '@/components/company/CnpjConsultaPanel';
 import { occupationalComplianceGenerator } from '@/domains/occupational-intelligence/occupational-compliance-generator';
+import { getApplicableNrs } from '@/domains/occupational-intelligence/nr-training-mapper';
+import type { GrauRisco } from '@/domains/occupational-intelligence/types';
 
 export default function Companies() {
   const { currentTenant } = useTenant();
@@ -22,8 +25,22 @@ export default function Companies() {
 
   const { data: companies = [] } = useCompanies();
   const { data: employees = [] } = useEmployeesSimple();
+  const { data: cnaeProfiles = [] } = useCompanyCnaeProfiles();
   const createMutation = useCreateCompany();
   const { isTenantAdmin } = usePermissions();
+
+  const RISK_COLORS: Record<number, string> = {
+    1: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+    2: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    3: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+    4: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  };
+
+  const cnaeByCompany = useMemo(() => {
+    const map = new Map<string, typeof cnaeProfiles[0]>();
+    for (const p of cnaeProfiles) map.set(p.company_id, p);
+    return map;
+  }, [cnaeProfiles]);
 
   const handleCreate = async () => {
     if (!tenantId) return;
@@ -108,6 +125,34 @@ export default function Companies() {
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Funcionários ativos</span><span className="font-medium text-card-foreground">{compEmployees.length}</span></div>
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Folha mensal</span><span className="font-medium text-primary">R$ {payroll.toLocaleString('pt-BR')}</span></div>
               </div>
+
+              {/* NRs Aplicáveis via CNAE */}
+              {(() => {
+                const profile = cnaeByCompany.get(c.id);
+                if (!profile) return null;
+                const nrs = getApplicableNrs(profile.grau_risco_sugerido as GrauRisco);
+                return (
+                  <div className="space-y-2 border-t border-border pt-4 mt-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                        <ShieldCheck className="h-3.5 w-3.5" /> NRs Aplicáveis
+                      </p>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${RISK_COLORS[profile.grau_risco_sugerido] || ''}`}>
+                        Risco {profile.grau_risco_sugerido}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground truncate">CNAE {profile.cnae_principal} · {profile.descricao_atividade}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {nrs.slice(0, 10).map(nr => (
+                        <Badge key={nr.nr_number} variant={nr.priority === 'obrigatoria' ? 'default' : 'secondary'} className="text-[10px]">
+                          NR-{nr.nr_number}
+                        </Badge>
+                      ))}
+                      {nrs.length > 10 && <Badge variant="outline" className="text-[10px]">+{nrs.length - 10}</Badge>}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
