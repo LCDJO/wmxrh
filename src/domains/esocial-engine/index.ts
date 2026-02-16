@@ -45,8 +45,8 @@ export { transmissionService } from './transmission-service';
 export type { TransmissionConfig, IGovernmentAPI, TransmissionBatchResult, TransmissionItemResult, TransmissionItemStatus, QueueItem, QueueCallbacks } from './transmission-service';
 
 // ── Return Processor ──
-export { processReturn, processBatchReturn, toTransmissionResult, summarizeBatchReturn } from './return-processor';
-export type { GovernmentResponse, GovernmentEventResponse, ProcessedReturn } from './return-processor';
+export { processReturn, processBatchReturn, toTransmissionResult, summarizeBatchReturn, buildTransmissionLog, updateTransmissionLog, updateBatchTransmissionLogs } from './return-processor';
+export type { GovernmentResponse, GovernmentEventResponse, ProcessedReturn, ESocialTransmissionLog } from './return-processor';
 
 // ── Layout Version Manager ──
 export { layoutVersionManager } from './layout-version-manager';
