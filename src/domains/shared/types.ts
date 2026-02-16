@@ -765,3 +765,64 @@ export interface CreateSalaryRubricDTO {
   esocial_code?: string | null;
   catalog_item_id?: string | null;
 }
+
+// ========================
+// eSocial / GOVERNMENT INTEGRATION TYPES
+// ========================
+
+export type ESocialEventStatus = 'pending' | 'processing' | 'sent' | 'accepted' | 'rejected' | 'error' | 'cancelled';
+export type ESocialEventCategory = 'tabelas' | 'nao_periodicos' | 'periodicos' | 'sst' | 'gfip_fgts';
+
+export interface ESocialEvent {
+  id: string;
+  tenant_id: string;
+  company_id: string | null;
+  company_group_id: string | null;
+  event_type: string;
+  category: ESocialEventCategory;
+  receipt_number: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  status: ESocialEventStatus;
+  error_message: string | null;
+  retry_count: number;
+  payload: Record<string, unknown>;
+  response_payload: Record<string, unknown> | null;
+  reference_period: string | null;
+  effective_date: string | null;
+  created_by: string | null;
+  processed_at: string | null;
+  sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ESocialEventMapping {
+  id: string;
+  tenant_id: string;
+  trigger_table: string;
+  trigger_action: string;
+  trigger_conditions: Record<string, unknown> | null;
+  esocial_event_type: string;
+  category: ESocialEventCategory;
+  description: string | null;
+  is_active: boolean;
+  auto_generate: boolean;
+  payload_template: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateESocialEventDTO {
+  tenant_id: string;
+  company_id?: string | null;
+  company_group_id?: string | null;
+  event_type: string;
+  category: ESocialEventCategory;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  payload?: Record<string, unknown>;
+  reference_period?: string | null;
+  effective_date?: string | null;
+  created_by?: string | null;
+}
