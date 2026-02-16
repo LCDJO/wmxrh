@@ -16,6 +16,8 @@
 export { laborRulesService, RULE_CATEGORY_LABELS, CALC_TYPE_LABELS } from './labor-rules.service';
 export { evaluateLaborRules, summarizeRubrics } from './rule-evaluation.engine';
 export { validateLaborCompliance } from './rule-compliance.validator';
+export { STANDARD_RUBRIC_LIBRARY, buildStandardRuleDTOs, templateToDTO, getLibrarySummary } from './standard-rubric-library';
+export type { RubricTemplate } from './standard-rubric-library';
 export type { WorkContext, CalculatedRubric } from './rule-evaluation.engine';
 export type { ComplianceValidation, ComplianceResult, ComplianceSeverity } from './rule-compliance.validator';
 export type {
