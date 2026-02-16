@@ -11,6 +11,7 @@
  */
 
 import type { ModuleKey } from '@/domains/platform/platform-modules';
+import type { PlatformExperienceEngineAPI } from '@/domains/platform-experience/types';
 
 // ══════════════════════════════════════════════════════════════════
 // Runtime Lifecycle
@@ -431,6 +432,7 @@ export interface PlatformRuntimeAPI {
   navigation: NavigationOrchestratorAPI;
   features: FeatureLifecycleAPI;
   cognitive: CognitiveOrchestratorAPI;
+  experience: PlatformExperienceEngineAPI;
 }
 
 // ── Sub-system APIs (contracts) ──────────────────────────────────

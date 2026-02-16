@@ -38,6 +38,7 @@ import { createCognitiveOrchestrator } from './cognitive-orchestrator';
 import { CognitiveInsightsService } from '@/domains/platform-cognitive/cognitive-insights.service';
 import { installEventBridges } from './event-bridges';
 import { PLATFORM_EVENTS } from './platform-events';
+import { createPlatformExperienceEngine } from '@/domains/platform-experience';
 import type { PlatformBootstrappedPayload } from './platform-events';
 
 // ── Security Kernel imports ──────────────────────────────────────
@@ -75,6 +76,9 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
   // Cognitive needs a service instance
   const cognitiveService = new CognitiveInsightsService();
   const cognitive = createCognitiveOrchestrator(events, cognitiveService);
+
+  // ── Platform Experience Engine (PXE) ────────────────────────
+  const experience = createPlatformExperienceEngine();
 
   // ── Lifecycle ────────────────────────────────────────────────
 
@@ -173,6 +177,32 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
       services.register('CognitiveInsightsService', cognitiveService, {
         version: '1.0.0',
         capabilities: ['cognitive:generate-insights', 'cognitive:role-suggestion', 'cognitive:permission-risk'],
+      });
+
+      // ── 6. Register PXE sub-systems ──────────────────────────
+      services.register('PXE.PlanRegistry', experience.plans, {
+        version: '1.0.0',
+        capabilities: ['pxe:plan-catalog', 'pxe:plan-lookup'],
+      });
+      services.register('PXE.PlanLifecycleManager', experience.lifecycle, {
+        version: '1.0.0',
+        capabilities: ['pxe:plan-transition', 'pxe:plan-status'],
+      });
+      services.register('PXE.TenantPlanResolver', experience.tenantPlan, {
+        version: '1.0.0',
+        capabilities: ['pxe:tenant-plan-resolve', 'pxe:module-access-check'],
+      });
+      services.register('PXE.PaymentPolicyEngine', experience.payment, {
+        version: '1.0.0',
+        capabilities: ['pxe:payment-policy', 'pxe:proration'],
+      });
+      services.register('PXE.ModuleAccessResolver', experience.moduleAccess, {
+        version: '1.0.0',
+        capabilities: ['pxe:module-access', 'pxe:upgrade-prompt'],
+      });
+      services.register('PXE.ExperienceOrchestrator', experience.experience, {
+        version: '1.0.0',
+        capabilities: ['pxe:experience-profile', 'pxe:navigation-gate'],
       });
 
       // ── 5. Install ALL domain event bridges → GlobalEventKernel
@@ -368,6 +398,7 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
     navigation,
     features,
     cognitive,
+    experience,
   };
 }
 
