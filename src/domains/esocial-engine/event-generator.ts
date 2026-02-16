@@ -8,13 +8,15 @@
  * Pure function — returns envelopes without persisting.
  */
 
-// No external UUID dependency — uses crypto.randomUUID()
 import type { InboundDomainEvent, ESocialEnvelope, ESocialCategory } from './types';
-import { CURRENT_LAYOUT_VERSION, EVENT_TYPE_REGISTRY } from './types';
-import { getMapper, hasMapper } from './layout-mappers';
+import { CURRENT_LAYOUT_VERSION } from './types';
+import { getMapper } from './layout-mappers';
 import type { S2200Input } from './layout-mappers/s2200-admissao.mapper';
 import type { S2206Input } from './layout-mappers/s2206-alt-contratual.mapper';
 import type { S2220Input } from './layout-mappers/s2220-aso.mapper';
+import type { S1000Input } from './layout-mappers/s1000-empregador.mapper';
+import type { S1010Input } from './layout-mappers/s1010-rubrica.mapper';
+import type { S2240Input } from './layout-mappers/s2240-exp-risco.mapper';
 
 function generateId(): string {
   return crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -33,8 +35,13 @@ export function generateFromDomainEvent(event: InboundDomainEvent): ESocialEnvel
       return generateAlteracaoContratual(event);
     case 'health_exam.created':
       return generateASO(event);
+    case 'company.created':
+      return generateInfoEmpregador(event);
+    case 'rubric.created':
+      return generateTabRubrica(event);
+    case 'risk_exposure.created':
+      return generateExpRisco(event);
     default:
-      // Event type not mapped yet — no envelope generated
       return null;
   }
 }
@@ -55,7 +62,7 @@ function generateAdmissao(event: InboundDomainEvent): ESocialEnvelope | null {
   if (!mapper) return null;
 
   const p = event.payload as Record<string, unknown>;
-  const input = {
+  const input: S2200Input = {
     employee_id: event.entity_id,
     name: (p.name as string) || '',
     cpf: (p.cpf as string) || '',
@@ -68,14 +75,12 @@ function generateAdmissao(event: InboundDomainEvent): ESocialEnvelope | null {
     cbo_code: p.cbo_code as string | undefined,
   };
 
-  const payload = mapper.map(input as any);
-
   return createEnvelope({
     tenant_id: event.tenant_id,
     company_id: event.company_id,
     event_type: 'S-2200',
     category: 'nao_periodicos',
-    payload,
+    payload: mapper.map(input as any),
     source_entity_type: event.entity_type,
     source_entity_id: event.entity_id,
   });
@@ -86,7 +91,7 @@ function generateAlteracaoContratual(event: InboundDomainEvent): ESocialEnvelope
   if (!mapper) return null;
 
   const p = event.payload as Record<string, unknown>;
-  const input = {
+  const input: S2206Input = {
     employee_id: event.entity_id,
     cpf: (p.cpf as string) || '',
     company_document: (p.company_document as string) || '',
@@ -97,14 +102,12 @@ function generateAlteracaoContratual(event: InboundDomainEvent): ESocialEnvelope
     reason: p.reason as string | undefined,
   };
 
-  const payload = mapper.map(input as any);
-
   return createEnvelope({
     tenant_id: event.tenant_id,
     company_id: event.company_id,
     event_type: 'S-2206',
     category: 'nao_periodicos',
-    payload,
+    payload: mapper.map(input as any),
     source_entity_type: event.entity_type,
     source_entity_id: event.entity_id,
   });
@@ -115,7 +118,7 @@ function generateASO(event: InboundDomainEvent): ESocialEnvelope | null {
   if (!mapper) return null;
 
   const p = event.payload as Record<string, unknown>;
-  const input = {
+  const input: S2220Input = {
     employee_id: (p.employee_id as string) || event.entity_id,
     cpf: (p.cpf as string) || '',
     company_document: (p.company_document as string) || '',
@@ -128,14 +131,97 @@ function generateASO(event: InboundDomainEvent): ESocialEnvelope | null {
     cbo_code: p.cbo_code as string | undefined,
   };
 
-  const payload = mapper.map(input as any);
-
   return createEnvelope({
     tenant_id: event.tenant_id,
     company_id: event.company_id,
     event_type: 'S-2220',
     category: 'sst',
-    payload,
+    payload: mapper.map(input as any),
+    source_entity_type: event.entity_type,
+    source_entity_id: event.entity_id,
+  });
+}
+
+function generateInfoEmpregador(event: InboundDomainEvent): ESocialEnvelope | null {
+  const mapper = getMapper('S-1000');
+  if (!mapper) return null;
+
+  const p = event.payload as Record<string, unknown>;
+  const input: S1000Input = {
+    company_id: event.entity_id,
+    company_name: (p.name as string) || '',
+    company_document: (p.document as string) || '',
+    email: p.email as string | undefined,
+    phone: p.phone as string | undefined,
+    address: p.address as string | undefined,
+  };
+
+  return createEnvelope({
+    tenant_id: event.tenant_id,
+    company_id: event.company_id,
+    event_type: 'S-1000',
+    category: 'tabelas',
+    payload: mapper.map(input as any),
+    source_entity_type: event.entity_type,
+    source_entity_id: event.entity_id,
+  });
+}
+
+function generateTabRubrica(event: InboundDomainEvent): ESocialEnvelope | null {
+  const mapper = getMapper('S-1010');
+  if (!mapper) return null;
+
+  const p = event.payload as Record<string, unknown>;
+  const input: S1010Input = {
+    rubric_id: event.entity_id,
+    company_document: (p.company_document as string) || '',
+    code: (p.code as string) || '',
+    name: (p.name as string) || '',
+    nature_code: (p.nature_code as string) || '1000',
+    type: (p.type as 1 | 2 | 3) || 1,
+    irrf_incidence: p.irrf_incidence as number | undefined,
+    cp_incidence: p.cp_incidence as number | undefined,
+    fgts_incidence: p.fgts_incidence as number | undefined,
+    description: p.description as string | undefined,
+  };
+
+  return createEnvelope({
+    tenant_id: event.tenant_id,
+    company_id: event.company_id,
+    event_type: 'S-1010',
+    category: 'tabelas',
+    payload: mapper.map(input as any),
+    source_entity_type: event.entity_type,
+    source_entity_id: event.entity_id,
+  });
+}
+
+function generateExpRisco(event: InboundDomainEvent): ESocialEnvelope | null {
+  const mapper = getMapper('S-2240');
+  if (!mapper) return null;
+
+  const p = event.payload as Record<string, unknown>;
+  const input: S2240Input = {
+    employee_id: (p.employee_id as string) || event.entity_id,
+    cpf: (p.cpf as string) || '',
+    company_document: (p.company_document as string) || '',
+    start_date: (p.start_date as string) || event.occurred_at.slice(0, 10),
+    risk_agent_code: (p.risk_agent_code as string) || '',
+    risk_agent_description: p.risk_agent_description as string | undefined,
+    intensity: p.intensity as string | undefined,
+    epi_efficacy: p.epi_efficacy as 0 | 1 | 2 | undefined,
+    epi_description: p.epi_description as string | undefined,
+    epi_ca_number: p.epi_ca_number as string | undefined,
+    activity_description: p.activity_description as string | undefined,
+    cbo_code: p.cbo_code as string | undefined,
+  };
+
+  return createEnvelope({
+    tenant_id: event.tenant_id,
+    company_id: event.company_id,
+    event_type: 'S-2240',
+    category: 'sst',
+    payload: mapper.map(input as any),
     source_entity_type: event.entity_type,
     source_entity_id: event.entity_id,
   });
