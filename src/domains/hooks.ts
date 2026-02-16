@@ -114,6 +114,10 @@ export const queryKeys = {
   // Salary Rubric Templates
   salaryRubricTemplates: (tenantId?: string) => ['salary_rubric_templates', tenantId] as const,
   documentVault: (empId: string) => ['document_vault', empId] as const,
+  // NR Training
+  nrTrainingAssignments: (tenantId?: string) => ['nr_training_assignments', tenantId] as const,
+  nrTrainingByEmployee: (empId: string) => ['nr_training_employee', empId] as const,
+  restrictedEmployees: (tenantId?: string) => ['restricted_employees', tenantId] as const,
 };
 
 // ========================
@@ -935,5 +939,65 @@ export function useDocumentVault(employeeId: string) {
     queryKey: queryKeys.documentVault(employeeId),
     queryFn: () => documentVaultService.listByEmployee(employeeId, qs!),
     enabled: !!employeeId && !!qs,
+  });
+}
+
+// ========================
+// NR TRAINING HOOKS
+// ========================
+
+export function useNrTrainingAssignments() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.nrTrainingAssignments(qs?.tenantId),
+    queryFn: async () => {
+      let q = supabase
+        .from('nr_training_assignments')
+        .select('*, employees(name, company_id)')
+        .eq('tenant_id', qs!.tenantId)
+        .order('updated_at', { ascending: false });
+      if (qs!.companyId) q = q.eq('company_id', qs!.companyId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!qs,
+  });
+}
+
+export function useNrTrainingByEmployee(employeeId: string) {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.nrTrainingByEmployee(employeeId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('nr_training_assignments')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .eq('tenant_id', qs!.tenantId)
+        .order('nr_number');
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!employeeId && !!qs,
+  });
+}
+
+export function useRestrictedEmployees() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.restrictedEmployees(qs?.tenantId),
+    queryFn: async () => {
+      let q = supabase
+        .from('employees')
+        .select('id, name, company_id, department_id, position_id, operacao_restrita, restricao_motivo')
+        .eq('tenant_id', qs!.tenantId)
+        .eq('operacao_restrita', true);
+      if (qs!.companyId) q = q.eq('company_id', qs!.companyId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!qs,
   });
 }
