@@ -113,9 +113,10 @@ interface Props {
   isTenantAdmin: boolean;
   onClose: () => void;
   onSaved: () => void;
+  securityContext?: import('@/domains/security/kernel/identity.service').SecurityContext | null;
 }
 
-export function PermissionMatrix({ role, permissions, userId, isTenantAdmin, onClose, onSaved }: Props) {
+export function PermissionMatrix({ role, permissions, userId, isTenantAdmin, onClose, onSaved, securityContext }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -192,6 +193,7 @@ export function PermissionMatrix({ role, permissions, userId, isTenantAdmin, onC
       granted_by: userId,
       tenant_id: role.tenant_id,
       is_tenant_admin: isTenantAdmin,
+      ctx: securityContext,
     }),
     onSuccess: () => {
       toast({ title: 'Permissões salvas!' });

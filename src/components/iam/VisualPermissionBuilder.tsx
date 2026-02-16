@@ -109,15 +109,18 @@ interface Props {
   permissions: PermissionDefinition[];
   tenantId: string;
   userId?: string;
-  isTenantAdmin: boolean;
+  /** UI hint only — real enforcement is in IdentityGateway via SecurityPipeline */
+  canEdit: boolean;
   onInvalidate: () => void;
+  /** SecurityContext for pipeline-enforced mutations (passed to gateway) */
+  securityContext?: import('@/domains/security/kernel/identity.service').SecurityContext | null;
 }
 
 // ══════════════════════════════════
 // COMPONENT
 // ══════════════════════════════════
 
-export function VisualPermissionBuilder({ roles, permissions, tenantId, userId, isTenantAdmin, onInvalidate }: Props) {
+export function VisualPermissionBuilder({ roles, permissions, tenantId, userId, canEdit, onInvalidate, securityContext }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -226,7 +229,8 @@ export function VisualPermissionBuilder({ roles, permissions, tenantId, userId, 
       scope_type: 'tenant',
       granted_by: userId,
       tenant_id: tenantId,
-      is_tenant_admin: isTenantAdmin,
+      is_tenant_admin: canEdit,
+      ctx: securityContext,
     }),
     onSuccess: () => {
       toast({ title: 'Permissões salvas com sucesso!' });
@@ -442,7 +446,7 @@ export function VisualPermissionBuilder({ roles, permissions, tenantId, userId, 
                           />
                         </div>
 
-                        {isTenantAdmin && (
+                        {canEdit && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div
@@ -490,12 +494,12 @@ export function VisualPermissionBuilder({ roles, permissions, tenantId, userId, 
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <button
-                                        onClick={() => isTenantAdmin && toggleResource(resource)}
-                                        disabled={!isTenantAdmin}
+                                        onClick={() => canEdit && toggleResource(resource)}
+                                        disabled={!canEdit}
                                         className={cn(
                                           "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
                                           allResOn ? "bg-primary/15 text-primary" : "bg-muted/40 text-muted-foreground",
-                                          isTenantAdmin && "cursor-pointer hover:bg-primary/20"
+                                          canEdit && "cursor-pointer hover:bg-primary/20"
                                         )}
                                       >
                                         <ResourceIcon className="h-3.5 w-3.5" />
@@ -530,11 +534,11 @@ export function VisualPermissionBuilder({ roles, permissions, tenantId, userId, 
                                       <Tooltip key={action}>
                                         <TooltipTrigger asChild>
                                           <button
-                                            onClick={() => isTenantAdmin && toggle(perm.id)}
-                                            disabled={!isTenantAdmin}
+                                            onClick={() => canEdit && toggle(perm.id)}
+                                            disabled={!canEdit}
                                             className={cn(
                                               "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border",
-                                              isTenantAdmin && "cursor-pointer",
+                                              canEdit && "cursor-pointer",
                                               isOn
                                                 ? "bg-primary/10 border-primary/30 text-primary shadow-sm"
                                                 : "bg-card border-border/40 text-muted-foreground hover:border-border hover:text-foreground",
@@ -570,7 +574,7 @@ export function VisualPermissionBuilder({ roles, permissions, tenantId, userId, 
             </ScrollArea>
 
             {/* Save Bar */}
-            {isTenantAdmin && (
+            {canEdit && (
               <div className={cn(
                 "px-4 py-3 border-t flex items-center justify-between transition-colors",
                 dirty ? "bg-primary/5 border-primary/20" : "bg-muted/20 border-border/40"

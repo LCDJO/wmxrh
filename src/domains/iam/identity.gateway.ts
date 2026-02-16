@@ -5,16 +5,23 @@
  * between the UI layer and the IAM domain service.
  *
  * Security Kernel integration:
+ *   - Runs full SecurityPipeline on every mutation (8-stage check)
  *   - Emits IAM domain events on every mutation
  *   - Invalidates AccessGraph cache on role changes
  *   - Emits GraphEvent.UserRoleChanged for kernel listeners
+ *   - Audit trail via AuditSecurityService
+ *
+ * NO security rule lives in the frontend — all enforcement
+ * happens here at the Domain Gateway Layer.
  */
 
 import { iamService, type CustomRole, type PermissionDefinition, type RolePermission, type UserCustomRole, type TenantUser } from '@/domains/iam/iam.service';
-import { emitIAMEvent, type IAMDomainEvent } from '@/domains/iam/iam.events';
+import { emitIAMEvent } from '@/domains/iam/iam.events';
 import { graphEvents } from '@/domains/security/kernel/access-graph.events';
 import { accessGraphService } from '@/domains/security/kernel/access-graph.service';
 import { auditSecurity } from '@/domains/security/kernel/audit-security.service';
+import { executeSecurityPipeline, SecurityPipelineError } from '@/domains/security/kernel/security-pipeline';
+import type { SecurityContext } from '@/domains/security/kernel/identity.service';
 
 // ═══════════════════════════════════
 // SECURITY ERRORS
@@ -28,8 +35,43 @@ export class IAMAuthorizationError extends Error {
 }
 
 /**
- * Validate that the caller is a TenantAdmin.
- * This is a gateway-level guard — SecurityKernel stays UI-free.
+ * Run the full 8-stage SecurityPipeline for an IAM mutation.
+ * This replaces the old `requireTenantAdmin` simple boolean check.
+ * 
+ * Pipeline stages:
+ *   1. RequestId → 2. Auth → 3. IBL Session → 4. ContextResolver
+ *   5. AccessGraph → 6. RBAC+ABAC → 7. PolicyEngine → 8. Audit
+ */
+function requirePipelineAllow(
+  action: 'create' | 'update' | 'delete' | 'view',
+  gatewayAction: string,
+  ctx?: SecurityContext | null,
+  tenantId?: string,
+): void {
+  const result = executeSecurityPipeline({
+    action,
+    resource: 'user_roles',
+    ctx: ctx ?? null,
+    target: tenantId ? { tenant_id: tenantId } : undefined,
+    // IAM mutations always go through the full pipeline
+    skipAccessGraph: false,
+    skipPolicy: false,
+    skipAudit: false,
+  });
+
+  if (result.decision === 'deny') {
+    throw new IAMAuthorizationError(
+      gatewayAction,
+      result.reason || `Pipeline negou: stage ${result.deniedAtStage} (${result.deniedBy})`,
+    );
+  }
+}
+
+/**
+ * Fallback guard when SecurityContext is not available.
+ * Uses the legacy isTenantAdmin boolean check + audit logging.
+ * This ensures backward compatibility with components that haven't
+ * been migrated to pass SecurityContext yet.
  */
 function requireTenantAdmin(isTenantAdmin: boolean, action: string, tenantId?: string): void {
   if (!isTenantAdmin) {
@@ -39,6 +81,22 @@ function requireTenantAdmin(isTenantAdmin: boolean, action: string, tenantId?: s
       metadata: { tenant_id: tenantId },
     });
     throw new IAMAuthorizationError(action, 'Apenas TenantAdmin pode executar esta ação');
+  }
+}
+
+/**
+ * Smart guard: uses SecurityPipeline when ctx is available,
+ * falls back to requireTenantAdmin otherwise.
+ */
+function enforceIAMAccess(
+  action: 'create' | 'update' | 'delete',
+  gatewayAction: string,
+  opts: { ctx?: SecurityContext | null; isTenantAdmin: boolean; tenantId?: string },
+): void {
+  if (opts.ctx) {
+    requirePipelineAllow(action, gatewayAction, opts.ctx, opts.tenantId);
+  } else {
+    requireTenantAdmin(opts.isTenantAdmin, gatewayAction, opts.tenantId);
   }
 }
 
@@ -60,14 +118,16 @@ export interface AssignRoleToUserCommand {
   scope_type?: 'tenant' | 'company_group' | 'company';
   scope_id?: string | null;
   assigned_by?: string;
+  /** SecurityContext for pipeline enforcement */
+  ctx?: SecurityContext | null;
 }
 
 export interface RemoveRoleFromUserCommand {
   assignment_id: string;
-  /** Required for event emission / cache invalidation */
   user_id?: string;
   tenant_id?: string;
   role_id?: string;
+  ctx?: SecurityContext | null;
 }
 
 export interface CreateRoleCommand {
@@ -75,8 +135,8 @@ export interface CreateRoleCommand {
   name: string;
   description?: string;
   created_by?: string;
-  /** Caller must pass this — gateway enforces TenantAdmin */
   is_tenant_admin: boolean;
+  ctx?: SecurityContext | null;
 }
 
 export interface CloneRoleCommand {
@@ -85,12 +145,14 @@ export interface CloneRoleCommand {
   new_name: string;
   created_by?: string;
   is_tenant_admin: boolean;
+  ctx?: SecurityContext | null;
 }
 
 export interface DeleteRoleCommand {
   role_id: string;
   tenant_id?: string;
   is_tenant_admin: boolean;
+  ctx?: SecurityContext | null;
 }
 
 export interface UpdateRolePermissionsCommand {
@@ -100,33 +162,19 @@ export interface UpdateRolePermissionsCommand {
   granted_by?: string;
   tenant_id?: string;
   is_tenant_admin: boolean;
+  ctx?: SecurityContext | null;
 }
 
 // ═══════════════════════════════════
 // QUERY TYPES
 // ═══════════════════════════════════
 
-export interface GetTenantUsersQuery {
-  tenant_id: string;
-}
-
-export interface GetRolesQuery {
-  tenant_id: string;
-}
-
-export interface GetPermissionsMatrixQuery {
-  role_id: string;
-}
-
+export interface GetTenantUsersQuery { tenant_id: string; }
+export interface GetRolesQuery { tenant_id: string; }
+export interface GetPermissionsMatrixQuery { role_id: string; }
 export interface GetAllPermissionsQuery {}
-
-export interface GetUserAssignmentsQuery {
-  tenant_id: string;
-}
-
-export interface GetScopeOptionsQuery {
-  tenant_id: string;
-}
+export interface GetUserAssignmentsQuery { tenant_id: string; }
+export interface GetScopeOptionsQuery { tenant_id: string; }
 
 // ═══════════════════════════════════
 // QUERY RESULTS
@@ -170,6 +218,11 @@ export const identityGateway = {
   },
 
   async assignRoleToUser(cmd: AssignRoleToUserCommand): Promise<UserCustomRole> {
+    // Pipeline enforcement when ctx is available
+    if (cmd.ctx) {
+      requirePipelineAllow('create', 'assignRoleToUser', cmd.ctx, cmd.tenant_id);
+    }
+
     const result = await iamService.assignRole({
       user_id: cmd.user_id,
       role_id: cmd.role_id,
@@ -179,7 +232,6 @@ export const identityGateway = {
       assigned_by: cmd.assigned_by,
     });
 
-    // 1. Emit IAM domain event
     emitIAMEvent({
       type: 'UserRoleAssigned',
       timestamp: Date.now(),
@@ -191,11 +243,9 @@ export const identityGateway = {
       assigned_by: cmd.assigned_by,
     });
 
-    // 2. Invalidate AccessGraph cache + emit kernel event
     accessGraphService.invalidateUser(cmd.user_id, cmd.tenant_id, 'ROLE_CHANGED');
     graphEvents.userRoleChanged(cmd.tenant_id, cmd.user_id, cmd.role_id, 'insert');
 
-    // 3. Emit AccessGraphRebuilt
     emitIAMEvent({
       type: 'AccessGraphRebuilt',
       timestamp: Date.now(),
@@ -208,6 +258,10 @@ export const identityGateway = {
   },
 
   async removeRoleFromUser(cmd: RemoveRoleFromUserCommand): Promise<void> {
+    if (cmd.ctx && cmd.tenant_id) {
+      requirePipelineAllow('delete', 'removeRoleFromUser', cmd.ctx, cmd.tenant_id);
+    }
+
     await iamService.removeAssignment(cmd.assignment_id);
 
     if (cmd.user_id && cmd.tenant_id) {
@@ -233,7 +287,12 @@ export const identityGateway = {
   },
 
   async createRole(cmd: CreateRoleCommand): Promise<CustomRole> {
-    requireTenantAdmin(cmd.is_tenant_admin, 'createRole', cmd.tenant_id);
+    enforceIAMAccess('create', 'createRole', {
+      ctx: cmd.ctx,
+      isTenantAdmin: cmd.is_tenant_admin,
+      tenantId: cmd.tenant_id,
+    });
+
     const slug = cmd.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '');
     return iamService.createRole({
       tenant_id: cmd.tenant_id,
@@ -245,14 +304,22 @@ export const identityGateway = {
   },
 
   async cloneRole(cmd: CloneRoleCommand): Promise<CustomRole> {
-    requireTenantAdmin(cmd.is_tenant_admin, 'cloneRole', cmd.tenant_id);
+    enforceIAMAccess('create', 'cloneRole', {
+      ctx: cmd.ctx,
+      isTenantAdmin: cmd.is_tenant_admin,
+      tenantId: cmd.tenant_id,
+    });
+
     return iamService.cloneRole(cmd.source_role_id, cmd.tenant_id, cmd.new_name, cmd.created_by);
   },
 
   async deleteRole(cmd: DeleteRoleCommand): Promise<void> {
-    requireTenantAdmin(cmd.is_tenant_admin, 'deleteRole', cmd.tenant_id);
+    enforceIAMAccess('delete', 'deleteRole', {
+      ctx: cmd.ctx,
+      isTenantAdmin: cmd.is_tenant_admin,
+      tenantId: cmd.tenant_id,
+    });
 
-    // Fetch role to check is_system
     const roles = await iamService.listRoles(cmd.tenant_id || '');
     const target = roles.find(r => r.id === cmd.role_id);
     if (target?.is_system) {
@@ -267,7 +334,12 @@ export const identityGateway = {
   },
 
   async updateRolePermissions(cmd: UpdateRolePermissionsCommand): Promise<void> {
-    requireTenantAdmin(cmd.is_tenant_admin, 'updateRolePermissions', cmd.tenant_id);
+    enforceIAMAccess('update', 'updateRolePermissions', {
+      ctx: cmd.ctx,
+      isTenantAdmin: cmd.is_tenant_admin,
+      tenantId: cmd.tenant_id,
+    });
+
     await iamService.setRolePermissions(
       cmd.role_id,
       cmd.permission_ids,
@@ -284,7 +356,6 @@ export const identityGateway = {
       granted_by: cmd.granted_by,
     });
 
-    // Invalidate entire tenant — all users with this role need graph refresh
     if (cmd.tenant_id) {
       accessGraphService.invalidateTenant(cmd.tenant_id, 'ROLE_CHANGED' as any);
 
@@ -298,7 +369,7 @@ export const identityGateway = {
     }
   },
 
-  // ── Queries (unchanged — no side-effects) ──
+  // ── Queries (read-only — no side-effects) ──
 
   async getTenantUsers(query: GetTenantUsersQuery): Promise<TenantUser[]> {
     return iamService.listTenantMembers(query.tenant_id);

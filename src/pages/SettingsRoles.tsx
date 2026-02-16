@@ -15,7 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export default function SettingsRoles() {
   const { user } = useAuth();
   const { currentTenant } = useTenant();
-  const { isTenantAdmin } = useSecurityKernel();
+  const kernel = useSecurityKernel();
+  const { isTenantAdmin, securityContext } = kernel;
   const tenantId = currentTenant?.id;
 
   const { roles, permissions } = useRolePermissionsMatrixView();
@@ -49,8 +50,9 @@ export default function SettingsRoles() {
             permissions={permissions}
             tenantId={tenantId!}
             userId={user?.id}
-            isTenantAdmin={isTenantAdmin}
+            canEdit={isTenantAdmin}
             onInvalidate={invalidateAll}
+            securityContext={securityContext}
           />
         </TabsContent>
 
@@ -62,6 +64,7 @@ export default function SettingsRoles() {
             userId={user?.id}
             isTenantAdmin={isTenantAdmin}
             onInvalidate={invalidateAll}
+            securityContext={securityContext}
           />
         </TabsContent>
 

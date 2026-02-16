@@ -237,6 +237,35 @@ export const BUILTIN_RULES: PolicyRule[] = [
     description: 'Audit logs são imutáveis',
     priority: 0,
   },
+
+  // ── IAM-Specific Rules ──
+  {
+    id: 'iam_admin_manage_roles',
+    effect: 'allow',
+    roles: ['superadmin', 'owner', 'admin', 'tenant_admin'],
+    actions: ['create', 'update', 'delete'],
+    resources: ['user_roles'],
+    description: 'Apenas TenantAdmin pode gerenciar cargos e permissões (IAM)',
+    priority: 5,
+  },
+  {
+    id: 'iam_all_view_roles',
+    effect: 'allow',
+    roles: [],
+    actions: ['view'],
+    resources: ['user_roles'],
+    description: 'Todos os membros podem visualizar cargos e permissões',
+    priority: 10,
+  },
+  {
+    id: 'deny_non_admin_iam_mutation',
+    effect: 'deny',
+    roles: ['rh', 'gestor', 'manager', 'financeiro', 'viewer', 'group_admin', 'company_admin'],
+    actions: ['create', 'update', 'delete'],
+    resources: ['user_roles'],
+    description: 'Apenas TenantAdmin pode modificar IAM — roles não-admin são explicitamente negadas',
+    priority: 1,
+  },
 ];
 
 // ════════════════════════════════════════════════════════════
