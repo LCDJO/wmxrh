@@ -234,6 +234,56 @@ export function detectRisks(input: RiskDetectionInput): RiskDetectionOutput {
     }
   }
 
+  // ── 13. NR Compliance Risk — expired NR trainings ──
+  if (dataset.nr_trainings && dataset.nr_trainings.length > 0) {
+    const expired = dataset.nr_trainings.filter(t => t.status === 'expired');
+    if (expired.length > 0) {
+      const uniqueNrs = new Set(expired.map(t => t.nr_number));
+      const affectedEmpIds = [...new Set(expired.map(t => t.employee_id))];
+      push('nr_compliance', 'COMPLIANCE_WARNING', 'high',
+        'Treinamentos NR vencidos',
+        `${expired.length} treinamento(s) NR vencido(s) (NR-${[...uniqueNrs].join(', NR-')}), afetando ${affectedEmpIds.length} colaborador(es).`,
+        affectedEmpIds, affectedEmpIds.length * 5000,
+        'Reagendar treinamentos NR vencidos com urgência para manter conformidade.',
+        'NR-1 / CLT Art. 157',
+      );
+    }
+  }
+
+  // ── 14. Training Gap Detected — overdue NR trainings ──
+  if (dataset.nr_trainings && dataset.nr_trainings.length > 0) {
+    const overdue = dataset.nr_trainings.filter(t => t.status === 'overdue');
+    if (overdue.length > 0) {
+      const affectedEmpIds = [...new Set(overdue.map(t => t.employee_id))];
+      push('training_gap', 'LEGAL_RISK', 'critical',
+        'Lacunas de treinamento NR detectadas',
+        `${overdue.length} treinamento(s) NR em atraso para ${affectedEmpIds.length} colaborador(es). Colaboradores podem estar operando sem qualificação obrigatória.`,
+        affectedEmpIds, affectedEmpIds.length * 10000,
+        'Bloquear operações de risco e providenciar treinamentos imediatamente.',
+        'NR-1 Art. 1.7 / CLT Art. 157-158',
+      );
+    }
+  }
+
+  // ── 15. Operational Risk Detected — employees with hard/soft blocks ──
+  if (dataset.nr_trainings && dataset.nr_trainings.length > 0) {
+    const blocked = dataset.nr_trainings.filter(t =>
+      t.blocking_level === 'hard_block' || t.blocking_level === 'soft_block'
+    );
+    if (blocked.length > 0) {
+      const hardBlocked = blocked.filter(t => t.blocking_level === 'hard_block');
+      const affectedEmpIds = [...new Set(blocked.map(t => t.employee_id))];
+      const hardBlockedEmpIds = [...new Set(hardBlocked.map(t => t.employee_id))];
+      push('operational_risk', 'LEGAL_RISK', hardBlockedEmpIds.length > 0 ? 'critical' : 'high',
+        'Risco operacional — funcionários bloqueados',
+        `${affectedEmpIds.length} colaborador(es) com restrição operacional (${hardBlockedEmpIds.length} bloqueio total). Operação em atividades de risco sem treinamento válido configura responsabilidade civil e criminal.`,
+        affectedEmpIds, hardBlockedEmpIds.length * 50000 + (affectedEmpIds.length - hardBlockedEmpIds.length) * 15000,
+        'Afastar colaboradores bloqueados de atividades de risco até regularização dos treinamentos.',
+        'CLT Art. 157 / NR-1 / Código Penal Art. 132',
+      );
+    }
+  }
+
   // ── Score calculation ──
   const severityWeight = { critical: 25, high: 15, medium: 8, low: 3 };
   const rawScore = risks.reduce((s, r) => s + (severityWeight[r.severity] || 0), 0);

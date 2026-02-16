@@ -103,12 +103,13 @@ serve(async (req) => {
 // ── Inline lightweight dataset loader (edge function can't import from src/) ──
 
 async function loadDataset(supabase: any, tenantId: string) {
-  const [employeesRes, exposuresRes, examsRes, benefitsRes, violationsRes] = await Promise.all([
+  const [employeesRes, exposuresRes, examsRes, benefitsRes, violationsRes, nrTrainingsRes] = await Promise.all([
     supabase.from("employees").select("id, name, status, hire_date, current_salary, company_id, position_id").eq("tenant_id", tenantId).eq("status", "active").is("deleted_at", null),
     supabase.from("employee_risk_exposures").select("employee_id, is_active, generates_hazard_pay, hazard_pay_type, risk_level").eq("tenant_id", tenantId).eq("is_active", true).is("deleted_at", null),
     supabase.from("pcmso_exam_alerts").select("employee_id, alert_status, days_until_due").eq("tenant_id", tenantId),
     supabase.from("employee_benefits").select("employee_id, is_active").eq("tenant_id", tenantId).eq("is_active", true).is("deleted_at", null),
     supabase.from("compliance_violations").select("employee_id, severity, is_resolved").eq("tenant_id", tenantId).eq("is_resolved", false),
+    supabase.from("nr_training_assignments").select("employee_id, nr_number, training_name, status, data_validade, blocking_level, company_id").eq("tenant_id", tenantId),
   ]);
 
   const employees = (employeesRes.data ?? []).map((e: any) => ({
@@ -160,13 +161,24 @@ async function loadDataset(supabase: any, tenantId: string) {
     employee_id: b.employee_id, is_active: b.is_active,
   }));
 
+  const nr_trainings = (nrTrainingsRes.data ?? []).map((t: any) => ({
+    employee_id: t.employee_id,
+    nr_number: t.nr_number,
+    training_name: t.training_name ?? `NR-${t.nr_number}`,
+    status: t.status ?? 'assigned',
+    data_validade: t.data_validade,
+    blocking_level: t.blocking_level ?? 'none',
+    company_id: t.company_id,
+  }));
+
   return {
     tenant_id: tenantId,
     analysis_date: new Date().toISOString().slice(0, 10),
     employees,
-    simulations: [], // not needed for risk detection
+    simulations: [],
     compliance,
     benefits,
+    nr_trainings,
   };
 }
 
@@ -227,6 +239,51 @@ function detectRisks(dataset: any) {
       description: `${noBenefits.length} ativos sem benefícios.`,
       affected_count: noBenefits.length, financial_exposure: 0,
       recommended_action: "Incluir nos planos de benefícios.",
+    });
+  }
+
+  // NR Compliance Risk — expired trainings
+  const nrTrainings = dataset.nr_trainings ?? [];
+  const expiredTrainings = nrTrainings.filter((t: any) => t.status === "expired");
+  if (expiredTrainings.length > 0) {
+    const affectedCount = new Set(expiredTrainings.map((t: any) => t.employee_id)).size;
+    risks.push({
+      risk_id: rid(), category: "nr_compliance", insight_type: "COMPLIANCE_WARNING",
+      severity: "high", title: "Treinamentos NR vencidos",
+      description: `${expiredTrainings.length} treinamento(s) NR vencido(s), afetando ${affectedCount} colaborador(es).`,
+      affected_count: affectedCount, financial_exposure: affectedCount * 5000,
+      legal_basis: "NR-1 / CLT Art. 157",
+      recommended_action: "Reagendar treinamentos NR vencidos com urgência.",
+    });
+  }
+
+  // Training Gap Detected — overdue trainings
+  const overdueTrainings = nrTrainings.filter((t: any) => t.status === "overdue");
+  if (overdueTrainings.length > 0) {
+    const affectedCount = new Set(overdueTrainings.map((t: any) => t.employee_id)).size;
+    risks.push({
+      risk_id: rid(), category: "training_gap", insight_type: "LEGAL_RISK",
+      severity: "critical", title: "Lacunas de treinamento NR detectadas",
+      description: `${overdueTrainings.length} treinamento(s) NR em atraso para ${affectedCount} colaborador(es).`,
+      affected_count: affectedCount, financial_exposure: affectedCount * 10000,
+      legal_basis: "NR-1 Art. 1.7 / CLT Art. 157-158",
+      recommended_action: "Bloquear operações de risco e providenciar treinamentos.",
+    });
+  }
+
+  // Operational Risk Detected — blocked employees
+  const blockedTrainings = nrTrainings.filter((t: any) => t.blocking_level === "hard_block" || t.blocking_level === "soft_block");
+  if (blockedTrainings.length > 0) {
+    const hardBlocked = new Set(blockedTrainings.filter((t: any) => t.blocking_level === "hard_block").map((t: any) => t.employee_id));
+    const allBlocked = new Set(blockedTrainings.map((t: any) => t.employee_id));
+    risks.push({
+      risk_id: rid(), category: "operational_risk", insight_type: "LEGAL_RISK",
+      severity: hardBlocked.size > 0 ? "critical" : "high",
+      title: "Risco operacional — funcionários bloqueados",
+      description: `${allBlocked.size} colaborador(es) com restrição operacional (${hardBlocked.size} bloqueio total).`,
+      affected_count: allBlocked.size, financial_exposure: hardBlocked.size * 50000 + (allBlocked.size - hardBlocked.size) * 15000,
+      legal_basis: "CLT Art. 157 / NR-1 / Código Penal Art. 132",
+      recommended_action: "Afastar colaboradores bloqueados de atividades de risco.",
     });
   }
 

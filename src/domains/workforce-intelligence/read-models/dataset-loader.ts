@@ -15,6 +15,7 @@ import type {
   SimulationSnapshot,
   ComplianceSnapshot,
   BenefitSnapshot,
+  NrTrainingSnapshot,
 } from '../types';
 import { toRiskExposureView } from './risk-exposure.view';
 import { toMedicalExamStatusView } from './medical-exam-status.view';
@@ -27,12 +28,13 @@ export async function loadWorkforceDataset(scope: QueryScope): Promise<Workforce
   const tenantId = scope.tenantId;
 
   // Parallel data fetching
-  const [employeesRes, simulationsRes, examsRes, exposuresRes, benefitsRes] = await Promise.all([
+  const [employeesRes, simulationsRes, examsRes, exposuresRes, benefitsRes, nrTrainingsRes] = await Promise.all([
     fetchEmployees(scope),
     fetchSimulations(scope),
     fetchExamAlerts(tenantId),
     fetchRiskExposures(scope),
     fetchBenefits(scope),
+    fetchNrTrainings(tenantId, scope),
   ]);
 
   // Build compliance snapshot by merging exams + exposures
@@ -71,6 +73,7 @@ export async function loadWorkforceDataset(scope: QueryScope): Promise<Workforce
     simulations: simulationsRes,
     compliance,
     benefits: benefitsRes,
+    nr_trainings: nrTrainingsRes,
   };
 }
 
@@ -178,5 +181,24 @@ async function fetchBenefits(scope: QueryScope): Promise<BenefitSnapshot[]> {
     monthly_value: r.monthly_value ?? r.benefit_plans?.base_value ?? 0,
     employer_cost: (r.monthly_value ?? 0) * ((r.employer_pays_pct ?? 100) / 100),
     is_active: r.is_active,
+  }));
+}
+
+async function fetchNrTrainings(tenantId: string, scope: QueryScope): Promise<NrTrainingSnapshot[]> {
+  let q = supabase
+    .from('nr_training_assignments')
+    .select('employee_id, nr_number, training_name, status, data_validade, blocking_level, company_id')
+    .eq('tenant_id', tenantId);
+  if (scope.companyId) q = q.eq('company_id', scope.companyId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    employee_id: r.employee_id,
+    nr_number: r.nr_number,
+    training_name: r.training_name ?? `NR-${r.nr_number}`,
+    status: r.status ?? 'assigned',
+    data_validade: r.data_validade,
+    blocking_level: r.blocking_level ?? 'none',
+    company_id: r.company_id,
   }));
 }
