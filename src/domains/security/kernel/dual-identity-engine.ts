@@ -90,6 +90,12 @@ export class DualIdentityEngine {
    * Called once on login/session restore.
    */
   setRealIdentity(identity: RealIdentity): void {
+    // INVARIANT: RealIdentity is NEVER mutated during an active impersonation.
+    // It can only be set when no session is active (login/restore) or cleared on logout.
+    if (this._activeSession) {
+      console.error('[DualIdentity] SECURITY: Cannot mutate RealIdentity during active impersonation.');
+      return;
+    }
     this._realIdentity = Object.freeze({ ...identity });
   }
 
@@ -156,8 +162,18 @@ export class DualIdentityEngine {
       return this._deny('NOT_PLATFORM_USER', 'Nenhuma identidade real estabelecida.');
     }
 
+    // RULE: TenantUsers can NEVER impersonate another tenant
     if (this._realIdentity.userType !== 'platform') {
-      return this._deny('NOT_PLATFORM_USER', 'Apenas usuários da plataforma podem impersonar.', request.targetTenantId);
+      return this._deny('NOT_PLATFORM_USER', 'Apenas usuários da plataforma podem impersonar. TenantUsers não possuem esse privilégio.', request.targetTenantId);
+    }
+
+    // RULE: platform_finance is explicitly denied impersonation
+    if (this._realIdentity.platformRole === 'platform_finance') {
+      return this._deny(
+        'INSUFFICIENT_ROLE',
+        'platform_finance não possui permissão de impersonação por política de segurança.',
+        request.targetTenantId,
+      );
     }
 
     if (!this._realIdentity.platformRole || !IMPERSONATION_ALLOWED_ROLES.includes(this._realIdentity.platformRole)) {
