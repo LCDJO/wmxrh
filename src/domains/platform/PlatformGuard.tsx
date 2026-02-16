@@ -75,6 +75,7 @@ export function PlatformGuard({ children, allowedRoles }: PlatformGuardProps) {
     );
   }
 
+  // SECURITY: Tenant users can NEVER access platform routes
   if (!identity) {
     return <Navigate to="/" replace />;
   }

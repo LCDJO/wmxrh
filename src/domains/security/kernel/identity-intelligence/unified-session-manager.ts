@@ -174,17 +174,44 @@ export class UnifiedSessionManager {
       operation_count: impersonation.operationCount,
     } : null;
 
+    const realIdentityObj = {
+      user_id: realUserId,
+      email: realEmail,
+      user_type: input.userTypeDetection?.detectedType ?? 'unknown' as const,
+      platform_role: input.userTypeDetection?.platformRole ?? dual.realIdentity?.platformRole ?? null,
+      detection: input.userTypeDetection,
+      authenticated_at: iblSession?.authenticatedAt ?? dual.realIdentity?.authenticatedAt ?? 0,
+    };
+
+    // ── Build active_identity ──
+    // During impersonation: active_identity is the simulated tenant persona
+    // Normal mode: active_identity mirrors real_identity
+    const isImpersonating = dual.isImpersonating;
+    const activeIdentityObj = isImpersonating && impersonation
+      ? {
+          user_id: realUserId, // still the same physical user
+          email: realEmail,
+          user_type: 'tenant' as const, // SECURITY: impersonation = tenant view
+          platform_role: null, // stripped during impersonation
+          is_impersonated: true,
+          tenant_id: impersonation.targetTenantId,
+          tenant_role: impersonation.simulatedRole,
+        }
+      : {
+          user_id: realIdentityObj.user_id,
+          email: realIdentityObj.email,
+          user_type: realIdentityObj.user_type,
+          platform_role: realIdentityObj.platform_role,
+          is_impersonated: false,
+          tenant_id: activeContext?.tenant_id ?? null,
+          tenant_role: activeContext?.membership_role ?? null,
+        };
+
     return {
       session_id: iblSession?.sessionFingerprint ?? `anon_${now}`,
       phase: input.phase,
-      real_identity: {
-        user_id: realUserId,
-        email: realEmail,
-        user_type: input.userTypeDetection?.detectedType ?? 'unknown',
-        platform_role: input.userTypeDetection?.platformRole ?? dual.realIdentity?.platformRole ?? null,
-        detection: input.userTypeDetection,
-        authenticated_at: iblSession?.authenticatedAt ?? dual.realIdentity?.authenticatedAt ?? 0,
-      },
+      real_identity: realIdentityObj,
+      active_identity: activeIdentityObj,
       available_tenants: availableTenants,
       available_groups: availableGroups,
       recent_contexts: input.recentContexts,
