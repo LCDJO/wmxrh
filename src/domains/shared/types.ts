@@ -16,9 +16,14 @@ export type TenantRole = 'owner' | 'admin' | 'manager' | 'viewer';
 // ENTITIES
 // ========================
 
+export type TenantStatus = 'active' | 'inactive' | 'suspended';
+export type CompanyStatus = 'active' | 'inactive';
+export type ScopeType = 'tenant' | 'company_group' | 'company';
+
 export interface Tenant {
   id: string;
   name: string;
+  status: TenantStatus;
   document: string | null;
   email: string | null;
   phone: string | null;
@@ -32,6 +37,16 @@ export interface TenantMembership {
   tenant_id: string;
   user_id: string;
   role: TenantRole;
+  created_at: string;
+}
+
+export interface UserRole {
+  id: string;
+  user_id: string;
+  tenant_id: string;
+  role: TenantRole;
+  scope_type: ScopeType;
+  scope_id: string | null;
   created_at: string;
 }
 
@@ -49,6 +64,7 @@ export interface Company {
   tenant_id: string;
   company_group_id: string | null;
   name: string;
+  status: CompanyStatus;
   document: string | null;
   email: string | null;
   phone: string | null;
