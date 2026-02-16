@@ -4,8 +4,10 @@ import { AppBreadcrumbs } from './AppBreadcrumbs';
 import { Bell, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useSecurityMonitor } from '@/domains/security/useSecurityMonitor';
 
 export function AppLayout() {
+  useSecurityMonitor();
   return (
     <div className="flex min-h-screen">
       <AppSidebar />

@@ -15,3 +15,14 @@ export { ProtectedRoute } from './ProtectedRoute';
 export { validateMutation, secureMutation, SecurityError } from './secure-mutation';
 
 export { checkRateLimit, resetRateLimit, RATE_LIMITS } from './rate-limiter';
+
+export {
+  emitSecurityEvent,
+  emitUnauthorizedAccess,
+  emitScopeViolation,
+  emitRateLimitTriggered,
+  onSecurityEvent,
+} from './security-events';
+export type { SecurityEventType, SecurityEventPayload } from './security-events';
+
+export { useSecurityMonitor } from './useSecurityMonitor';
