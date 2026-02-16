@@ -22,10 +22,16 @@ import { useNavigate } from 'react-router-dom';
 
 type LoginIntent = 'platform' | 'tenant' | 'both';
 
+interface TenantEntry {
+  id: string;
+  name: string;
+  role: string;
+}
+
 interface DetectedIntent {
   intent: LoginIntent;
   platformRole?: string | null;
-  tenantCount: number;
+  tenants: TenantEntry[];
 }
 
 export default function Auth() {
@@ -44,7 +50,6 @@ export default function Auth() {
    * Detect login intent: PlatformUser, TenantUser, or Both.
    */
   const detectLoginIntent = async (userId: string, userEmail?: string | null): Promise<DetectedIntent> => {
-    // Parallel lookups: platform_users + tenant_memberships
     const [platformRes, tenantRes] = await Promise.all([
       supabase
         .from('platform_users')
@@ -54,33 +59,38 @@ export default function Auth() {
         .maybeSingle(),
       supabase
         .from('tenant_memberships')
-        .select('id')
+        .select('id, role, tenant_id, tenants(id, name)')
         .eq('user_id', userId)
-        .limit(5),
+        .limit(20),
     ]);
 
     const isPlatform = !!platformRes.data;
-    const tenantCount = tenantRes.data?.length ?? 0;
-    const isTenant = tenantCount > 0;
+    const tenants: TenantEntry[] = (tenantRes.data ?? [])
+      .filter((m: any) => m.tenants)
+      .map((m: any) => ({
+        id: m.tenants.id,
+        name: m.tenants.name,
+        role: m.role ?? 'member',
+      }));
+    const isTenant = tenants.length > 0;
 
-    // Feed the LoginIntentDetector
     if (isPlatform) {
-      identityIntelligence.setDetectedUserType(
-        isTenant ? 'platform' : 'platform',
-        'db_lookup',
-        platformRes.data?.role ?? null,
-      );
+      identityIntelligence.setDetectedUserType('platform', 'db_lookup', platformRes.data?.role ?? null);
     } else if (isTenant) {
       identityIntelligence.setDetectedUserType('tenant', 'db_lookup');
     }
 
     if (isPlatform && isTenant) {
-      return { intent: 'both', platformRole: platformRes.data?.role, tenantCount };
+      return { intent: 'both', platformRole: platformRes.data?.role, tenants };
     }
     if (isPlatform) {
-      return { intent: 'platform', platformRole: platformRes.data?.role, tenantCount: 0 };
+      return { intent: 'platform', platformRole: platformRes.data?.role, tenants: [] };
     }
-    return { intent: 'tenant', tenantCount };
+    // Multiple tenants without platform → also show selector
+    if (tenants.length > 1) {
+      return { intent: 'both', tenants };
+    }
+    return { intent: 'tenant', tenants };
   };
 
   /**
@@ -103,12 +113,16 @@ export default function Auth() {
     }
   };
 
-  const handleSelectWorkspace = (choice: 'platform' | 'tenant') => {
+  const handleSelectWorkspace = (choice: 'platform' | 'tenant', tenantId?: string) => {
     setSelectorOpen(false);
     if (choice === 'platform') {
       platformEvents.userLoggedIn('', email);
       navigate('/platform/dashboard', { replace: true });
     } else {
+      // If a specific tenant was chosen, store it for TenantContext to pick up
+      if (tenantId) {
+        localStorage.setItem('currentTenantId', tenantId);
+      }
       navigate('/', { replace: true });
     }
   };
@@ -454,60 +468,65 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* ═══ Workspace Selector Dialog (dual-identity users) ═══ */}
+      {/* ═══ Workspace Selector Dialog ═══ */}
       <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
-        <DialogContent className="sm:max-w-[420px]">
+        <DialogContent className="sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-display">Selecionar Workspace</DialogTitle>
+            <DialogTitle className="text-xl font-display">Escolha onde deseja entrar</DialogTitle>
             <DialogDescription>
-              Sua conta possui acesso a múltiplos ambientes. Escolha onde deseja entrar.
+              Sua conta possui acesso a múltiplos ambientes.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-3 pt-2">
-            {/* Platform option */}
-            <button
-              onClick={() => handleSelectWorkspace('platform')}
-              className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-accent/50 hover:border-primary/30 transition-all text-left group"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500 group-hover:bg-purple-500/15 transition-colors">
-                <Crown className="h-6 w-6" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-foreground">Modo Plataforma</p>
-                <p className="text-sm text-muted-foreground truncate">
-                  Painel administrativo SaaS
-                  {detectedIntent?.platformRole && (
-                    <span className="ml-1 text-xs text-purple-500">
-                      · {detectedIntent.platformRole.replace('platform_', '').replace('_', ' ')}
+          <div className="grid gap-2.5 pt-2 max-h-[400px] overflow-y-auto">
+            {/* Platform option (only if user is platform) */}
+            {detectedIntent?.platformRole && (
+              <button
+                onClick={() => handleSelectWorkspace('platform')}
+                className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-accent/50 hover:border-purple-500/30 transition-all text-left group"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500 group-hover:bg-purple-500/15 transition-colors">
+                  <Crown className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground text-sm">Plataforma SaaS</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Painel administrativo
+                    <span className="ml-1 text-purple-500">
+                      · {detectedIntent.platformRole.replace('platform_', '').replace(/_/g, ' ')}
                     </span>
-                  )}
-                </p>
-              </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-            </button>
+                  </p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+              </button>
+            )}
 
-            {/* Tenant option */}
-            <button
-              onClick={() => handleSelectWorkspace('tenant')}
-              className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-accent/50 hover:border-primary/30 transition-all text-left group"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
-                <Building2 className="h-6 w-6" />
+            {/* Separator if both platform + tenants */}
+            {detectedIntent?.platformRole && detectedIntent.tenants.length > 0 && (
+              <div className="flex items-center gap-3 py-1">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Tenants</span>
+                <div className="flex-1 h-px bg-border" />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-foreground">Workspace Tenant</p>
-                <p className="text-sm text-muted-foreground">
-                  Área operacional
-                  {detectedIntent?.tenantCount && detectedIntent.tenantCount > 0 && (
-                    <span className="ml-1 text-xs text-primary">
-                      · {detectedIntent.tenantCount} {detectedIntent.tenantCount === 1 ? 'tenant' : 'tenants'}
-                    </span>
-                  )}
-                </p>
-              </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-            </button>
+            )}
+
+            {/* Individual tenant entries */}
+            {detectedIntent?.tenants.map((tenant) => (
+              <button
+                key={tenant.id}
+                onClick={() => handleSelectWorkspace('tenant', tenant.id)}
+                className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-accent/50 hover:border-primary/30 transition-all text-left group"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground text-sm truncate">{tenant.name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{tenant.role}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+              </button>
+            ))}
           </div>
         </DialogContent>
       </Dialog>
