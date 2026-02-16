@@ -20,12 +20,16 @@ import type { SecurityFeatureKey, FeatureKey } from '../feature-flags';
 // SECURITY CONTEXT — the universal auth envelope
 // ════════════════════════════════════
 
+export type UserType = 'platform' | 'tenant';
+
 export interface SecurityContext {
   /** Unique request/operation identifier */
   request_id: string;
+  /** Whether this is a platform admin or a tenant user */
+  user_type: UserType;
   /** Authenticated user ID (from JWT sub) */
   user_id: string;
-  /** Current tenant ID */
+  /** Current tenant ID (null for platform users without tenant context) */
   tenant_id: string;
   /** User's hierarchical scopes */
   scopes: SecurityScope[];
@@ -98,6 +102,7 @@ function generateRequestId(): string {
 export interface BuildSecurityContextInput {
   user: User;
   session: Session;
+  userType?: UserType;
   tenantId: string;
   effectiveRoles: TenantRole[];
   userRoles: UserRole[];
@@ -155,6 +160,7 @@ export function buildSecurityContext(input: BuildSecurityContextInput): Security
 
   return {
     request_id: generateRequestId(),
+    user_type: input.userType ?? 'tenant',
     user_id: input.user.id,
     tenant_id: input.tenantId,
     scopes,
