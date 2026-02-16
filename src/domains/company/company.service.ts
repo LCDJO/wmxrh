@@ -1,22 +1,26 @@
+import type { QueryScope } from '@/domains/shared/scoped-query';
+import { applyScope, scopedInsert } from '@/domains/shared/scoped-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { ICompanyService } from '@/domains/shared';
 import type { Company, CompanyWithRelations, CreateCompanyDTO } from '@/domains/shared';
 
-export const companyService: ICompanyService = {
-  async list(tenantId: string) {
-    const { data, error } = await supabase.from('companies').select('*, company_groups(name)').eq('tenant_id', tenantId).is('deleted_at', null);
+export const companyService = {
+  async list(scope: QueryScope) {
+    const q = applyScope(supabase.from('companies').select('*, company_groups(name)'), scope, { skipScopeFilter: true });
+    const { data, error } = await q;
     if (error) throw error;
     return (data || []) as CompanyWithRelations[];
   },
 
-  async listSimple(tenantId: string) {
-    const { data, error } = await supabase.from('companies').select('id, name').eq('tenant_id', tenantId).is('deleted_at', null);
+  async listSimple(scope: QueryScope) {
+    const q = applyScope(supabase.from('companies').select('id, name'), scope, { skipScopeFilter: true });
+    const { data, error } = await q;
     if (error) throw error;
     return data || [];
   },
 
-  async create(dto: CreateCompanyDTO) {
-    const { data, error } = await supabase.from('companies').insert(dto).select().single();
+  async create(dto: CreateCompanyDTO, scope: QueryScope) {
+    const secured = scopedInsert(dto, scope);
+    const { data, error } = await supabase.from('companies').insert(secured).select().single();
     if (error) throw error;
     return data as Company;
   },

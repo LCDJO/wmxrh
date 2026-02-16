@@ -1,13 +1,15 @@
 /**
  * Domain Hooks - React Query hooks per bounded context
  * 
- * These hooks encapsulate all data fetching and mutations.
- * Pages only import hooks — never services directly.
- * When migrating to microservices, only the service implementations change.
+ * All hooks use QueryScope for automatic data isolation:
+ *   - tenant_id always from context (never from params)
+ *   - scope filters (group/company) applied automatically
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTenant } from '@/contexts/TenantContext';
+import { useScope } from '@/contexts/ScopeContext';
+import type { QueryScope } from '@/domains/shared/scoped-query';
 
 // Services
 import { tenantService } from '@/domains/tenant/tenant.service';
@@ -32,13 +34,30 @@ import type {
 } from '@/domains/shared';
 
 // ========================
+// SCOPE HELPER — builds QueryScope from contexts
+// ========================
+
+export function useQueryScope(): QueryScope | null {
+  const { currentTenant } = useTenant();
+  const { scope, userRoles } = useScope();
+  
+  if (!currentTenant) return null;
+
+  return {
+    tenantId: currentTenant.id,
+    userRoles,
+    scopeLevel: scope.level === 'tenant' ? 'tenant' : scope.level === 'group' ? 'company_group' : 'company',
+    groupId: scope.groupId,
+    companyId: scope.companyId,
+  };
+}
+
+// ========================
 // QUERY KEYS (centralized for cache management)
 // ========================
 
 export const queryKeys = {
   employees: (tenantId?: string) => ['employees', tenantId] as const,
-  employeesByGroup: (tenantId?: string, groupId?: string) => ['employees_group', tenantId, groupId] as const,
-  employeesByCompany: (tenantId?: string, companyId?: string) => ['employees_company', tenantId, companyId] as const,
   employeesSimple: (tenantId?: string) => ['employees-simple', tenantId] as const,
   employee: (id: string) => ['employee', id] as const,
   companies: (tenantId?: string) => ['companies', tenantId] as const,
@@ -77,21 +96,20 @@ export function useCreateTenant() {
 // ========================
 
 export function useCompanyGroups() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const qs = useQueryScope();
   return useQuery({
-    queryKey: queryKeys.companyGroups(tenantId),
-    queryFn: () => companyGroupService.list(tenantId!),
-    enabled: !!tenantId,
+    queryKey: queryKeys.companyGroups(qs?.tenantId),
+    queryFn: () => companyGroupService.list(qs!),
+    enabled: !!qs,
   });
 }
 
 export function useCreateCompanyGroup() {
-  const { currentTenant } = useTenant();
+  const qs = useQueryScope();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateCompanyGroupDTO) => companyGroupService.create(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.companyGroups(currentTenant?.id) }),
+    mutationFn: (dto: CreateCompanyGroupDTO) => companyGroupService.create(dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.companyGroups(qs?.tenantId) }),
   });
 }
 
@@ -100,31 +118,29 @@ export function useCreateCompanyGroup() {
 // ========================
 
 export function useCompanies() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const qs = useQueryScope();
   return useQuery({
-    queryKey: queryKeys.companies(tenantId),
-    queryFn: () => companyService.list(tenantId!),
-    enabled: !!tenantId,
+    queryKey: queryKeys.companies(qs?.tenantId),
+    queryFn: () => companyService.list(qs!),
+    enabled: !!qs,
   });
 }
 
 export function useCompaniesSimple() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const qs = useQueryScope();
   return useQuery({
-    queryKey: queryKeys.companiesSimple(tenantId),
-    queryFn: () => companyService.listSimple(tenantId!),
-    enabled: !!tenantId,
+    queryKey: queryKeys.companiesSimple(qs?.tenantId),
+    queryFn: () => companyService.listSimple(qs!),
+    enabled: !!qs,
   });
 }
 
 export function useCreateCompany() {
-  const { currentTenant } = useTenant();
+  const qs = useQueryScope();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateCompanyDTO) => companyService.create(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.companies(currentTenant?.id) }),
+    mutationFn: (dto: CreateCompanyDTO) => companyService.create(dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.companies(qs?.tenantId) }),
   });
 }
 
@@ -133,21 +149,20 @@ export function useCreateCompany() {
 // ========================
 
 export function useDepartments() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const qs = useQueryScope();
   return useQuery({
-    queryKey: queryKeys.departments(tenantId),
-    queryFn: () => departmentService.list(tenantId!),
-    enabled: !!tenantId,
+    queryKey: queryKeys.departments(qs?.tenantId),
+    queryFn: () => departmentService.list(qs!),
+    enabled: !!qs,
   });
 }
 
 export function useCreateDepartment() {
-  const { currentTenant } = useTenant();
+  const qs = useQueryScope();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateDepartmentDTO) => departmentService.create(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.departments(currentTenant?.id) }),
+    mutationFn: (dto: CreateDepartmentDTO) => departmentService.create(dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.departments(qs?.tenantId) }),
   });
 }
 
@@ -156,21 +171,20 @@ export function useCreateDepartment() {
 // ========================
 
 export function usePositions() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const qs = useQueryScope();
   return useQuery({
-    queryKey: queryKeys.positions(tenantId),
-    queryFn: () => positionService.list(tenantId!),
-    enabled: !!tenantId,
+    queryKey: queryKeys.positions(qs?.tenantId),
+    queryFn: () => positionService.list(qs!),
+    enabled: !!qs,
   });
 }
 
 export function useCreatePosition() {
-  const { currentTenant } = useTenant();
+  const qs = useQueryScope();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreatePositionDTO) => positionService.create(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.positions(currentTenant?.id) }),
+    mutationFn: (dto: CreatePositionDTO) => positionService.create(dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.positions(qs?.tenantId) }),
   });
 }
 
@@ -179,59 +193,38 @@ export function useCreatePosition() {
 // ========================
 
 export function useEmployees() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const qs = useQueryScope();
   return useQuery({
-    queryKey: queryKeys.employees(tenantId),
-    queryFn: () => employeeService.list(tenantId!),
-    enabled: !!tenantId,
+    queryKey: queryKeys.employees(qs?.tenantId),
+    queryFn: () => employeeService.list(qs!),
+    enabled: !!qs,
   });
 }
 
 export function useEmployeesSimple() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const qs = useQueryScope();
   return useQuery({
-    queryKey: queryKeys.employeesSimple(tenantId),
-    queryFn: () => employeeService.listSimple(tenantId!),
-    enabled: !!tenantId,
+    queryKey: queryKeys.employeesSimple(qs?.tenantId),
+    queryFn: () => employeeService.listSimple(qs!),
+    enabled: !!qs,
   });
 }
 
 export function useEmployee(id: string) {
+  const qs = useQueryScope();
   return useQuery({
     queryKey: queryKeys.employee(id),
-    queryFn: () => employeeService.getById(id),
-    enabled: !!id,
-  });
-}
-
-export function useEmployeesByGroup(groupId?: string) {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
-  return useQuery({
-    queryKey: queryKeys.employeesByGroup(tenantId, groupId),
-    queryFn: () => employeeService.listByGroup(tenantId!, groupId!),
-    enabled: !!tenantId && !!groupId,
-  });
-}
-
-export function useEmployeesByCompany(companyId?: string) {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
-  return useQuery({
-    queryKey: queryKeys.employeesByCompany(tenantId, companyId),
-    queryFn: () => employeeService.listByCompany(tenantId!, companyId!),
-    enabled: !!tenantId && !!companyId,
+    queryFn: () => employeeService.getById(id, qs!),
+    enabled: !!id && !!qs,
   });
 }
 
 export function useCreateEmployee() {
-  const { currentTenant } = useTenant();
+  const qs = useQueryScope();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateEmployeeDTO) => employeeService.create(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.employees(currentTenant?.id) }),
+    mutationFn: (dto: CreateEmployeeDTO) => employeeService.create(dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.employees(qs?.tenantId) }),
   });
 }
 
@@ -240,20 +233,20 @@ export function useCreateEmployee() {
 // ========================
 
 export function useSalaryHistoryByTenant() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const qs = useQueryScope();
   return useQuery({
-    queryKey: queryKeys.salaryHistoryTenant(tenantId),
-    queryFn: () => salaryHistoryService.listByTenant(tenantId!),
-    enabled: !!tenantId,
+    queryKey: queryKeys.salaryHistoryTenant(qs?.tenantId),
+    queryFn: () => salaryHistoryService.listByTenant(qs!),
+    enabled: !!qs,
   });
 }
 
 export function useSalaryHistoryByEmployee(employeeId: string) {
+  const qs = useQueryScope();
   return useQuery({
     queryKey: queryKeys.salaryHistoryEmployee(employeeId),
-    queryFn: () => salaryHistoryService.listByEmployee(employeeId),
-    enabled: !!employeeId,
+    queryFn: () => salaryHistoryService.listByEmployee(employeeId, qs!),
+    enabled: !!employeeId && !!qs,
   });
 }
 
@@ -262,20 +255,20 @@ export function useSalaryHistoryByEmployee(employeeId: string) {
 // ========================
 
 export function useEmployeeEvents(employeeId: string) {
+  const qs = useQueryScope();
   return useQuery({
     queryKey: queryKeys.employeeEvents(employeeId),
-    queryFn: () => employeeEventService.listByEmployee(employeeId),
-    enabled: !!employeeId,
+    queryFn: () => employeeEventService.listByEmployee(employeeId, qs!),
+    enabled: !!employeeId && !!qs,
   });
 }
 
 export function useEmployeeEventsByTenant() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const qs = useQueryScope();
   return useQuery({
-    queryKey: queryKeys.employeeEventsTenant(tenantId),
-    queryFn: () => employeeEventService.listByTenant(tenantId!),
-    enabled: !!tenantId,
+    queryKey: queryKeys.employeeEventsTenant(qs?.tenantId),
+    queryFn: () => employeeEventService.listByTenant(qs!),
+    enabled: !!qs,
   });
 }
 
@@ -284,30 +277,32 @@ export function useEmployeeEventsByTenant() {
 // ========================
 
 export function useSalaryContracts(employeeId: string) {
+  const qs = useQueryScope();
   return useQuery({
     queryKey: queryKeys.salaryContracts(employeeId),
-    queryFn: () => salaryContractService.listByEmployee(employeeId),
-    enabled: !!employeeId,
+    queryFn: () => salaryContractService.listByEmployee(employeeId, qs!),
+    enabled: !!employeeId && !!qs,
   });
 }
 
 export function useActiveSalaryContract(employeeId: string) {
+  const qs = useQueryScope();
   return useQuery({
     queryKey: queryKeys.salaryContractActive(employeeId),
-    queryFn: () => salaryContractService.getActive(employeeId),
-    enabled: !!employeeId,
+    queryFn: () => salaryContractService.getActive(employeeId, qs!),
+    enabled: !!employeeId && !!qs,
   });
 }
 
 export function useCreateSalaryContract() {
-  const { currentTenant } = useTenant();
+  const qs = useQueryScope();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateSalaryContractDTO) => salaryContractService.create(dto),
+    mutationFn: (dto: CreateSalaryContractDTO) => salaryContractService.create(dto, qs!),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.salaryContracts(vars.employee_id) });
       qc.invalidateQueries({ queryKey: queryKeys.salaryContractActive(vars.employee_id) });
-      qc.invalidateQueries({ queryKey: queryKeys.employees(currentTenant?.id) });
+      qc.invalidateQueries({ queryKey: queryKeys.employees(qs?.tenantId) });
       qc.invalidateQueries({ queryKey: queryKeys.employeeEvents(vars.employee_id) });
     },
   });
@@ -318,31 +313,31 @@ export function useCreateSalaryContract() {
 // ========================
 
 export function useSalaryAdjustments(employeeId: string) {
+  const qs = useQueryScope();
   return useQuery({
     queryKey: queryKeys.salaryAdjustments(employeeId),
-    queryFn: () => salaryAdjustmentService.listByEmployee(employeeId),
-    enabled: !!employeeId,
+    queryFn: () => salaryAdjustmentService.listByEmployee(employeeId, qs!),
+    enabled: !!employeeId && !!qs,
   });
 }
 
 export function useSalaryAdjustmentsByTenant() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const qs = useQueryScope();
   return useQuery({
-    queryKey: queryKeys.salaryAdjustmentsTenant(tenantId),
-    queryFn: () => salaryAdjustmentService.listByTenant(tenantId!),
-    enabled: !!tenantId,
+    queryKey: queryKeys.salaryAdjustmentsTenant(qs?.tenantId),
+    queryFn: () => salaryAdjustmentService.listByTenant(qs!),
+    enabled: !!qs,
   });
 }
 
 export function useCreateSalaryAdjustment() {
-  const { currentTenant } = useTenant();
+  const qs = useQueryScope();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateSalaryAdjustmentDTO) => salaryAdjustmentService.create(dto),
+    mutationFn: (dto: CreateSalaryAdjustmentDTO) => salaryAdjustmentService.create(dto, qs!),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.salaryAdjustments(vars.employee_id) });
-      qc.invalidateQueries({ queryKey: queryKeys.employees(currentTenant?.id) });
+      qc.invalidateQueries({ queryKey: queryKeys.employees(qs?.tenantId) });
       qc.invalidateQueries({ queryKey: queryKeys.employeeEvents(vars.employee_id) });
     },
   });
@@ -353,18 +348,19 @@ export function useCreateSalaryAdjustment() {
 // ========================
 
 export function useSalaryAdditionals(employeeId: string) {
+  const qs = useQueryScope();
   return useQuery({
     queryKey: queryKeys.salaryAdditionals(employeeId),
-    queryFn: () => salaryAdditionalService.listByEmployee(employeeId),
-    enabled: !!employeeId,
+    queryFn: () => salaryAdditionalService.listByEmployee(employeeId, qs!),
+    enabled: !!employeeId && !!qs,
   });
 }
 
 export function useCreateSalaryAdditional() {
-  const { currentTenant } = useTenant();
+  const qs = useQueryScope();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateSalaryAdditionalDTO) => salaryAdditionalService.create(dto),
+    mutationFn: (dto: CreateSalaryAdditionalDTO) => salaryAdditionalService.create(dto, qs!),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.salaryAdditionals(vars.employee_id) });
       qc.invalidateQueries({ queryKey: queryKeys.employeeEvents(vars.employee_id) });
@@ -377,10 +373,11 @@ export function useCreateSalaryAdditional() {
 // ========================
 
 export function useCompensationTimeline(employeeId: string) {
+  const qs = useQueryScope();
   return useQuery({
     queryKey: queryKeys.compensationTimeline(employeeId),
-    queryFn: () => compensationTimelineService.getByEmployee(employeeId),
-    enabled: !!employeeId,
+    queryFn: () => compensationTimelineService.getByEmployee(employeeId, qs!),
+    enabled: !!employeeId && !!qs,
   });
 }
 
@@ -389,20 +386,20 @@ export function useCompensationTimeline(employeeId: string) {
 // ========================
 
 export function useAuditLogs(opts?: { limit?: number; entity_type?: string; action?: string }) {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const qs = useQueryScope();
   const filterKey = JSON.stringify(opts || {});
   return useQuery({
-    queryKey: queryKeys.auditLogs(tenantId, filterKey),
-    queryFn: () => auditLogService.listByTenant(tenantId!, opts),
-    enabled: !!tenantId,
+    queryKey: queryKeys.auditLogs(qs?.tenantId, filterKey),
+    queryFn: () => auditLogService.listByTenant(qs!, opts),
+    enabled: !!qs,
   });
 }
 
 export function useAuditLogsByEntity(entityType: string, entityId: string) {
+  const qs = useQueryScope();
   return useQuery({
     queryKey: queryKeys.auditLogsByEntity(entityType, entityId),
-    queryFn: () => auditLogService.listByEntity(entityType, entityId),
-    enabled: !!entityType && !!entityId,
+    queryFn: () => auditLogService.listByEntity(entityType, entityId, qs!),
+    enabled: !!entityType && !!entityId && !!qs,
   });
 }

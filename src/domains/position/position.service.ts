@@ -1,16 +1,19 @@
+import type { QueryScope } from '@/domains/shared/scoped-query';
+import { applyScope, scopedInsert } from '@/domains/shared/scoped-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { IPositionService } from '@/domains/shared';
 import type { Position, PositionWithRelations, CreatePositionDTO } from '@/domains/shared';
 
-export const positionService: IPositionService = {
-  async list(tenantId: string) {
-    const { data, error } = await supabase.from('positions').select('*, companies(name)').eq('tenant_id', tenantId).is('deleted_at', null);
+export const positionService = {
+  async list(scope: QueryScope) {
+    const q = applyScope(supabase.from('positions').select('*, companies(name)'), scope);
+    const { data, error } = await q;
     if (error) throw error;
     return (data || []) as PositionWithRelations[];
   },
 
-  async create(dto: CreatePositionDTO) {
-    const { data, error } = await supabase.from('positions').insert(dto).select().single();
+  async create(dto: CreatePositionDTO, scope: QueryScope) {
+    const secured = scopedInsert(dto, scope);
+    const { data, error } = await supabase.from('positions').insert(secured).select().single();
     if (error) throw error;
     return data as Position;
   },

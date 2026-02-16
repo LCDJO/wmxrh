@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/domains/security';
+import { useQueryScope } from '@/domains/hooks';
 import {
   useEmployeesSimple, useSalaryHistoryByTenant,
   useSalaryAdjustmentsByTenant, useCompaniesSimple,
@@ -27,6 +28,7 @@ export default function Compensation() {
   const { user } = useAuth();
   const { toast } = useToast();
   const tenantId = currentTenant?.id;
+  const queryScope = useQueryScope();
 
   const { data: employeesSimple = [] } = useEmployeesSimple();
   const { data: employees = [] } = useEmployees();
@@ -63,8 +65,10 @@ export default function Compensation() {
     // Need active contract
     // We'll do a simple approach: we need the contract_id
     // For now we'll fetch it inline
+    const qs = queryScope;
+    if (!qs) return;
     import('@/domains/compensation/salary-contract.service').then(({ salaryContractService }) => {
-      salaryContractService.getActive(adjEmployeeId).then(contract => {
+      salaryContractService.getActive(adjEmployeeId, qs).then(contract => {
         if (!contract) {
           toast({ title: 'Erro', description: 'Funcionário não possui contrato ativo', variant: 'destructive' });
           return;
