@@ -964,6 +964,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
