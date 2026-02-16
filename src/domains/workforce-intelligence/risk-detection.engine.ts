@@ -3,6 +3,18 @@
  *
  * Scans workforce dataset for labor law violations, health/safety gaps,
  * cost anomalies, and contract irregularities.
+ *
+ * Detected rules:
+ *  1. Salário abaixo do piso sindical (LEGAL_RISK)
+ *  2. Excesso de horas extras recorrentes (LEGAL_RISK)
+ *  3. Adicional sem exposição de risco registrada (COMPLIANCE_WARNING)
+ *  4. Exames PCMSO vencidos (COMPLIANCE_WARNING)
+ *  5. Empresa sem programa PGR ativo (LEGAL_RISK)
+ *  6. Exposição a risco sem adicional (LEGAL_RISK)
+ *  7. Violações trabalhistas críticas (LEGAL_RISK)
+ *  8. Fator de custo anômalo (FINANCIAL_RISK)
+ *  9. Colaboradores sem benefícios (FINANCIAL_RISK)
+ *
  * Pure function — no I/O.
  */
 
@@ -10,8 +22,8 @@ import type {
   RiskDetectionInput,
   RiskDetectionOutput,
   LaborRisk,
-  RiskCategory,
   WorkforceDataset,
+  WorkforceInsightType,
 } from './types';
 
 const DEFAULT_MAX_OVERTIME = 44; // CLT Art. 59
@@ -23,102 +35,154 @@ export function detectRisks(input: RiskDetectionInput): RiskDetectionOutput {
   const rid = () => `WIR-${String(++riskIdCounter).padStart(3, '0')}`;
   const now = dataset.analysis_date;
 
-  // ── 1. Salary compliance ──
+  const push = (
+    category: LaborRisk['category'],
+    insight_type: WorkforceInsightType,
+    severity: LaborRisk['severity'],
+    title: string,
+    description: string,
+    affected: string[],
+    financial_exposure: number,
+    recommended_action: string,
+    legal_basis?: string,
+  ) => {
+    risks.push({
+      risk_id: rid(), category, insight_type, severity, title, description,
+      affected_employees: affected, affected_count: affected.length,
+      financial_exposure: round(financial_exposure),
+      legal_basis, recommended_action, detection_date: now,
+    });
+  };
+
+  // ── 1. Salário abaixo do piso sindical ──
   if (piso_cct && piso_cct > 0) {
     const below = dataset.employees.filter(e => e.status === 'active' && e.current_salary > 0 && e.current_salary < piso_cct);
     if (below.length > 0) {
       const exposure = below.reduce((s, e) => s + (piso_cct - e.current_salary) * 12, 0);
-      risks.push({
-        risk_id: rid(), category: 'salary_compliance', severity: 'critical',
-        title: 'Salários abaixo do piso CCT',
-        description: `${below.length} colaborador(es) com salário abaixo do piso convencional de R$ ${piso_cct.toLocaleString('pt-BR')}.`,
-        affected_employees: below.map(e => e.id), affected_count: below.length,
-        financial_exposure: round(exposure),
-        legal_basis: 'CLT Art. 611-A / Convenção Coletiva',
-        recommended_action: 'Ajustar salários ao piso da CCT vigente imediatamente.',
-        detection_date: now,
-      });
+      push('salary_compliance', 'LEGAL_RISK', 'critical',
+        'Salários abaixo do piso CCT',
+        `${below.length} colaborador(es) com salário abaixo do piso convencional de R$ ${piso_cct.toLocaleString('pt-BR')}.`,
+        below.map(e => e.id), exposure,
+        'Ajustar salários ao piso da CCT vigente imediatamente.',
+        'CLT Art. 611-A / Convenção Coletiva',
+      );
     }
   }
 
-  // ── 2. Health & Safety gaps ──
+  // ── 2. Excesso de horas extras recorrentes ──
+  const overtimeAbuse = dataset.compliance.filter(c =>
+    c.avg_overtime_hours != null && c.avg_overtime_hours > max_overtime_hours
+  );
+  if (overtimeAbuse.length > 0) {
+    const avgExcess = overtimeAbuse.reduce((s, c) => s + ((c.avg_overtime_hours ?? 0) - max_overtime_hours), 0) / overtimeAbuse.length;
+    push('overtime_exposure', 'LEGAL_RISK', 'high',
+      'Excesso de horas extras recorrentes',
+      `${overtimeAbuse.length} colaborador(es) com média de HE acima de ${max_overtime_hours}h/mês (excesso médio: ${avgExcess.toFixed(1)}h).`,
+      overtimeAbuse.map(c => c.employee_id),
+      overtimeAbuse.length * 2000 * 12, // estimated annual exposure per employee
+      'Revisar banco de horas e escalas; avaliar contratação para reduzir dependência de HE.',
+      'CLT Art. 59 / Súmula 376 TST',
+    );
+  }
+
+  // ── 3. Adicional sem exposição de risco registrada ──
+  const hazardWithoutExposure = dataset.compliance.filter(c => c.has_hazard_pay_without_exposure);
+  if (hazardWithoutExposure.length > 0) {
+    push('contract_irregularity', 'COMPLIANCE_WARNING', 'medium',
+      'Adicional de insalubridade/periculosidade sem exposição registrada',
+      `${hazardWithoutExposure.length} colaborador(es) recebem adicional sem registro de exposição a risco no GHE/LTCAT.`,
+      hazardWithoutExposure.map(c => c.employee_id),
+      hazardWithoutExposure.length * 3000,
+      'Atualizar LTCAT/GHE ou suspender adicional indevido após avaliação técnica.',
+      'CLT Art. 189-197 / NR-15 / NR-16',
+    );
+  }
+
+  // ── 4. Exames PCMSO vencidos ──
   const overdueExams = dataset.compliance.filter(c => c.exam_overdue);
   if (overdueExams.length > 0) {
-    risks.push({
-      risk_id: rid(), category: 'health_safety', severity: 'high',
-      title: 'Exames ocupacionais vencidos',
-      description: `${overdueExams.length} colaborador(es) com exames periódicos vencidos (PCMSO).`,
-      affected_employees: overdueExams.map(c => c.employee_id), affected_count: overdueExams.length,
-      financial_exposure: round(overdueExams.length * 3000), // avg fine estimate
-      legal_basis: 'NR-7 / CLT Art. 168',
-      recommended_action: 'Agendar exames periódicos com urgência.',
-      detection_date: now,
-    });
+    push('health_safety', 'COMPLIANCE_WARNING', 'high',
+      'Exames ocupacionais vencidos',
+      `${overdueExams.length} colaborador(es) com exames periódicos vencidos (PCMSO).`,
+      overdueExams.map(c => c.employee_id),
+      overdueExams.length * 3000,
+      'Agendar exames periódicos com urgência.',
+      'NR-7 / CLT Art. 168',
+    );
   }
 
-  // Risk exposure without hazard pay
+  // ── 5. Empresa sem programa PGR ativo ──
+  const noPGR = dataset.compliance.filter(c => c.has_active_pgr === false);
+  if (noPGR.length > 0) {
+    // Group by unique company (avoid duplicating the risk)
+    const uniqueCompanies = new Set(
+      dataset.employees
+        .filter(e => noPGR.some(c => c.employee_id === e.id))
+        .map(e => e.company_id)
+    );
+    push('health_safety', 'LEGAL_RISK', 'critical',
+      'Empresa(s) sem Programa de Gerenciamento de Riscos (PGR) ativo',
+      `${uniqueCompanies.size} empresa(s) sem PGR vigente, afetando ${noPGR.length} colaborador(es).`,
+      noPGR.map(c => c.employee_id),
+      uniqueCompanies.size * 50000, // multa estimada por empresa
+      'Elaborar ou renovar o PGR imediatamente conforme NR-1.',
+      'NR-1 (nova redação) / CLT Art. 157',
+    );
+  }
+
+  // ── 6. Exposição a risco sem adicional ──
   const missingHazard = dataset.compliance.filter(c => c.has_risk_exposure && !c.has_hazard_pay);
   if (missingHazard.length > 0) {
-    risks.push({
-      risk_id: rid(), category: 'health_safety', severity: 'critical',
-      title: 'Exposição a risco sem adicional',
-      description: `${missingHazard.length} colaborador(es) expostos a riscos ocupacionais sem adicional de insalubridade/periculosidade.`,
-      affected_employees: missingHazard.map(c => c.employee_id), affected_count: missingHazard.length,
-      financial_exposure: round(missingHazard.length * 5000 * 12),
-      legal_basis: 'CLT Art. 189-197 / NR-15 / NR-16',
-      recommended_action: 'Avaliar GHE e conceder adicional correspondente.',
-      detection_date: now,
-    });
+    push('health_safety', 'LEGAL_RISK', 'critical',
+      'Exposição a risco sem adicional',
+      `${missingHazard.length} colaborador(es) expostos a riscos ocupacionais sem adicional de insalubridade/periculosidade.`,
+      missingHazard.map(c => c.employee_id),
+      missingHazard.length * 5000 * 12,
+      'Avaliar GHE e conceder adicional correspondente.',
+      'CLT Art. 189-197 / NR-15 / NR-16',
+    );
   }
 
-  // ── 3. Compliance violations ──
-  const withViolations = dataset.compliance.filter(c => c.open_violations > 0);
-  const criticalViolations = withViolations.filter(c => c.violation_severities.includes('critical'));
+  // ── 7. Violações trabalhistas críticas ──
+  const criticalViolations = dataset.compliance.filter(c => c.open_violations > 0 && c.violation_severities.includes('critical'));
   if (criticalViolations.length > 0) {
-    risks.push({
-      risk_id: rid(), category: 'contract_irregularity', severity: 'critical',
-      title: 'Violações trabalhistas críticas em aberto',
-      description: `${criticalViolations.length} colaborador(es) com violações de severidade crítica não resolvidas.`,
-      affected_employees: criticalViolations.map(c => c.employee_id), affected_count: criticalViolations.length,
-      financial_exposure: round(criticalViolations.length * 10000),
-      recommended_action: 'Resolver violações críticas e documentar ações corretivas.',
-      detection_date: now,
-    });
+    push('contract_irregularity', 'LEGAL_RISK', 'critical',
+      'Violações trabalhistas críticas em aberto',
+      `${criticalViolations.length} colaborador(es) com violações de severidade crítica não resolvidas.`,
+      criticalViolations.map(c => c.employee_id),
+      criticalViolations.length * 10000,
+      'Resolver violações críticas e documentar ações corretivas.',
+    );
   }
 
-  // ── 4. Cost anomalies ──
+  // ── 8. Fator de custo anômalo ──
   const sims = dataset.simulations;
   if (sims.length >= 3) {
     const fatores = sims.map(s => s.fator_custo);
     const avgFator = fatores.reduce((s, f) => s + f, 0) / fatores.length;
     const highCost = sims.filter(s => s.fator_custo > avgFator * 1.5);
     if (highCost.length > 0) {
-      risks.push({
-        risk_id: rid(), category: 'cost_anomaly', severity: 'medium',
-        title: 'Fator de custo anômalo',
-        description: `${highCost.length} colaborador(es) com fator custo 50%+ acima da média (${avgFator.toFixed(2)}x).`,
-        affected_employees: highCost.map(s => s.employee_id), affected_count: highCost.length,
-        financial_exposure: round(highCost.reduce((s, c) => s + c.custo_total_empregador - c.salario_base * avgFator, 0)),
-        recommended_action: 'Revisar composição de custos dos colaboradores destacados.',
-        detection_date: now,
-      });
+      push('cost_anomaly', 'FINANCIAL_RISK', 'medium',
+        'Fator de custo anômalo',
+        `${highCost.length} colaborador(es) com fator custo 50%+ acima da média (${avgFator.toFixed(2)}x).`,
+        highCost.map(s => s.employee_id),
+        highCost.reduce((s, c) => s + c.custo_total_empregador - c.salario_base * avgFator, 0),
+        'Revisar composição de custos dos colaboradores destacados.',
+      );
     }
   }
 
-  // ── 5. Benefit gaps ──
+  // ── 9. Colaboradores sem benefícios ──
   const employeesWithBenefits = new Set(dataset.benefits.filter(b => b.is_active).map(b => b.employee_id));
   const activeEmps = dataset.employees.filter(e => e.status === 'active');
   const noBenefits = activeEmps.filter(e => !employeesWithBenefits.has(e.id));
   if (noBenefits.length > 0 && activeEmps.length > 0 && noBenefits.length / activeEmps.length > 0.2) {
-    risks.push({
-      risk_id: rid(), category: 'benefit_gap', severity: 'medium',
-      title: 'Colaboradores sem benefícios',
-      description: `${noBenefits.length} colaborador(es) ativos (${Math.round(noBenefits.length / activeEmps.length * 100)}%) sem nenhum benefício ativo.`,
-      affected_employees: noBenefits.map(e => e.id), affected_count: noBenefits.length,
-      financial_exposure: 0,
-      recommended_action: 'Avaliar elegibilidade e incluir nos planos de benefícios.',
-      detection_date: now,
-    });
+    push('benefit_gap', 'FINANCIAL_RISK', 'medium',
+      'Colaboradores sem benefícios',
+      `${noBenefits.length} colaborador(es) ativos (${Math.round(noBenefits.length / activeEmps.length * 100)}%) sem nenhum benefício ativo.`,
+      noBenefits.map(e => e.id), 0,
+      'Avaliar elegibilidade e incluir nos planos de benefícios.',
+    );
   }
 
   // ── Score calculation ──

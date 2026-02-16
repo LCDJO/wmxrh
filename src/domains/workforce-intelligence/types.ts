@@ -61,8 +61,13 @@ export interface ComplianceSnapshot {
   risk_level?: string;
   has_hazard_pay: boolean;
   hazard_pay_type?: string;
+  has_hazard_pay_without_exposure?: boolean;
   open_violations: number;
   violation_severities: string[];
+  /** Whether the employee's company has an active PGR program */
+  has_active_pgr?: boolean;
+  /** Recurring overtime hours (monthly average) */
+  avg_overtime_hours?: number;
 }
 
 /** Snapshot of benefit enrollment */
@@ -230,9 +235,13 @@ export type RiskCategory =
   | 'cost_anomaly'
   | 'turnover_risk';
 
+/** Insight type for persistence to workforce_insights table */
+export type WorkforceInsightType = 'LEGAL_RISK' | 'FINANCIAL_RISK' | 'COMPLIANCE_WARNING';
+
 export interface LaborRisk {
   risk_id: string;
   category: RiskCategory;
+  insight_type: WorkforceInsightType;
   severity: 'low' | 'medium' | 'high' | 'critical';
   title: string;
   description: string;
