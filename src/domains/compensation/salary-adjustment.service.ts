@@ -8,6 +8,7 @@ export const salaryAdjustmentService: ISalaryAdjustmentService = {
       .from('salary_adjustments')
       .select('*')
       .eq('employee_id', employeeId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []) as SalaryAdjustment[];
@@ -18,6 +19,7 @@ export const salaryAdjustmentService: ISalaryAdjustmentService = {
       .from('salary_adjustments')
       .select('*, employees(name)')
       .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []) as SalaryAdjustmentWithRelations[];

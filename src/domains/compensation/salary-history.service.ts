@@ -8,6 +8,7 @@ export const salaryHistoryService: ISalaryHistoryService = {
       .from('salary_history')
       .select('*, employees(name)')
       .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
       .order('effective_date', { ascending: false });
     if (error) throw error;
     return (data || []) as SalaryHistoryWithRelations[];
@@ -18,6 +19,7 @@ export const salaryHistoryService: ISalaryHistoryService = {
       .from('salary_history')
       .select('*')
       .eq('employee_id', employeeId)
+      .is('deleted_at', null)
       .order('effective_date', { ascending: false });
     if (error) throw error;
     return (data || []) as SalaryHistory[];

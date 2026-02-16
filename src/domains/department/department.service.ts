@@ -4,7 +4,7 @@ import type { Department, DepartmentWithRelations, CreateDepartmentDTO } from '@
 
 export const departmentService: IDepartmentService = {
   async list(tenantId: string) {
-    const { data, error } = await supabase.from('departments').select('*, companies(name)').eq('tenant_id', tenantId);
+    const { data, error } = await supabase.from('departments').select('*, companies(name)').eq('tenant_id', tenantId).is('deleted_at', null);
     if (error) throw error;
     return (data || []) as DepartmentWithRelations[];
   },

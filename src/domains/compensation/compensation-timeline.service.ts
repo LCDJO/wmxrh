@@ -18,10 +18,10 @@ export interface CompensationTimelineEvent {
 export const compensationTimelineService = {
   async getByEmployee(employeeId: string): Promise<CompensationTimelineEvent[]> {
     const [contractsRes, adjustmentsRes, additionalsRes, historyRes] = await Promise.all([
-      supabase.from('salary_contracts').select('*').eq('employee_id', employeeId).order('start_date', { ascending: false }),
-      supabase.from('salary_adjustments').select('*').eq('employee_id', employeeId).order('created_at', { ascending: false }),
-      supabase.from('salary_additionals').select('*').eq('employee_id', employeeId).order('created_at', { ascending: false }),
-      supabase.from('salary_history').select('*').eq('employee_id', employeeId).order('effective_date', { ascending: false }),
+      supabase.from('salary_contracts').select('*').eq('employee_id', employeeId).is('deleted_at', null).order('start_date', { ascending: false }),
+      supabase.from('salary_adjustments').select('*').eq('employee_id', employeeId).is('deleted_at', null).order('created_at', { ascending: false }),
+      supabase.from('salary_additionals').select('*').eq('employee_id', employeeId).is('deleted_at', null).order('created_at', { ascending: false }),
+      supabase.from('salary_history').select('*').eq('employee_id', employeeId).is('deleted_at', null).order('effective_date', { ascending: false }),
     ]);
 
     const events: CompensationTimelineEvent[] = [];

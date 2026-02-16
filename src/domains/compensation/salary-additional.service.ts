@@ -8,6 +8,7 @@ export const salaryAdditionalService: ISalaryAdditionalService = {
       .from('salary_additionals')
       .select('*')
       .eq('employee_id', employeeId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []) as SalaryAdditional[];

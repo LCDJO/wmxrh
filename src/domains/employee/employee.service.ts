@@ -12,7 +12,8 @@ export const employeeService: IEmployeeService & {
     const { data, error } = await supabase
       .from('employees')
       .select(EMPLOYEE_SELECT)
-      .eq('tenant_id', tenantId);
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null);
     if (error) throw error;
     return (data || []) as EmployeeWithRelations[];
   },
@@ -22,7 +23,8 @@ export const employeeService: IEmployeeService & {
       .from('employees')
       .select(EMPLOYEE_SELECT)
       .eq('tenant_id', tenantId)
-      .eq('company_group_id', groupId);
+      .eq('company_group_id', groupId)
+      .is('deleted_at', null);
     if (error) throw error;
     return (data || []) as EmployeeWithRelations[];
   },
@@ -32,7 +34,8 @@ export const employeeService: IEmployeeService & {
       .from('employees')
       .select(EMPLOYEE_SELECT)
       .eq('tenant_id', tenantId)
-      .eq('company_id', companyId);
+      .eq('company_id', companyId)
+      .is('deleted_at', null);
     if (error) throw error;
     return (data || []) as EmployeeWithRelations[];
   },
@@ -41,7 +44,8 @@ export const employeeService: IEmployeeService & {
     const { data, error } = await supabase
       .from('employees')
       .select('id, company_id, department_id, position_id, current_salary, status')
-      .eq('tenant_id', tenantId);
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null);
     if (error) throw error;
     return data || [];
   },
@@ -51,6 +55,7 @@ export const employeeService: IEmployeeService & {
       .from('employees')
       .select(EMPLOYEE_SELECT)
       .eq('id', id)
+      .is('deleted_at', null)
       .maybeSingle();
     if (error) throw error;
     return data as EmployeeWithRelations | null;

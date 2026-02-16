@@ -8,6 +8,7 @@ export const salaryContractService: ISalaryContractService = {
       .from('salary_contracts')
       .select('*')
       .eq('employee_id', employeeId)
+      .is('deleted_at', null)
       .order('start_date', { ascending: false });
     if (error) throw error;
     return (data || []) as SalaryContract[];
@@ -19,6 +20,7 @@ export const salaryContractService: ISalaryContractService = {
       .select('*')
       .eq('employee_id', employeeId)
       .eq('is_active', true)
+      .is('deleted_at', null)
       .maybeSingle();
     if (error) throw error;
     return data as SalaryContract | null;
