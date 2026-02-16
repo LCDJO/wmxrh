@@ -77,9 +77,18 @@ export type {
 
 // ── Identity Boundary Layer ────────────────────────────────
 export { IdentityBoundaryLayer, identityBoundary } from './identity-boundary';
+export { IdentitySessionManager } from './identity-boundary';
+export { contextResolver } from './identity-boundary';
+export { multiScopeTokenBuilder } from './identity-boundary';
+export { contextGuard, ContextGuardError } from './identity-boundary';
+export { ContextSwitcherService } from './identity-boundary';
 export type {
   IdentitySession, TenantScope,
   BoundaryIdentity, OperationalContext, TenantMembership,
   IdentityProvider, ContextSwitchRequest, ContextSwitchResult,
   EstablishIdentityInput, IdentityBoundarySnapshot,
+  RefreshScopesInput,
+  ResolvedContext, ScopeValidation,
+  ScopeToken, QueryFilterSet,
+  GuardResult, GuardTarget, GuardCheckName,
 } from './identity-boundary';
