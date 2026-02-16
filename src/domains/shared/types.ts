@@ -373,7 +373,7 @@ export interface CreateSalaryAdditionalDTO {
 export type PayrollItemType = 'provento' | 'desconto';
 export type PayrollItemNature = 'fixed' | 'variable' | 'informational';
 export type PayrollIncidence = 'inss' | 'irrf' | 'fgts' | 'inss_irrf' | 'inss_fgts' | 'irrf_fgts' | 'all' | 'none';
-export type BenefitType = 'va' | 'vr' | 'vt' | 'health' | 'dental';
+export type BenefitType = 'va' | 'vr' | 'vt' | 'health' | 'dental' | 'cesta' | 'flex';
 export type ExamType = 'admissional' | 'periodico' | 'demissional' | 'mudanca_funcao' | 'retorno_trabalho';
 export type ExamResult = 'apto' | 'inapto' | 'apto_restricao';
 export type RiskCategory = 'fisico' | 'quimico' | 'biologico' | 'ergonomico' | 'acidente';
@@ -445,6 +445,9 @@ export interface BenefitPlan {
   employee_discount_percentage: number | null;
   has_coparticipation: boolean;
   description: string | null;
+  is_indemnity: boolean;
+  integrates_salary: boolean;
+  legal_basis: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -464,6 +467,9 @@ export interface EmployeeBenefit {
   enrollment_date: string;
   cancellation_date: string | null;
   is_active: boolean;
+  monthly_value: number;
+  employee_discount_pct: number;
+  employer_pays_pct: number;
   notes: string | null;
   created_by: string | null;
   created_at: string;
@@ -580,6 +586,9 @@ export interface CreateBenefitPlanDTO {
   employee_discount_percentage?: number;
   has_coparticipation?: boolean;
   description?: string | null;
+  is_indemnity?: boolean;
+  integrates_salary?: boolean;
+  legal_basis?: string | null;
 }
 
 export interface CreateEmployeeBenefitDTO {
@@ -589,6 +598,9 @@ export interface CreateEmployeeBenefitDTO {
   company_id?: string | null;
   company_group_id?: string | null;
   custom_value?: number | null;
+  monthly_value?: number;
+  employee_discount_pct?: number;
+  employer_pays_pct?: number;
   dependents_count?: number;
   card_number?: string | null;
   enrollment_date?: string;
