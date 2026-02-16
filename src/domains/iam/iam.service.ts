@@ -156,6 +156,81 @@ export const iamService = {
     if (insError) throw insError;
   },
 
+  async cloneRole(sourceRoleId: string, tenantId: string, newName: string, createdBy?: string): Promise<CustomRole> {
+    // 1. Create the new role
+    const slug = newName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '');
+    const { data: newRole, error: roleErr } = await supabase
+      .from('custom_roles')
+      .insert([{ tenant_id: tenantId, name: newName, slug, description: `Clonado de ${sourceRoleId}`, created_by: createdBy || null }])
+      .select()
+      .single();
+    if (roleErr) throw roleErr;
+
+    // 2. Copy permissions
+    const { data: sourcePerms, error: permErr } = await supabase
+      .from('role_permissions')
+      .select('permission_id, scope_type')
+      .eq('role_id', sourceRoleId);
+    if (permErr) throw permErr;
+
+    if (sourcePerms && sourcePerms.length > 0) {
+      const rows = sourcePerms.map(sp => ({
+        role_id: (newRole as CustomRole).id,
+        permission_id: sp.permission_id,
+        scope_type: sp.scope_type,
+        granted_by: createdBy || null,
+      }));
+      const { error: insErr } = await supabase.from('role_permissions').insert(rows);
+      if (insErr) throw insErr;
+    }
+
+    return newRole as CustomRole;
+  },
+
+  async inviteUser(dto: { tenant_id: string; email: string; name?: string; role_id?: string; scope_type?: 'tenant' | 'company_group' | 'company'; scope_id?: string; invited_by?: string }): Promise<TenantUser> {
+    // We don't create an auth user here — just a membership record with status 'invited'
+    // A real invite flow would send an email via edge function
+    const { data, error } = await supabase
+      .from('tenant_memberships')
+      .insert([{
+        tenant_id: dto.tenant_id,
+        user_id: crypto.randomUUID(), // placeholder until user signs up
+        email: dto.email,
+        name: dto.name || null,
+        role: 'viewer',
+        status: 'invited',
+        created_by: dto.invited_by || null,
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data as TenantUser;
+  },
+
+  // ── Scope helpers ──
+
+  async listCompanies(tenantId: string): Promise<{ id: string; name: string }[]> {
+    const { data, error } = await supabase
+      .from('companies')
+      .select('id, name')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+      .order('name');
+    if (error) throw error;
+    return data || [];
+  },
+
+  async listCompanyGroups(tenantId: string): Promise<{ id: string; name: string }[]> {
+    const { data, error } = await supabase
+      .from('company_groups')
+      .select('id, name')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+      .order('name');
+    if (error) throw error;
+    return data || [];
+  },
+
   // ── User Custom Role Assignments ──
 
   async listUserAssignments(tenantId: string): Promise<UserCustomRole[]> {
