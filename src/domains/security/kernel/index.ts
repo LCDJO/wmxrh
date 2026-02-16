@@ -90,6 +90,6 @@ export type {
   RefreshScopesInput,
   AccessGraphSnapshot, AllowedScopes,
   ResolvedContext, ScopeValidation, ResolutionStrategy, InitialContextResolution, PersistedContext,
-  ScopeToken, QueryFilterSet,
+  MultiScopeToken, ScopeToken, QueryFilterSet,
   GuardResult, GuardTarget, GuardCheckName,
 } from './identity-boundary';
