@@ -33,6 +33,7 @@ import { salaryStructureService } from '@/domains/compensation/salary-structure.
 import { riskExposureService } from '@/domains/compliance/risk-exposure.service';
 import { pcmsoAlertService, type ExamAlertStatus } from '@/domains/compliance/pcmso-alert.service';
 import { complianceRulesService } from '@/domains/compliance/compliance-rules.service';
+import { supabase } from '@/integrations/supabase/client';
 import { laborRulesService } from '@/domains/labor-rules/labor-rules.service';
 import type {
   CreateLaborRuleSetDTO, CreateLaborRuleDefinitionDTO,
@@ -110,6 +111,8 @@ export const queryKeys = {
   laborRuleSets: (tenantId?: string) => ['labor_rule_sets', tenantId] as const,
   laborRuleDefinitions: (ruleSetId: string) => ['labor_rule_definitions', ruleSetId] as const,
   collectiveAgreements: (tenantId?: string) => ['collective_agreements', tenantId] as const,
+  // Salary Rubric Templates
+  salaryRubricTemplates: (tenantId?: string) => ['salary_rubric_templates', tenantId] as const,
 };
 
 // ========================
@@ -894,5 +897,26 @@ export function useCreateAgreementClause() {
   return useMutation({
     mutationFn: (dto: CreateCollectiveAgreementClauseDTO) => laborRulesService.createClause(dto, qs!),
     onSuccess: () => qc.invalidateQueries({ queryKey: laborRulesKeys.agreements(qs?.tenantId) }),
+  });
+}
+
+// ========================
+// SALARY RUBRIC TEMPLATES
+// ========================
+
+export function useSalaryRubricTemplates() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: queryKeys.salaryRubricTemplates(qs?.tenantId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('salary_rubric_templates' as any)
+        .select('*')
+        .eq('tenant_id', qs!.tenantId)
+        .order('codigo');
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    enabled: !!qs,
   });
 }

@@ -2279,6 +2279,68 @@ export type Database = {
           },
         ]
       }
+      salary_rubric_templates: {
+        Row: {
+          codigo: string
+          created_at: string
+          exige_base_horaria: boolean
+          id: string
+          integra_fgts: boolean
+          integra_inss: boolean
+          integra_irrf: boolean
+          is_active: boolean
+          is_system: boolean
+          natureza_juridica: string
+          nome: string
+          permite_percentual: boolean
+          tenant_id: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          exige_base_horaria?: boolean
+          id?: string
+          integra_fgts?: boolean
+          integra_inss?: boolean
+          integra_irrf?: boolean
+          is_active?: boolean
+          is_system?: boolean
+          natureza_juridica: string
+          nome: string
+          permite_percentual?: boolean
+          tenant_id: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          exige_base_horaria?: boolean
+          id?: string
+          integra_fgts?: boolean
+          integra_inss?: boolean
+          integra_irrf?: boolean
+          is_active?: boolean
+          is_system?: boolean
+          natureza_juridica?: string
+          nome?: string
+          permite_percentual?: boolean
+          tenant_id?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_rubric_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salary_rubrics: {
         Row: {
           amount: number
@@ -2763,6 +2825,10 @@ export type Database = {
       }
       seed_default_rubrics: { Args: { _tenant_id: string }; Returns: undefined }
       seed_esocial_mappings: {
+        Args: { _tenant_id: string }
+        Returns: undefined
+      }
+      seed_salary_rubric_templates: {
         Args: { _tenant_id: string }
         Returns: undefined
       }
