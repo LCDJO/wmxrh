@@ -1,25 +1,30 @@
 /**
  * useIdentityIntelligence — React Hook
  *
- * Reactive hook that exposes the unified IdentitySnapshot from the
- * Identity Intelligence Layer. Re-renders on phase transitions,
- * risk changes, workspace switches, and snapshot invalidations.
+ * Reactive hook that exposes both the UnifiedIdentitySession (primary API)
+ * and the full IdentitySnapshot (diagnostic) from the Identity Intelligence Layer.
  */
 
 import { useSyncExternalStore, useCallback, useMemo } from 'react';
 import { identityIntelligence } from './identity-intelligence.service';
 import type {
   IdentitySnapshot,
+  UnifiedIdentitySession,
   IntelligenceDecision,
   IdentityPhase,
   RiskAssessment,
   WorkspaceEntry,
   RecentContext,
   UserTypeDetection,
+  ActiveContext,
+  TenantWorkspace,
 } from './types';
 
 export interface UseIdentityIntelligenceReturn {
-  /** Full projected snapshot of all identity subsystems */
+  /** Primary API — clean, focused session object */
+  session: UnifiedIdentitySession;
+
+  /** Full diagnostic snapshot (superset of session) */
   snapshot: IdentitySnapshot;
 
   /** Current identity phase */
@@ -39,7 +44,11 @@ export interface UseIdentityIntelligenceReturn {
   isTenantUser: boolean;
   userTypeDetection: UserTypeDetection | null;
 
+  /** Active context (from UnifiedIdentitySession) */
+  activeContext: ActiveContext | null;
+
   /** Workspace management */
+  availableTenants: readonly TenantWorkspace[];
   availableWorkspaces: readonly WorkspaceEntry[];
   recentContexts: readonly RecentContext[];
   canSwitchWorkspace: boolean;
@@ -61,19 +70,28 @@ function subscribe(onStoreChange: () => void): () => void {
   return identityIntelligence.onSnapshotChange(onStoreChange);
 }
 
-// Snapshot function — invalidates cache on phase change
+// Cache management
 let cachedSnapshot: IdentitySnapshot | null = null;
+let cachedSession: UnifiedIdentitySession | null = null;
 let cachedVersion = 0;
 let lastVersion = -1;
 
-function getSnapshot(): IdentitySnapshot {
-  // Rebuild on every subscribe notification (version bump)
-  const currentPhase = identityIntelligence.phase;
-  if (!cachedSnapshot || cachedVersion !== lastVersion) {
-    cachedSnapshot = identityIntelligence.snapshot();
+interface CachedState {
+  snapshot: IdentitySnapshot;
+  session: UnifiedIdentitySession;
+}
+
+let cachedState: CachedState | null = null;
+
+function getState(): CachedState {
+  if (!cachedState || cachedVersion !== lastVersion) {
+    cachedState = {
+      snapshot: identityIntelligence.snapshot(),
+      session: identityIntelligence.unifiedSession(),
+    };
     lastVersion = cachedVersion;
   }
-  return cachedSnapshot;
+  return cachedState;
 }
 
 // Bump version on every notification
@@ -81,13 +99,13 @@ const originalSubscribe = subscribe;
 function subscribeBump(onStoreChange: () => void): () => void {
   return originalSubscribe(() => {
     cachedVersion++;
-    cachedSnapshot = null; // force rebuild
+    cachedState = null;
     onStoreChange();
   });
 }
 
 export function useIdentityIntelligence(): UseIdentityIntelligenceReturn {
-  const snapshot = useSyncExternalStore(subscribeBump, getSnapshot, getSnapshot);
+  const state = useSyncExternalStore(subscribeBump, getState, getState);
 
   const evaluate = useCallback(
     (action?: string, resource?: string) => identityIntelligence.evaluate(action, resource),
@@ -108,23 +126,26 @@ export function useIdentityIntelligence(): UseIdentityIntelligenceReturn {
   );
 
   return useMemo(() => ({
-    snapshot,
-    phase: snapshot.phase,
-    risk: snapshot.risk,
-    isAnonymous: snapshot.phase === 'anonymous',
-    isAuthenticated: snapshot.phase === 'authenticated',
-    isScoped: snapshot.phase === 'scoped',
-    isImpersonating: snapshot.phase === 'impersonating',
-    isPlatformUser: snapshot.userType === 'platform',
-    isTenantUser: snapshot.userType === 'tenant',
-    userTypeDetection: snapshot.userTypeDetection,
-    availableWorkspaces: snapshot.availableWorkspaces,
-    recentContexts: snapshot.recentContexts,
-    canSwitchWorkspace: snapshot.canSwitchWorkspace,
+    session: state.session,
+    snapshot: state.snapshot,
+    phase: state.session.phase,
+    risk: state.session.risk,
+    isAnonymous: state.session.phase === 'anonymous',
+    isAuthenticated: state.session.phase === 'authenticated',
+    isScoped: state.session.phase === 'scoped',
+    isImpersonating: state.session.phase === 'impersonating',
+    isPlatformUser: state.session.real_identity.user_type === 'platform',
+    isTenantUser: state.session.real_identity.user_type === 'tenant',
+    userTypeDetection: state.session.real_identity.detection,
+    activeContext: state.session.active_context,
+    availableTenants: state.session.available_tenants,
+    availableWorkspaces: state.snapshot.availableWorkspaces,
+    recentContexts: state.session.recent_contexts,
+    canSwitchWorkspace: state.session.available_tenants.length > 1,
     switchWorkspace,
     restoreLastWorkspace,
     evaluate,
     syncPhase,
     debug,
-  }), [snapshot, evaluate, syncPhase, debug, switchWorkspace, restoreLastWorkspace]);
+  }), [state, evaluate, syncPhase, debug, switchWorkspace, restoreLastWorkspace]);
 }
