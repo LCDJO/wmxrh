@@ -94,7 +94,10 @@ export type Database = {
           employer_percentage: number | null
           has_coparticipation: boolean | null
           id: string
+          integrates_salary: boolean
           is_active: boolean
+          is_indemnity: boolean
+          legal_basis: string | null
           name: string
           plan_code: string | null
           provider: string | null
@@ -113,7 +116,10 @@ export type Database = {
           employer_percentage?: number | null
           has_coparticipation?: boolean | null
           id?: string
+          integrates_salary?: boolean
           is_active?: boolean
+          is_indemnity?: boolean
+          legal_basis?: string | null
           name: string
           plan_code?: string | null
           provider?: string | null
@@ -132,7 +138,10 @@ export type Database = {
           employer_percentage?: number | null
           has_coparticipation?: boolean | null
           id?: string
+          integrates_salary?: boolean
           is_active?: boolean
+          is_indemnity?: boolean
+          legal_basis?: string | null
           name?: string
           plan_code?: string | null
           provider?: string | null
@@ -331,10 +340,13 @@ export type Database = {
           custom_value: number | null
           deleted_at: string | null
           dependents_count: number | null
+          employee_discount_pct: number | null
           employee_id: string
+          employer_pays_pct: number | null
           enrollment_date: string
           id: string
           is_active: boolean
+          monthly_value: number | null
           notes: string | null
           tenant_id: string
           updated_at: string
@@ -350,10 +362,13 @@ export type Database = {
           custom_value?: number | null
           deleted_at?: string | null
           dependents_count?: number | null
+          employee_discount_pct?: number | null
           employee_id: string
+          employer_pays_pct?: number | null
           enrollment_date?: string
           id?: string
           is_active?: boolean
+          monthly_value?: number | null
           notes?: string | null
           tenant_id: string
           updated_at?: string
@@ -369,10 +384,13 @@ export type Database = {
           custom_value?: number | null
           deleted_at?: string | null
           dependents_count?: number | null
+          employee_discount_pct?: number | null
           employee_id?: string
+          employer_pays_pct?: number | null
           enrollment_date?: string
           id?: string
           is_active?: boolean
+          monthly_value?: number | null
           notes?: string | null
           tenant_id?: string
           updated_at?: string
@@ -1985,7 +2003,7 @@ export type Database = {
       }
     }
     Enums: {
-      benefit_type: "va" | "vr" | "vt" | "health" | "dental"
+      benefit_type: "va" | "vr" | "vt" | "health" | "dental" | "cesta" | "flex"
       employee_event_type:
         | "company_transfer"
         | "position_change"
@@ -2177,7 +2195,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      benefit_type: ["va", "vr", "vt", "health", "dental"],
+      benefit_type: ["va", "vr", "vt", "health", "dental", "cesta", "flex"],
       employee_event_type: [
         "company_transfer",
         "position_change",
