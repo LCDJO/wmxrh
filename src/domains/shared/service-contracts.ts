@@ -18,7 +18,7 @@ import type {
   Employee, EmployeeWithRelations, EmployeeEvent, SalaryHistory,
   SalaryContract, SalaryContractWithRelations,
   SalaryAdjustment, SalaryAdjustmentWithRelations,
-  SalaryAdditional,
+  SalaryAdditional, AuditLog,
   CompanyWithRelations, PositionWithRelations, DepartmentWithRelations,
   SalaryHistoryWithRelations,
   CreateTenantDTO, CreateCompanyDTO, CreateCompanyGroupDTO,
@@ -93,4 +93,9 @@ export interface ISalaryAdjustmentService {
 export interface ISalaryAdditionalService {
   listByEmployee(employeeId: string): Promise<SalaryAdditional[]>;
   create(data: CreateSalaryAdditionalDTO): Promise<SalaryAdditional>;
+}
+
+export interface IAuditLogService {
+  listByTenant(tenantId: string, opts?: { limit?: number; entity_type?: string; action?: string }): Promise<AuditLog[]>;
+  listByEntity(entityType: string, entityId: string): Promise<AuditLog[]>;
 }

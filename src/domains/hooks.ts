@@ -21,6 +21,7 @@ import { salaryHistoryService } from '@/domains/compensation/salary-history.serv
 import { salaryContractService } from '@/domains/compensation/salary-contract.service';
 import { salaryAdjustmentService } from '@/domains/compensation/salary-adjustment.service';
 import { salaryAdditionalService } from '@/domains/compensation/salary-additional.service';
+import { auditLogService } from '@/domains/audit/audit-log.service';
 
 // Types
 import type {
@@ -51,6 +52,8 @@ export const queryKeys = {
   salaryAdjustments: (empId: string) => ['salary_adjustments', empId] as const,
   salaryAdjustmentsTenant: (tenantId?: string) => ['salary_adjustments_tenant', tenantId] as const,
   salaryAdditionals: (empId: string) => ['salary_additionals', empId] as const,
+  auditLogs: (tenantId?: string, filters?: string) => ['audit_logs', tenantId, filters] as const,
+  auditLogsByEntity: (entityType: string, entityId: string) => ['audit_logs_entity', entityType, entityId] as const,
 };
 
 // ========================
@@ -342,5 +345,28 @@ export function useCreateSalaryAdditional() {
       qc.invalidateQueries({ queryKey: queryKeys.salaryAdditionals(vars.employee_id) });
       qc.invalidateQueries({ queryKey: queryKeys.employeeEvents(vars.employee_id) });
     },
+  });
+}
+
+// ========================
+// AUDIT LOG HOOKS
+// ========================
+
+export function useAuditLogs(opts?: { limit?: number; entity_type?: string; action?: string }) {
+  const { currentTenant } = useTenant();
+  const tenantId = currentTenant?.id;
+  const filterKey = JSON.stringify(opts || {});
+  return useQuery({
+    queryKey: queryKeys.auditLogs(tenantId, filterKey),
+    queryFn: () => auditLogService.listByTenant(tenantId!, opts),
+    enabled: !!tenantId,
+  });
+}
+
+export function useAuditLogsByEntity(entityType: string, entityId: string) {
+  return useQuery({
+    queryKey: queryKeys.auditLogsByEntity(entityType, entityId),
+    queryFn: () => auditLogService.listByEntity(entityType, entityId),
+    enabled: !!entityType && !!entityId,
   });
 }
