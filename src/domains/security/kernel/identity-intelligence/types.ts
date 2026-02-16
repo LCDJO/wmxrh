@@ -258,6 +258,21 @@ export interface ActiveContext {
   readonly group_id: string | null;
   readonly company_id: string | null;
   readonly activated_at: number;
+  /** PXE: active plan tier for this tenant (null if not resolved yet) */
+  readonly active_plan: ActivePlanInfo | null;
+  /** PXE: module keys accessible under the current plan */
+  readonly allowed_modules: readonly string[];
+}
+
+/**
+ * Plan info embedded in the active context.
+ */
+export interface ActivePlanInfo {
+  readonly plan_id: string;
+  readonly plan_name: string;
+  readonly tier: string;
+  readonly status: string;
+  readonly billing_cycle: string;
 }
 
 /**

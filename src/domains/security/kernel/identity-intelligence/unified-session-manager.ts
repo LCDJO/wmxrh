@@ -195,6 +195,9 @@ export class UnifiedSessionManager {
       group_id: context.activeGroupId,
       company_id: context.activeCompanyId,
       activated_at: context.activatedAt,
+      // PXE fields — populated lazily by useIdentityIntelligence via enrichment
+      active_plan: (context as any).activePlan ?? null,
+      allowed_modules: (context as any).allowedModules ?? [],
     } : null;
 
     const impersonationState = impersonation ? {
