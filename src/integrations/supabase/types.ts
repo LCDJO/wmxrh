@@ -2252,6 +2252,62 @@ export type Database = {
           },
         ]
       }
+      impersonation_sessions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          expires_at: string
+          id: string
+          metadata: Json | null
+          operation_count: number
+          platform_user_id: string
+          reason: string
+          simulated_role: string
+          started_at: string
+          status: string
+          target_user_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          expires_at: string
+          id?: string
+          metadata?: Json | null
+          operation_count?: number
+          platform_user_id: string
+          reason: string
+          simulated_role?: string
+          started_at?: string
+          status?: string
+          target_user_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          metadata?: Json | null
+          operation_count?: number
+          platform_user_id?: string
+          reason?: string
+          simulated_role?: string
+          started_at?: string
+          status?: string
+          target_user_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonation_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       labor_rule_definitions: {
         Row: {
           aplica_reflexos: boolean
