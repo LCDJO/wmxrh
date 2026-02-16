@@ -383,7 +383,7 @@ export function VisualPermissionBuilder({ roles, permissions, tenantId, userId, 
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
           {/* Permission Grid */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden border-border/60">
             <CardHeader className="pb-3 border-b border-border/40">
               <div className="flex items-center gap-3 justify-between">
                 <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -401,7 +401,7 @@ export function VisualPermissionBuilder({ roles, permissions, tenantId, userId, 
                 </div>
               </div>
             </CardHeader>
-            <ScrollArea className="max-h-[60vh]">
+            <div className="h-[60vh] overflow-y-auto">
               <div className="p-4 space-y-1">
                 {Object.entries(MODULE_GROUPS).map(([groupKey, group]) => {
                   const groupResources = group.resources.filter(r => filteredResources.includes(r) && matrix.has(r));
@@ -571,7 +571,7 @@ export function VisualPermissionBuilder({ roles, permissions, tenantId, userId, 
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Save Bar */}
             {canEdit && (
