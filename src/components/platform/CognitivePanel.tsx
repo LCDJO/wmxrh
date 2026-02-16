@@ -1,9 +1,10 @@
 /**
- * CognitivePanel — Slide-out panel with AI-powered contextual suggestions.
+ * CognitivePanel — Slide-out panel powered by PlatformCognitiveLayer architecture.
  */
 import { useState } from 'react';
 import { usePlatformCognitive } from '@/domains/platform/use-platform-cognitive';
-import type { CognitiveIntent, CognitiveSuggestion } from '@/domains/platform/platform-cognitive.types';
+import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
+import type { CognitiveIntent, CognitiveSuggestion } from '@/domains/platform-cognitive/types';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -71,12 +72,14 @@ function SuggestionCard({ s }: { s: CognitiveSuggestion }) {
 
 export function CognitivePanel() {
   const { ask, loading, response, clear } = usePlatformCognitive();
+  const { identity } = usePlatformIdentity();
   const [open, setOpen] = useState(false);
   const [activeIntent, setActiveIntent] = useState<CognitiveIntent | null>(null);
 
   const handleAsk = async (intent: CognitiveIntent) => {
+    if (!identity) return;
     setActiveIntent(intent);
-    await ask(intent);
+    await ask(intent, { role: identity.role, email: identity.email });
   };
 
   return (
@@ -94,7 +97,6 @@ export function CognitivePanel() {
       </SheetTrigger>
 
       <SheetContent className="w-[420px] sm:max-w-[420px] p-0 flex flex-col">
-        {/* Header */}
         <SheetHeader className="px-5 pt-5 pb-3 border-b">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(265_60%_50%/0.12)]">
@@ -102,7 +104,9 @@ export function CognitivePanel() {
             </div>
             <div>
               <SheetTitle className="text-base">Platform Cognitive Layer</SheetTitle>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Inteligência contextual • Apenas sugestões</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Inteligência contextual • 6 advisors • Apenas sugestões
+              </p>
             </div>
           </div>
         </SheetHeader>
@@ -111,7 +115,7 @@ export function CognitivePanel() {
           <div className="p-5 space-y-5">
             {/* Intent selector */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Consultar</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Consultar Advisor</p>
               <div className="grid gap-2">
                 {INTENT_OPTIONS.map(({ intent, label, icon: IIcon, desc }) => (
                   <button
@@ -123,7 +127,7 @@ export function CognitivePanel() {
                       activeIntent === intent
                         ? 'border-primary/40 bg-primary/5 ring-1 ring-primary/20'
                         : 'hover:bg-muted/50',
-                      loading && 'opacity-60 cursor-wait'
+                      loading && 'opacity-60 cursor-wait',
                     )}
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -169,9 +173,15 @@ export function CognitivePanel() {
 
         {/* Footer */}
         <div className="border-t px-5 py-3">
-          <p className="text-[10px] text-muted-foreground text-center">
-            ⚡ Cognitive Layer — apenas recomendações, sem ações automáticas
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-muted-foreground">
+              ⚡ Cognitive Layer — apenas recomendações
+            </p>
+            <Badge variant="outline" className="text-[9px] gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
+              6 Advisors
+            </Badge>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
