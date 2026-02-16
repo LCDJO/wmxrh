@@ -20,6 +20,10 @@ export type { MultiScopeToken, ScopeToken, QueryFilterSet } from './multi-scope-
 export { contextGuard, ContextGuardError } from './context-guard.middleware';
 export type { GuardResult, GuardTarget, GuardCheckName } from './context-guard.middleware';
 
+// ── Session Cache ──
+export { identitySessionCache, computeAccessGraphHash } from './identity-session-cache';
+export type { IdentitySessionCacheEntry, OperationalContextSnapshot } from './identity-session-cache';
+
 // ── Domain Events ──
 export { emitIBLEvent, onIBLEvent, onIBLEventType, getIBLEventLog, clearIBLEventLog } from './domain-events';
 export type {
