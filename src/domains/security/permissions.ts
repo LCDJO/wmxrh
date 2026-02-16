@@ -198,7 +198,7 @@ export const PERMISSION_MATRIX: PermissionMatrix = {
 // NAV ACCESS (derived from permission matrix)
 // ========================
 
-export type NavKey = 'dashboard' | 'employees' | 'companies' | 'groups' | 'positions' | 'compensation' | 'departments' | 'audit' | 'compliance' | 'benefits' | 'health' | 'labor_dashboard' | 'labor_compliance' | 'labor_rules' | 'legal_dashboard';
+export type NavKey = 'dashboard' | 'employees' | 'companies' | 'groups' | 'positions' | 'compensation' | 'departments' | 'audit' | 'compliance' | 'benefits' | 'health' | 'labor_dashboard' | 'labor_compliance' | 'labor_rules' | 'legal_dashboard' | 'esocial';
 
 const NAV_ENTITY_MAP: Record<NavKey, PermissionEntity> = {
   dashboard: 'tenants',
@@ -216,6 +216,7 @@ const NAV_ENTITY_MAP: Record<NavKey, PermissionEntity> = {
   labor_compliance: 'health_programs',
   labor_rules: 'labor_rules',
   legal_dashboard: 'labor_rules',
+  esocial: 'tenants',
 };
 
 /**
