@@ -1,36 +1,29 @@
+import type { QueryScope } from '@/domains/shared/scoped-query';
+import { applyScope, scopedInsert } from '@/domains/shared/scoped-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { ISalaryAdjustmentService } from '@/domains/shared';
 import type { SalaryAdjustment, SalaryAdjustmentWithRelations, CreateSalaryAdjustmentDTO } from '@/domains/shared';
 
-export const salaryAdjustmentService: ISalaryAdjustmentService = {
-  async listByEmployee(employeeId: string) {
-    const { data, error } = await supabase
-      .from('salary_adjustments')
-      .select('*')
+export const salaryAdjustmentService = {
+  async listByEmployee(employeeId: string, scope: QueryScope) {
+    const q = applyScope(supabase.from('salary_adjustments').select('*'), scope)
       .eq('employee_id', employeeId)
-      .is('deleted_at', null)
       .order('created_at', { ascending: false });
+    const { data, error } = await q;
     if (error) throw error;
     return (data || []) as SalaryAdjustment[];
   },
 
-  async listByTenant(tenantId: string) {
-    const { data, error } = await supabase
-      .from('salary_adjustments')
-      .select('*, employees(name)')
-      .eq('tenant_id', tenantId)
-      .is('deleted_at', null)
+  async listByTenant(scope: QueryScope) {
+    const q = applyScope(supabase.from('salary_adjustments').select('*, employees(name)'), scope)
       .order('created_at', { ascending: false });
+    const { data, error } = await q;
     if (error) throw error;
     return (data || []) as SalaryAdjustmentWithRelations[];
   },
 
-  async create(dto: CreateSalaryAdjustmentDTO) {
-    const { data, error } = await supabase
-      .from('salary_adjustments')
-      .insert([dto])
-      .select()
-      .single();
+  async create(dto: CreateSalaryAdjustmentDTO, scope: QueryScope) {
+    const secured = scopedInsert(dto, scope);
+    const { data, error } = await supabase.from('salary_adjustments').insert([secured]).select().single();
     if (error) throw error;
     return data as SalaryAdjustment;
   },

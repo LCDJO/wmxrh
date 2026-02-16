@@ -3,6 +3,8 @@
  * Aggregates contracts, adjustments, additionals and history into a unified timeline.
  */
 
+import type { QueryScope } from '@/domains/shared/scoped-query';
+import { applyScope } from '@/domains/shared/scoped-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { SalaryContract, SalaryAdjustment, SalaryAdditional, SalaryHistory } from '@/domains/shared/types';
 
@@ -16,64 +18,54 @@ export interface CompensationTimelineEvent {
 }
 
 export const compensationTimelineService = {
-  async getByEmployee(employeeId: string): Promise<CompensationTimelineEvent[]> {
+  async getByEmployee(employeeId: string, scope: QueryScope): Promise<CompensationTimelineEvent[]> {
     const [contractsRes, adjustmentsRes, additionalsRes, historyRes] = await Promise.all([
-      supabase.from('salary_contracts').select('*').eq('employee_id', employeeId).is('deleted_at', null).order('start_date', { ascending: false }),
-      supabase.from('salary_adjustments').select('*').eq('employee_id', employeeId).is('deleted_at', null).order('created_at', { ascending: false }),
-      supabase.from('salary_additionals').select('*').eq('employee_id', employeeId).is('deleted_at', null).order('created_at', { ascending: false }),
-      supabase.from('salary_history').select('*').eq('employee_id', employeeId).is('deleted_at', null).order('effective_date', { ascending: false }),
+      applyScope(supabase.from('salary_contracts').select('*'), scope).eq('employee_id', employeeId).order('start_date', { ascending: false }),
+      applyScope(supabase.from('salary_adjustments').select('*'), scope).eq('employee_id', employeeId).order('created_at', { ascending: false }),
+      applyScope(supabase.from('salary_additionals').select('*'), scope).eq('employee_id', employeeId).order('created_at', { ascending: false }),
+      applyScope(supabase.from('salary_history').select('*'), scope).eq('employee_id', employeeId).order('effective_date', { ascending: false }),
     ]);
 
     const events: CompensationTimelineEvent[] = [];
 
-    (contractsRes.data || []).forEach((c: SalaryContract) => {
+    ((contractsRes.data || []) as SalaryContract[]).forEach((c) => {
       events.push({
-        id: c.id,
-        type: 'contract',
-        date: c.start_date,
+        id: c.id, type: 'contract', date: c.start_date,
         description: `Contrato salarial${c.is_active ? ' (ativo)' : ' (encerrado)'}`,
         amount: c.base_salary,
         metadata: { is_active: c.is_active, end_date: c.end_date },
       });
     });
 
-    (adjustmentsRes.data || []).forEach((a: SalaryAdjustment) => {
+    ((adjustmentsRes.data || []) as SalaryAdjustment[]).forEach((a) => {
       const pct = a.percentage ? ` (+${a.percentage}%)` : '';
       events.push({
-        id: a.id,
-        type: 'adjustment',
-        date: a.created_at,
+        id: a.id, type: 'adjustment', date: a.created_at,
         description: `Ajuste ${a.adjustment_type}${pct}: R$ ${a.previous_salary.toLocaleString('pt-BR')} → R$ ${a.new_salary.toLocaleString('pt-BR')}`,
         amount: a.new_salary,
         metadata: { adjustment_type: a.adjustment_type, percentage: a.percentage, reason: a.reason },
       });
     });
 
-    (additionalsRes.data || []).forEach((a: SalaryAdditional) => {
+    ((additionalsRes.data || []) as SalaryAdditional[]).forEach((a) => {
       events.push({
-        id: a.id,
-        type: 'additional',
-        date: a.start_date,
+        id: a.id, type: 'additional', date: a.start_date,
         description: `Adicional ${a.additional_type}${a.is_recurring ? ' (recorrente)' : ''}`,
         amount: a.amount,
         metadata: { additional_type: a.additional_type, is_recurring: a.is_recurring, description: a.description },
       });
     });
 
-    (historyRes.data || []).forEach((h: SalaryHistory) => {
+    ((historyRes.data || []) as SalaryHistory[]).forEach((h) => {
       events.push({
-        id: h.id,
-        type: 'history',
-        date: h.effective_date,
+        id: h.id, type: 'history', date: h.effective_date,
         description: `Alteração salarial: R$ ${h.previous_salary.toLocaleString('pt-BR')} → R$ ${h.new_salary.toLocaleString('pt-BR')}`,
         amount: h.new_salary,
         metadata: { reason: h.reason },
       });
     });
 
-    // Sort by date descending
     events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
     return events;
   },
 };
