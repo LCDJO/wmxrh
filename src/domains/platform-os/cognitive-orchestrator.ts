@@ -39,6 +39,7 @@ const SUGGESTION_KIND_MAP: Record<SuggestionType, CognitiveSignalKind> = {
   shortcut: 'shortcut_suggestion',
   pattern: 'pattern_detection',
   setup: 'quick_setup',
+  'plan-upgrade': 'dashboard_recommendation',
 };
 
 function mapSuggestionToSignal(

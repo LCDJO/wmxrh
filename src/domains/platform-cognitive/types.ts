@@ -16,10 +16,11 @@ export type CognitiveIntent =
   | 'recommend-dashboards'
   | 'suggest-shortcuts'
   | 'detect-patterns'
-  | 'quick-setup';
+  | 'quick-setup'
+  | 'suggest-plan-upgrade';
 
 // ── Suggestion ─────────────────────────────────────────────────────
-export type SuggestionType = 'permission' | 'dashboard' | 'shortcut' | 'pattern' | 'setup';
+export type SuggestionType = 'permission' | 'dashboard' | 'shortcut' | 'pattern' | 'setup' | 'plan-upgrade';
 
 export interface CognitiveSuggestion {
   id: string;

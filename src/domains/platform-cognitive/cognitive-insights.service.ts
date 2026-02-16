@@ -21,6 +21,7 @@ import { BehaviorAnalyzer } from './behavior-analyzer';
 import { PermissionAdvisor } from './permission-advisor';
 import { NavigationAdvisor } from './navigation-advisor';
 import { RoleSuggestionEngine } from './role-suggestion-engine';
+import { PlanUpgradeAdvisor } from './plan-upgrade-advisor';
 import type { CognitiveIntent, CognitiveResponse, AdvisorPayload } from './types';
 
 export class CognitiveInsightsService {
@@ -29,6 +30,7 @@ export class CognitiveInsightsService {
   private permAdvisor = new PermissionAdvisor();
   private navAdvisor = new NavigationAdvisor();
   private roleEngine = new RoleSuggestionEngine();
+  private planAdvisor = new PlanUpgradeAdvisor();
 
   constructor() {
     this.behavior = new BehaviorAnalyzer(this.collector);
@@ -160,6 +162,16 @@ export class CognitiveInsightsService {
       });
     }
 
+    if (intent === 'suggest-plan-upgrade' && response.suggestions.length > 0) {
+      response.suggestions.forEach(s => {
+        platformEvents.navigationHintCreated(actorId, {
+          route: '/platform/plans',
+          label: s.title,
+          source: 'ai',
+        });
+      });
+    }
+
     return response;
   }
 
@@ -201,6 +213,13 @@ export class CognitiveInsightsService {
         return this.roleEngine.buildPatternDetection(anonSnapshot, callerRole);
       case 'quick-setup':
         return this.roleEngine.buildQuickSetup(anonSnapshot, callerRole);
+      case 'suggest-plan-upgrade':
+        return this.planAdvisor.build(
+          anonSnapshot,
+          callerRole,
+          profile,
+          params?.currentPlan as { tier: string; plan_name: string } | undefined,
+        );
       default:
         return null;
     }
