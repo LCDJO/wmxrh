@@ -27,7 +27,12 @@ export type PlatformEventType =
   | 'UserBehaviorTracked'
   | 'RoleSuggestionGenerated'
   | 'PermissionRiskDetected'
-  | 'NavigationHintCreated';
+  | 'NavigationHintCreated'
+  // Billing events
+  | 'PlanAssignedToTenant'
+  | 'PlanUpgraded'
+  | 'PlanDowngraded'
+  | 'PaymentMethodRestricted';
 
 export interface PlatformEventPayload {
   type: PlatformEventType;
@@ -36,7 +41,7 @@ export interface PlatformEventPayload {
   actorId: string;
   actorEmail?: string;
   /** Target entity */
-  targetType: 'platform_user' | 'tenant' | 'platform_role' | 'cognitive_layer';
+  targetType: 'platform_user' | 'tenant' | 'platform_role' | 'cognitive_layer' | 'billing';
   targetId: string;
   /** Extra context */
   metadata?: Record<string, unknown>;
@@ -212,6 +217,66 @@ export const platformEvents = {
       actorId,
       targetType: 'cognitive_layer',
       targetId: `hint:${opts.route}`,
+      metadata: opts,
+    });
+  },
+
+  // ═══════════════════════════════════
+  // Billing Events
+  // ═══════════════════════════════════
+
+  /**
+   * Emitted when a plan is first assigned to a tenant.
+   */
+  planAssignedToTenant(actorId: string, tenantId: string, opts: { planId: string; planName: string; tier: string; billingCycle: string }) {
+    emit({
+      type: 'PlanAssignedToTenant',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'billing',
+      targetId: tenantId,
+      metadata: opts,
+    });
+  },
+
+  /**
+   * Emitted when a tenant upgrades to a higher plan tier.
+   */
+  planUpgraded(actorId: string, tenantId: string, opts: { fromPlan: string; toPlan: string; fromTier: string; toTier: string; proratedAmountBrl?: number }) {
+    emit({
+      type: 'PlanUpgraded',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'billing',
+      targetId: tenantId,
+      metadata: opts,
+    });
+  },
+
+  /**
+   * Emitted when a tenant downgrades to a lower plan tier.
+   */
+  planDowngraded(actorId: string, tenantId: string, opts: { fromPlan: string; toPlan: string; fromTier: string; toTier: string; effectiveAt?: string }) {
+    emit({
+      type: 'PlanDowngraded',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'billing',
+      targetId: tenantId,
+      metadata: opts,
+    });
+  },
+
+  /**
+   * Emitted when a payment method is restricted or rejected for a tenant.
+   */
+  paymentMethodRestricted(actorId: string, tenantId: string, opts: { method: string; reason: string; allowedMethods: string[] }) {
+    emit({
+      type: 'PaymentMethodRestricted',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'billing',
+      targetId: tenantId,
       metadata: opts,
     });
   },

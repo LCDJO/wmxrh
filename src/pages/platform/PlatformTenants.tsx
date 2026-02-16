@@ -141,6 +141,14 @@ export default function PlatformTenants() {
         if (planError) {
           console.error('[PXE] Plan assignment error:', planError);
           toast({ title: 'Aviso', description: 'Tenant criado mas houve erro ao vincular o plano.', variant: 'destructive' });
+        } else {
+          const selectedPlan = availablePlans.find(p => p.id === form.planId);
+          platformEvents.planAssignedToTenant(user?.id ?? '', tenantId, {
+            planId: form.planId,
+            planName: selectedPlan?.name ?? '',
+            tier: selectedPlan?.name?.toLowerCase() ?? 'free',
+            billingCycle: selectedPlan?.billing_cycle ?? 'monthly',
+          });
         }
       }
 
