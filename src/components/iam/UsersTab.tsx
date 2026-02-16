@@ -88,7 +88,7 @@ export function UsersTab({ members, assignments, roles, tenantId, userId, isTena
   });
 
   const removeMutation = useMutation({
-    mutationFn: (id: string) => identityGateway.removeRoleFromUser({ assignment_id: id }),
+    mutationFn: (a: UserCustomRole) => identityGateway.removeRoleFromUser({ assignment_id: a.id, user_id: a.user_id, tenant_id: tenantId, role_id: a.role_id }),
     onSuccess: () => { toast({ title: 'Atribuição removida!' }); onInvalidate(); },
     onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
@@ -244,7 +244,7 @@ export function UsersTab({ members, assignments, roles, tenantId, userId, isTena
                             </span>
                           </Badge>
                           {isTenantAdmin && (
-                            <button onClick={() => removeMutation.mutate(ur.id)} className="text-destructive hover:text-destructive/80">
+                            <button onClick={() => removeMutation.mutate(ur)} className="text-destructive hover:text-destructive/80">
                               <Trash2 className="h-3 w-3" />
                             </button>
                           )}
