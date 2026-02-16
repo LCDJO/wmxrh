@@ -56,3 +56,24 @@ export type {
   EmployerCostResult,
   EncargoEstimate,
 } from './types';
+
+// ── Future Integration Ports (contracts only) ──
+export type {
+  OfficialPayrollPort,
+  OfficialPayrollOutput,
+  OfficialRubric,
+  PayrollBatchResult,
+  PayrollProcessingError,
+  ESocialExportPort,
+  ESocialPayrollPayload,
+  ESocialRubricItem,
+  ESocialEmployeeData,
+  ESocialValidationResult,
+  ESocialSubmissionResult,
+  AccountingIntegrationPort,
+  AccountingEntry,
+  AccountMappingConfig,
+  SPEDExportResult,
+  ERPConnectionConfig,
+  ERPPushResult,
+} from './ports';
