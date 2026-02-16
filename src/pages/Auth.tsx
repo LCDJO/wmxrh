@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { platformEvents } from '@/domains/platform/platform-events';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,6 +49,7 @@ export default function Auth() {
         .maybeSingle();
 
       if (platformUser && platformUser.status === 'active') {
+        platformEvents.userLoggedIn(user.id, user.email);
         navigate('/platform', { replace: true });
       } else {
         navigate('/', { replace: true });
