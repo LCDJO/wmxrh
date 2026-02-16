@@ -40,5 +40,5 @@ export { featureFlagEngine } from './feature-flag-engine';
 export type { FeatureFlagEngineAPI, FeatureFlagContext, FeatureFlagRecord } from './feature-flag-engine';
 
 // ── Audit Security ─────────────────────────────────────────
-export { auditSecurity } from './audit-security.service';
-export type { AuditSecurityAPI, AuditEntry, AuditAction } from './audit-security.service';
+export { auditSecurity, onSecurityEvent } from './audit-security.service';
+export type { AuditSecurityAPI, AuditEntry, AuditAction, AuditResult, SecurityEventType, SecurityEventPayload } from './audit-security.service';

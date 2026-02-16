@@ -5,7 +5,7 @@
 
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { onSecurityEvent, type SecurityEventPayload } from './security-events';
+import { onSecurityEvent, type SecurityEventPayload } from './kernel';
 
 const EVENT_LABELS: Record<string, { title: string; variant: 'destructive' | 'default' }> = {
   UnauthorizedAccessAttempt: { title: '⛔ Acesso Negado', variant: 'destructive' },
