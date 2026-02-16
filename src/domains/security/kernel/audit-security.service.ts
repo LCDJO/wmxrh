@@ -37,9 +37,12 @@ export type AuditAction =
   | 'feature_blocked'
   | 'login_attempt'
   | 'mutation_blocked'
-  | 'unauthorized_access';
+  | 'unauthorized_access'
+  | 'identity_cleared'
+  | 'tenant_switched'
+  | 'scope_switched';
 
-export type AuditResult = 'allowed' | 'blocked';
+export type AuditResult = 'allowed' | 'blocked' | 'success';
 
 export type SecurityEventType =
   | 'UnauthorizedAccessAttempt'
@@ -127,6 +130,9 @@ const ACTION_TO_EVENT: Record<AuditAction, SecurityEventType> = {
   feature_blocked: 'FeatureBlocked',
   login_attempt: 'UnauthorizedAccessAttempt',
   mutation_blocked: 'MutationBlocked',
+  identity_cleared: 'UnauthorizedAccessAttempt',
+  tenant_switched: 'ScopeMismatchDetected',
+  scope_switched: 'ScopeMismatchDetected',
 };
 
 function buildEntry(
