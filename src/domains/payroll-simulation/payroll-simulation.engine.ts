@@ -25,17 +25,24 @@ import { calculateTaxes } from './tax-calculator';
 import { calculateReflections } from './reflection-calculator';
 import { calculateEmployerCost } from './employer-cost-calculator';
 import type { SimulationInput, PayrollSimulationOutput, EncargoEstimate } from './types';
-
+import {
+  payrollSimulationEventBus,
+  detectSimulationRisks,
+  type PayrollSimulationCreatedPayload,
+  type EncargoEstimateUpdatedPayload,
+} from './payroll-simulation.events';
 /**
  * Run a full payroll simulation.
  *
  * @param input - Employee work/salary data
  * @param rules - Effective labor rules (from laborRulesService.getEffectiveRules)
+ * @param meta  - Optional metadata for event emission (tenantId, employeeId)
  * @returns Complete simulation with rubrics, taxes, reflections, and employer cost
  */
 export function simulatePayroll(
   input: SimulationInput,
   rules: LaborRuleDefinition[],
+  meta?: { tenantId?: string; employeeId?: string },
 ): PayrollSimulationOutput {
   // 1. Build WorkContext for LaborRulesEngine
   const workContext: WorkContext = {
@@ -176,7 +183,7 @@ export function simulatePayroll(
     total_encargos_estimados: round(taxes.inss + taxes.irrf + taxes.fgts),
   };
 
-  return {
+  const result: PayrollSimulationOutput = {
     input,
     rubrics,
     summary: fullSummary,
@@ -186,6 +193,42 @@ export function simulatePayroll(
     employerCost,
     simulated_at: new Date().toISOString(),
   };
+
+  // ── Emit domain events ──
+  const tenantId = meta?.tenantId ?? 'unknown';
+
+  payrollSimulationEventBus.emit<PayrollSimulationCreatedPayload>('PayrollSimulationCreated', {
+    tenant_id: tenantId,
+    employee_id: meta?.employeeId,
+    salario_base: input.salario_base,
+    custo_total_empregador: employerCost.custo_total_empregador,
+    fator_custo: employerCost.fator_custo,
+    is_adhoc: !meta?.employeeId,
+  });
+
+  payrollSimulationEventBus.emit<EncargoEstimateUpdatedPayload>('EncargoEstimateUpdated', {
+    tenant_id: tenantId,
+    employee_id: meta?.employeeId,
+    base_inss: encargos.base_inss,
+    valor_inss_estimado: encargos.valor_inss_estimado,
+    valor_irrf_estimado: encargos.valor_irrf_estimado,
+    valor_fgts_estimado: encargos.valor_fgts_estimado,
+    total_encargos_estimados: encargos.total_encargos_estimados,
+  });
+
+  // Risk detection
+  const risks = detectSimulationRisks(
+    tenantId,
+    meta?.employeeId,
+    employerCost.fator_custo,
+    fullSummary.baseInss,
+    input.salario_base,
+  );
+  for (const risk of risks) {
+    payrollSimulationEventBus.emit('SimulationRiskDetected', risk);
+  }
+
+  return result;
 }
 
 function round(v: number): number {
