@@ -31,7 +31,7 @@ import { healthProgramService } from '@/domains/compliance/health-program.servic
 import { payrollSimulationService } from '@/domains/compliance/payroll-simulation.service';
 import { salaryStructureService } from '@/domains/compensation/salary-structure.service';
 import { riskExposureService } from '@/domains/compliance/risk-exposure.service';
-
+import { pcmsoAlertService, type ExamAlertStatus } from '@/domains/compliance/pcmso-alert.service';
 // Types
 import type {
   CreateTenantDTO, CreateCompanyGroupDTO, CreateCompanyDTO,
@@ -678,5 +678,42 @@ export function useCreateRiskExposure() {
       qc.invalidateQueries({ queryKey: riskExposureKeys.byTenant(qs?.tenantId) });
       qc.invalidateQueries({ queryKey: riskExposureKeys.hazardPay(qs?.tenantId) });
     },
+  });
+}
+
+// ========================
+// PCMSO ALERTS
+// ========================
+
+const pcmsoKeys = {
+  alerts: (tenantId?: string, statuses?: string) => ['pcmso_alerts', tenantId, statuses],
+  counts: (tenantId?: string) => ['pcmso_alert_counts', tenantId],
+};
+
+export function usePcmsoAlerts(statuses?: ExamAlertStatus[]) {
+  const qs = useQueryScope();
+  const key = statuses?.join(',');
+  return useQuery({
+    queryKey: pcmsoKeys.alerts(qs?.tenantId, key),
+    queryFn: () => pcmsoAlertService.listAlerts(qs!.tenantId, statuses),
+    enabled: !!qs,
+  });
+}
+
+export function usePcmsoOverdueAlerts() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: pcmsoKeys.alerts(qs?.tenantId, 'overdue_expiring'),
+    queryFn: () => pcmsoAlertService.listOverdueAndExpiring(qs!.tenantId),
+    enabled: !!qs,
+  });
+}
+
+export function usePcmsoAlertCounts() {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: pcmsoKeys.counts(qs?.tenantId),
+    queryFn: () => pcmsoAlertService.countByStatus(qs!.tenantId),
+    enabled: !!qs,
   });
 }
