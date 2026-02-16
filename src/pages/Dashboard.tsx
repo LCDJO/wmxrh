@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Users, Briefcase, TrendingUp, Building2, Layers, Calendar } from 'lucide-react';
+import { CognitiveInsightsCard } from '@/components/dashboard/CognitiveInsightsCard';
 import { StatsCard } from '@/components/shared/StatsCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -126,6 +127,16 @@ export default function Dashboard() {
 
   // Recent adjustments
   const recentAdjustments = useMemo(() => adjustments.slice(0, 5), [adjustments]);
+
+  // Position distribution for cognitive insights
+  const positionCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    scopedEmployees.forEach(e => {
+      const title = e.positions?.title || 'Sem cargo';
+      counts.set(title, (counts.get(title) ?? 0) + 1);
+    });
+    return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+  }, [scopedEmployees]);
 
   return (
     <div className="space-y-8">
@@ -313,6 +324,12 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Cognitive Insights */}
+      <CognitiveInsightsCard
+        positionCounts={positionCounts}
+        totalEmployees={scopedEmployees.length}
+      />
     </div>
   );
 }
