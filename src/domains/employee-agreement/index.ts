@@ -67,4 +67,7 @@ export type { AgreementEventType, AgreementDomainEvent } from './events';
 // ── Adapters ──
 export { simulationSignerAdapter } from './adapters/simulation-signer';
 export { openSignAdapter } from './adapters/opensign-adapter';
+export { clicksignAdapter } from './adapters/clicksign-adapter';
+export { autentiqueAdapter } from './adapters/autentique-adapter';
+export { zapsignAdapter } from './adapters/zapsign-adapter';
 export { documentStorageAdapter } from './adapters/document-storage';

@@ -17,9 +17,11 @@ export type AgreementStatus =
   | 'expired';
 
 export type SignatureProvider =
-  | 'opensign'
-  | 'docusign'
   | 'clicksign'
+  | 'autentique'
+  | 'zapsign'
+  | 'docusign'
+  | 'opensign'
   | 'manual'
   | 'simulation';
 
