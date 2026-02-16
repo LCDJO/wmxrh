@@ -29,4 +29,5 @@ export type {
   InssBreakdown,
   ReflectionResult,
   EmployerCostResult,
+  EncargoEstimate,
 } from './types';

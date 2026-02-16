@@ -24,7 +24,7 @@ import {
 import { calculateTaxes } from './tax-calculator';
 import { calculateReflections } from './reflection-calculator';
 import { calculateEmployerCost } from './employer-cost-calculator';
-import type { SimulationInput, PayrollSimulationOutput } from './types';
+import type { SimulationInput, PayrollSimulationOutput, EncargoEstimate } from './types';
 
 /**
  * Run a full payroll simulation.
@@ -110,11 +110,25 @@ export function simulatePayroll(
     salario_base: input.salario_base,
   });
 
+  // 7. Build EncargoEstimate (SIMULAÇÃO)
+  const encargos: EncargoEstimate = {
+    is_simulacao: true,
+    disclaimer: 'SIMULAÇÃO — valores estimados para análise financeira. NÃO substitui cálculos oficiais de folha de pagamento.',
+    base_inss: fullSummary.baseInss,
+    valor_inss_estimado: taxes.inss,
+    base_irrf: fullSummary.baseIrrf,
+    valor_irrf_estimado: taxes.irrf,
+    base_fgts: fullSummary.baseFgts,
+    valor_fgts_estimado: taxes.fgts,
+    total_encargos_estimados: round(taxes.inss + taxes.irrf + taxes.fgts),
+  };
+
   return {
     input,
     rubrics,
     summary: fullSummary,
     taxes,
+    encargos,
     reflections,
     employerCost,
     simulated_at: new Date().toISOString(),
