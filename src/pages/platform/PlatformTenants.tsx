@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Building2, Plus, Search, Ban, CheckCircle, Eye, Puzzle,
+  Building2, Plus, Search, Ban, CheckCircle, Eye, Puzzle, Package,
   Loader2, MoreHorizontal, Users, Calendar, UserCog, Shield, Clock,
 } from 'lucide-react';
 import {
@@ -49,6 +49,13 @@ interface TenantModule {
   is_active: boolean;
 }
 
+interface SaasPlanOption {
+  id: string;
+  name: string;
+  price: number;
+  billing_cycle: string;
+}
+
 type DialogMode = 'create' | 'view' | 'modules' | 'impersonate' | null;
 
 export default function PlatformTenants() {
@@ -64,7 +71,18 @@ export default function PlatformTenants() {
   const [saving, setSaving] = useState(false);
 
   // Create form
-  const [form, setForm] = useState({ name: '', document: '', email: '', phone: '', adminEmail: '', adminName: '' });
+  const [form, setForm] = useState({ name: '', document: '', email: '', phone: '', adminEmail: '', adminName: '', planId: '' });
+
+  // Available plans
+  const [availablePlans, setAvailablePlans] = useState<SaasPlanOption[]>([]);
+  useEffect(() => {
+    supabase
+      .from('saas_plans')
+      .select('id, name, price, billing_cycle')
+      .eq('is_active', true)
+      .order('price', { ascending: true })
+      .then(({ data }) => setAvailablePlans((data ?? []) as SaasPlanOption[]));
+  }, []);
 
   // Modules
   const [tenantModules, setTenantModules] = useState<TenantModule[]>([]);
@@ -93,7 +111,7 @@ export default function PlatformTenants() {
     t.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // ── Create Tenant (atomic: tenant + role + first admin) ──
+  // ── Create Tenant (atomic: tenant + role + first admin + plan assignment) ──
   const handleCreate = async () => {
     if (!form.name.trim()) return;
     setSaving(true);
@@ -109,9 +127,26 @@ export default function PlatformTenants() {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
       const tenantId = typeof data === 'object' && data !== null ? (data as any).tenant_id : '';
+
+      // ── PXE: Assign plan → triggers module sync + experience profile ──
+      if (tenantId && form.planId) {
+        const { error: planError } = await supabase
+          .from('tenant_plans')
+          .insert({
+            tenant_id: tenantId,
+            plan_id: form.planId,
+            status: 'active',
+            billing_cycle: availablePlans.find(p => p.id === form.planId)?.billing_cycle ?? 'monthly',
+          });
+        if (planError) {
+          console.error('[PXE] Plan assignment error:', planError);
+          toast({ title: 'Aviso', description: 'Tenant criado mas houve erro ao vincular o plano.', variant: 'destructive' });
+        }
+      }
+
       platformEvents.tenantCreated(user?.id ?? '', tenantId, form.name.trim());
-      toast({ title: 'Tenant criado', description: `${form.name} criado com role TenantAdmin e convite enviado.` });
-      setForm({ name: '', document: '', email: '', phone: '', adminEmail: '', adminName: '' });
+      toast({ title: 'Tenant criado', description: `${form.name} criado com plano, módulos e role TenantAdmin.` });
+      setForm({ name: '', document: '', email: '', phone: '', adminEmail: '', adminName: '', planId: '' });
       setDialogMode(null);
       fetchTenants();
     }
@@ -432,6 +467,35 @@ export default function PlatformTenants() {
               <div className="space-y-1.5">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">Telefone</Label>
                 <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(00) 0000-0000" />
+              </div>
+            </div>
+
+            {/* Plan selection */}
+            <div className="border-t border-border pt-4 space-y-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Package className="h-3.5 w-3.5" /> Plano SaaS
+              </p>
+              <div className="grid gap-2">
+                {availablePlans.map(plan => (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, planId: plan.id }))}
+                    className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-all ${
+                      form.planId === plan.id
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:border-primary/30'
+                    }`}
+                  >
+                    <span className="font-medium">{plan.name}</span>
+                    <span className="text-xs">
+                      R$ {plan.price.toFixed(2).replace('.', ',')} /{plan.billing_cycle === 'monthly' ? 'mês' : 'ano'}
+                    </span>
+                  </button>
+                ))}
+                {availablePlans.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">Nenhum plano ativo cadastrado.</p>
+                )}
               </div>
             </div>
 
