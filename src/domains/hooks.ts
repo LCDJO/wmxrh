@@ -21,6 +21,7 @@ import { salaryHistoryService } from '@/domains/compensation/salary-history.serv
 import { salaryContractService } from '@/domains/compensation/salary-contract.service';
 import { salaryAdjustmentService } from '@/domains/compensation/salary-adjustment.service';
 import { salaryAdditionalService } from '@/domains/compensation/salary-additional.service';
+import { compensationTimelineService } from '@/domains/compensation/compensation-timeline.service';
 import { auditLogService } from '@/domains/audit/audit-log.service';
 
 // Types
@@ -36,6 +37,8 @@ import type {
 
 export const queryKeys = {
   employees: (tenantId?: string) => ['employees', tenantId] as const,
+  employeesByGroup: (tenantId?: string, groupId?: string) => ['employees_group', tenantId, groupId] as const,
+  employeesByCompany: (tenantId?: string, companyId?: string) => ['employees_company', tenantId, companyId] as const,
   employeesSimple: (tenantId?: string) => ['employees-simple', tenantId] as const,
   employee: (id: string) => ['employee', id] as const,
   companies: (tenantId?: string) => ['companies', tenantId] as const,
@@ -52,6 +55,7 @@ export const queryKeys = {
   salaryAdjustments: (empId: string) => ['salary_adjustments', empId] as const,
   salaryAdjustmentsTenant: (tenantId?: string) => ['salary_adjustments_tenant', tenantId] as const,
   salaryAdditionals: (empId: string) => ['salary_additionals', empId] as const,
+  compensationTimeline: (empId: string) => ['compensation_timeline', empId] as const,
   auditLogs: (tenantId?: string, filters?: string) => ['audit_logs', tenantId, filters] as const,
   auditLogsByEntity: (entityType: string, entityId: string) => ['audit_logs_entity', entityType, entityId] as const,
 };
@@ -202,6 +206,26 @@ export function useEmployee(id: string) {
   });
 }
 
+export function useEmployeesByGroup(groupId?: string) {
+  const { currentTenant } = useTenant();
+  const tenantId = currentTenant?.id;
+  return useQuery({
+    queryKey: queryKeys.employeesByGroup(tenantId, groupId),
+    queryFn: () => employeeService.listByGroup(tenantId!, groupId!),
+    enabled: !!tenantId && !!groupId,
+  });
+}
+
+export function useEmployeesByCompany(companyId?: string) {
+  const { currentTenant } = useTenant();
+  const tenantId = currentTenant?.id;
+  return useQuery({
+    queryKey: queryKeys.employeesByCompany(tenantId, companyId),
+    queryFn: () => employeeService.listByCompany(tenantId!, companyId!),
+    enabled: !!tenantId && !!companyId,
+  });
+}
+
 export function useCreateEmployee() {
   const { currentTenant } = useTenant();
   const qc = useQueryClient();
@@ -345,6 +369,18 @@ export function useCreateSalaryAdditional() {
       qc.invalidateQueries({ queryKey: queryKeys.salaryAdditionals(vars.employee_id) });
       qc.invalidateQueries({ queryKey: queryKeys.employeeEvents(vars.employee_id) });
     },
+  });
+}
+
+// ========================
+// COMPENSATION TIMELINE HOOKS
+// ========================
+
+export function useCompensationTimeline(employeeId: string) {
+  return useQuery({
+    queryKey: queryKeys.compensationTimeline(employeeId),
+    queryFn: () => compensationTimelineService.getByEmployee(employeeId),
+    enabled: !!employeeId,
   });
 }
 
