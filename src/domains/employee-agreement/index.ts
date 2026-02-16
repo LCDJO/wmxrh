@@ -25,6 +25,7 @@ export { agreementAssignmentService } from './agreement-assignment.service';
 export { digitalSignatureAdapter } from './digital-signature-adapter';
 export { documentVault } from './document-vault';
 export { agreementAuditService, initAgreementAudit } from './agreement-audit.service';
+export { agreementAutomationService } from './agreement-automation.service';
 
 // ── Types ──
 export type {
