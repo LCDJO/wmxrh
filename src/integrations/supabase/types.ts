@@ -919,6 +919,8 @@ export type Database = {
           is_active: boolean
           is_system: boolean
           name: string
+          scope_id: string | null
+          scope_type: string
           slug: string
           tenant_id: string
           updated_at: string
@@ -931,6 +933,8 @@ export type Database = {
           is_active?: boolean
           is_system?: boolean
           name: string
+          scope_id?: string | null
+          scope_type?: string
           slug: string
           tenant_id: string
           updated_at?: string
@@ -943,6 +947,8 @@ export type Database = {
           is_active?: boolean
           is_system?: boolean
           name?: string
+          scope_id?: string | null
+          scope_type?: string
           slug?: string
           tenant_id?: string
           updated_at?: string
@@ -4374,8 +4380,16 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      user_is_company_admin: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_is_employee: {
         Args: { _employee_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_is_group_admin: {
+        Args: { _group_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
       }
       user_is_tenant_admin: {
