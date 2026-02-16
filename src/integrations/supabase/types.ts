@@ -3924,6 +3924,53 @@ export type Database = {
           },
         ]
       }
+      subscription_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          new_mrr: number | null
+          new_plan: Database["public"]["Enums"]["subscription_plan"] | null
+          old_mrr: number | null
+          old_plan: Database["public"]["Enums"]["subscription_plan"] | null
+          performed_by: string | null
+          reason: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          new_mrr?: number | null
+          new_plan?: Database["public"]["Enums"]["subscription_plan"] | null
+          old_mrr?: number | null
+          old_plan?: Database["public"]["Enums"]["subscription_plan"] | null
+          performed_by?: string | null
+          reason?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          new_mrr?: number | null
+          new_plan?: Database["public"]["Enums"]["subscription_plan"] | null
+          old_mrr?: number | null
+          old_plan?: Database["public"]["Enums"]["subscription_plan"] | null
+          performed_by?: string | null
+          reason?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_brackets: {
         Row: {
           bracket_order: number
@@ -4060,6 +4107,74 @@ export type Database = {
             foreignKeyName: "tenant_modules_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_subscriptions: {
+        Row: {
+          billing_cycle: string
+          cancelled_at: string | null
+          churned_at: string | null
+          created_at: string
+          currency: string
+          id: string
+          metadata: Json | null
+          mrr: number
+          next_billing_at: string | null
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          seats_included: number
+          seats_used: number
+          started_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          tenant_id: string
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          billing_cycle?: string
+          cancelled_at?: string | null
+          churned_at?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          mrr?: number
+          next_billing_at?: string | null
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          seats_included?: number
+          seats_used?: number
+          started_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tenant_id: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          billing_cycle?: string
+          cancelled_at?: string | null
+          churned_at?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          mrr?: number
+          next_billing_at?: string | null
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          seats_included?: number
+          seats_used?: number
+          started_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tenant_id?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -4463,6 +4578,7 @@ export type Database = {
         Returns: boolean
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      get_platform_metrics: { Args: never; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_type_from_jwt: { Args: never; Returns: string }
       has_platform_role: {
@@ -4669,6 +4785,13 @@ export type Database = {
         | "adjustment"
         | "merit"
         | "correction"
+      subscription_plan: "starter" | "professional" | "enterprise" | "custom"
+      subscription_status:
+        | "trial"
+        | "active"
+        | "past_due"
+        | "cancelled"
+        | "churned"
       tenant_role:
         | "owner"
         | "admin"
@@ -4920,6 +5043,14 @@ export const Constants = {
         "adjustment",
         "merit",
         "correction",
+      ],
+      subscription_plan: ["starter", "professional", "enterprise", "custom"],
+      subscription_status: [
+        "trial",
+        "active",
+        "past_due",
+        "cancelled",
+        "churned",
       ],
       tenant_role: [
         "owner",
