@@ -39,6 +39,8 @@ interface CacheEntry<T> {
   value: T;
   version: number;
   builtAt: number;
+  /** session_id key for cross-reference */
+  sessionId: string | null;
 }
 
 export class UnifiedSessionManager {
@@ -46,6 +48,9 @@ export class UnifiedSessionManager {
   private _version = 0;
   private _sessionCache: CacheEntry<UnifiedIdentitySession> | null = null;
   private _snapshotCache: CacheEntry<IdentitySnapshot> | null = null;
+  /** session_id-keyed secondary cache for fast lookups across context switches */
+  private _sessionIdCache = new Map<string, CacheEntry<UnifiedIdentitySession>>();
+  private static readonly MAX_SESSION_CACHE_SIZE = 10;
 
   /**
    * Bump cache version — called by the orchestrator on every state change.
@@ -78,12 +83,42 @@ export class UnifiedSessionManager {
    * Get UnifiedIdentitySession — returns cached if valid, rebuilds otherwise.
    */
   getSession(input: SessionProjectionInput): UnifiedIdentitySession {
+    // Check primary cache
     if (this._isValid(this._sessionCache)) {
       return this._sessionCache.value;
     }
+
     const session = this._buildSession(input);
-    this._sessionCache = { value: session, version: this._version, builtAt: Date.now() };
+    const sid = session.session_id;
+    const entry: CacheEntry<UnifiedIdentitySession> = {
+      value: session, version: this._version, builtAt: Date.now(), sessionId: sid,
+    };
+
+    this._sessionCache = entry;
+
+    // Store in session_id-keyed secondary cache
+    this._sessionIdCache.set(sid, entry);
+    if (this._sessionIdCache.size > UnifiedSessionManager.MAX_SESSION_CACHE_SIZE) {
+      // Evict oldest
+      const firstKey = this._sessionIdCache.keys().next().value;
+      if (firstKey) this._sessionIdCache.delete(firstKey);
+    }
+
     return session;
+  }
+
+  /**
+   * Get session by session_id — O(1) lookup from secondary cache.
+   * Useful when restoring context without rebuilding.
+   */
+  getSessionById(sessionId: string): UnifiedIdentitySession | null {
+    const entry = this._sessionIdCache.get(sessionId);
+    if (!entry) return null;
+    if (Date.now() - entry.builtAt > CACHE_TTL_MS) {
+      this._sessionIdCache.delete(sessionId);
+      return null;
+    }
+    return entry.value;
   }
 
   /**
@@ -94,7 +129,7 @@ export class UnifiedSessionManager {
       return this._snapshotCache.value;
     }
     const snapshot = this._buildSnapshot(input);
-    this._snapshotCache = { value: snapshot, version: this._version, builtAt: Date.now() };
+    this._snapshotCache = { value: snapshot, version: this._version, builtAt: Date.now(), sessionId: null };
     return snapshot;
   }
 
@@ -117,6 +152,7 @@ export class UnifiedSessionManager {
   clearCache(): void {
     this._sessionCache = null;
     this._snapshotCache = null;
+    this._sessionIdCache.clear();
     this._version++;
   }
 
