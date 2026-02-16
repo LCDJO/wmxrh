@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { iamService } from '@/domains/iam/iam.service';
+import { identityGateway } from '@/domains/iam/identity.gateway';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, Users, Network } from 'lucide-react';
 import { UsersTab } from '@/components/iam/UsersTab';
@@ -21,24 +21,24 @@ export default function IAMManagement() {
 
   const { data: roles = [] } = useQuery({
     queryKey: ['iam_roles', tenantId],
-    queryFn: () => iamService.listRoles(tenantId!),
+    queryFn: () => identityGateway.getRoles({ tenant_id: tenantId! }),
     enabled: !!tenantId,
   });
 
   const { data: permissions = [] } = useQuery({
     queryKey: ['iam_permissions'],
-    queryFn: () => iamService.listPermissions(),
+    queryFn: () => identityGateway.getAllPermissions(),
   });
 
   const { data: assignments = [] } = useQuery({
     queryKey: ['iam_assignments', tenantId],
-    queryFn: () => iamService.listUserAssignments(tenantId!),
+    queryFn: () => identityGateway.getUserAssignments({ tenant_id: tenantId! }),
     enabled: !!tenantId,
   });
 
   const { data: members = [] } = useQuery({
     queryKey: ['iam_members', tenantId],
-    queryFn: () => iamService.listTenantMembers(tenantId!),
+    queryFn: () => identityGateway.getTenantUsers({ tenant_id: tenantId! }),
     enabled: !!tenantId,
   });
 

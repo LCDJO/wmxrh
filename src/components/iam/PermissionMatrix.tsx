@@ -3,7 +3,8 @@
  */
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { iamService, type CustomRole, type PermissionDefinition } from '@/domains/iam/iam.service';
+import { identityGateway } from '@/domains/iam/identity.gateway';
+import { type CustomRole, type PermissionDefinition } from '@/domains/iam/iam.service';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -59,7 +60,7 @@ export function PermissionMatrix({ role, permissions, userId, isTenantAdmin, onC
 
   const { data: rolePerms = [], isLoading } = useQuery({
     queryKey: ['iam_role_perms', role.id],
-    queryFn: () => iamService.listRolePermissions(role.id),
+    queryFn: () => identityGateway.getPermissionsMatrix({ role_id: role.id }),
   });
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -126,7 +127,7 @@ export function PermissionMatrix({ role, permissions, userId, isTenantAdmin, onC
   };
 
   const saveMutation = useMutation({
-    mutationFn: () => iamService.setRolePermissions(role.id, Array.from(selected), 'tenant', userId),
+    mutationFn: () => identityGateway.updateRolePermissions({ role_id: role.id, permission_ids: Array.from(selected), scope_type: 'tenant', granted_by: userId }),
     onSuccess: () => {
       toast({ title: 'Permissões salvas!' });
       qc.invalidateQueries({ queryKey: ['iam_role_perms', role.id] });
