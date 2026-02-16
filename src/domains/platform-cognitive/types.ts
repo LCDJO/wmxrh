@@ -5,6 +5,7 @@
 // ── Intents ────────────────────────────────────────────────────────
 export type CognitiveIntent =
   | 'suggest-permissions'
+  | 'audit-permissions'
   | 'recommend-dashboards'
   | 'suggest-shortcuts'
   | 'detect-patterns'

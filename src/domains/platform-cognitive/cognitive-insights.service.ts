@@ -79,6 +79,8 @@ export class CognitiveInsightsService {
     switch (intent) {
       case 'suggest-permissions':
         return this.permAdvisor.build(snapshot, callerRole, params?.role_name as string | undefined);
+      case 'audit-permissions':
+        return this.permAdvisor.buildAudit(snapshot, callerRole);
       case 'recommend-dashboards':
         return this.navAdvisor.buildDashboards(snapshot, callerRole, profile);
       case 'suggest-shortcuts':
