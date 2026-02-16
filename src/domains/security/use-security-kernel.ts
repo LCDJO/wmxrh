@@ -1,19 +1,19 @@
 /**
  * useSecurityKernel — Master hook that orchestrates the entire Security Kernel.
  * 
- * Provides a unified API combining:
- *   - Identity resolution
- *   - Permission checks
+ * Builds a SecurityContext on every auth/scope change and provides:
+ *   - Full SecurityContext object
+ *   - Permission checks (bound to current roles)
  *   - Policy evaluation
- *   - Scope resolution
  *   - Feature flag queries
  *   - Audit logging
  * 
  * Usage:
  *   const kernel = useSecurityKernel();
- *   if (!kernel.can('employees', 'create')) { ... }
- *   if (!kernel.isFeatureEnabled('MFA')) { ... }
- *   kernel.audit.logAccessDenied({ resource: '...', reason: '...' });
+ *   kernel.securityContext  // { request_id, user_id, tenant_id, scopes, roles, features }
+ *   kernel.can('employees', 'create')
+ *   kernel.isFeatureEnabled('MFA')
+ *   kernel.audit.logAccessDenied({ resource: '...', reason: '...' })
  */
 
 import { useCallback, useMemo } from 'react';
@@ -23,21 +23,24 @@ import { useTenant } from '@/contexts/TenantContext';
 
 import {
   resolveIdentity,
+  buildSecurityContext,
   permissionEngine,
   policyEngine,
-  resolveScope,
   featureFlagEngine,
   auditSecurity,
   type Identity,
-  type ScopeResolution,
+  type SecurityContext,
   type PolicyResult,
 } from './kernel';
 
 import type { PermissionAction, PermissionEntity, NavKey } from './permissions';
-import type { TenantRole } from '@/domains/shared/types';
+import type { TenantRole, ScopeType } from '@/domains/shared/types';
 import type { SecurityFeatureKey } from './feature-flags';
 
 export interface UseSecurityKernelReturn {
+  // ── SecurityContext (the universal auth envelope) ──
+  securityContext: SecurityContext | null;
+
   // ── Identity ──
   identity: Identity | null;
   isAuthenticated: boolean;
@@ -50,9 +53,6 @@ export interface UseSecurityKernelReturn {
 
   // ── Policy ──
   evaluatePolicy: () => PolicyResult;
-
-  // ── Scope ──
-  scope: ScopeResolution | null;
 
   // ── Feature Flags ──
   isFeatureEnabled: (feature: SecurityFeatureKey) => boolean;
@@ -88,20 +88,26 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     [user, session]
   );
 
-  // ── Scope ──
-  const scopeResolution = useMemo(() => {
-    if (!currentTenant) return null;
-    return resolveScope({
+  // ── SecurityContext ──
+  const securityContext = useMemo((): SecurityContext | null => {
+    if (!user || !session || !currentTenant) return null;
+
+    const uiScopeLevel: ScopeType =
+      uiScope.level === 'tenant' ? 'tenant' :
+      uiScope.level === 'group' ? 'company_group' : 'company';
+
+    return buildSecurityContext({
+      user,
+      session,
       tenantId: currentTenant.id,
+      effectiveRoles,
       userRoles,
       membershipRole,
-      uiScopeLevel:
-        uiScope.level === 'tenant' ? 'tenant' :
-        uiScope.level === 'group' ? 'company_group' : 'company',
+      uiScopeLevel,
       uiGroupId: uiScope.groupId,
       uiCompanyId: uiScope.companyId,
     });
-  }, [currentTenant, userRoles, membershipRole, uiScope]);
+  }, [user, session, currentTenant, effectiveRoles, userRoles, membershipRole, uiScope]);
 
   // ── Permissions (bound to current roles) ──
   const can = useCallback(
@@ -117,16 +123,16 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
 
   // ── Policy ──
   const evaluatePolicy = useCallback((): PolicyResult => {
-    if (!identity || !scopeResolution) {
+    if (!securityContext) {
       return { decision: 'deny', reason: 'Contexto não resolvido.', policyId: 'no_context' };
     }
     return policyEngine.evaluate({
-      userId: identity.userId,
-      tenantId: scopeResolution.tenantId,
-      roles: effectiveRoles,
-      scope: scopeResolution,
+      userId: securityContext.user_id,
+      tenantId: securityContext.tenant_id,
+      roles: securityContext.roles,
+      scope: securityContext.meta.scopeResolution,
     });
-  }, [identity, scopeResolution, effectiveRoles]);
+  }, [securityContext]);
 
   // ── Feature Flags ──
   const isFeatureEnabled = useCallback(
@@ -160,6 +166,7 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
   );
 
   return {
+    securityContext,
     identity,
     isAuthenticated: !!user,
     can,
@@ -167,7 +174,6 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     hasRole,
     effectiveRoles,
     evaluatePolicy,
-    scope: scopeResolution,
     isFeatureEnabled,
     audit: auditSecurity,
     loading: rolesLoading,
