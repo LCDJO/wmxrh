@@ -25,8 +25,11 @@ export { permissionEngine, checkPermission } from './permission-engine';
 export type { PermissionEngineAPI, PermissionCheck, PermissionResult, PermissionDecision, ResourceTarget } from './permission-engine';
 
 // ── Policy Engine ──────────────────────────────────────────
-export { policyEngine, requireAtLeastOneRole, requireValidScope, preventCrossTenantAccess } from './policy-engine';
-export type { PolicyEngineAPI, PolicyFn, PolicyContext, PolicyResult, PolicyDecision } from './policy-engine';
+export { policyEngine, requireAtLeastOneRole, requireValidScope, preventCrossTenantAccess, BUILTIN_RULES } from './policy-engine';
+export type {
+  PolicyEngineAPI, PolicyFn, PolicyContext, PolicyResult, PolicyDecision,
+  PolicyRule, PolicyEffect, PolicyCondition, PolicyEvalContext,
+} from './policy-engine';
 
 // ── Scope Resolver ─────────────────────────────────────────
 export { resolveScope } from './scope-resolver';
