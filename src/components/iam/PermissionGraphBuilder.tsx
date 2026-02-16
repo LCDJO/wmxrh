@@ -29,7 +29,10 @@ import {
   ZoomIn, ZoomOut, Maximize2, Lock, Move, GripVertical,
   Briefcase, DollarSign, ShieldCheck, Heart, Send, ScrollText,
   Brain, GraduationCap, AlertTriangle, Calculator,
+  ChevronDown, ChevronRight, Search, Library,
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // ══════════════════════════════════
 // TYPES
@@ -97,6 +100,32 @@ const RES_LABELS: Record<string, string> = {
 };
 
 const SCOPE_LBL: Record<string, string> = { tenant: 'Tenant', company_group: 'Grupo', company: 'Empresa' };
+
+// ══════════════════════════════════
+// PERMISSION LIBRARY — Domain grouping
+// ══════════════════════════════════
+
+type PermDomain = 'HR' | 'Compensation' | 'Tenant' | 'Reporting' | 'Security' | 'Compliance' | 'Health';
+
+const RESOURCE_TO_DOMAIN: Record<string, PermDomain> = {
+  employees: 'HR', departments: 'HR', positions: 'HR',
+  salary: 'Compensation', benefits: 'Compensation', payroll: 'Compensation',
+  companies: 'Tenant', company: 'Tenant', tenant: 'Tenant',
+  audit: 'Reporting', intelligence: 'Reporting',
+  iam: 'Security', user: 'Security', agreements: 'Security',
+  health: 'Health', training: 'Health', risk: 'Compliance',
+  esocial: 'Compliance',
+};
+
+const DOMAIN_META: Record<PermDomain, { icon: typeof Users; color: string }> = {
+  HR:           { icon: Users,          color: 'text-primary' },
+  Compensation: { icon: DollarSign,     color: 'text-warning' },
+  Tenant:       { icon: Building2,      color: 'text-info' },
+  Reporting:    { icon: Brain,          color: 'text-accent-foreground' },
+  Security:     { icon: Lock,           color: 'text-destructive' },
+  Compliance:   { icon: ShieldCheck,    color: 'text-muted-foreground' },
+  Health:       { icon: Heart,          color: 'text-primary' },
+};
 
 const NODE_W = 190;
 const NODE_H = 60;
@@ -424,8 +453,10 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         ))}
       </div>
 
-      {/* Canvas + Panel */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+      {/* Permission Library + Canvas + Panel */}
+      <div className="grid gap-4 lg:grid-cols-[260px_1fr_280px]">
+        {/* ── Permission Library ── */}
+        <PermissionLibraryPanel permissions={permissions} rolePermMap={rolePermMap} focusRoleId={focusRoleId} onSelectPermission={(permId) => setSelectedNodeId(`perm:${permId}`)} />
         <Card className="overflow-hidden border-border/50">
           <div
             ref={containerRef}
@@ -808,6 +839,140 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         </div>
       </div>
     </div>
+  );
+}
+
+// ══════════════════════════════════
+// PERMISSION LIBRARY PANEL
+// ══════════════════════════════════
+
+interface PermLibProps {
+  permissions: PermissionDefinition[];
+  rolePermMap: Map<string, string[]>;
+  focusRoleId: string | null;
+  onSelectPermission: (permId: string) => void;
+}
+
+function PermissionLibraryPanel({ permissions, rolePermMap, focusRoleId, onSelectPermission }: PermLibProps) {
+  const [search, setSearch] = useState('');
+  const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set(['HR', 'Security', 'Compensation']));
+
+  // Group permissions by domain
+  const grouped = useMemo(() => {
+    const map = new Map<PermDomain, PermissionDefinition[]>();
+    const q = search.toLowerCase();
+    permissions.forEach(p => {
+      const domain = RESOURCE_TO_DOMAIN[p.resource] || 'Tenant';
+      const key = `${p.resource}.${p.action}`;
+      if (q && !key.toLowerCase().includes(q) && !p.name.toLowerCase().includes(q)) return;
+      if (!map.has(domain)) map.set(domain, []);
+      map.get(domain)!.push(p);
+    });
+    // Sort domains
+    const order: PermDomain[] = ['HR', 'Compensation', 'Tenant', 'Reporting', 'Security', 'Compliance', 'Health'];
+    return order.filter(d => map.has(d)).map(d => ({ domain: d, perms: map.get(d)! }));
+  }, [permissions, search]);
+
+  // Which permissions are assigned to the focused role
+  const assignedPermIds = useMemo(() => {
+    if (!focusRoleId) return new Set<string>();
+    return new Set(rolePermMap.get(focusRoleId) || []);
+  }, [focusRoleId, rolePermMap]);
+
+  const toggleDomain = (d: string) => {
+    setExpandedDomains(prev => {
+      const next = new Set(prev);
+      if (next.has(d)) next.delete(d); else next.add(d);
+      return next;
+    });
+  };
+
+  const totalCount = permissions.length;
+  const filteredCount = grouped.reduce((s, g) => s + g.perms.length, 0);
+
+  return (
+    <Card className="border-border/50 flex flex-col overflow-hidden" style={{ height: '68vh', minHeight: 460 }}>
+      <CardHeader className="pb-2 pt-3 px-3 shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+            <Library className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-xs">Permission Library</CardTitle>
+            <p className="text-[10px] text-muted-foreground">
+              {filteredCount}/{totalCount} permissões
+            </p>
+          </div>
+        </div>
+        <div className="relative mt-2">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+          <Input
+            placeholder="employee.create…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="h-8 pl-8 text-xs bg-muted/20 border-border/40"
+          />
+        </div>
+      </CardHeader>
+      <ScrollArea className="flex-1 px-1.5">
+        <div className="space-y-0.5 pb-3">
+          {grouped.map(({ domain, perms }) => {
+            const meta = DOMAIN_META[domain];
+            const DIcon = meta.icon;
+            const isOpen = expandedDomains.has(domain);
+            return (
+              <Collapsible key={domain} open={isOpen} onOpenChange={() => toggleDomain(domain)}>
+                <CollapsibleTrigger className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-muted/30 transition-colors group">
+                  {isOpen ? <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" /> : <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />}
+                  <DIcon className={cn("h-3.5 w-3.5 shrink-0", meta.color)} />
+                  <span className="text-xs font-semibold text-foreground flex-1 text-left">{domain}</span>
+                  <Badge variant="secondary" className="text-[9px] h-4 px-1.5 tabular-nums">{perms.length}</Badge>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="ml-5 pl-2 border-l border-border/30 space-y-px py-1">
+                    {perms.map(p => {
+                      const key = `${p.resource}.${p.action}`;
+                      const isAssigned = assignedPermIds.has(p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => onSelectPermission(p.id)}
+                          className={cn(
+                            "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors",
+                            isAssigned
+                              ? "bg-primary/5 hover:bg-primary/10"
+                              : "hover:bg-muted/30"
+                          )}
+                        >
+                          <Key className={cn("h-3 w-3 shrink-0", isAssigned ? "text-primary" : "text-muted-foreground/40")} />
+                          <div className="flex-1 min-w-0">
+                            <p className={cn(
+                              "text-[11px] font-mono truncate",
+                              isAssigned ? "text-primary font-medium" : "text-foreground"
+                            )}>
+                              {key}
+                            </p>
+                          </div>
+                          {isAssigned && (
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })}
+          {grouped.length === 0 && (
+            <div className="py-8 text-center">
+              <Search className="h-6 w-6 mx-auto mb-2 text-muted-foreground/20" />
+              <p className="text-[11px] text-muted-foreground">Nenhuma permissão encontrada</p>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </Card>
   );
 }
 
