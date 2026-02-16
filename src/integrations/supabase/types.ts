@@ -333,6 +333,59 @@ export type Database = {
           },
         ]
       }
+      cnae_risk_mappings: {
+        Row: {
+          agentes_risco_provaveis: string[]
+          ambiente: string
+          cnae_codigo: string
+          created_at: string
+          description: string | null
+          exige_pgr: boolean
+          grau_risco: number
+          id: string
+          is_custom: boolean
+          nrs_aplicaveis: number[]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          agentes_risco_provaveis?: string[]
+          ambiente?: string
+          cnae_codigo: string
+          created_at?: string
+          description?: string | null
+          exige_pgr?: boolean
+          grau_risco?: number
+          id?: string
+          is_custom?: boolean
+          nrs_aplicaveis?: number[]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          agentes_risco_provaveis?: string[]
+          ambiente?: string
+          cnae_codigo?: string
+          created_at?: string
+          description?: string | null
+          exige_pgr?: boolean
+          grau_risco?: number
+          id?: string
+          is_custom?: boolean
+          nrs_aplicaveis?: number[]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cnae_risk_mappings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collective_agreement_clauses: {
         Row: {
           agreement_id: string
