@@ -9,9 +9,10 @@ export { IdentitySessionManager } from './identity-session-manager';
 export type { EstablishIdentityInput, RefreshScopesInput } from './identity-session-manager';
 
 export { ContextSwitcherService } from './context-switcher.service';
+export type { ContextSwitchedEvent, ContextSnapshot } from './context-switcher.service';
 
 export { contextResolver } from './context-resolver';
-export type { ResolvedContext, ScopeValidation } from './context-resolver';
+export type { ResolvedContext, ScopeValidation, ResolutionStrategy, InitialContextResolution, PersistedContext } from './context-resolver';
 
 export { multiScopeTokenBuilder } from './multi-scope-token-builder';
 export type { ScopeToken, QueryFilterSet } from './multi-scope-token-builder';

@@ -148,6 +148,9 @@ export class ContextSwitcherService {
     // ── 5. Emit ContextSwitched event ──
     this._emitContextSwitched(identity.userId, previousContext, this._currentContext, switchType);
 
+    // ── 5b. Persist context for future sessions ──
+    contextResolver.persistContext(identity.userId, targetTenantId, scopeLevel, groupId, companyId);
+
     // ── 6. Audit ──
     const action = switchType === 'tenant' ? 'tenant_switched' : 'scope_switched';
     auditSecurity.log({
