@@ -6,7 +6,7 @@ export const employeeService: IEmployeeService = {
   async list(tenantId: string) {
     const { data, error } = await supabase
       .from('employees')
-      .select('*, positions(title), departments(name), companies(name)')
+      .select('*, positions(title), departments(name), companies(name), manager:employees!employees_manager_id_fkey(name)')
       .eq('tenant_id', tenantId);
     if (error) throw error;
     return (data || []) as EmployeeWithRelations[];
@@ -24,7 +24,7 @@ export const employeeService: IEmployeeService = {
   async getById(id: string) {
     const { data, error } = await supabase
       .from('employees')
-      .select('*, positions(title), departments(name), companies(name)')
+      .select('*, positions(title), departments(name), companies(name), manager:employees!employees_manager_id_fkey(name)')
       .eq('id', id)
       .maybeSingle();
     if (error) throw error;

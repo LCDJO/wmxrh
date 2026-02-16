@@ -15,7 +15,7 @@
 import type {
   Tenant, TenantMembership, TenantRole, UserRole, ScopeType,
   CompanyGroup, Company, Department, Position,
-  Employee, EmployeeWithRelations, SalaryHistory,
+  Employee, EmployeeWithRelations, EmployeeEvent, SalaryHistory,
   CompanyWithRelations, PositionWithRelations, DepartmentWithRelations,
   SalaryHistoryWithRelations,
   CreateTenantDTO, CreateCompanyDTO, CreateCompanyGroupDTO,
@@ -61,6 +61,11 @@ export interface IEmployeeService {
   listSimple(tenantId: string): Promise<Pick<Employee, 'id' | 'company_id' | 'department_id' | 'position_id' | 'current_salary' | 'status'>[]>;
   getById(id: string): Promise<EmployeeWithRelations | null>;
   create(data: CreateEmployeeDTO): Promise<Employee>;
+}
+
+export interface IEmployeeEventService {
+  listByEmployee(employeeId: string): Promise<EmployeeEvent[]>;
+  listByTenant(tenantId: string): Promise<EmployeeEvent[]>;
 }
 
 export interface ISalaryHistoryService {

@@ -11,6 +11,7 @@
 
 export type EmployeeStatus = 'active' | 'inactive' | 'on_leave';
 export type TenantRole = 'owner' | 'admin' | 'manager' | 'viewer';
+export type EmployeeEventType = 'company_transfer' | 'position_change' | 'department_change' | 'status_change' | 'manager_change' | 'salary_change';
 
 // ========================
 // ENTITIES
@@ -99,10 +100,13 @@ export interface Employee {
   id: string;
   tenant_id: string;
   company_id: string;
+  company_group_id: string | null;
   department_id: string | null;
   position_id: string | null;
+  manager_id: string | null;
   user_id: string | null;
   name: string;
+  cpf: string | null;
   email: string | null;
   phone: string | null;
   hire_date: string | null;
@@ -111,6 +115,18 @@ export interface Employee {
   current_salary: number | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface EmployeeEvent {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  event_type: EmployeeEventType;
+  old_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
+  reason: string | null;
+  performed_by: string | null;
+  created_at: string;
 }
 
 export interface SalaryHistory {
@@ -133,6 +149,7 @@ export interface EmployeeWithRelations extends Employee {
   positions?: { title: string } | null;
   departments?: { name: string } | null;
   companies?: { name: string } | null;
+  manager?: { name: string }[] | null;
 }
 
 export interface CompanyWithRelations extends Company {
@@ -158,7 +175,9 @@ export interface SalaryHistoryWithRelations extends SalaryHistory {
 export interface CreateEmployeeDTO {
   tenant_id: string;
   company_id: string;
+  company_group_id?: string | null;
   name: string;
+  cpf?: string | null;
   email?: string | null;
   phone?: string | null;
   base_salary?: number;
@@ -166,6 +185,7 @@ export interface CreateEmployeeDTO {
   hire_date?: string;
   department_id?: string;
   position_id?: string;
+  manager_id?: string | null;
 }
 
 export interface CreateCompanyDTO {

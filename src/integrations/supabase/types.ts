@@ -151,16 +151,70 @@ export type Database = {
           },
         ]
       }
+      employee_events: {
+        Row: {
+          created_at: string
+          employee_id: string
+          event_type: Database["public"]["Enums"]["employee_event_type"]
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          performed_by: string | null
+          reason: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          event_type: Database["public"]["Enums"]["employee_event_type"]
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          performed_by?: string | null
+          reason?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          event_type?: Database["public"]["Enums"]["employee_event_type"]
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          performed_by?: string | null
+          reason?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           base_salary: number | null
+          company_group_id: string | null
           company_id: string
+          cpf: string | null
           created_at: string
           current_salary: number | null
           department_id: string | null
           email: string | null
           hire_date: string | null
           id: string
+          manager_id: string | null
           name: string
           phone: string | null
           position_id: string | null
@@ -171,13 +225,16 @@ export type Database = {
         }
         Insert: {
           base_salary?: number | null
+          company_group_id?: string | null
           company_id: string
+          cpf?: string | null
           created_at?: string
           current_salary?: number | null
           department_id?: string | null
           email?: string | null
           hire_date?: string | null
           id?: string
+          manager_id?: string | null
           name: string
           phone?: string | null
           position_id?: string | null
@@ -188,13 +245,16 @@ export type Database = {
         }
         Update: {
           base_salary?: number | null
+          company_group_id?: string | null
           company_id?: string
+          cpf?: string | null
           created_at?: string
           current_salary?: number | null
           department_id?: string | null
           email?: string | null
           hire_date?: string | null
           id?: string
+          manager_id?: string | null
           name?: string
           phone?: string | null
           position_id?: string | null
@@ -204,6 +264,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "employees_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employees_company_id_fkey"
             columns: ["company_id"]
@@ -216,6 +283,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
@@ -474,6 +548,13 @@ export type Database = {
       }
     }
     Enums: {
+      employee_event_type:
+        | "company_transfer"
+        | "position_change"
+        | "department_change"
+        | "status_change"
+        | "manager_change"
+        | "salary_change"
       employee_status: "active" | "inactive" | "on_leave"
       tenant_role: "owner" | "admin" | "manager" | "viewer"
     }
@@ -603,6 +684,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      employee_event_type: [
+        "company_transfer",
+        "position_change",
+        "department_change",
+        "status_change",
+        "manager_change",
+        "salary_change",
+      ],
       employee_status: ["active", "inactive", "on_leave"],
       tenant_role: ["owner", "admin", "manager", "viewer"],
     },

@@ -16,6 +16,7 @@ import { companyService } from '@/domains/company/company.service';
 import { departmentService } from '@/domains/department/department.service';
 import { positionService } from '@/domains/position/position.service';
 import { employeeService } from '@/domains/employee/employee.service';
+import { employeeEventService } from '@/domains/employee/employee-event.service';
 import { salaryHistoryService } from '@/domains/compensation/salary-history.service';
 
 // Types
@@ -39,6 +40,8 @@ export const queryKeys = {
   positions: (tenantId?: string) => ['positions', tenantId] as const,
   salaryHistoryTenant: (tenantId?: string) => ['salary_history_all', tenantId] as const,
   salaryHistoryEmployee: (empId: string) => ['salary_history', empId] as const,
+  employeeEvents: (empId: string) => ['employee_events', empId] as const,
+  employeeEventsTenant: (tenantId?: string) => ['employee_events_tenant', tenantId] as const,
 };
 
 // ========================
@@ -215,5 +218,27 @@ export function useSalaryHistoryByEmployee(employeeId: string) {
     queryKey: queryKeys.salaryHistoryEmployee(employeeId),
     queryFn: () => salaryHistoryService.listByEmployee(employeeId),
     enabled: !!employeeId,
+  });
+}
+
+// ========================
+// EMPLOYEE EVENT HOOKS
+// ========================
+
+export function useEmployeeEvents(employeeId: string) {
+  return useQuery({
+    queryKey: queryKeys.employeeEvents(employeeId),
+    queryFn: () => employeeEventService.listByEmployee(employeeId),
+    enabled: !!employeeId,
+  });
+}
+
+export function useEmployeeEventsByTenant() {
+  const { currentTenant } = useTenant();
+  const tenantId = currentTenant?.id;
+  return useQuery({
+    queryKey: queryKeys.employeeEventsTenant(tenantId),
+    queryFn: () => employeeEventService.listByTenant(tenantId!),
+    enabled: !!tenantId,
   });
 }
