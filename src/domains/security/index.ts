@@ -20,6 +20,7 @@ export {
   scopedInsertFromContext,
   featureFlagEngine,
   auditSecurity,
+  onSecurityEvent,
   requireAtLeastOneRole,
   requireValidScope,
   preventCrossTenantAccess,
@@ -52,6 +53,9 @@ export type {
   AuditSecurityAPI,
   AuditEntry,
   AuditAction,
+  AuditResult,
+  SecurityEventType,
+  SecurityEventPayload,
 } from './kernel';
 
 // ── Feature Flags Hook ──
@@ -85,15 +89,13 @@ export { validateMutation, secureMutation, SecurityError } from './secure-mutati
 // Rate Limiter
 export { checkRateLimit, resetRateLimit, RATE_LIMITS } from './rate-limiter';
 
-// Security Events
+// Security Events (legacy emitters — re-exported for backward compat)
 export {
   emitSecurityEvent,
   emitUnauthorizedAccess,
   emitScopeViolation,
   emitRateLimitTriggered,
-  onSecurityEvent,
 } from './security-events';
-export type { SecurityEventType, SecurityEventPayload } from './security-events';
 
 // Security Monitor
 export { useSecurityMonitor } from './useSecurityMonitor';
