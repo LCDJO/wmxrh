@@ -14,7 +14,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import PlatformLayout from "./components/platform/PlatformLayout";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
-import TenantOnboarding from "./pages/TenantOnboarding";
+import AdaptiveOnboardingWizard from "./pages/AdaptiveOnboardingWizard";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
 import EmployeeDetail from "./pages/EmployeeDetail";
@@ -110,7 +110,12 @@ function AppRoutes() {
           /* Platform user with no tenant → redirect to platform */
           <Route path="*" element={<Navigate to="/platform/dashboard" replace />} />
         ) : (
-          <Route path="*" element={<TenantOnboarding />} />
+          <Route path="*" element={
+            <AdaptiveOnboardingWizard
+              planTier="free"
+              onComplete={() => window.location.reload()}
+            />
+          } />
         )
       ) : (
         <Route element={<AppLayout />}>
