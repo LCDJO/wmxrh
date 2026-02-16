@@ -1,8 +1,14 @@
 /**
- * UnifiedSessionManager — Builds the UnifiedIdentitySession and IdentitySnapshot.
+ * UnifiedSessionManager — Builds and CACHES the UnifiedIdentitySession and IdentitySnapshot.
  *
- * Pure read-model projector: no mutations, no side effects.
- * Collects state from all subsystems and projects into a single object.
+ * JWT stays simple (sub, email, user_type, platform_role).
+ * The advanced session is computed client-side and cached in-memory with
+ * version-based invalidation. No heavy data hits the token.
+ *
+ * Cache strategy:
+ *   - In-memory LRU with version counter
+ *   - Invalidated on: phase transition, workspace switch, impersonation change
+ *   - TTL fallback: 30s max staleness
  *
  * Part of the Identity Intelligence Layer decomposition.
  */
@@ -12,6 +18,12 @@ import { dualIdentityEngine } from '../dual-identity-engine';
 import { getAccessGraph } from '../access-graph';
 import type { IdentityPhase, UserTypeDetection, RiskAssessment, RecentContext, WorkspaceEntry } from './types';
 import type { IdentitySnapshot, UnifiedIdentitySession } from './types';
+
+// ════════════════════════════════════
+// CACHE CONFIG
+// ════════════════════════════════════
+
+const CACHE_TTL_MS = 30_000; // 30s max staleness
 
 export interface SessionProjectionInput {
   phase: IdentityPhase;
@@ -23,11 +35,96 @@ export interface SessionProjectionInput {
   workspaces: WorkspaceEntry[];
 }
 
+interface CacheEntry<T> {
+  value: T;
+  version: number;
+  builtAt: number;
+}
+
 export class UnifiedSessionManager {
+  // ── Cache state ──
+  private _version = 0;
+  private _sessionCache: CacheEntry<UnifiedIdentitySession> | null = null;
+  private _snapshotCache: CacheEntry<IdentitySnapshot> | null = null;
+
   /**
-   * Project UnifiedIdentitySession — the clean, focused API.
+   * Bump cache version — called by the orchestrator on every state change.
+   */
+  invalidate(): void {
+    this._version++;
+    // Don't clear cache eagerly — let next read rebuild lazily
+  }
+
+  /**
+   * Current cache version (for diagnostics).
+   */
+  get cacheVersion(): number { return this._version; }
+
+  /**
+   * Check if a cache entry is still valid.
+   */
+  private _isValid<T>(entry: CacheEntry<T> | null): entry is CacheEntry<T> {
+    if (!entry) return false;
+    if (entry.version !== this._version) return false;
+    if (Date.now() - entry.builtAt > CACHE_TTL_MS) return false;
+    return true;
+  }
+
+  // ══════════════════════════════════
+  // SESSION (cached)
+  // ══════════════════════════════════
+
+  /**
+   * Get UnifiedIdentitySession — returns cached if valid, rebuilds otherwise.
+   */
+  getSession(input: SessionProjectionInput): UnifiedIdentitySession {
+    if (this._isValid(this._sessionCache)) {
+      return this._sessionCache.value;
+    }
+    const session = this._buildSession(input);
+    this._sessionCache = { value: session, version: this._version, builtAt: Date.now() };
+    return session;
+  }
+
+  /**
+   * Get IdentitySnapshot — returns cached if valid, rebuilds otherwise.
+   */
+  getSnapshot(input: SessionProjectionInput): IdentitySnapshot {
+    if (this._isValid(this._snapshotCache)) {
+      return this._snapshotCache.value;
+    }
+    const snapshot = this._buildSnapshot(input);
+    this._snapshotCache = { value: snapshot, version: this._version, builtAt: Date.now() };
+    return snapshot;
+  }
+
+  /**
+   * Force rebuild (bypass cache). Used for diagnostics.
    */
   buildSession(input: SessionProjectionInput): UnifiedIdentitySession {
+    this.invalidate();
+    return this.getSession(input);
+  }
+
+  buildSnapshot(input: SessionProjectionInput): IdentitySnapshot {
+    this.invalidate();
+    return this.getSnapshot(input);
+  }
+
+  /**
+   * Clear all cached data (e.g., on logout).
+   */
+  clearCache(): void {
+    this._sessionCache = null;
+    this._snapshotCache = null;
+    this._version++;
+  }
+
+  // ══════════════════════════════════
+  // BUILDERS (internal)
+  // ══════════════════════════════════
+
+  private _buildSession(input: SessionProjectionInput): UnifiedIdentitySession {
     const iblSession = identityBoundary.identity;
     const dual = dualIdentityEngine;
     const graph = getAccessGraph();
@@ -99,10 +196,7 @@ export class UnifiedSessionManager {
     };
   }
 
-  /**
-   * Project IdentitySnapshot — the full diagnostic model.
-   */
-  buildSnapshot(input: SessionProjectionInput): IdentitySnapshot {
+  private _buildSnapshot(input: SessionProjectionInput): IdentitySnapshot {
     const iblSnapshot = identityBoundary.snapshot();
     const dual = dualIdentityEngine;
     const graph = getAccessGraph();

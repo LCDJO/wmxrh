@@ -234,11 +234,11 @@ export class IdentityIntelligenceService {
   }
 
   snapshot(): IdentitySnapshot {
-    return this.sessionManager.buildSnapshot(this._projectionInput());
+    return this.sessionManager.getSnapshot(this._projectionInput());
   }
 
   unifiedSession(): UnifiedIdentitySession {
-    return this.sessionManager.buildSession(this._projectionInput());
+    return this.sessionManager.getSession(this._projectionInput());
   }
 
   onSnapshotChange(listener: () => void): () => void {
@@ -328,10 +328,11 @@ export class IdentityIntelligenceService {
     // Re-assess risk
     this._assessRisk();
 
-    // On LOGOUT, clear detection + context
+    // On LOGOUT, clear detection + context + cache
     if (this.router.phase === 'anonymous') {
       this.loginDetector.clear();
       this.contextMemory.clearEntry();
+      this.sessionManager.clearCache();
     }
 
     // On SCOPE_RESOLVED or SCOPE_SWITCH, mark context entry
@@ -364,6 +365,7 @@ export class IdentityIntelligenceService {
   }
 
   private _notifySnapshotListeners(): void {
+    this.sessionManager.invalidate();
     for (const fn of this._snapshotListeners) {
       try { fn(); } catch { /* swallow */ }
     }
@@ -382,6 +384,7 @@ export class IdentityIntelligenceService {
       userTypeDetection: this.loginDetector.detection,
       recentContextsCount: this.contextMemory.recentContexts.length,
       availableWorkspaces: this.workspaceResolver.getAvailableWorkspaces().length,
+      cacheVersion: this.sessionManager.cacheVersion,
     };
   }
 }
