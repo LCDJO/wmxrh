@@ -693,6 +693,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_compensation: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_manage_employees: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_view_compensation: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
@@ -702,12 +714,28 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      user_has_any_role: {
+        Args: {
+          _roles: Database["public"]["Enums"]["tenant_role"][]
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       user_has_company_access: {
         Args: { _company_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
       }
       user_has_group_access: {
         Args: { _group_id: string; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["tenant_role"]
+          _tenant_id: string
+          _user_id: string
+        }
         Returns: boolean
       }
       user_has_tenant_access: {
@@ -746,7 +774,18 @@ export type Database = {
         | "adjustment"
         | "merit"
         | "correction"
-      tenant_role: "owner" | "admin" | "manager" | "viewer"
+      tenant_role:
+        | "owner"
+        | "admin"
+        | "manager"
+        | "viewer"
+        | "superadmin"
+        | "tenant_admin"
+        | "group_admin"
+        | "company_admin"
+        | "rh"
+        | "gestor"
+        | "financeiro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -903,7 +942,19 @@ export const Constants = {
         "merit",
         "correction",
       ],
-      tenant_role: ["owner", "admin", "manager", "viewer"],
+      tenant_role: [
+        "owner",
+        "admin",
+        "manager",
+        "viewer",
+        "superadmin",
+        "tenant_admin",
+        "group_admin",
+        "company_admin",
+        "rh",
+        "gestor",
+        "financeiro",
+      ],
     },
   },
 } as const

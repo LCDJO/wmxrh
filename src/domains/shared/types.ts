@@ -10,7 +10,7 @@
 // ========================
 
 export type EmployeeStatus = 'active' | 'inactive' | 'on_leave';
-export type TenantRole = 'owner' | 'admin' | 'manager' | 'viewer';
+export type TenantRole = 'owner' | 'admin' | 'manager' | 'viewer' | 'superadmin' | 'tenant_admin' | 'group_admin' | 'company_admin' | 'rh' | 'gestor' | 'financeiro';
 export type EmployeeEventType = 'company_transfer' | 'position_change' | 'department_change' | 'status_change' | 'manager_change' | 'salary_change' | 'employee_hired' | 'salary_contract_started' | 'salary_adjusted' | 'additional_added' | 'job_changed';
 export type SalaryAdjustmentType = 'annual' | 'promotion' | 'adjustment' | 'merit' | 'correction';
 export type SalaryAdditionalType = 'bonus' | 'commission' | 'allowance' | 'hazard_pay' | 'overtime' | 'other';
