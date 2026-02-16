@@ -333,6 +333,103 @@ export type Database = {
           },
         ]
       }
+      cbo_catalog: {
+        Row: {
+          area_ocupacional: string | null
+          cbo_codigo: string
+          created_at: string
+          descricao: string | null
+          id: string
+          is_active: boolean
+          nome_funcao: string
+          nrs_relacionadas: number[]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          area_ocupacional?: string | null
+          cbo_codigo: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          is_active?: boolean
+          nome_funcao: string
+          nrs_relacionadas?: number[]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          area_ocupacional?: string | null
+          cbo_codigo?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          is_active?: boolean
+          nome_funcao?: string
+          nrs_relacionadas?: number[]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cbo_catalog_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cnae_cbo_mappings: {
+        Row: {
+          approved: boolean
+          approved_at: string | null
+          approved_by: string | null
+          cbo_codigo: string
+          cnae_codigo: string
+          created_at: string
+          id: string
+          probabilidade: number
+          source: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          cbo_codigo: string
+          cnae_codigo: string
+          created_at?: string
+          id?: string
+          probabilidade?: number
+          source?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          cbo_codigo?: string
+          cnae_codigo?: string
+          created_at?: string
+          id?: string
+          probabilidade?: number
+          source?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cnae_cbo_mappings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cnae_risk_mappings: {
         Row: {
           agentes_risco_provaveis: string[]
