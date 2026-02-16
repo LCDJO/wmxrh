@@ -27,6 +27,9 @@ export { analyzeSalaries } from './salary-analysis.engine';
 export { detectRisks } from './risk-detection.engine';
 export { generateInsights } from './insight-generator.engine';
 
+// ── Read Models (data sources) ──
+export * from './read-models';
+
 // ── Types ──
 export type {
   // Input snapshots
