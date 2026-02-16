@@ -19,8 +19,9 @@
  * Pure visualization — no security logic lives here.
  */
 import { useState, useMemo, useCallback, useRef } from 'react';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { identityGateway } from '@/domains/iam/identity.gateway';
+import { useRolePermissionGraphView, useRoleInheritanceGraphView, useAccessPreviewView } from '@/domains/iam/read-models';
 import { type CustomRole, type PermissionDefinition, type UserCustomRole, type TenantUser } from '@/domains/iam/iam.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,7 +30,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Shield, Users, Building2, Key, Network, Eye, Layers,
@@ -394,26 +394,20 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
   // Inheritance selector
   const [showInheritanceSelector, setShowInheritanceSelector] = useState(false);
 
-  // Load role permissions
-  const roleIds = roles.map(r => r.id);
-  const { data: allRolePerms = [] } = useQuery({
-    queryKey: ['iam_graph_role_perms', tenantId],
-    queryFn: () => identityGateway.getPermissionGraph({ tenant_id: tenantId, role_ids: roleIds }),
-    enabled: roleIds.length > 0,
-  });
+  // Load role permissions from read model (cached, scope-aware)
+  const roleIds = useMemo(() => roles.map(r => r.id), [roles]);
+  const { graph: allRolePerms } = useRolePermissionGraphView(roleIds);
 
-  // Load role inheritance
-  const { data: inheritances = [] } = useQuery<RoleInheritance[]>({
-    queryKey: ['role_inheritance', tenantId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('role_inheritance')
-        .select('*')
-        .eq('tenant_id', tenantId);
-      return (data || []) as RoleInheritance[];
-    },
-    enabled: !!tenantId,
-  });
+  // Load role inheritance from read model (cached, scope-aware)
+  const { inheritances: rawInheritances } = useRoleInheritanceGraphView();
+  const inheritances = useMemo(() => rawInheritances.map(i => ({
+    ...i,
+    created_at: '',
+    created_by: null,
+  })) as RoleInheritance[], [rawInheritances]);
+
+  // Live access preview for focused role (no reload needed)
+  const { permissions: previewPermissions, inheritedFrom: previewInheritedFrom } = useAccessPreviewView(focusRoleId);
 
   const rolePermMap = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -469,7 +463,7 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
     return `0 0 ${Math.max(maxX, 1200)} ${Math.max(maxY, 600)}`;
   }, [nodes]);
 
-  // ── Permission Toggle Mutation ──
+  // ── Permission Toggle Mutation (optimistic) ──
   const togglePermMutation = useMutation({
     mutationFn: async ({ roleId, permId, grant }: { roleId: string; permId: string; grant: boolean }) => {
       const currentPermIds = rolePermMap.get(roleId) || [];
@@ -486,17 +480,49 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         ctx: kernel.securityContext,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['iam_graph_role_perms'] });
-      // Events + cache invalidation handled by identityGateway.updateRolePermissions
-      toast.success('Permissão atualizada');
+    onMutate: async ({ roleId, permId, grant }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['iam_perm_graph'] });
+      await queryClient.cancelQueries({ queryKey: ['iam_access_preview'] });
+
+      // Snapshot previous value for rollback
+      const prevGraph = queryClient.getQueryData(['iam_perm_graph']);
+
+      // Optimistic update: patch rolePermMap in-place via query cache
+      queryClient.setQueriesData<typeof allRolePerms>(
+        { queryKey: ['iam_perm_graph'] },
+        (old) => {
+          if (!old) return old;
+          return old.map(rp => {
+            if (rp.roleId !== roleId) return rp;
+            const perms = grant
+              ? [...rp.perms, { permission_id: permId } as any]
+              : rp.perms.filter(p => p.permission_id !== permId);
+            return { ...rp, perms };
+          });
+        },
+      );
+
+      return { prevGraph };
     },
-    onError: (err: Error) => {
+    onError: (err: Error, _vars, context) => {
+      // Rollback on error
+      if (context?.prevGraph) {
+        queryClient.setQueriesData({ queryKey: ['iam_perm_graph'] }, context.prevGraph);
+      }
       toast.error(err.message);
+    },
+    onSettled: () => {
+      // Always refetch to sync with server
+      queryClient.invalidateQueries({ queryKey: ['iam_perm_graph'] });
+      queryClient.invalidateQueries({ queryKey: ['iam_access_preview'] });
+    },
+    onSuccess: () => {
+      toast.success('Permissão atualizada');
     },
   });
 
-  // ── Inheritance Mutations (via Gateway) ──
+  // ── Inheritance Mutations (optimistic, via Gateway) ──
   const addInheritanceMutation = useMutation({
     mutationFn: async ({ parentRoleId }: { parentRoleId: string }) => {
       if (!focusRoleId) throw new Error('Selecione um cargo filho');
@@ -509,12 +535,38 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         ctx: kernel.securityContext,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['role_inheritance'] });
-      queryClient.invalidateQueries({ queryKey: ['iam_graph_role_perms'] });
-      toast.success('Herança adicionada');
+    onMutate: async ({ parentRoleId }) => {
+      await queryClient.cancelQueries({ queryKey: ['iam_role_graph'] });
+      const prev = queryClient.getQueryData(['iam_role_graph']);
+
+      // Optimistic: add the inheritance edge immediately
+      queryClient.setQueriesData<{ roles: CustomRole[]; inheritances: any[] }>(
+        { queryKey: ['iam_role_graph'] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            inheritances: [...old.inheritances, {
+              id: `optimistic-${Date.now()}`,
+              parent_role_id: parentRoleId,
+              child_role_id: focusRoleId,
+              tenant_id: tenantId,
+            }],
+          };
+        },
+      );
+      return { prev };
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error, _vars, context) => {
+      if (context?.prev) queryClient.setQueriesData({ queryKey: ['iam_role_graph'] }, context.prev);
+      toast.error(err.message);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['iam_role_graph'] });
+      queryClient.invalidateQueries({ queryKey: ['iam_perm_graph'] });
+      queryClient.invalidateQueries({ queryKey: ['iam_access_preview'] });
+    },
+    onSuccess: () => toast.success('Herança adicionada'),
   });
 
   const removeInheritanceMutation = useMutation({
@@ -526,12 +578,29 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
         ctx: kernel.securityContext,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['role_inheritance'] });
-      queryClient.invalidateQueries({ queryKey: ['iam_graph_role_perms'] });
-      toast.success('Herança removida');
+    onMutate: async ({ inheritanceId }) => {
+      await queryClient.cancelQueries({ queryKey: ['iam_role_graph'] });
+      const prev = queryClient.getQueryData(['iam_role_graph']);
+
+      queryClient.setQueriesData<{ roles: CustomRole[]; inheritances: any[] }>(
+        { queryKey: ['iam_role_graph'] },
+        (old) => {
+          if (!old) return old;
+          return { ...old, inheritances: old.inheritances.filter((i: any) => i.id !== inheritanceId) };
+        },
+      );
+      return { prev };
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error, _vars, context) => {
+      if (context?.prev) queryClient.setQueriesData({ queryKey: ['iam_role_graph'] }, context.prev);
+      toast.error(err.message);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['iam_role_graph'] });
+      queryClient.invalidateQueries({ queryKey: ['iam_perm_graph'] });
+      queryClient.invalidateQueries({ queryKey: ['iam_access_preview'] });
+    },
+    onSuccess: () => toast.success('Herança removida'),
   });
 
   // ── Canvas Handlers ──
