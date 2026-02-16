@@ -24,6 +24,7 @@ import { useNavigationPins } from '@/hooks/use-navigation-pins';
 import { useExperienceProfile } from '@/hooks/use-experience-profile';
 import { NavigationSuggestionsPanel } from './NavigationSuggestionsPanel';
 import { ContextSelector } from './ContextSelector';
+import { PlanBadge } from '@/components/shared/PlanBadge';
 import type { NavKey } from '@/domains/security/permissions';
 import type { FeatureKey } from '@/domains/security/feature-flags';
 
@@ -396,15 +397,23 @@ export function AppSidebar() {
       {/* ── Navigation Suggestions ── */}
       <NavigationSuggestionsPanel collapsed={collapsed} />
 
-      {/* ── Upgrade Banner for non-enterprise tenants ── */}
-      {expProfile.plan_tier && !['enterprise', 'custom'].includes(expProfile.plan_tier) && !collapsed && (
-        <div className="mx-3 mb-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
-          <p className="text-xs font-semibold text-primary">⚡ Upgrade disponível</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            {expProfile.plan_tier === 'free' && 'Desbloqueie módulos de Inteligência e Compliance.'}
-            {expProfile.plan_tier === 'starter' && 'Acesse Analytics avançado e dashboards extras.'}
-            {expProfile.plan_tier === 'professional' && 'Libere branding customizado e IA completa.'}
-          </p>
+      {/* ── Plan Badge + Upgrade Banner ── */}
+      {!collapsed && expProfile.plan_tier && (
+        <div className="mx-3 mb-2 space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/40">Plano</span>
+            <PlanBadge tier={expProfile.plan_tier} size="sm" />
+          </div>
+          {!['enterprise', 'custom'].includes(expProfile.plan_tier) && (
+            <div className="p-2.5 rounded-lg bg-primary/10 border border-primary/20">
+              <p className="text-[10px] font-semibold text-primary">⚡ Upgrade disponível</p>
+              <p className="text-[10px] text-sidebar-foreground/50 mt-0.5 leading-relaxed">
+                {expProfile.plan_tier === 'free' && 'Desbloqueie módulos de Inteligência e Compliance.'}
+                {expProfile.plan_tier === 'starter' && 'Acesse Analytics avançado e dashboards extras.'}
+                {expProfile.plan_tier === 'professional' && 'Libere branding customizado e IA completa.'}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
