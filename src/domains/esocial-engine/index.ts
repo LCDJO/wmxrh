@@ -40,9 +40,9 @@ export type { ESocialEventXML, ESocialLoteXML, XMLValidationResult, XMLGeneratio
 export { simulationSigner, checkCertificateExpiry, selectBestCertificate } from './digital-signer';
 export type { IDigitalSigner, IA1Adapter, IA3Adapter, DigitalCertificate, CertificateStorage, SignatureResult, SignatureValidation, CertificateValidationResult, CertificateType } from './digital-signer';
 
-// ── Transmission Service ──
+// ── Transmission Service (Async Queue) ──
 export { transmissionService } from './transmission-service';
-export type { TransmissionConfig, IGovernmentAPI, TransmissionBatchResult, TransmissionItemResult } from './transmission-service';
+export type { TransmissionConfig, IGovernmentAPI, TransmissionBatchResult, TransmissionItemResult, TransmissionItemStatus, QueueItem, QueueCallbacks } from './transmission-service';
 
 // ── Return Processor ──
 export { processReturn, processBatchReturn, toTransmissionResult, summarizeBatchReturn } from './return-processor';
