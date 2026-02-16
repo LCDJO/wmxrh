@@ -56,6 +56,11 @@
     --info: 210 100% 52%;
     --info-foreground: 0 0% 100%;
 
+    --impersonation: 25 95% 53%;
+    --impersonation-foreground: 0 0% 100%;
+    --impersonation-muted: 25 90% 95%;
+    --impersonation-border: 25 80% 65%;
+
     --font-display: 'Plus Jakarta Sans', sans-serif;
     --font-body: 'Inter', sans-serif;
   }
