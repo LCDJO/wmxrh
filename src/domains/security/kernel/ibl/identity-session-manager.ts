@@ -23,6 +23,7 @@ import { auditSecurity } from '../audit-security.service';
 import { getAccessGraph } from '../access-graph';
 import { featureFlagEngine } from '../feature-flag-engine';
 import { emitIBLEvent } from './domain-events';
+import { identitySessionCache } from './identity-session-cache';
 import type { SecurityFeatureKey, FeatureKey } from '../../feature-flags';
 import type {
   IdentitySession,
@@ -121,6 +122,14 @@ export class IdentitySessionManager {
       },
     });
 
+    // Cache the session
+    identitySessionCache.set(
+      input.user.id,
+      this._session.sessionFingerprint ?? `fp-${Date.now().toString(36)}`,
+      accessGraphSnapshot,
+      null, // no context yet
+    );
+
     return this._session;
   }
 
@@ -169,6 +178,9 @@ export class IdentitySessionManager {
       removedRoles,
     });
 
+    // Update cache graph hash
+    identitySessionCache.updateGraphHash(accessGraphSnapshot);
+
     return this._session;
   }
 
@@ -186,6 +198,7 @@ export class IdentitySessionManager {
       });
     }
     this._session = null;
+    identitySessionCache.clear();
   }
 
   get session(): IdentitySession | null {

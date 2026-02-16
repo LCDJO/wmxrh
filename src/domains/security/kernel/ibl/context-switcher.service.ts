@@ -21,6 +21,7 @@ import { auditSecurity } from '../audit-security.service';
 import { contextResolver } from './context-resolver';
 import { getAccessGraph } from '../access-graph';
 import { emitIBLEvent } from './domain-events';
+import { identitySessionCache } from './identity-session-cache';
 import type {
   IdentitySession,
   OperationalContext,
@@ -330,6 +331,9 @@ export class ContextSwitcherService {
       previous: event.previousContext,
       current: event.newContext,
     });
+
+    // Update session cache with new context
+    identitySessionCache.updateContext(newContext);
   }
 
   // ════════════════════════════════════
