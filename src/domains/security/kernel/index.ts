@@ -7,7 +7,7 @@
  * ║  próprias — tudo passa pelo Kernel.                     ║
  * ║                                                         ║
  * ║  SecurityKernel                                         ║
- * ║   ├── IdentityService     (quem é o usuário)            ║
+ * ║   ├── IdentityService     (quem é + SecurityContext)    ║
  * ║   ├── PermissionEngine    (o que pode fazer)            ║
  * ║   ├── PolicyEngine        (regras dinâmicas)            ║
  * ║   ├── ScopeResolver       (onde pode acessar)           ║
@@ -16,9 +16,9 @@
  * ╚══════════════════════════════════════════════════════════╝
  */
 
-// ── Identity ───────────────────────────────────────────────
-export { resolveIdentity } from './identity.service';
-export type { Identity } from './identity.service';
+// ── Identity + SecurityContext ─────────────────────────────
+export { resolveIdentity, buildSecurityContext } from './identity.service';
+export type { Identity, SecurityContext, SecurityScope, BuildSecurityContextInput } from './identity.service';
 
 // ── Permission Engine ──────────────────────────────────────
 export { permissionEngine } from './permission-engine';

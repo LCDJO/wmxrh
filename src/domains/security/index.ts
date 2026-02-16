@@ -9,6 +9,7 @@
 // ══════════════════════════════════════
 export {
   resolveIdentity,
+  buildSecurityContext,
   permissionEngine,
   policyEngine,
   resolveScope,
@@ -20,6 +21,9 @@ export {
 } from './kernel';
 export type {
   Identity,
+  SecurityContext,
+  SecurityScope,
+  BuildSecurityContextInput,
   PermissionEngineAPI,
   PermissionCheck,
   PolicyEngineAPI,
