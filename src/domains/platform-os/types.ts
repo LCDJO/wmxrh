@@ -177,18 +177,72 @@ export interface ModuleRegistration {
 // Identity Orchestrator
 // ══════════════════════════════════════════════════════════════════
 
-export interface IdentitySnapshot {
+/**
+ * OperationalIdentitySnapshot — Unified read-model combining:
+ *
+ *   1. Platform Identity  (is_platform_admin, platform_role)
+ *   2. Tenant Identity    (tenant_id, tenant_name, tenant_role, scope)
+ *   3. Dual Identity      (impersonation state)
+ *   4. UnifiedIdentitySession (IIL full session)
+ *
+ * This is the SINGLE object any UI or service should consume
+ * to answer "who is operating, where, and with what permissions?"
+ */
+export interface OperationalIdentitySnapshot {
+  // ── Core ──────────────────────────────────────────────────
   user_id: string | null;
   email: string | null;
   is_authenticated: boolean;
+  phase: IdentityPhase;
+
+  // ── Platform layer ────────────────────────────────────────
   is_platform_admin: boolean;
-  is_tenant_admin: boolean;
+  platform_role: string | null;
+  user_type: 'platform' | 'tenant' | 'unknown';
+
+  // ── Tenant layer ──────────────────────────────────────────
   current_tenant_id: string | null;
-  current_scope: string | null;
-  roles: string[];
-  impersonating: boolean;
-  phase: string;
+  current_tenant_name: string | null;
+  tenant_role: string | null;
+  effective_roles: readonly string[];
+  scope_level: string | null;
+  current_group_id: string | null;
+  current_company_id: string | null;
+
+  // ── Dual identity (impersonation) ─────────────────────────
+  is_impersonating: boolean;
+  impersonation: {
+    real_user_id: string;
+    target_tenant_id: string;
+    simulated_role: string;
+    reason: string;
+    remaining_ms: number;
+    operation_count: number;
+  } | null;
+
+  // ── Workspace / navigation context ────────────────────────
+  available_tenants: ReadonlyArray<{ tenant_id: string; tenant_name: string; role: string; is_active: boolean }>;
+  available_groups: ReadonlyArray<{ group_id: string; tenant_id: string }>;
+  can_switch_workspace: boolean;
+
+  // ── Access graph ──────────────────────────────────────────
+  has_access_graph: boolean;
+  reachable_company_count: number;
+  reachable_group_count: number;
+
+  // ── Risk ──────────────────────────────────────────────────
+  risk_level: 'low' | 'medium' | 'high' | 'critical';
+  risk_score: number;
+
+  // ── Metadata ──────────────────────────────────────────────
+  resolved_at: number;
+  session_id: string | null;
 }
+
+/** @deprecated Use OperationalIdentitySnapshot instead */
+export type IdentitySnapshot = OperationalIdentitySnapshot;
+
+type IdentityPhase = 'anonymous' | 'authenticated' | 'scoped' | 'impersonating' | 'idle';
 
 // ══════════════════════════════════════════════════════════════════
 // Navigation Orchestrator
@@ -305,9 +359,18 @@ export interface ModuleOrchestratorAPI {
 }
 
 export interface IdentityOrchestratorAPI {
-  snapshot(): IdentitySnapshot;
+  /** Get the unified operational identity snapshot */
+  snapshot(): OperationalIdentitySnapshot;
+  /** Force re-read from Security Kernel subsystems */
   refresh(): Promise<void>;
-  onIdentityChange(handler: (snapshot: IdentitySnapshot) => void): () => void;
+  /** Subscribe to identity state changes */
+  onIdentityChange(handler: (snapshot: OperationalIdentitySnapshot) => void): () => void;
+  /** Check if user is authenticated */
+  isAuthenticated(): boolean;
+  /** Check if currently impersonating */
+  isImpersonating(): boolean;
+  /** Get the current identity phase */
+  currentPhase(): string;
 }
 
 export interface NavigationOrchestratorAPI {
