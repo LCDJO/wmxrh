@@ -1950,6 +1950,7 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      seed_default_rubrics: { Args: { _tenant_id: string }; Returns: undefined }
       user_has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["tenant_role"][]
