@@ -211,7 +211,7 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
   }, [user, session, currentTenant, effectiveRoles, userRoles, membershipRole, uiScope]);
 
   // ── Stable fingerprint to avoid unnecessary graph rebuilds ──
-  // Only rebuild when the actual role data changes, not on every render.
+  // Only rebuild when the actual role data changes, not on every scope switch.
   const rolesFingerprint = useMemo(() => {
     const roleKeys = userRoles
       .map(r => `${r.role}:${r.scope_type}:${r.scope_id || '*'}`)
@@ -220,21 +220,36 @@ export function useSecurityKernel(): UseSecurityKernelReturn {
     return `${membershipRole || ''}::${roleKeys}`;
   }, [userRoles, membershipRole]);
 
-  // ── Access Graph (cached, fingerprint-gated rebuilds) ──
+  // ── Access Graph (cached per user:tenant, reused across context switches) ──
+  // PERFORMANCE: Context switches (group/company) do NOT rebuild the graph.
+  // Only role changes or tenant switches trigger a rebuild.
   const accessGraph = useMemo((): AccessGraph | null => {
     if (!user || !currentTenant) return null;
 
-    // The cache inside accessGraphService handles TTL + LRU.
-    // We only reach buildUserAccessGraph when the fingerprint changes
-    // (useMemo deps gate this). No manual invalidation needed here —
-    // events (graphEvents.*) handle external invalidation.
-    return accessGraphService.buildUserAccessGraph({
+    // Check the persistent cache first (survives context switches)
+    const { accessGraphCache } = require('./kernel/access-graph.cache');
+    const cached = accessGraphCache.get(user.id, currentTenant.id);
+    if (cached) {
+      // Reuse cached graph — O(1) lookup, no rebuild
+      const { setAccessGraph } = require('./kernel/access-graph');
+      setAccessGraph(cached.graph);
+      return cached.graph;
+    }
+
+    // Cache miss — build and store
+    const graph = accessGraphService.buildUserAccessGraph({
       userId: user.id,
       tenantId: currentTenant.id,
       userRoles,
       membershipRole,
       companyGroupMap: {},
     });
+
+    if (graph) {
+      accessGraphCache.set(user.id, currentTenant.id, graph);
+    }
+
+    return graph;
   }, [user, currentTenant, rolesFingerprint]);
 
   const graphCheckAccess = useCallback(
