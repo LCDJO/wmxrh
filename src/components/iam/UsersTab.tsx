@@ -3,7 +3,8 @@
  */
 import { useState, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { iamService, type CustomRole, type UserCustomRole, type TenantUser } from '@/domains/iam/iam.service';
+import { identityGateway } from '@/domains/iam/identity.gateway';
+import { type CustomRole, type UserCustomRole, type TenantUser } from '@/domains/iam/iam.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,19 +46,16 @@ export function UsersTab({ members, assignments, roles, tenantId, userId, isTena
   const [selScopeId, setSelScopeId] = useState('');
 
   // Scope options
-  const { data: companies = [] } = useQuery({
-    queryKey: ['iam_companies', tenantId],
-    queryFn: () => iamService.listCompanies(tenantId),
+  const { data: scopeData } = useQuery({
+    queryKey: ['iam_scope_options', tenantId],
+    queryFn: () => identityGateway.getScopeOptions({ tenant_id: tenantId }),
     enabled: !!tenantId,
   });
-  const { data: groups = [] } = useQuery({
-    queryKey: ['iam_groups', tenantId],
-    queryFn: () => iamService.listCompanyGroups(tenantId),
-    enabled: !!tenantId,
-  });
+  const companies = scopeData?.companies || [];
+  const groups = scopeData?.companyGroups || [];
 
   const inviteMutation = useMutation({
-    mutationFn: () => iamService.inviteUser({ tenant_id: tenantId, email: invEmail, name: invName || undefined, invited_by: userId }),
+    mutationFn: () => identityGateway.createTenantUser({ tenant_id: tenantId, email: invEmail, name: invName || undefined, invited_by: userId }),
     onSuccess: () => {
       toast({ title: 'Convite enviado!' });
       setInviteOpen(false);
@@ -69,7 +67,7 @@ export function UsersTab({ members, assignments, roles, tenantId, userId, isTena
   });
 
   const assignMutation = useMutation({
-    mutationFn: () => iamService.assignRole({
+    mutationFn: () => identityGateway.assignRoleToUser({
       user_id: selUser,
       role_id: selRole,
       tenant_id: tenantId,
@@ -90,7 +88,7 @@ export function UsersTab({ members, assignments, roles, tenantId, userId, isTena
   });
 
   const removeMutation = useMutation({
-    mutationFn: (id: string) => iamService.removeAssignment(id),
+    mutationFn: (id: string) => identityGateway.removeRoleFromUser({ assignment_id: id }),
     onSuccess: () => { toast({ title: 'Atribuição removida!' }); onInvalidate(); },
     onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });

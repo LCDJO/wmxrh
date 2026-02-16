@@ -3,7 +3,8 @@
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { iamService, type CustomRole, type PermissionDefinition, type UserCustomRole, type TenantUser } from '@/domains/iam/iam.service';
+import { identityGateway } from '@/domains/iam/identity.gateway';
+import { type CustomRole, type PermissionDefinition, type UserCustomRole, type TenantUser } from '@/domains/iam/iam.service';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, User, ChevronRight, Building2, Network, Key } from 'lucide-react';
@@ -35,7 +36,7 @@ export function AccessGraphTab({ members, assignments, roles, permissions, tenan
   const { data: allRolePerms = [] } = useQuery({
     queryKey: ['iam_all_role_perms', tenantId],
     queryFn: async () => {
-      const results = await Promise.all(roleIds.map(id => iamService.listRolePermissions(id)));
+      const results = await Promise.all(roleIds.map(id => identityGateway.getPermissionsMatrix({ role_id: id })));
       return roleIds.map((id, i) => ({ roleId: id, perms: results[i] }));
     },
     enabled: roleIds.length > 0,

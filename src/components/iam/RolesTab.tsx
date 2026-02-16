@@ -3,7 +3,8 @@
  */
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { iamService, type CustomRole, type PermissionDefinition } from '@/domains/iam/iam.service';
+import { identityGateway } from '@/domains/iam/identity.gateway';
+import { type CustomRole, type PermissionDefinition } from '@/domains/iam/iam.service';
 import { PermissionMatrix } from '@/components/iam/PermissionMatrix';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,22 +33,20 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
   const [description, setDescription] = useState('');
   const [cloneName, setCloneName] = useState('');
 
-  const createRole = useMutation({
-    mutationFn: (dto: { tenant_id: string; name: string; slug: string; description?: string; created_by?: string }) =>
-      iamService.createRole(dto),
+  const createRoleMut = useMutation({
+    mutationFn: (dto: { tenant_id: string; name: string; description?: string; created_by?: string }) =>
+      identityGateway.createRole(dto),
     onSuccess: () => {
       toast({ title: 'Cargo criado!' });
-      setCreateOpen(false);
-      setName('');
-      setDescription('');
+      setCreateOpen(false); setName(''); setDescription('');
       onInvalidate();
     },
     onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
 
-  const cloneRole = useMutation({
+  const cloneRoleMut = useMutation({
     mutationFn: ({ sourceId, newName }: { sourceId: string; newName: string }) =>
-      iamService.cloneRole(sourceId, tenantId, newName, userId),
+      identityGateway.cloneRole({ source_role_id: sourceId, tenant_id: tenantId, new_name: newName, created_by: userId }),
     onSuccess: () => {
       toast({ title: 'Cargo clonado com sucesso!' });
       setCloneOpen(null);
@@ -57,15 +56,14 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
     onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
 
-  const deleteRole = useMutation({
-    mutationFn: (id: string) => iamService.deleteRole(id),
+  const deleteRoleMut = useMutation({
+    mutationFn: (id: string) => identityGateway.deleteRole({ role_id: id }),
     onSuccess: () => { toast({ title: 'Cargo removido!' }); onInvalidate(); },
     onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
 
   const handleCreate = () => {
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '');
-    createRole.mutate({ tenant_id: tenantId, name, slug, description: description || undefined, created_by: userId });
+    createRoleMut.mutate({ tenant_id: tenantId, name, description: description || undefined, created_by: userId });
   };
 
   return (
@@ -88,8 +86,8 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
                   <Label>Descrição</Label>
                   <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrição do cargo" />
                 </div>
-                <Button className="w-full" disabled={!name || createRole.isPending} onClick={handleCreate}>
-                  {createRole.isPending ? 'Criando...' : 'Criar Cargo'}
+                <Button className="w-full" disabled={!name || createRoleMut.isPending} onClick={handleCreate}>
+                  {createRoleMut.isPending ? 'Criando...' : 'Criar Cargo'}
                 </Button>
               </div>
             </DialogContent>
@@ -124,7 +122,7 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
                   </Button>
                 )}
                 {isTenantAdmin && !role.is_system && (
-                  <Button variant="ghost" size="sm" className="gap-1 text-xs text-destructive" onClick={() => deleteRole.mutate(role.id)}>
+                  <Button variant="ghost" size="sm" className="gap-1 text-xs text-destructive" onClick={() => deleteRoleMut.mutate(role.id)}>
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 )}
@@ -157,8 +155,8 @@ export function RolesTab({ roles, permissions, tenantId, userId, isTenantAdmin, 
                 <Input value={cloneName} onChange={e => setCloneName(e.target.value)} placeholder="Nome do cargo clonado" />
               </div>
               <p className="text-xs text-muted-foreground">Todas as permissões serão copiadas para o novo cargo.</p>
-              <Button className="w-full" disabled={!cloneName || cloneRole.isPending} onClick={() => cloneRole.mutate({ sourceId: cloneOpen.id, newName: cloneName })}>
-                {cloneRole.isPending ? 'Clonando...' : 'Clonar Cargo'}
+              <Button className="w-full" disabled={!cloneName || cloneRoleMut.isPending} onClick={() => cloneRoleMut.mutate({ sourceId: cloneOpen.id, newName: cloneName })}>
+                {cloneRoleMut.isPending ? 'Clonando...' : 'Clonar Cargo'}
               </Button>
             </div>
           </DialogContent>
