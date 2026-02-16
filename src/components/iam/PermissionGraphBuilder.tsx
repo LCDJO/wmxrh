@@ -725,73 +725,37 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
   return (
     <div className="space-y-3 animate-fade-in">
       {/* ─── Premium Toolbar ─── */}
-      <div className="flex items-center justify-between bg-card/80 backdrop-blur-sm border border-border/40 rounded-2xl px-5 py-3 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20">
-            <Network className="h-4.5 w-4.5 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-sm font-bold font-display text-foreground tracking-tight">Permission Graph</h2>
-            <p className="text-[10px] text-muted-foreground leading-tight">
-              Arraste permissões da Library • Clique recurso para CRUD • Scroll para zoom
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          {/* Role chips */}
-          <div className="flex items-center gap-1 max-w-[400px] overflow-x-auto scrollbar-none">
-            <button
-              onClick={() => { setFocusRoleId(null); setNodePositions(new Map()); setSelectedNodeId(null); setCrudResource(null); }}
-              className={cn(
-                "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all whitespace-nowrap",
-                !focusRoleId
-                  ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/25"
-                  : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border/60 bg-muted/30"
-              )}
-            >
-              Todos
-            </button>
-            {roles.map(r => (
-              <button
-                key={r.id}
-                onClick={() => { setFocusRoleId(prev => prev === r.id ? null : r.id); setNodePositions(new Map()); setSelectedNodeId(null); setCrudResource(null); }}
-                className={cn(
-                  "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all flex items-center gap-1 whitespace-nowrap",
-                  focusRoleId === r.id
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/25"
-                    : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border/60 bg-muted/30"
-                )}
-              >
-                {r.is_system ? <Lock className="h-2.5 w-2.5" /> : <Shield className="h-2.5 w-2.5" />}
-                {r.name}
-                {inheritances.some(inh => inh.child_role_id === r.id || inh.parent_role_id === r.id) && (
-                  <GitBranch className="h-2.5 w-2.5 text-warning" />
-                )}
-              </button>
-            ))}
+      <div className="bg-card/80 backdrop-blur-sm border border-border/40 rounded-2xl shadow-sm overflow-hidden">
+        {/* Row 1: Title + Controls */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border/20">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20">
+              <Network className="h-4.5 w-4.5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold font-display text-foreground tracking-tight">Permission Graph</h2>
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                Arraste permissões da Library • Clique recurso para CRUD • Scroll para zoom
+              </p>
+            </div>
           </div>
 
-          {/* Divider */}
-          <div className="h-6 w-px bg-border/40" />
-
-          {/* Controls cluster */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {focusRoleId && kernel.isTenantAdmin && (
               <Button
-                variant={showInheritanceSelector ? "default" : "ghost"}
+                variant={showInheritanceSelector ? "default" : "outline"}
                 size="sm"
-                className="h-7 gap-1 text-[10px] px-2"
+                className="h-8 gap-1.5 text-xs px-3 rounded-lg"
                 onClick={() => setShowInheritanceSelector(v => !v)}
               >
-                <GitBranch className="h-3 w-3" />
+                <GitBranch className="h-3.5 w-3.5" />
                 Herança
               </Button>
             )}
 
             <Select value={scopeFilter} onValueChange={(v) => { setScopeFilter(v as typeof scopeFilter); setNodePositions(new Map()); }}>
-              <SelectTrigger className="h-7 w-[120px] text-[10px] bg-muted/20 border-border/40 rounded-lg">
-                <Building2 className="h-3 w-3 text-muted-foreground mr-1 shrink-0" />
+              <SelectTrigger className="h-8 w-[130px] text-xs bg-muted/20 border-border/40 rounded-lg">
+                <Building2 className="h-3.5 w-3.5 text-muted-foreground mr-1.5 shrink-0" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-popover border-border shadow-lg z-50">
@@ -802,19 +766,56 @@ export function PermissionGraphBuilder({ members, assignments, roles, permission
               </SelectContent>
             </Select>
 
-            <div className="h-5 w-px bg-border/30" />
+            <div className="h-6 w-px bg-border/30" />
 
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.min(z + 0.15, 3))}>
-              <ZoomIn className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.max(z - 0.15, 0.25))}>
-              <ZoomOut className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={resetView}>
-              <Maximize2 className="h-3.5 w-3.5" />
-            </Button>
-            <span className="text-[9px] text-muted-foreground font-mono tabular-nums w-8 text-center">{Math.round(zoom * 100)}%</span>
+            <div className="flex items-center gap-0.5 bg-muted/20 rounded-lg border border-border/30 px-1 py-0.5">
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => setZoom(z => Math.min(z + 0.15, 3))}>
+                <ZoomIn className="h-3.5 w-3.5" />
+              </Button>
+              <span className="text-[10px] text-muted-foreground font-mono tabular-nums w-9 text-center select-none">{Math.round(zoom * 100)}%</span>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => setZoom(z => Math.max(z - 0.15, 0.25))}>
+                <ZoomOut className="h-3.5 w-3.5" />
+              </Button>
+              <div className="h-4 w-px bg-border/30 mx-0.5" />
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={resetView}>
+                <Maximize2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
+        </div>
+
+        {/* Row 2: Role chips */}
+        <div className="px-5 py-2.5 flex items-center gap-2 overflow-x-auto scrollbar-none">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider shrink-0 mr-1">Cargo</span>
+          <button
+            onClick={() => { setFocusRoleId(null); setNodePositions(new Map()); setSelectedNodeId(null); setCrudResource(null); }}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all whitespace-nowrap shrink-0",
+              !focusRoleId
+                ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/25"
+                : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border/60 bg-muted/30"
+            )}
+          >
+            Todos
+          </button>
+          {roles.map(r => (
+            <button
+              key={r.id}
+              onClick={() => { setFocusRoleId(prev => prev === r.id ? null : r.id); setNodePositions(new Map()); setSelectedNodeId(null); setCrudResource(null); }}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0",
+                focusRoleId === r.id
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/25"
+                  : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border/60 bg-muted/30"
+              )}
+            >
+              {r.is_system ? <Lock className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
+              {r.name}
+              {inheritances.some(inh => inh.child_role_id === r.id || inh.parent_role_id === r.id) && (
+                <GitBranch className="h-3 w-3 text-warning" />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
