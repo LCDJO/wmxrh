@@ -93,3 +93,13 @@ export type {
   MultiScopeToken, ScopeToken, QueryFilterSet,
   GuardResult, GuardTarget, GuardCheckName,
 } from './identity-boundary';
+
+// ── IBL Domain Events ──────────────────────────────────────
+export { emitIBLEvent, onIBLEvent, onIBLEventType, getIBLEventLog, clearIBLEventLog } from './ibl/domain-events';
+export type {
+  IBLDomainEventType, IBLDomainEvent,
+  ContextSwitchedPayload, ContextSnapshotPayload,
+  IdentitySessionStartedPayload,
+  IdentitySessionRefreshedPayload,
+  UnauthorizedContextSwitchPayload,
+} from './ibl/domain-events';

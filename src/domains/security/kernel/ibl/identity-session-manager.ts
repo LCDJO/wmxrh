@@ -22,6 +22,7 @@ import type { TenantRole, UserRole } from '@/domains/shared/types';
 import { auditSecurity } from '../audit-security.service';
 import { getAccessGraph } from '../access-graph';
 import { featureFlagEngine } from '../feature-flag-engine';
+import { emitIBLEvent } from './domain-events';
 import type { SecurityFeatureKey, FeatureKey } from '../../feature-flags';
 import type {
   IdentitySession,
@@ -90,6 +91,20 @@ export class IdentitySessionManager {
       allowedScopes: Object.freeze(allowedScopes),
     }) as IdentitySession;
 
+    // Emit IdentitySessionStarted event
+    emitIBLEvent({
+      type: 'IdentitySessionStarted',
+      timestamp: Date.now(),
+      userId: input.user.id,
+      email: input.user.email ?? null,
+      provider: this._session.provider,
+      tenantCount: tenantIds.length,
+      tenantIds: [...tenantIds],
+      roles: [...roles],
+      allowedScopes: { ...allowedScopes },
+      hasAccessGraph: !!accessGraphSnapshot,
+    });
+
     auditSecurity.log({
       action: 'identity_established',
       resource: 'identity_session_manager',
@@ -127,6 +142,8 @@ export class IdentitySessionManager {
       accessGraphSnapshot,
     );
 
+    const previousRoles = this._session.roles;
+
     this._session = Object.freeze({
       ...this._session,
       tenantScopes: Object.freeze(input.tenantMemberships.map(m => Object.freeze(m))),
@@ -137,6 +154,20 @@ export class IdentitySessionManager {
       featureFlags: Object.freeze(featureFlags),
       allowedScopes: Object.freeze(allowedScopes),
     }) as IdentitySession;
+
+    // Emit IdentitySessionRefreshed event
+    const addedRoles = roles.filter(r => !previousRoles.includes(r));
+    const removedRoles = previousRoles.filter(r => !roles.includes(r));
+
+    emitIBLEvent({
+      type: 'IdentitySessionRefreshed',
+      timestamp: Date.now(),
+      userId: this._session.userId,
+      tenantCount: tenantIds.length,
+      roleCount: roles.length,
+      addedRoles,
+      removedRoles,
+    });
 
     return this._session;
   }

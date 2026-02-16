@@ -20,6 +20,7 @@ import type { ScopeType } from '@/domains/shared/types';
 import { auditSecurity } from '../audit-security.service';
 import { contextResolver } from './context-resolver';
 import { getAccessGraph } from '../access-graph';
+import { emitIBLEvent } from './domain-events';
 import type {
   IdentitySession,
   OperationalContext,
@@ -86,13 +87,13 @@ export class ContextSwitcherService {
   ): ContextSwitchResult {
     // ── 1. Identity must exist ──
     if (!identity) {
-      return this._deny('NO_IDENTITY', 'Nenhuma identidade estabelecida. Autentique-se primeiro.');
+      return this._deny('NO_IDENTITY', 'Nenhuma identidade estabelecida. Autentique-se primeiro.', null, request);
     }
 
     const targetTenantId = request.targetTenantId ?? this._currentContext?.activeTenantId;
 
     if (!targetTenantId) {
-      return this._deny('NO_MEMBERSHIP', 'Nenhum tenant alvo especificado e nenhum contexto ativo.');
+      return this._deny('NO_MEMBERSHIP', 'Nenhum tenant alvo especificado e nenhum contexto ativo.', identity.userId, request);
     }
 
     // ── 2. Membership check ──
@@ -102,7 +103,7 @@ export class ContextSwitcherService {
         resource: `tenant:${targetTenantId}`,
         reason: 'Tentativa de troca para tenant sem membership',
       });
-      return this._deny('NO_MEMBERSHIP', `Sem acesso ao tenant ${targetTenantId}.`);
+      return this._deny('NO_MEMBERSHIP', `Sem acesso ao tenant ${targetTenantId}.`, identity.userId, request);
     }
 
     // ── Resolve target scope ──
@@ -117,7 +118,7 @@ export class ContextSwitcherService {
         resource: `scope:${scopeLevel}:${groupId || companyId || 'tenant'}`,
         reason: graphValidation.reason,
       });
-      return this._deny('SCOPE_DENIED', graphValidation.reason);
+      return this._deny('SCOPE_DENIED', graphValidation.reason, identity.userId, request);
     }
 
     // ── Resolve effective context ──
@@ -314,13 +315,21 @@ export class ContextSwitcherService {
       switchCount: this._switchCount,
     };
 
+    // Emit to local listeners
     for (const listener of this._listeners) {
-      try {
-        listener(event);
-      } catch {
-        // Swallow listener errors to not break the switch flow
-      }
+      try { listener(event); } catch { /* swallow */ }
     }
+
+    // Emit to IBL domain event bus
+    emitIBLEvent({
+      type: 'ContextSwitched',
+      timestamp: event.timestamp,
+      userId,
+      switchType,
+      switchCount: this._switchCount,
+      previous: event.previousContext,
+      current: event.newContext,
+    });
   }
 
   // ════════════════════════════════════
@@ -343,7 +352,19 @@ export class ContextSwitcherService {
   private _deny(
     failedValidation: ContextSwitchResult['failedValidation'],
     reason: string,
+    userId?: string | null,
+    request?: ContextSwitchRequest,
   ): ContextSwitchResult {
+    emitIBLEvent({
+      type: 'UnauthorizedContextSwitch',
+      timestamp: Date.now(),
+      userId: userId ?? null,
+      targetTenantId: request?.targetTenantId ?? null,
+      targetGroupId: request?.targetGroupId ?? null,
+      targetCompanyId: request?.targetCompanyId ?? null,
+      failedValidation: failedValidation ?? 'UNKNOWN',
+      reason,
+    });
     return { success: false, newContext: null, reason, failedValidation };
   }
 
