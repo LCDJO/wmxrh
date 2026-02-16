@@ -1,12 +1,7 @@
 /**
  * CognitiveInsightsService — Orchestrator
  *
- * Coordinates the full cognitive pipeline:
- *  1. CognitiveContextCollector  → gathers snapshot
- *  2. BehaviorAnalyzer           → builds behaviour profile
- *  3. Advisor (Permission / Navigation / RoleSuggestion) → builds prompt payload
- *  4. Edge function call         → sends payload to AI
- *  5. Returns structured CognitiveResponse
+ * Pipeline: Collect → Analyze → Advise → AI → Response
  */
 import { supabase } from '@/integrations/supabase/client';
 import { CognitiveContextCollector } from './cognitive-context-collector';
@@ -18,67 +13,68 @@ import type { CognitiveIntent, CognitiveResponse, AdvisorPayload } from './types
 
 export class CognitiveInsightsService {
   private collector = new CognitiveContextCollector();
-  private behavior = new BehaviorAnalyzer();
+  private behavior: BehaviorAnalyzer;
   private permAdvisor = new PermissionAdvisor();
   private navAdvisor = new NavigationAdvisor();
   private roleEngine = new RoleSuggestionEngine();
 
+  constructor() {
+    this.behavior = new BehaviorAnalyzer(this.collector);
+  }
+
   // ── Public API ───────────────────────────────────────────────────
 
-  /** Track a navigation event (call from layout on route change). */
   trackNavigation(route: string) {
     this.behavior.track('navigate', route);
   }
 
-  /** Main entry point — orchestrates the full pipeline. */
+  trackModuleUse(moduleKey: string) {
+    this.collector.trackModuleUse(moduleKey);
+  }
+
+  trackCommand(command: string, meta?: Record<string, unknown>) {
+    this.collector.trackCommand(command, meta);
+  }
+
   async query(
     intent: CognitiveIntent,
     caller: { role: string; email: string },
     params?: Record<string, unknown>,
   ): Promise<CognitiveResponse> {
-    // 1. Collect
+    // 1. Collect snapshot
     const snapshot = await this.collector.collect();
 
-    // 2. Build advisor payload
-    const payload = this.routeToAdvisor(intent, caller.role, params);
+    // 2. Build advisor payload (uses snapshot + behavior)
+    const payload = await this.routeToAdvisor(intent, caller.role, params);
 
     // 3. Call edge function
     const { data, error } = await supabase.functions.invoke('platform-cognitive', {
-      body: {
-        intent,
-        advisor_payload: payload,
-        context: params,
-      },
+      body: { intent, advisor_payload: payload, context: params },
     });
 
     if (error) {
       const msg = typeof error === 'object' && 'message' in error ? (error as any).message : String(error);
       throw new Error(msg);
     }
-
     if (data?.error) throw new Error(data.error);
-
     return data as CognitiveResponse;
   }
 
-  /** Force-refresh the cached snapshot. */
-  refreshContext() {
-    this.collector.invalidate();
-  }
+  refreshContext() { this.collector.invalidate(); }
 
-  /** Get current behaviour profile (for display/debug). */
-  getBehaviorProfile() {
-    return this.behavior.profile();
-  }
+  getBehaviorProfile() { return this.behavior.sessionProfile(); }
+
+  async getFullBehaviorProfile() { return this.behavior.fullProfile(); }
+
+  async getEventStats(daysBack = 30) { return this.collector.getEventStats(daysBack); }
 
   // ── Private ──────────────────────────────────────────────────────
 
-  private routeToAdvisor(intent: CognitiveIntent, callerRole: string, params?: Record<string, unknown>): AdvisorPayload | null {
-    // We need the snapshot synchronously here — it was already cached by collect()
-    const snapshot = (this.collector as any).cache;
+  private async routeToAdvisor(intent: CognitiveIntent, callerRole: string, params?: Record<string, unknown>): Promise<AdvisorPayload | null> {
+    const snapshot = (this.collector as any).snapshotCache;
     if (!snapshot) return null;
 
-    const profile = this.behavior.profile();
+    const profile = await this.behavior.fullProfile();
 
     switch (intent) {
       case 'suggest-permissions':

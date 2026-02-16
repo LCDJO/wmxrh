@@ -3141,6 +3141,33 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_cognitive_events: {
+        Row: {
+          created_at: string
+          event_key: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_key: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_key?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_permission_definitions: {
         Row: {
           code: string
@@ -4637,6 +4664,7 @@ export type Database = {
         Returns: boolean
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      get_cognitive_event_stats: { Args: { days_back?: number }; Returns: Json }
       get_platform_metrics: { Args: never; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_type_from_jwt: { Args: never; Returns: string }
@@ -4668,6 +4696,7 @@ export type Database = {
         }
         Returns: Json
       }
+      purge_old_cognitive_events: { Args: never; Returns: undefined }
       scan_employee_compliance: {
         Args: { _tenant_id: string }
         Returns: {
