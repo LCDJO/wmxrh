@@ -9,6 +9,7 @@ import { ScopeProvider } from "./contexts/ScopeContext";
 import { ProtectedRoute } from "./domains/security";
 import { AppLayout } from "./components/layout/AppLayout";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import TenantOnboarding from "./pages/TenantOnboarding";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
@@ -55,7 +56,16 @@ function AppRoutes() {
     );
   }
 
-  if (!user) return <Auth />;
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/auth/login" element={<Auth />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="*" element={<Navigate to="/auth/login" replace />} />
+      </Routes>
+    );
+  }
+
   if (!currentTenant) return <TenantOnboarding />;
 
   return (
@@ -193,6 +203,9 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
       </Route>
+      {/* Redirect auth routes to home if already logged in */}
+      <Route path="/auth/login" element={<Navigate to="/" replace />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
     </Routes>
   );
 }
