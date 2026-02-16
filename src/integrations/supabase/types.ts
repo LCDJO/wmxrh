@@ -4406,6 +4406,17 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      platform_create_tenant: {
+        Args: {
+          p_admin_email?: string
+          p_admin_name?: string
+          p_document?: string
+          p_email?: string
+          p_name: string
+          p_phone?: string
+        }
+        Returns: Json
+      }
       scan_employee_compliance: {
         Args: { _tenant_id: string }
         Returns: {
