@@ -523,6 +523,9 @@ export interface HealthProgram {
   document_url: string | null;
   status: string;
   notes: string | null;
+  exam_periodicity_months: number;
+  generates_hazard_pay: boolean;
+  hazard_pay_type: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -538,6 +541,7 @@ export interface EmployeeHealthExam {
   exam_type: ExamType;
   exam_date: string;
   expiry_date: string | null;
+  next_exam_date: string | null;
   result: ExamResult;
   physician_name: string | null;
   physician_crm: string | null;
