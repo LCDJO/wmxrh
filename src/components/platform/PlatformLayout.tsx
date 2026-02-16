@@ -18,6 +18,7 @@ import {
   Zap,
   Users,
 } from 'lucide-react';
+import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -157,9 +158,12 @@ export default function PlatformLayout() {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Shield className="h-3.5 w-3.5" />
-            <span>{identity ? roleLabel[identity.role] ?? identity.role : ''}</span>
+          <div className="flex items-center gap-3">
+            <CognitivePanel />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Shield className="h-3.5 w-3.5" />
+              <span>{identity ? roleLabel[identity.role] ?? identity.role : ''}</span>
+            </div>
           </div>
         </header>
 
