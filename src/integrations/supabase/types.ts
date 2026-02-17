@@ -5229,6 +5229,8 @@ export type Database = {
           created_at: string
           expires_at: string | null
           id: string
+          next_billing_date: string | null
+          payment_method: string | null
           plan_id: string
           started_at: string
           status: string
@@ -5242,6 +5244,8 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          next_billing_date?: string | null
+          payment_method?: string | null
           plan_id: string
           started_at?: string
           status?: string
@@ -5255,6 +5259,8 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          next_billing_date?: string | null
+          payment_method?: string | null
           plan_id?: string
           started_at?: string
           status?: string
