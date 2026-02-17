@@ -23,7 +23,7 @@ export interface PageSnapshot {
   name: string;
   slug: string;
   blocks: FABBlock[];
-  status: 'draft' | 'published';
+  status: 'draft' | 'approved' | 'published';
 }
 
 export interface VersionDiff {
