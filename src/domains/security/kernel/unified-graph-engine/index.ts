@@ -25,6 +25,7 @@ import { analyzeGraph } from './graph-analyzer';
 import { queryGraph, getUserAccessMap, getTenantAccessOverview, getPermissionUsage } from './graph-query-service';
 import { assessRisk } from './risk-assessment-service';
 import { toVisualizationData } from './graph-visualization-adapter';
+import { graphCache, extractTenantSnapshot, invalidateDomain } from './graph-cache';
 
 // ── Auto-register built-in providers ──
 import { platformAccessProvider } from './providers/platform-access-provider';
@@ -65,9 +66,64 @@ export const unifiedGraphEngine = {
     return graphRegistry.getRegisteredDomains();
   },
 
-  // ── Compose ──
-  compose(domains?: GraphDomain[]): UnifiedGraphSnapshot {
-    return composeUnifiedGraph(domains);
+  // ── Compose (with session cache) ──
+  compose(domains?: GraphDomain[], sessionId?: string): UnifiedGraphSnapshot {
+    if (sessionId) {
+      const cached = graphCache.getSessionSnapshot(sessionId, domains);
+      if (cached) return cached;
+    }
+    const snapshot = composeUnifiedGraph(domains);
+    if (sessionId) {
+      graphCache.setSessionSnapshot(sessionId, snapshot, domains);
+    }
+    return snapshot;
+  },
+
+  // ── Tenant-scoped snapshot ──
+  composeTenant(tenantId: string, sessionId?: string): UnifiedGraphSnapshot {
+    const full = this.compose(undefined, sessionId);
+    return extractTenantSnapshot(full, tenantId);
+  },
+
+  // ── Incremental update ──
+  composeIncremental(
+    base: UnifiedGraphSnapshot,
+    sessionId?: string,
+  ): UnifiedGraphSnapshot {
+    const staleDomains = graphCache.getStaleDomains(base);
+    if (staleDomains.length === 0) return base;
+
+    // Only re-fetch stale domains
+    const freshData = new Map<GraphDomain, { nodes: import('./types').UnifiedNode[]; edges: import('./types').UnifiedEdge[] }>();
+    for (const domain of staleDomains) {
+      const provider = graphRegistry.getProvider(domain);
+      if (provider?.isAvailable()) {
+        freshData.set(domain, provider.provide());
+      }
+    }
+
+    const updated = graphCache.applyIncrementalUpdate(base, staleDomains, freshData);
+    if (sessionId) {
+      graphCache.setSessionSnapshot(sessionId, updated);
+    }
+    return updated;
+  },
+
+  // ── Cache management ──
+  invalidateDomain(domain: GraphDomain): void {
+    invalidateDomain(domain);
+  },
+  invalidateSession(sessionId: string): void {
+    graphCache.invalidateSession(sessionId);
+  },
+  invalidateTenant(tenantId: string): void {
+    graphCache.invalidateTenant(tenantId);
+  },
+  clearCache(): void {
+    graphCache.clear();
+  },
+  cacheStats() {
+    return graphCache.stats();
   },
 
   // ── Analyze ──
@@ -105,8 +161,8 @@ export const unifiedGraphEngine = {
   },
 
   // ── Convenience: full pipeline ──
-  buildFullReport(domains?: GraphDomain[]) {
-    const snapshot = composeUnifiedGraph(domains);
+  buildFullReport(domains?: GraphDomain[], sessionId?: string) {
+    const snapshot = this.compose(domains, sessionId);
     return {
       snapshot,
       analysis: analyzeGraph(snapshot),
@@ -155,3 +211,12 @@ export {
   getUGEEventLog,
   clearUGEEventLog,
 } from './uge-events';
+
+// ── Cache & Performance ──
+export type { GraphCacheConfig } from './graph-cache';
+export {
+  graphCache,
+  extractTenantSnapshot,
+  invalidateDomain,
+  getDomainVersion,
+} from './graph-cache';
