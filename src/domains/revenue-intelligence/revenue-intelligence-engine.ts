@@ -232,26 +232,67 @@ export function createRevenueAnalyzer(): RevenueAnalyzerAPI {
 export function createChurnPredictionService(): ChurnPredictionServiceAPI {
   return {
     async getAtRiskTenants(): Promise<ChurnRiskTenant[]> {
-      // Fetch active tenant plans with tenant info
-      const { data: tenantPlans } = await supabase
-        .from('tenant_plans')
-        .select('tenant_id, plan_id, saas_plans(name, price), tenants(name)')
-        .eq('status', 'active');
+      // Fetch ALL signals in parallel
+      const [tpRes, invRes, usageCurr, usagePrev, couponRes, downgradeLedger] = await Promise.all([
+        supabase.from('tenant_plans').select('tenant_id, plan_id, saas_plans(name, price), tenants(name)').eq('status', 'active'),
+        supabase.from('invoices').select('tenant_id, status, created_at, due_date').order('created_at', { ascending: false }).limit(1000),
+        // Current month usage
+        supabase.from('usage_records').select('tenant_id, quantity, recorded_at')
+          .gte('recorded_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+        // Previous month usage
+        supabase.from('usage_records').select('tenant_id, quantity, recorded_at')
+          .gte('recorded_at', new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString())
+          .lt('recorded_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+        // Coupon redemptions (last 90 days)
+        supabase.from('coupon_redemptions').select('tenant_id, discount_applied_brl, status')
+          .gte('redeemed_at', new Date(Date.now() - 90 * 86400000).toISOString()),
+        // Downgrade signals from ledger
+        supabase.from('platform_financial_entries').select('tenant_id, entry_type, description, created_at')
+          .in('entry_type', ['plan_downgrade', 'refund', 'credit'])
+          .gte('created_at', new Date(Date.now() - 90 * 86400000).toISOString()),
+      ]);
 
-      if (!tenantPlans?.length) return [];
+      const tenantPlans = tpRes.data ?? [];
+      if (!tenantPlans.length) return [];
 
-      // Fetch recent invoices to check payment patterns
-      const { data: invoices } = await supabase
-        .from('invoices')
-        .select('tenant_id, status, created_at, due_date')
-        .order('created_at', { ascending: false })
-        .limit(500);
+      const invoices = invRes.data ?? [];
+      const currUsage = usageCurr.data ?? [];
+      const prevUsage = usagePrev.data ?? [];
+      const coupons = couponRes.data ?? [];
+      const downgrades = downgradeLedger.data ?? [];
+
+      // Pre-aggregate usage per tenant
+      const aggUsage = (records: typeof currUsage) => {
+        const map = new Map<string, number>();
+        for (const r of records) {
+          map.set(r.tenant_id, (map.get(r.tenant_id) ?? 0) + Number(r.quantity));
+        }
+        return map;
+      };
+      const currUsageMap = aggUsage(currUsage);
+      const prevUsageMap = aggUsage(prevUsage);
+
+      // Coupon discount per tenant
+      const couponMap = new Map<string, { total_discount: number; count: number }>();
+      for (const c of coupons) {
+        const entry = couponMap.get(c.tenant_id) ?? { total_discount: 0, count: 0 };
+        entry.total_discount += Number(c.discount_applied_brl);
+        entry.count++;
+        couponMap.set(c.tenant_id, entry);
+      }
+
+      // Downgrade events per tenant
+      const downgradeMap = new Map<string, number>();
+      for (const d of downgrades) {
+        downgradeMap.set(d.tenant_id, (downgradeMap.get(d.tenant_id) ?? 0) + 1);
+      }
 
       const now = Date.now();
       const risks: ChurnRiskTenant[] = [];
 
       for (const tp of tenantPlans) {
-        const tenantInvoices = (invoices ?? []).filter(i => i.tenant_id === tp.tenant_id);
+        const tid = tp.tenant_id;
+        const tenantInvoices = invoices.filter(i => i.tenant_id === tid);
         const overdueCount = tenantInvoices.filter(i => i.status === 'overdue').length;
         const lastInvoice = tenantInvoices[0];
         const daysSinceLastInvoice = lastInvoice
@@ -261,20 +302,75 @@ export function createChurnPredictionService(): ChurnPredictionServiceAPI {
         const factors: string[] = [];
         let score = 0;
 
-        if (overdueCount > 0) { score += 30; factors.push(`${overdueCount} faturas vencidas`); }
-        if (daysSinceLastInvoice > 60) { score += 25; factors.push('Sem atividade > 60 dias'); }
-        if (daysSinceLastInvoice > 90) { score += 20; factors.push('Inatividade crítica > 90 dias'); }
+        // ── Signal 1: Overdue invoices ──
+        if (overdueCount > 0) {
+          score += Math.min(overdueCount * 15, 30);
+          factors.push(`${overdueCount} fatura(s) vencida(s)`);
+        }
 
-        if (score >= 25) {
+        // ── Signal 2: Inactivity ──
+        if (daysSinceLastInvoice > 90) {
+          score += 20;
+          factors.push('Inatividade crítica > 90 dias');
+        } else if (daysSinceLastInvoice > 60) {
+          score += 12;
+          factors.push('Sem atividade > 60 dias');
+        }
+
+        // ── Signal 3: Usage reduction ──
+        const curr = currUsageMap.get(tid) ?? 0;
+        const prev = prevUsageMap.get(tid) ?? 0;
+        if (prev > 0) {
+          const usageDrop = ((prev - curr) / prev) * 100;
+          if (usageDrop >= 50) {
+            score += 25;
+            factors.push(`Uso caiu ${Math.round(usageDrop)}% vs mês anterior`);
+          } else if (usageDrop >= 25) {
+            score += 15;
+            factors.push(`Uso caiu ${Math.round(usageDrop)}% vs mês anterior`);
+          }
+        } else if (curr === 0 && prev === 0) {
+          score += 5;
+          factors.push('Sem uso registrado');
+        }
+
+        // ── Signal 4: Plan downgrade ──
+        const downgradeCount = downgradeMap.get(tid) ?? 0;
+        if (downgradeCount > 0) {
+          score += Math.min(downgradeCount * 15, 25);
+          factors.push(`${downgradeCount} downgrade(s) recente(s)`);
+        }
+
+        // ── Signal 5: Heavy coupon usage ──
+        const couponData = couponMap.get(tid);
+        if (couponData) {
+          const planPrice = Number((tp as any).saas_plans?.price ?? 0);
+          const discountRatio = planPrice > 0 ? couponData.total_discount / planPrice : 0;
+          if (discountRatio > 0.5) {
+            score += 15;
+            factors.push(`Alto desconto via cupons (${Math.round(discountRatio * 100)}% do plano)`);
+          } else if (couponData.count >= 2) {
+            score += 8;
+            factors.push(`${couponData.count} cupons resgatados recentemente`);
+          }
+        }
+
+        // Only include tenants with meaningful risk
+        if (score >= 15) {
+          const clampedScore = Math.min(score, 100);
           risks.push({
-            tenant_id: tp.tenant_id,
-            tenant_name: (tp as any).tenants?.name ?? tp.tenant_id,
+            tenant_id: tid,
+            tenant_name: (tp as any).tenants?.name ?? tid,
             plan_name: (tp as any).saas_plans?.name ?? '—',
-            risk_score: Math.min(score, 100),
+            risk_score: clampedScore,
             risk_factors: factors,
             days_since_last_activity: daysSinceLastInvoice,
             mrr_at_risk: Number((tp as any).saas_plans?.price ?? 0),
-            recommended_action: score > 60 ? 'Contato urgente' : 'Acompanhamento preventivo',
+            recommended_action:
+              clampedScore > 75 ? 'Contato urgente — risco iminente' :
+              clampedScore > 50 ? 'Engajamento proativo necessário' :
+              clampedScore > 30 ? 'Acompanhamento preventivo' :
+              'Monitorar',
           });
         }
       }
