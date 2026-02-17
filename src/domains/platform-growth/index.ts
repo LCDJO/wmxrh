@@ -26,7 +26,7 @@ export { referralTrackingService, ReferralTrackingService } from './referral-tra
 export { growthGovernanceAnalyzer, GrowthGovernanceAnalyzer } from './growth-governance-analyzer';
 export type { GrowthGovernanceFinding } from './growth-governance-analyzer';
 export { emitGrowthEvent, onGrowthEvent, onGrowthEventType, getGrowthEventLog, clearGrowthEventLog } from './growth.events';
-export type { GrowthDomainEvent, GrowthEventType, LandingPageCreatedPayload, LandingPagePublishedPayload, FABContentUpdatedPayload, ConversionTrackedPayload, GrowthInsightGeneratedPayload, WebsitePublishedEventPayload, LandingVersionCreatedEventPayload, AIConversionSuggestedEventPayload, FABSectionGeneratedEventPayload, GTMInjectedEventPayload } from './growth.events';
+export type { GrowthDomainEvent, GrowthEventType, LandingPageCreatedPayload, LandingPagePublishedPayload, FABContentUpdatedPayload, ConversionTrackedPayload, GrowthInsightGeneratedPayload, WebsitePublishedEventPayload, LandingVersionCreatedEventPayload, AIConversionSuggestedEventPayload, FABSectionGeneratedEventPayload, GTMInjectedEventPayload, RollbackSuggestedPayload, RollbackExecutedPayload, RollbackPreventedByExperimentPayload, RollbackAuditLoggedPayload } from './growth.events';
 
 // ── Website Platform Engine (AI Conversion Designer) ──
 export { websitePlatformEngine, WebsitePlatformEngine } from './website-platform-engine';
