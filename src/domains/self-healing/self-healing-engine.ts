@@ -54,6 +54,7 @@ export class SelfHealingEngine {
     if (this.disposers.length > 0) return; // already started
 
     this.accessSafetyGuard.start();
+    this.circuitBreakers.setEventKernel(this.events);
 
     // Wire observability singletons to emit via GlobalEventKernel
     getHealthMonitor().setEventKernel(this.events);
