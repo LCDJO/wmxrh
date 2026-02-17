@@ -114,7 +114,7 @@ export class LandingPageBuilder {
   async update(id: string, fields: Partial<{
     name: string;
     slug: string;
-    status: 'draft' | 'published';
+    status: 'draft' | 'approved' | 'published';
     target_plan_id: string | null;
     referral_program_id: string | null;
     gtm_container_id: string | null;

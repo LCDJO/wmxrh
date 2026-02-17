@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import {
   Globe, Eye, Users, Target, Percent, BarChart3, ArrowUpRight,
-  Layout, ExternalLink, Plus, Upload,
+  Layout, ExternalLink, Plus, Upload, Send,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -60,13 +60,22 @@ export default function GrowthLandingPages() {
                     <Eye className="h-3 w-3" />Preview
                   </a>
                 </Button>
-                {canPublish && page.status === 'draft' && (
+                {page.status === 'draft' && (
                   <Button size="sm" variant="outline" className="gap-1 text-xs">
+                    <Send className="h-3 w-3" />Submeter
+                  </Button>
+                )}
+                {canPublish && page.status === 'approved' && (
+                  <Button size="sm" variant="outline" className="gap-1 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10">
                     <Upload className="h-3 w-3" />Publicar
                   </Button>
                 )}
-                <Badge variant="outline" className={cn('text-[10px]', page.status === 'published' ? 'border-emerald-500/30 text-emerald-400' : 'border-amber-500/30 text-amber-400')}>
-                  {page.status}
+                <Badge variant="outline" className={cn('text-[10px]',
+                  page.status === 'published' ? 'border-emerald-500/30 text-emerald-400' :
+                  page.status === 'approved' ? 'border-blue-500/30 text-blue-400' :
+                  'border-amber-500/30 text-amber-400'
+                )}>
+                  {page.status === 'approved' ? 'aprovado' : page.status}
                 </Badge>
               </div>
             </div>
