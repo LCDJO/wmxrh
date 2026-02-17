@@ -77,7 +77,21 @@ export function CognitiveInsightsCard({ positionCounts, totalEmployees }: Props)
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_cognitive_event_stats', { days_back: 30 });
       if (error) throw error;
-      return data as { event_type: string; action: string; event_count: number }[] | null;
+      // RPC returns a JSONB object with top_pages, top_modules, etc.
+      const obj = data as Record<string, any> | null;
+      if (!obj) return null;
+      // Normalize to flat array for downstream consumption
+      const items: { event_type: string; action: string; event_count: number }[] = [];
+      if (Array.isArray(obj.top_pages)) {
+        obj.top_pages.forEach((p: any) => items.push({ event_type: 'page_view', action: p.page, event_count: p.visits }));
+      }
+      if (Array.isArray(obj.top_modules)) {
+        obj.top_modules.forEach((m: any) => items.push({ event_type: 'module_use', action: m.module, event_count: m.uses }));
+      }
+      if (Array.isArray(obj.top_commands)) {
+        obj.top_commands.forEach((c: any) => items.push({ event_type: 'command_exec', action: c.command, event_count: c.executions }));
+      }
+      return items;
     },
     staleTime: 5 * 60 * 1000,
   });
