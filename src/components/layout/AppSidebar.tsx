@@ -14,7 +14,7 @@ import {
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
-  Zap, Trophy,
+  Zap, Trophy, Gift,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -131,6 +131,9 @@ const navStructure: NavEntry[] = [
       { to: '/document-signature', icon: FileSignature, label: 'Assinatura de Documentos', key: 'esocial' },
     ],
   },
+
+  // ── Indique e Ganhe ──
+  { to: '/referral', icon: Gift, label: 'Indique e Ganhe', key: 'dashboard' },
 
   // ── Configurações ──
   {
