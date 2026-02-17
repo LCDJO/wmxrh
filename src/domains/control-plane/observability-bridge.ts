@@ -14,14 +14,16 @@ export class ObservabilityBridge {
   /** Initialize APCP-specific metric baselines */
   registerMetrics(): void {
     const metrics = getMetricsCollector();
-    // Initialize counters at 0
     metrics.increment('apcp_state_snapshots_total', {}, 0);
     metrics.increment('apcp_automation_executions_total', {}, 0);
     metrics.increment('apcp_actions_executed_total', {}, 0);
-    // Initialize gauges
+    metrics.increment('referral_links_created_total', {}, 0);
+    metrics.increment('referral_conversion_total', {}, 0);
+    metrics.increment('gamification_points_total', {}, 0);
     metrics.gauge('apcp_risk_score', 0);
     metrics.gauge('apcp_active_modules', 0);
     metrics.gauge('apcp_error_modules', 0);
+    metrics.gauge('revenue_forecast_value', 0);
   }
 
   /** Update gauges from current state */

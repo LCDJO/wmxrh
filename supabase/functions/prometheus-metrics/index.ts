@@ -6,19 +6,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/**
- * GET /prometheus-metrics
- *
- * Returns all platform metrics in Prometheus text exposition format.
- * Compatible with Grafana → Prometheus datasource scrape.
- */
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const lines: string[] = [];
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const sb = createClient(supabaseUrl, serviceKey);
 
-    const now = Math.floor(Date.now() / 1000);
+    const lines: string[] = [];
 
     // ── module_health_status ──────────────────────────────────
     const modules = [
@@ -109,6 +105,74 @@ serve(async (req) => {
     lines.push("# TYPE access_graph_recomposition_p95_ms gauge");
     lines.push(`access_graph_recomposition_p95_ms 0`);
 
+    // ══════════════════════════════════════════════════════════
+    // ── REFERRAL & GAMIFICATION METRICS (live from DB) ───────
+    // ══════════════════════════════════════════════════════════
+
+    const [linksRes, trackingRes, rewardsRes, plansRes] = await Promise.all([
+      sb.from("referral_links").select("id, created_at", { count: "exact", head: true }),
+      sb.from("referral_tracking").select("id, status, referred_plan_id, converted_at"),
+      sb.from("referral_rewards").select("id, referrer_user_id, amount_brl, reward_type, status"),
+      sb.from("saas_plans").select("id, name"),
+    ]);
+
+    // Build plan id→name map
+    const planMap = new Map<string, string>();
+    for (const p of (plansRes.data ?? [])) {
+      planMap.set(p.id, (p.name ?? "unknown").toLowerCase().replace(/\s+/g, "_"));
+    }
+
+    // ── referral_links_created_total ─────────────────────────
+    lines.push("# HELP referral_links_created_total Total referral links created");
+    lines.push("# TYPE referral_links_created_total counter");
+    lines.push(`referral_links_created_total ${linksRes.count ?? 0}`);
+
+    // ── referral_conversion_total ────────────────────────────
+    const conversions = (trackingRes.data ?? []).filter(t => t.status === "converted");
+    const convByPlan = new Map<string, number>();
+    for (const c of conversions) {
+      const plan = planMap.get(c.referred_plan_id ?? "") ?? "unknown";
+      convByPlan.set(plan, (convByPlan.get(plan) ?? 0) + 1);
+    }
+    lines.push("# HELP referral_conversion_total Total referral conversions by plan");
+    lines.push("# TYPE referral_conversion_total counter");
+    if (convByPlan.size === 0) {
+      lines.push(`referral_conversion_total 0`);
+    } else {
+      for (const [plan, count] of convByPlan) {
+        lines.push(`referral_conversion_total{plan="${esc(plan)}"} ${count}`);
+      }
+    }
+
+    // ── gamification_points_total ────────────────────────────
+    const totalPoints = (rewardsRes.data ?? [])
+      .filter(r => r.status === "paid" || r.status === "pending")
+      .reduce((s, r) => s + (r.amount_brl ?? 0), 0);
+    lines.push("# HELP gamification_points_total Total gamification points (reward BRL accumulated)");
+    lines.push("# TYPE gamification_points_total counter");
+    lines.push(`gamification_points_total ${totalPoints.toFixed(2)}`);
+
+    // ── revenue_forecast_value ───────────────────────────────
+    // Simple MRR proxy: count active tenants × average plan value
+    const { count: tenantCount } = await sb
+      .from("tenants")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active");
+
+    const { data: planPrices } = await sb
+      .from("saas_plans")
+      .select("price_monthly_brl")
+      .eq("is_active", true);
+
+    const avgPrice = planPrices?.length
+      ? planPrices.reduce((s, p) => s + (p.price_monthly_brl ?? 0), 0) / planPrices.length
+      : 0;
+    const forecastMrr = (tenantCount ?? 0) * avgPrice;
+
+    lines.push("# HELP revenue_forecast_value Projected MRR in BRL");
+    lines.push("# TYPE revenue_forecast_value gauge");
+    lines.push(`revenue_forecast_value ${forecastMrr.toFixed(2)}`);
+
     // Trailing newline required by Prometheus spec
     return new Response(lines.join("\n") + "\n", {
       headers: {
@@ -124,3 +188,7 @@ serve(async (req) => {
     );
   }
 });
+
+function esc(v: string): string {
+  return v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
+}
