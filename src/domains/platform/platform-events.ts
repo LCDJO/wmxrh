@@ -47,6 +47,7 @@ export type PlatformEventType =
   // Landing Audit events
   | 'LandingDraftDeleted'
   | 'LandingVersionCreated'
+  | 'LandingVersionApproved'
   | 'LandingVersionPublished'
   | 'LandingVersionSuperseded';
 
@@ -427,6 +428,17 @@ export const platformEvents = {
   landingVersionCreated(actorId: string, opts: { landingPageId: string; versionId: string; versionNumber: number }) {
     emit({
       type: 'LandingVersionCreated',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'governance',
+      targetId: opts.versionId,
+      metadata: opts,
+    });
+  },
+
+  landingVersionApproved(actorId: string, opts: { landingPageId: string; versionId: string; versionNumber: number; approvedBy: string }) {
+    emit({
+      type: 'LandingVersionApproved',
       timestamp: new Date().toISOString(),
       actorId,
       targetType: 'governance',
