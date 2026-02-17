@@ -484,6 +484,70 @@ export type Database = {
           },
         ]
       }
+      billing_adjustments: {
+        Row: {
+          adjustment_type: string
+          amount_brl: number
+          applied_at: string
+          applied_by: string | null
+          coupon_redemption_id: string | null
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string | null
+          metadata: Json | null
+          tenant_id: string
+        }
+        Insert: {
+          adjustment_type: string
+          amount_brl: number
+          applied_at?: string
+          applied_by?: string | null
+          coupon_redemption_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id?: string | null
+          metadata?: Json | null
+          tenant_id: string
+        }
+        Update: {
+          adjustment_type?: string
+          amount_brl?: number
+          applied_at?: string
+          applied_by?: string | null
+          coupon_redemption_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string | null
+          metadata?: Json | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_adjustments_coupon_redemption_id_fkey"
+            columns: ["coupon_redemption_id"]
+            isOneToOne: false
+            referencedRelation: "coupon_redemptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_adjustments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_adjustments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cbo_catalog: {
         Row: {
           area_ocupacional: string | null
@@ -1179,6 +1243,152 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      coupon_redemptions: {
+        Row: {
+          billing_cycles_remaining: number | null
+          coupon_id: string
+          created_at: string
+          discount_applied_brl: number
+          expires_at: string | null
+          id: string
+          invoice_id: string | null
+          plan_id: string | null
+          redeemed_at: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          billing_cycles_remaining?: number | null
+          coupon_id: string
+          created_at?: string
+          discount_applied_brl?: number
+          expires_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          plan_id?: string | null
+          redeemed_at?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          billing_cycles_remaining?: number | null
+          coupon_id?: string
+          created_at?: string
+          discount_applied_brl?: number
+          expires_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          plan_id?: string | null
+          redeemed_at?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          applicable_billing_cycles: string[] | null
+          applicable_plan_ids: string[] | null
+          code: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          current_redemptions: number
+          description: string | null
+          discount_type: string
+          discount_value: number
+          duration_months: number | null
+          id: string
+          max_discount_brl: number | null
+          max_redemptions: number | null
+          max_redemptions_per_tenant: number | null
+          min_plan_tier: string | null
+          name: string
+          status: string
+          updated_at: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          applicable_billing_cycles?: string[] | null
+          applicable_plan_ids?: string[] | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          current_redemptions?: number
+          description?: string | null
+          discount_type?: string
+          discount_value: number
+          duration_months?: number | null
+          id?: string
+          max_discount_brl?: number | null
+          max_redemptions?: number | null
+          max_redemptions_per_tenant?: number | null
+          min_plan_tier?: string | null
+          name: string
+          status?: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          applicable_billing_cycles?: string[] | null
+          applicable_plan_ids?: string[] | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          current_redemptions?: number
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          duration_months?: number | null
+          id?: string
+          max_discount_brl?: number | null
+          max_redemptions?: number | null
+          max_redemptions_per_tenant?: number | null
+          min_plan_tier?: string | null
+          name?: string
+          status?: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: []
       }
       custom_roles: {
         Row: {
@@ -5571,6 +5781,109 @@ export type Database = {
           },
           {
             foreignKeyName: "training_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage_pricing_tiers: {
+        Row: {
+          created_at: string
+          flat_fee_brl: number
+          id: string
+          included_quantity: number
+          is_active: boolean
+          metric_key: string
+          plan_id: string
+          pricing_model: string
+          tier_end: number | null
+          tier_start: number
+          unit_price_brl: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          flat_fee_brl?: number
+          id?: string
+          included_quantity?: number
+          is_active?: boolean
+          metric_key: string
+          plan_id: string
+          pricing_model?: string
+          tier_end?: number | null
+          tier_start?: number
+          unit_price_brl?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          flat_fee_brl?: number
+          id?: string
+          included_quantity?: number
+          is_active?: boolean
+          metric_key?: string
+          plan_id?: string
+          pricing_model?: string
+          tier_end?: number | null
+          tier_start?: number
+          unit_price_brl?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_pricing_tiers_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage_records: {
+        Row: {
+          billing_period_end: string
+          billing_period_start: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          metric_key: string
+          quantity: number
+          recorded_at: string
+          source: string
+          tenant_id: string
+          unit: string
+        }
+        Insert: {
+          billing_period_end: string
+          billing_period_start: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          metric_key: string
+          quantity?: number
+          recorded_at?: string
+          source?: string
+          tenant_id: string
+          unit?: string
+        }
+        Update: {
+          billing_period_end?: string
+          billing_period_start?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          metric_key?: string
+          quantity?: number
+          recorded_at?: string
+          source?: string
+          tenant_id?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_records_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

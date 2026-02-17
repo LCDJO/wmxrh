@@ -14,6 +14,14 @@ import { createInvoiceEngine } from './invoice-engine';
 import { createRevenueMetricsService } from './revenue-metrics-service';
 import { createSubscriptionLifecycleManager } from './subscription-lifecycle-manager';
 import { createModulePlanSyncService } from './module-plan-sync-service';
+import { createUsageBillingEngine } from './usage-billing-engine';
+import {
+  createCouponManager,
+  createCouponValidationService,
+  createCouponLifecycleManager,
+  createDiscountEngine,
+  createBillingAdjustmentService,
+} from './coupon-discount-engine';
 
 /**
  * Creates the PlatformBillingCore aggregate by composing PXE services
@@ -27,6 +35,16 @@ export function createPlatformBillingCore(
   const ledger = createFinancialLedgerAdapter();
   const invoices = createInvoiceEngine();
   const revenue = createRevenueMetricsService();
+
+  // Usage-based billing
+  const usage = createUsageBillingEngine();
+
+  // Coupon & discount engine
+  const coupons = createCouponManager();
+  const couponValidation = createCouponValidationService();
+  const couponLifecycle = createCouponLifecycleManager();
+  const discounts = createDiscountEngine();
+  const adjustments = createBillingAdjustmentService();
 
   // Module sync: auto-activate/deactivate modules when plan changes
   const modulePlanSync = modules
@@ -51,6 +69,12 @@ export function createPlatformBillingCore(
     ledger,
     invoices,
     revenue,
+    usage,
+    coupons,
+    couponValidation,
+    couponLifecycle,
+    discounts,
+    adjustments,
     _planLifecycle: pxe.lifecycle,
   };
 }

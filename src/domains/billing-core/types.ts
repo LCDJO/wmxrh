@@ -77,7 +77,7 @@ export interface BillingLineItem {
   quantity: number;
   unit_price_brl: number;
   total_brl: number;
-  type: 'plan_base' | 'per_user' | 'per_employee' | 'addon' | 'proration' | 'discount' | 'setup';
+  type: 'plan_base' | 'per_user' | 'per_employee' | 'addon' | 'proration' | 'discount' | 'setup' | 'usage' | 'coupon_discount';
 }
 
 export interface BillingCalculation {
@@ -236,6 +236,255 @@ export interface RevenueMetricsServiceAPI {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// Usage-Based Billing
+// ══════════════════════════════════════════════════════════════════
+
+export interface UsageRecord {
+  id: string;
+  tenant_id: string;
+  metric_key: string;
+  quantity: number;
+  unit: string;
+  recorded_at: string;
+  billing_period_start: string;
+  billing_period_end: string;
+  source: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface UsageAggregate {
+  tenant_id: string;
+  metric_key: string;
+  total_quantity: number;
+  unit: string;
+  period_start: string;
+  period_end: string;
+  record_count: number;
+}
+
+export interface UsagePricingTier {
+  id: string;
+  plan_id: string;
+  metric_key: string;
+  tier_start: number;
+  tier_end: number | null;
+  unit_price_brl: number;
+  flat_fee_brl: number;
+  included_quantity: number;
+  pricing_model: 'tiered' | 'volume' | 'graduated' | 'flat';
+  is_active: boolean;
+}
+
+export interface UsageCostLineItem {
+  metric_key: string;
+  quantity: number;
+  unit: string;
+  unit_price_brl: number;
+  total_brl: number;
+  tiers_applied: number;
+  pricing_model: string;
+}
+
+export interface UsageCostBreakdown {
+  plan_id: string;
+  line_items: UsageCostLineItem[];
+  total_usage_brl: number;
+  calculated_at: number;
+}
+
+export interface UsageCollectorAPI {
+  record(tenantId: string, metricKey: string, quantity: number, opts?: {
+    unit?: string;
+    billing_period_start?: string;
+    billing_period_end?: string;
+    source?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<UsageRecord>;
+  recordBatch(tenantId: string, records: Array<{
+    metric_key: string;
+    quantity: number;
+    unit?: string;
+    billing_period_start: string;
+    billing_period_end: string;
+    source?: string;
+    metadata?: Record<string, unknown>;
+  }>): Promise<UsageRecord[]>;
+  getByTenant(tenantId: string, opts?: {
+    metric_key?: string;
+    period_start?: string;
+    period_end?: string;
+    limit?: number;
+  }): Promise<UsageRecord[]>;
+}
+
+export interface UsageAggregatorAPI {
+  aggregate(tenantId: string, periodStart: string, periodEnd: string): Promise<UsageAggregate[]>;
+  aggregateMetric(tenantId: string, metricKey: string, periodStart: string, periodEnd: string): Promise<UsageAggregate>;
+}
+
+export interface UsagePricingCalculatorAPI {
+  getTiers(planId: string, metricKey: string): Promise<UsagePricingTier[]>;
+  calculateCost(planId: string, aggregates: UsageAggregate[]): Promise<UsageCostBreakdown>;
+  setTiers(planId: string, metricKey: string, tiers: Array<{
+    tier_start: number;
+    tier_end?: number | null;
+    unit_price_brl: number;
+    flat_fee_brl?: number;
+    included_quantity?: number;
+    pricing_model?: string;
+  }>): Promise<void>;
+}
+
+export interface UsageBillingEngineAPI {
+  collector: UsageCollectorAPI;
+  aggregator: UsageAggregatorAPI;
+  pricing: UsagePricingCalculatorAPI;
+  calculateTenantUsageCost(tenantId: string, planId: string, periodStart: string, periodEnd: string): Promise<UsageCostBreakdown>;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Coupons & Discounts
+// ══════════════════════════════════════════════════════════════════
+
+export type CouponStatus = 'active' | 'paused' | 'expired' | 'exhausted' | 'archived';
+export type DiscountType = 'percentage' | 'fixed_amount' | 'free_months';
+
+export interface Coupon {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  discount_type: DiscountType;
+  discount_value: number;
+  max_discount_brl: number | null;
+  currency: string;
+  applicable_plan_ids: string[] | null;
+  applicable_billing_cycles: string[] | null;
+  min_plan_tier: string | null;
+  max_redemptions: number | null;
+  max_redemptions_per_tenant: number;
+  current_redemptions: number;
+  valid_from: string;
+  valid_until: string | null;
+  duration_months: number | null;
+  status: CouponStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCouponDTO {
+  code: string;
+  name: string;
+  description?: string;
+  discount_type: DiscountType;
+  discount_value: number;
+  max_discount_brl?: number;
+  applicable_plan_ids?: string[];
+  applicable_billing_cycles?: string[];
+  min_plan_tier?: string;
+  max_redemptions?: number;
+  max_redemptions_per_tenant?: number;
+  valid_from?: string;
+  valid_until?: string;
+  duration_months?: number;
+  created_by?: string;
+}
+
+export interface CouponRedemption {
+  id: string;
+  coupon_id: string;
+  tenant_id: string;
+  plan_id: string | null;
+  invoice_id: string | null;
+  discount_applied_brl: number;
+  billing_cycles_remaining: number | null;
+  status: 'active' | 'fully_applied' | 'cancelled' | 'expired';
+  redeemed_at: string;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CouponValidationResult {
+  valid: boolean;
+  reason?: string;
+  coupon?: Coupon;
+}
+
+export interface DiscountApplication {
+  applied: boolean;
+  reason?: string;
+  coupon?: Coupon;
+  redemption?: CouponRedemption;
+  discount_brl: number;
+  final_amount_brl: number;
+}
+
+export interface BillingAdjustment {
+  id: string;
+  tenant_id: string;
+  invoice_id: string | null;
+  coupon_redemption_id: string | null;
+  adjustment_type: string;
+  amount_brl: number;
+  description: string;
+  applied_at: string;
+  applied_by: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface CouponManagerAPI {
+  create(dto: CreateCouponDTO): Promise<Coupon>;
+  getById(couponId: string): Promise<Coupon | null>;
+  getByCode(code: string): Promise<Coupon | null>;
+  listAll(opts?: { status?: CouponStatus; limit?: number }): Promise<Coupon[]>;
+  update(couponId: string, updates: Partial<CreateCouponDTO & { status: CouponStatus }>): Promise<Coupon>;
+  archive(couponId: string): Promise<Coupon>;
+}
+
+export interface CouponValidationServiceAPI {
+  validate(code: string, tenantId: string, planId?: string, billingCycle?: string): Promise<CouponValidationResult>;
+}
+
+export interface CouponLifecycleManagerAPI {
+  expireExpiredCoupons(): Promise<number>;
+  decrementCyclesRemaining(): Promise<number>;
+  getActiveRedemptions(tenantId: string): Promise<CouponRedemption[]>;
+}
+
+export interface DiscountEngineAPI {
+  applyDiscount(code: string, tenantId: string, subtotalBrl: number, planId?: string, billingCycle?: string): Promise<DiscountApplication>;
+  getActiveDiscounts(tenantId: string): Promise<Array<{
+    redemption_id: string;
+    coupon_code: string;
+    coupon_name: string;
+    discount_type: DiscountType;
+    discount_value: number;
+    discount_applied_brl: number;
+    cycles_remaining: number | null;
+  }>>;
+  calculateRecurringDiscount(tenantId: string, subtotalBrl: number): Promise<number>;
+}
+
+export interface BillingAdjustmentServiceAPI {
+  create(tenantId: string, dto: {
+    invoice_id?: string;
+    coupon_redemption_id?: string;
+    adjustment_type: string;
+    amount_brl: number;
+    description: string;
+    applied_by?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<BillingAdjustment>;
+  listByTenant(tenantId: string, opts?: { adjustment_type?: string; limit?: number }): Promise<BillingAdjustment[]>;
+  listByInvoice(invoiceId: string): Promise<BillingAdjustment[]>;
+  getTotalAdjustments(tenantId: string): Promise<number>;
+}
+
+// ══════════════════════════════════════════════════════════════════
 // Aggregate: PlatformBillingCore API
 // ══════════════════════════════════════════════════════════════════
 
@@ -256,6 +505,18 @@ export interface PlatformBillingCoreAPI {
   invoices: InvoiceEngineAPI;
   /** Revenue metrics and analytics */
   revenue: RevenueMetricsServiceAPI;
+  /** Usage-based billing */
+  usage: UsageBillingEngineAPI;
+  /** Coupon management */
+  coupons: CouponManagerAPI;
+  /** Coupon validation */
+  couponValidation: CouponValidationServiceAPI;
+  /** Coupon lifecycle */
+  couponLifecycle: CouponLifecycleManagerAPI;
+  /** Discount engine */
+  discounts: DiscountEngineAPI;
+  /** Billing adjustments */
+  adjustments: BillingAdjustmentServiceAPI;
   /** Reuses PXE lifecycle (internal) */
   _planLifecycle: PlanLifecycleManagerAPI;
 }
