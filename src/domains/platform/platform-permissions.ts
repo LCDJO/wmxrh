@@ -53,6 +53,8 @@ export const PLATFORM_PERMISSIONS = [
   'growth.publish',
   'growth.delete',
   'growth.version_view',
+  // ── A/B Experiments ──
+  'ab_experiment.start',
   // ── Future: Marketplace ──
   'marketplace.view',
   'marketplace.publish',
@@ -93,6 +95,7 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing_page.create',
     'landing_page.publish',
     'landing_page.delete',
+    'ab_experiment.start',
   ],
 
   platform_support: [
@@ -172,6 +175,7 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing_page.publish',
     'landing_page.delete',
     'audit.view',
+    'ab_experiment.start',
   ],
 
   platform_marketing_team: [
