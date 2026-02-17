@@ -881,6 +881,125 @@ export type Database = {
           },
         ]
       }
+      compliance_evaluations: {
+        Row: {
+          ai_analysis: string | null
+          evaluated_at: string
+          evaluated_by: string | null
+          id: string
+          passed: boolean
+          remediation_suggestions: Json | null
+          rule_id: string
+          tenant_id: string
+          violation_count: number
+          violations: Json
+        }
+        Insert: {
+          ai_analysis?: string | null
+          evaluated_at?: string
+          evaluated_by?: string | null
+          id?: string
+          passed: boolean
+          remediation_suggestions?: Json | null
+          rule_id: string
+          tenant_id: string
+          violation_count?: number
+          violations?: Json
+        }
+        Update: {
+          ai_analysis?: string | null
+          evaluated_at?: string
+          evaluated_by?: string | null
+          id?: string
+          passed?: boolean
+          remediation_suggestions?: Json | null
+          rule_id?: string
+          tenant_id?: string
+          violation_count?: number
+          violations?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_evaluations_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_evaluations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_rules: {
+        Row: {
+          auto_remediate: boolean
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          last_evaluated_at: string | null
+          last_violation_count: number | null
+          name: string
+          remediation_action: string | null
+          rule_code: string
+          rule_config: Json
+          severity: Database["public"]["Enums"]["compliance_rule_severity"]
+          status: Database["public"]["Enums"]["compliance_rule_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_remediate?: boolean
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          last_evaluated_at?: string | null
+          last_violation_count?: number | null
+          name: string
+          remediation_action?: string | null
+          rule_code: string
+          rule_config?: Json
+          severity?: Database["public"]["Enums"]["compliance_rule_severity"]
+          status?: Database["public"]["Enums"]["compliance_rule_status"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_remediate?: boolean
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          last_evaluated_at?: string | null
+          last_violation_count?: number | null
+          name?: string
+          remediation_action?: string | null
+          rule_code?: string
+          rule_config?: Json
+          severity?: Database["public"]["Enums"]["compliance_rule_severity"]
+          status?: Database["public"]["Enums"]["compliance_rule_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_violations: {
         Row: {
           company_id: string | null
@@ -2264,6 +2383,74 @@ export type Database = {
           },
           {
             foreignKeyName: "feature_flags_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      governance_audit_snapshots: {
+        Row: {
+          anomalies: Json
+          composition_time_ms: number | null
+          created_at: string
+          created_by: string | null
+          edge_count: number
+          excessive_permissions: Json
+          id: string
+          node_count: number
+          orphan_nodes: Json
+          permission_count: number
+          risk_level: string
+          risk_signals: Json
+          role_count: number
+          role_overlaps: Json
+          snapshot_type: string
+          tenant_id: string
+          user_count: number
+        }
+        Insert: {
+          anomalies?: Json
+          composition_time_ms?: number | null
+          created_at?: string
+          created_by?: string | null
+          edge_count?: number
+          excessive_permissions?: Json
+          id?: string
+          node_count?: number
+          orphan_nodes?: Json
+          permission_count?: number
+          risk_level?: string
+          risk_signals?: Json
+          role_count?: number
+          role_overlaps?: Json
+          snapshot_type?: string
+          tenant_id: string
+          user_count?: number
+        }
+        Update: {
+          anomalies?: Json
+          composition_time_ms?: number | null
+          created_at?: string
+          created_by?: string | null
+          edge_count?: number
+          excessive_permissions?: Json
+          id?: string
+          node_count?: number
+          orphan_nodes?: Json
+          permission_count?: number
+          risk_level?: string
+          risk_signals?: Json
+          role_count?: number
+          role_overlaps?: Json
+          snapshot_type?: string
+          tenant_id?: string
+          user_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governance_audit_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3726,6 +3913,74 @@ export type Database = {
           },
           {
             foreignKeyName: "positions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_trend_snapshots: {
+        Row: {
+          ai_forecast: string | null
+          critical_count: number
+          forecast_confidence: number | null
+          forecast_risk_level: string | null
+          high_count: number
+          high_risk_users: number
+          id: string
+          low_count: number
+          medium_count: number
+          risk_level: string
+          risk_score: number
+          signal_count: number
+          snapshot_at: string
+          tenant_id: string
+          top_signals: Json
+          trend_metadata: Json
+          user_count: number
+        }
+        Insert: {
+          ai_forecast?: string | null
+          critical_count?: number
+          forecast_confidence?: number | null
+          forecast_risk_level?: string | null
+          high_count?: number
+          high_risk_users?: number
+          id?: string
+          low_count?: number
+          medium_count?: number
+          risk_level?: string
+          risk_score?: number
+          signal_count?: number
+          snapshot_at?: string
+          tenant_id: string
+          top_signals?: Json
+          trend_metadata?: Json
+          user_count?: number
+        }
+        Update: {
+          ai_forecast?: string | null
+          critical_count?: number
+          forecast_confidence?: number | null
+          forecast_risk_level?: string | null
+          high_count?: number
+          high_risk_users?: number
+          id?: string
+          low_count?: number
+          medium_count?: number
+          risk_level?: string
+          risk_score?: number
+          signal_count?: number
+          snapshot_at?: string
+          tenant_id?: string
+          top_signals?: Json
+          trend_metadata?: Json
+          user_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_trend_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -5427,6 +5682,8 @@ export type Database = {
         | "general"
       announcement_priority: "low" | "medium" | "high" | "critical"
       benefit_type: "va" | "vr" | "vt" | "health" | "dental" | "cesta" | "flex"
+      compliance_rule_severity: "info" | "warning" | "critical"
+      compliance_rule_status: "active" | "disabled" | "archived"
       employee_event_type:
         | "company_transfer"
         | "position_change"
@@ -5686,6 +5943,8 @@ export const Constants = {
       ],
       announcement_priority: ["low", "medium", "high", "critical"],
       benefit_type: ["va", "vr", "vt", "health", "dental", "cesta", "flex"],
+      compliance_rule_severity: ["info", "warning", "critical"],
+      compliance_rule_status: ["active", "disabled", "archived"],
       employee_event_type: [
         "company_transfer",
         "position_change",
