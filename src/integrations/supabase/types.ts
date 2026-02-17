@@ -3459,6 +3459,7 @@ export type Database = {
         Row: {
           action_label: string | null
           action_url: string | null
+          auto_resolve_on: string | null
           category: Database["public"]["Enums"]["announcement_category"]
           created_at: string
           created_by: string | null
@@ -3467,9 +3468,14 @@ export type Database = {
           id: string
           is_active: boolean
           is_dismissible: boolean
+          metadata: Json | null
           priority: Database["public"]["Enums"]["announcement_priority"]
+          resolved_at: string | null
           show_banner: boolean
+          source: string
           starts_at: string
+          subcategory: string | null
+          target_roles: string[] | null
           tenant_id: string | null
           title: string
           updated_at: string
@@ -3477,6 +3483,7 @@ export type Database = {
         Insert: {
           action_label?: string | null
           action_url?: string | null
+          auto_resolve_on?: string | null
           category?: Database["public"]["Enums"]["announcement_category"]
           created_at?: string
           created_by?: string | null
@@ -3485,9 +3492,14 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_dismissible?: boolean
+          metadata?: Json | null
           priority?: Database["public"]["Enums"]["announcement_priority"]
+          resolved_at?: string | null
           show_banner?: boolean
+          source?: string
           starts_at?: string
+          subcategory?: string | null
+          target_roles?: string[] | null
           tenant_id?: string | null
           title: string
           updated_at?: string
@@ -3495,6 +3507,7 @@ export type Database = {
         Update: {
           action_label?: string | null
           action_url?: string | null
+          auto_resolve_on?: string | null
           category?: Database["public"]["Enums"]["announcement_category"]
           created_at?: string
           created_by?: string | null
@@ -3503,9 +3516,14 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_dismissible?: boolean
+          metadata?: Json | null
           priority?: Database["public"]["Enums"]["announcement_priority"]
+          resolved_at?: string | null
           show_banner?: boolean
+          source?: string
           starts_at?: string
+          subcategory?: string | null
+          target_roles?: string[] | null
           tenant_id?: string | null
           title?: string
           updated_at?: string
@@ -5191,6 +5209,7 @@ export type Database = {
         Returns: boolean
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      generate_billing_alerts: { Args: never; Returns: undefined }
       get_cognitive_event_stats: { Args: { days_back?: number }; Returns: Json }
       get_platform_metrics: { Args: never; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }

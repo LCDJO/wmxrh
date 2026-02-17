@@ -1,12 +1,14 @@
 /**
  * AnnouncementFlyoutSection — Section within the NotificationFlyout
  * that shows active institutional announcements separately from operational notifications.
+ * Supports subcategory display from TenantCommunicationCenter.
  */
 
 import { useAnnouncements } from '@/hooks/use-announcements';
 import {
   CATEGORY_CONFIG,
   PRIORITY_CONFIG,
+  SUBCATEGORY_CONFIG,
   type PlatformAnnouncement,
 } from '@/domains/announcements/announcement-hub';
 import { cn } from '@/lib/utils';
@@ -21,8 +23,9 @@ function AnnouncementFlyoutItem({
   announcement: PlatformAnnouncement;
   onDismiss: (id: string) => void;
 }) {
-  const cat = CATEGORY_CONFIG[a.category];
+  const cat = CATEGORY_CONFIG[a.category] ?? CATEGORY_CONFIG.general;
   const pri = PRIORITY_CONFIG[a.priority];
+  const sub = a.subcategory ? SUBCATEGORY_CONFIG[a.subcategory] : null;
 
   return (
     <div className={cn(
@@ -36,7 +39,7 @@ function AnnouncementFlyoutItem({
         <div className="flex items-center gap-1.5">
           <p className="text-xs font-semibold text-foreground truncate">{a.title}</p>
           <Badge variant="outline" className={cn('text-[8px] shrink-0', pri.color)}>
-            {cat.label}
+            {sub?.label ?? cat.label}
           </Badge>
         </div>
         <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{a.description}</p>

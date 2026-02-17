@@ -1,20 +1,32 @@
 /**
  * AnnouncementBanner — Persistent banner at the top of the layout.
- * Shows the highest-priority active announcement with dismiss action.
+ * Shows the highest-priority active announcements with dismiss action.
+ * Supports subcategory display from TenantCommunicationCenter.
  */
 
 import { useAnnouncements } from '@/hooks/use-announcements';
 import {
   CATEGORY_CONFIG,
   PRIORITY_CONFIG,
+  SUBCATEGORY_CONFIG,
   type PlatformAnnouncement,
 } from '@/domains/announcements/announcement-hub';
 import { Button } from '@/components/ui/button';
-import { X, Wrench, Sparkles, CreditCard, ShieldAlert, Scale, Megaphone, ArrowRight } from 'lucide-react';
+import {
+  X, Wrench, Sparkles, CreditCard, ShieldAlert, Scale, Megaphone,
+  ArrowRight, Settings, FileText, ShieldOff, Lock, Ban, BookOpen,
+  Clock, AlertTriangle, RefreshCw, FileCheck,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Wrench, Sparkles, CreditCard, ShieldAlert, Scale, Megaphone,
+  Settings, FileText, ShieldOff, Lock, Ban, BookOpen,
+  Clock, AlertTriangle, RefreshCw, FileCheck,
+  // fallback aliases
+  CalendarClock: Clock,
+  FileClock: Clock,
+  FileWarning: AlertTriangle,
 };
 
 function BannerItem({
@@ -26,9 +38,10 @@ function BannerItem({
   onDismiss: (id: string) => void;
   onAction?: (url: string) => void;
 }) {
-  const cat = CATEGORY_CONFIG[a.category];
+  const cat = CATEGORY_CONFIG[a.category] ?? CATEGORY_CONFIG.general;
   const pri = PRIORITY_CONFIG[a.priority];
-  const Icon = ICON_MAP[cat.icon] || Megaphone;
+  const sub = a.subcategory ? SUBCATEGORY_CONFIG[a.subcategory] : null;
+  const Icon = (sub ? ICON_MAP[sub.icon] : null) ?? ICON_MAP[cat.icon] ?? Megaphone;
 
   return (
     <div className={cn(
@@ -37,7 +50,9 @@ function BannerItem({
     )}>
       <div className={cn('shrink-0 flex items-center gap-2', cat.color)}>
         <Icon className="h-4 w-4" />
-        <span className="font-semibold text-xs uppercase tracking-wider">{cat.label}</span>
+        <span className="font-semibold text-xs uppercase tracking-wider">
+          {sub?.label ?? cat.label}
+        </span>
       </div>
 
       <div className="flex-1 min-w-0">
