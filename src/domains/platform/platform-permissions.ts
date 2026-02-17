@@ -55,6 +55,9 @@ export const PLATFORM_PERMISSIONS = [
   'landing.approve',
   'landing.reject',
   'landing.publish',
+  'landing.delete_draft',
+  'landing.create_version',
+  'landing.publish_version',
   // ── Growth AI / Marketing ──
   'growth.view',
   'growth.create',
@@ -206,6 +209,8 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing.edit',
     'landing.submit_for_review',
     'landing.view_drafts',
+    'landing.delete_draft',
+    'landing.create_version',
     // Website (view + submit)
     'website.view',
     'website.create',
@@ -228,6 +233,8 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing.edit',
     'landing.submit_for_review',
     'landing.view_drafts',
+    'landing.delete_draft',
+    'landing.create_version',
     // Website (create/edit/submit)
     'website.view',
     'website.create',
@@ -260,6 +267,9 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing.approve',
     'landing.reject',
     'landing.publish',
+    'landing.delete_draft',
+    'landing.create_version',
+    'landing.publish_version',
     // Website (full governance)
     'website.view',
     'website.create',

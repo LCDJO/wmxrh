@@ -277,11 +277,19 @@ export function hasRunningExperiments(landingPageId: string): boolean {
 }
 
 /**
- * Validates that a landing page can be deleted considering active experiments.
- * Throws if there are running experiments.
+ * Validates that a landing page can be deleted considering active experiments
+ * AND that the actor has the `landing.delete_draft` permission.
  */
-export function validateDeletionWithExperiments(landingPageId: string, status: LandingPageStatus): void {
+export function validateDeletionWithExperiments(
+  landingPageId: string,
+  status: LandingPageStatus,
+  role?: PlatformRoleType | null,
+): void {
   validateDeletion(status);
+
+  if (role && !hasPlatformPermission(role, 'landing.delete_draft')) {
+    throw new Error('Permissão "landing.delete_draft" é necessária para excluir rascunhos.');
+  }
 
   if (hasRunningExperiments(landingPageId)) {
     throw new Error(
@@ -292,14 +300,30 @@ export function validateDeletionWithExperiments(landingPageId: string, status: L
 }
 
 /**
- * Validates that a new version can be created considering active experiments.
- * Blocks versioning while experiments are running to prevent traffic conflicts.
+ * Validates that a new version can be created considering active experiments
+ * AND that the actor has the `landing.create_version` permission.
  */
-export function validateVersionCreation(landingPageId: string): void {
+export function validateVersionCreation(
+  landingPageId: string,
+  role?: PlatformRoleType | null,
+): void {
+  if (role && !hasPlatformPermission(role, 'landing.create_version')) {
+    throw new Error('Permissão "landing.create_version" é necessária para criar novas versões.');
+  }
+
   if (hasRunningExperiments(landingPageId)) {
     throw new Error(
       'Não é possível criar nova versão enquanto há experimentos A/B em execução. ' +
       'Finalize ou cancele os experimentos antes de criar uma nova versão.'
     );
+  }
+}
+
+/**
+ * Validates that the actor has the `landing.publish_version` permission.
+ */
+export function validateVersionPublish(role?: PlatformRoleType | null): void {
+  if (role && !hasPlatformPermission(role, 'landing.publish_version')) {
+    throw new Error('Permissão "landing.publish_version" é necessária para publicar versões.');
   }
 }

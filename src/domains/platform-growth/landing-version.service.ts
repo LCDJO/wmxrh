@@ -12,7 +12,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import type { LandingVersionStatus } from './landing-page-status-machine';
-import { getVersionTransitions, requiresNewVersion, validateVersionCreation } from './landing-page-status-machine';
+import { getVersionTransitions, requiresNewVersion, validateVersionCreation, validateVersionPublish } from './landing-page-status-machine';
 import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 
 // ═══════════════════════════════════
@@ -68,8 +68,8 @@ export const landingVersionService = {
       );
     }
 
-    // 2b. Block versioning if experiments are running
-    validateVersionCreation(landingPageId);
+    // 2b. Block versioning if experiments are running or missing permission
+    validateVersionCreation(landingPageId, actor.role);
 
     // 3. Determine next version number
     const { count } = await supabase
@@ -173,7 +173,12 @@ export const landingVersionService = {
       );
     }
 
-    // 3. Apply transition
+    // 3. SecurityKernel: validate landing.publish_version permission
+    if (targetStatus === 'published') {
+      validateVersionPublish(actor.role);
+    }
+
+    // 4. Apply transition
     const updatePayload: Record<string, unknown> = { status: targetStatus };
 
     // 4. If publishing: mark previous published versions as "superseded" (preserving metrics)
