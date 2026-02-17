@@ -12,6 +12,7 @@ export type PlatformRoleType =
   | 'platform_operations'
   | 'platform_support'
   | 'platform_finance'
+  | 'platform_fiscal'
   | 'platform_read_only';
 
 interface PlatformIdentity {

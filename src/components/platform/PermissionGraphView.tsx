@@ -18,6 +18,7 @@ const ROLE_STYLE: Record<string, { icon: typeof Shield; color: string }> = {
   platform_operations: { icon: Settings, color: 'bg-primary/15 text-primary border-primary/30' },
   platform_support: { icon: Headphones, color: 'bg-info/15 text-info border-info/30' },
   platform_finance: { icon: Wallet, color: 'bg-warning/15 text-warning border-warning/30' },
+  platform_fiscal: { icon: Shield, color: 'bg-accent text-accent-foreground border-accent' },
   platform_read_only: { icon: Eye, color: 'bg-muted text-muted-foreground border-border' },
 };
 
@@ -29,7 +30,7 @@ const MODULE_ICONS: Record<string, typeof Shield> = {
 
 const MODULE_LABELS: Record<string, string> = {
   tenants: 'Tenants', modulos: 'Módulos', auditoria: 'Auditoria',
-  financeiro: 'Financeiro', usuarios: 'Usuários', seguranca: 'Segurança',
+  financeiro: 'Financeiro', fiscal: 'Fiscal', usuarios: 'Usuários', seguranca: 'Segurança',
 };
 
 interface PermissionGraphViewProps {
