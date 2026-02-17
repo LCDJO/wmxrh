@@ -5,8 +5,9 @@
  *  - Rollback history (all decisions & executions)
  *  - Financial impact avoided (revenue saved by rolling back)
  *  - Affected pages
+ *  - Pending suggestions with approve/dismiss actions
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import {
   RotateCcw,
   ShieldCheck,
@@ -16,9 +17,11 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  Activity,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -27,87 +30,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { RollbackDecision, RollbackExecution } from '@/domains/platform-growth/smart-rollback/types';
-
-// ── Mock data (replace with real engine data when wired) ──
-
-const MOCK_DECISIONS: RollbackDecision[] = [
-  {
-    id: 'rd-001',
-    landingPageId: 'lp-pricing',
-    currentVersionId: 'v3',
-    targetVersionId: 'v2',
-    currentVersionNumber: 3,
-    targetVersionNumber: 2,
-    reason: 'conversion_drop',
-    mode: 'automatic',
-    comparison: {
-      currentVersion: {} as any,
-      previousVersion: {} as any,
-      conversionRateDelta: -28.5,
-      revenueDelta: -34.2,
-      bounceRateDelta: 15.3,
-      isDegraded: true,
-      confidence: 92,
-      comparedAt: '2026-02-15T14:30:00Z',
-    },
-    decidedAt: '2026-02-15T14:30:00Z',
-    approved: true,
-    executedAt: '2026-02-15T14:30:05Z',
-  },
-  {
-    id: 'rd-002',
-    landingPageId: 'lp-homepage',
-    currentVersionId: 'v5',
-    targetVersionId: 'v4',
-    currentVersionNumber: 5,
-    targetVersionNumber: 4,
-    reason: 'revenue_drop',
-    mode: 'suggested',
-    comparison: {
-      currentVersion: {} as any,
-      previousVersion: {} as any,
-      conversionRateDelta: -12.1,
-      revenueDelta: -26.8,
-      bounceRateDelta: 8.4,
-      isDegraded: true,
-      confidence: 78,
-      comparedAt: '2026-02-16T10:00:00Z',
-    },
-    decidedAt: '2026-02-16T10:00:00Z',
-    approved: true,
-    approvedBy: 'director@company.com',
-    executedAt: '2026-02-16T10:05:00Z',
-  },
-  {
-    id: 'rd-003',
-    landingPageId: 'lp-trial',
-    currentVersionId: 'v2',
-    targetVersionId: 'v1',
-    currentVersionNumber: 2,
-    targetVersionNumber: 1,
-    reason: 'bounce_spike',
-    mode: 'suggested',
-    comparison: {
-      currentVersion: {} as any,
-      previousVersion: {} as any,
-      conversionRateDelta: -8.3,
-      revenueDelta: -5.0,
-      bounceRateDelta: 42.1,
-      isDegraded: true,
-      confidence: 65,
-      comparedAt: '2026-02-17T08:00:00Z',
-    },
-    decidedAt: '2026-02-17T08:00:00Z',
-    approved: null,
-  },
-];
-
-const PAGE_NAMES: Record<string, string> = {
-  'lp-pricing': 'Pricing Page',
-  'lp-homepage': 'Homepage',
-  'lp-trial': 'Free Trial LP',
-};
+import { toast } from 'sonner';
+import { getSmartRollbackEngine } from '@/domains/platform-growth/smart-rollback/smart-rollback-engine';
+import { rollbackDecisionEngine } from '@/domains/platform-growth/smart-rollback/rollback-decision-engine';
+import { rollbackExecutor } from '@/domains/platform-growth/smart-rollback/rollback-executor';
+import { rollbackAuditService } from '@/domains/platform-growth/smart-rollback/rollback-audit-service';
+import { onGrowthEventType } from '@/domains/platform-growth/growth.events';
+import type { RollbackDecision } from '@/domains/platform-growth/smart-rollback/types';
+import { RollbackAlertBanner } from '@/domains/platform-growth/smart-rollback/components/RollbackAlertBanner';
 
 // ── Helpers ──
 
@@ -135,24 +65,85 @@ function formatDate(iso: string): string {
 // ── Component ──
 
 export default function MarketingRollbackDashboard() {
-  const decisions = MOCK_DECISIONS;
+  const engine = getSmartRollbackEngine();
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Listen for rollback events to auto-refresh
+  useEffect(() => {
+    const unsubs = [
+      onGrowthEventType('RollbackExecuted', () => setRefreshKey(k => k + 1)),
+      onGrowthEventType('RollbackSuggested', () => setRefreshKey(k => k + 1)),
+      onGrowthEventType('RollbackAuditLogged', () => setRefreshKey(k => k + 1)),
+    ];
+    return () => unsubs.forEach(u => u());
+  }, []);
+
+  // Pull live data from engine singletons
+  const decisions = useMemo(() => {
+    void refreshKey; // react to changes
+    return rollbackDecisionEngine.getHistory();
+  }, [refreshKey]);
+
+  const pendingSuggestions = useMemo(() => {
+    void refreshKey;
+    return engine.getPendingSuggestions();
+  }, [engine, refreshKey]);
+
+  const executions = useMemo(() => {
+    void refreshKey;
+    return rollbackExecutor.getAll();
+  }, [refreshKey]);
+
+  const auditEntries = useMemo(() => {
+    void refreshKey;
+    return rollbackAuditService.getAll();
+  }, [refreshKey]);
 
   const stats = useMemo(() => {
     const executed = decisions.filter(d => d.executedAt);
-    const pending = decisions.filter(d => d.approved === null);
     const totalRevenueSaved = executed.reduce(
       (acc, d) => acc + Math.abs(d.comparison.revenueDelta),
       0,
     );
     const affectedPages = new Set(executed.map(d => d.landingPageId));
+    const completedExecutions = executions.filter(e => e.status === 'completed').length;
+    const totalExecutions = executions.length;
+    const successRate = totalExecutions > 0
+      ? Math.round((completedExecutions / totalExecutions) * 100)
+      : 100;
 
     return {
       totalRollbacks: executed.length,
-      pendingSuggestions: pending.length,
+      pendingSuggestions: pendingSuggestions.length,
       estimatedRevenueSaved: totalRevenueSaved.toFixed(1),
       affectedPages: affectedPages.size,
+      successRate,
+      totalAuditEntries: auditEntries.length,
     };
-  }, [decisions]);
+  }, [decisions, pendingSuggestions, executions, auditEntries]);
+
+  // All decisions for the table (history + pending)
+  const allDecisions = useMemo(() => {
+    const historyIds = new Set(decisions.map(d => d.id));
+    const pending = pendingSuggestions.filter(d => !historyIds.has(d.id));
+    return [...pending, ...decisions];
+  }, [decisions, pendingSuggestions]);
+
+  const handleApprove = useCallback(async (decisionId: string) => {
+    try {
+      await engine.approveSuggested(decisionId, 'platform-user');
+      toast.success('Rollback aprovado e executado com sucesso.');
+      setRefreshKey(k => k + 1);
+    } catch (err) {
+      toast.error(`Erro ao executar rollback: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [engine]);
+
+  const handleDismiss = useCallback((decisionId: string) => {
+    rollbackDecisionEngine.cancel(decisionId);
+    toast.info('Sugestão de rollback dispensada.');
+    setRefreshKey(k => k + 1);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -160,12 +151,21 @@ export default function MarketingRollbackDashboard() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Smart Rollback</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Histórico de reversões automáticas e impacto financeiro evitado.
+          Histórico de reversões automáticas, impacto financeiro evitado e páginas afetadas.
         </p>
       </div>
 
+      {/* Pending Rollback Alert Banner */}
+      {pendingSuggestions.length > 0 && (
+        <RollbackAlertBanner
+          decisions={pendingSuggestions}
+          onApprove={handleApprove}
+          onDismiss={handleDismiss}
+        />
+      )}
+
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KPICard
           icon={<RotateCcw className="h-4 w-4" />}
           label="Rollbacks Executados"
@@ -190,6 +190,12 @@ export default function MarketingRollbackDashboard() {
           value={stats.affectedPages}
           accent="primary"
         />
+        <KPICard
+          icon={<Activity className="h-4 w-4" />}
+          label="Taxa de Sucesso"
+          value={`${stats.successRate}%`}
+          accent="success"
+        />
       </div>
 
       {/* Rollback History Table */}
@@ -198,66 +204,144 @@ export default function MarketingRollbackDashboard() {
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-primary" />
             Histórico de Rollbacks
+            {allDecisions.length > 0 && (
+              <Badge variant="outline" className="ml-auto text-xs">
+                {allDecisions.length} registro(s)
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Página</TableHead>
-                <TableHead>Versão</TableHead>
-                <TableHead>Motivo</TableHead>
-                <TableHead>Conversão Δ</TableHead>
-                <TableHead>Receita Δ</TableHead>
-                <TableHead>Modo</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Data</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {decisions.map(d => (
-                <TableRow key={d.id}>
-                  <TableCell className="font-medium">
-                    {PAGE_NAMES[d.landingPageId] ?? d.landingPageId}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    v{d.currentVersionNumber} → v{d.targetVersionNumber}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs">
-                      {formatReason(d.reason)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-destructive font-medium text-sm">
-                      {d.comparison.conversionRateDelta.toFixed(1)}%
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-destructive font-medium text-sm">
-                      {d.comparison.revenueDelta.toFixed(1)}%
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={d.mode === 'automatic' ? 'default' : 'secondary'}
-                      className="text-xs"
-                    >
-                      {d.mode === 'automatic' ? 'Auto' : 'Manual'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge decision={d} />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {formatDate(d.decidedAt)}
-                  </TableCell>
+          {allDecisions.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <RotateCcw className="h-8 w-8 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">Nenhum rollback registrado ainda.</p>
+              <p className="text-xs mt-1">
+                O SmartRollbackEngine monitorará automaticamente após cada publicação.
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Página</TableHead>
+                  <TableHead>Versão</TableHead>
+                  <TableHead>Motivo</TableHead>
+                  <TableHead>Conversão Δ</TableHead>
+                  <TableHead>Receita Δ</TableHead>
+                  <TableHead>Confiança</TableHead>
+                  <TableHead>Modo</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {allDecisions.map(d => (
+                  <TableRow key={d.id}>
+                    <TableCell className="font-medium text-sm">
+                      {d.landingPageId}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      v{d.currentVersionNumber} → v{d.targetVersionNumber}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {formatReason(d.reason)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-destructive font-medium text-sm">
+                        {d.comparison.conversionRateDelta.toFixed(1)}%
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-destructive font-medium text-sm">
+                        {d.comparison.revenueDelta.toFixed(1)}%
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {d.comparison.confidence}%
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={d.mode === 'automatic' ? 'default' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {d.mode === 'automatic' ? 'Auto' : 'Manual'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge decision={d} />
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatDate(d.decidedAt)}
+                    </TableCell>
+                    <TableCell>
+                      {d.approved === null && (
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="h-7 text-xs"
+                            onClick={() => handleApprove(d.id)}
+                          >
+                            Reverter
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs"
+                            onClick={() => handleDismiss(d.id)}
+                          >
+                            Dispensar
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
+
+      {/* Audit Trail Summary */}
+      {auditEntries.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              Trilha de Auditoria
+              <Badge variant="outline" className="ml-auto text-xs">
+                {auditEntries.length} entrada(s)
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {auditEntries.slice(0, 20).map(entry => (
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between text-xs border-b border-border/50 pb-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <AuditActionIcon action={entry.action} />
+                    <span className="text-muted-foreground">{entry.landingPageId}</span>
+                    <span className="font-medium">
+                      v{entry.fromVersion} → v{entry.toVersion}
+                    </span>
+                  </div>
+                  <span className="text-muted-foreground">{formatDate(entry.createdAt)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
@@ -318,4 +402,17 @@ function StatusBadge({ decision }: { decision: RollbackDecision }) {
       Pendente
     </span>
   );
+}
+
+function AuditActionIcon({ action }: { action: string }) {
+  switch (action) {
+    case 'rollback_completed':
+      return <CheckCircle2 className="h-3.5 w-3.5 text-success" />;
+    case 'rollback_failed':
+      return <XCircle className="h-3.5 w-3.5 text-destructive" />;
+    case 'rollback_suggested':
+      return <AlertTriangle className="h-3.5 w-3.5 text-warning" />;
+    default:
+      return <Activity className="h-3.5 w-3.5 text-muted-foreground" />;
+  }
 }

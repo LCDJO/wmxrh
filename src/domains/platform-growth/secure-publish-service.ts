@@ -15,6 +15,7 @@ import { landingPageBuilder } from './landing-page-builder';
 import { versioningManager } from './versioning-manager';
 import { landingVersionService } from './landing-version-service';
 import { emitGrowthEvent } from './growth.events';
+import { getSmartRollbackEngine } from './smart-rollback/smart-rollback-engine';
 
 // ── Publish Result ──────────────────────────────────
 
@@ -141,6 +142,21 @@ export class SecurePublishService {
       changeSummary: config.changeNotes ?? 'Publicação',
       createdBy: userId,
     });
+
+    // 8. Start SmartRollback monitoring (if version > 1 and role is authorized)
+    if (version.version > 1) {
+      try {
+        getSmartRollbackEngine().startMonitoring(
+          updated.id,
+          version.id,
+          version.version,
+          undefined,
+          userRole,
+        );
+      } catch {
+        // Role not authorized for auto-rollback — that's fine, monitoring skipped
+      }
+    }
 
     return {
       success: true,

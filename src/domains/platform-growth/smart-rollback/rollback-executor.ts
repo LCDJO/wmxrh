@@ -8,6 +8,7 @@
  *  - Restores the target version's content_snapshot
  */
 import { supabase } from '@/integrations/supabase/client';
+import { versioningManager } from '../versioning-manager';
 import type { RollbackDecision, RollbackExecution } from './types';
 
 class RollbackExecutor {
@@ -89,7 +90,23 @@ class RollbackExecutor {
         throw new Error(`Falha ao atualizar landing page: ${lpErr.message}`);
       }
 
-      // 5. Mark execution as completed
+      // 5. Sync VersioningManager — record the rollback as a new snapshot
+      const rollbackSnapshot = versioningManager.getRollbackSnapshot(decision.landingPageId, decision.targetVersionNumber);
+      if (rollbackSnapshot) {
+        versioningManager.snapshot(
+          {
+            id: decision.landingPageId,
+            name: rollbackSnapshot.name,
+            slug: rollbackSnapshot.slug,
+            blocks: rollbackSnapshot.blocks,
+            status: 'published',
+          } as any,
+          executedBy,
+          `Rollback: v${decision.currentVersionNumber} → v${decision.targetVersionNumber} (${decision.reason})`,
+        );
+      }
+
+      // 6. Mark execution as completed
       execution.status = 'completed';
       execution.completedAt = new Date().toISOString();
       decision.executedAt = execution.completedAt;
