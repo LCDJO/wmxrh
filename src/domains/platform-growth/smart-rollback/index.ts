@@ -18,5 +18,6 @@ export { RollbackDecisionEngine, rollbackDecisionEngine } from './rollback-decis
 export { RollbackExecutor, rollbackExecutor } from './rollback-executor';
 export { RollbackAuditService, rollbackAuditService } from './rollback-audit-service';
 export { ExperimentSafetyGuard, experimentSafetyGuard } from './experiment-safety-guard';
+export type { SafetyCheckResult, OverrideApproval } from './experiment-safety-guard';
 export { DEFAULT_ROLLBACK_THRESHOLDS } from './types';
 export type * from './types';

@@ -102,7 +102,12 @@ class SmartRollbackEngine {
     // 4. Check experiment safety
     const safety = experimentSafetyGuard.isSafe(landingPageId);
     if (!safety.safe) {
-      console.warn(`[SmartRollbackEngine] Rollback blocked: ${safety.reason}`);
+      console.warn(
+        `[SmartRollbackEngine] Rollback automático BLOQUEADO: ${safety.reason}` +
+        (safety.requiresDirectorApproval
+          ? ` Requer aprovação de: ${safety.authorizedRoles.join(', ')}`
+          : ''),
+      );
       return null;
     }
 
