@@ -34,6 +34,7 @@ import { WebsiteControlCenter } from '@/components/control-plane/WebsiteControlC
 import { MarketingControlCenter } from '@/components/control-plane/MarketingControlCenter';
 import { ActivePlatformVersionWidget } from '@/components/control-plane/ActivePlatformVersionWidget';
 import { ModuleHealthByVersionWidget } from '@/components/control-plane/ModuleHealthByVersionWidget';
+import { NavigationStructureStatusWidget } from '@/components/control-plane/NavigationStructureStatusWidget';
 // ── Hook ──────────────────────────────────────────────────────
 
 function useControlPlane() {
@@ -161,10 +162,11 @@ export default function PlatformControlPlane() {
           {/* Row 1: System Status (full width) */}
           <SystemStatusOverview state={state} onRefresh={refresh} />
 
-          {/* Row 2: Active Version + Module Health by Version */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Row 2: Active Version + Module Health + Nav Structure */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <ActivePlatformVersionWidget />
             <ModuleHealthByVersionWidget />
+            <NavigationStructureStatusWidget />
           </div>
 
           {/* Row 3: Incidents + Risk Heatmap */}
