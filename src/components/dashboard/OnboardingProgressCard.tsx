@@ -37,21 +37,33 @@ export function OnboardingProgressCard() {
   const navigate = useNavigate();
   const [progress, setProgress] = useState<OnboardingRow | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasCompanies, setHasCompanies] = useState(false);
 
   useEffect(() => {
     if (!currentTenant?.id) { setLoading(false); return; }
 
     const fetch = async () => {
-      const { data } = await supabase
-        .from('onboarding_progress')
-        .select('tenant_id, steps_completed, steps_skipped, last_step, is_completed')
-        .eq('tenant_id', currentTenant.id)
-        .maybeSingle();
-      setProgress(data as OnboardingRow | null);
+      const [progressRes, companiesRes] = await Promise.all([
+        supabase
+          .from('onboarding_progress')
+          .select('tenant_id, steps_completed, steps_skipped, last_step, is_completed')
+          .eq('tenant_id', currentTenant.id)
+          .maybeSingle(),
+        supabase
+          .from('companies')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', currentTenant.id)
+          .is('deleted_at', null),
+      ]);
+      setProgress(progressRes.data as OnboardingRow | null);
+      setHasCompanies((companiesRes.count ?? 0) > 0);
       setLoading(false);
     };
     fetch();
   }, [currentTenant?.id]);
+
+  // Tenant already has companies — no onboarding needed
+  if (hasCompanies) return null;
 
   if (loading) return null;
 

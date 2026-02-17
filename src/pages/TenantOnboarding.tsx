@@ -1,10 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCreateTenant } from '@/domains/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Building2, Plus, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTenant } from '@/contexts/TenantContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useAdaptiveOnboarding } from '@/hooks/use-adaptive-onboarding';
 import { OnboardingStepper } from '@/components/onboarding/OnboardingStepper';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
@@ -20,16 +23,43 @@ import { saveProgressToCache } from '@/domains/adaptive-onboarding/onboarding-pr
 import { isOnboardingAdmin, type OnboardingSecurityContext } from '@/domains/adaptive-onboarding/onboarding-security-guard';
 
 export default function TenantOnboarding() {
+  const navigate = useNavigate();
+  const { currentTenant } = useTenant();
   const [name, setName] = useState('');
   const [document, setDocument] = useState('');
   const [tenantCreated, setTenantCreated] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+  const [checkingCompanies, setCheckingCompanies] = useState(true);
   const [startedAt] = useState(Date.now());
   const { toast } = useToast();
   const createMutation = useCreateTenant();
 
-  const TENANT_ID = 'preview-tenant';
+  const TENANT_ID = currentTenant?.id ?? 'preview-tenant';
   const USER_ID = 'current-user';
+
+  // ── Bypass: if tenant already has companies, skip onboarding ──
+  useEffect(() => {
+    if (!currentTenant?.id) {
+      setCheckingCompanies(false);
+      return;
+    }
+
+    const check = async () => {
+      const { count } = await supabase
+        .from('companies')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', currentTenant.id)
+        .is('deleted_at', null);
+
+      if (count && count > 0) {
+        // Tenant already has companies — no need for onboarding
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+      setCheckingCompanies(false);
+    };
+    check();
+  }, [currentTenant?.id, navigate]);
 
   // Security context — in production, derived from JWT/session
   const securityCtx: OnboardingSecurityContext = {
@@ -45,6 +75,15 @@ export default function TenantOnboarding() {
     allowedModules: ['employees', 'companies', 'departments', 'compensation', 'benefits', 'compliance', 'health'],
     userRole: 'tenant_admin',
   });
+
+  // ── Skip handler ──
+  const handleSkipOnboarding = useCallback(() => {
+    toast({
+      title: 'Configuração pulada',
+      description: 'Você pode completar a configuração a qualquer momento no painel.',
+    });
+    navigate('/dashboard');
+  }, [navigate, toast]);
 
   // ── Persist progress to cache on every change ──
   const persistProgress = useCallback(() => {
@@ -112,6 +151,8 @@ export default function TenantOnboarding() {
 
     persistProgress();
   }, [onboarding, securityCtx, persistProgress, toast]);
+
+  if (checkingCompanies) return null;
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,15 +240,25 @@ export default function TenantOnboarding() {
               {name || 'Sua organização'} — Plano Professional
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowWizard(true)}
-            className="gap-1.5"
-          >
-            <Sparkles className="h-4 w-4" />
-            Assistente de Setup
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowWizard(true)}
+              className="gap-1.5"
+            >
+              <Sparkles className="h-4 w-4" />
+              Assistente de Setup
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSkipOnboarding}
+              className="gap-1.5 text-muted-foreground"
+            >
+              Pular configuração
+            </Button>
+          </div>
         </div>
 
         {/* Two-column layout */}
@@ -250,6 +301,7 @@ export default function TenantOnboarding() {
         recommendedModules={onboarding.recommendedModules}
         suggestedRoles={onboarding.suggestedRoles}
         onFinish={handleWizardFinish}
+        onSkip={handleSkipOnboarding}
       />
     </div>
   );
