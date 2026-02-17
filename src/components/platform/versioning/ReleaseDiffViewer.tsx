@@ -66,7 +66,7 @@ const STATUS_MAP: Record<string, { label: string; style: string }> = {
   rolled_back: { label: 'Rolled Back', style: 'bg-destructive/15 text-destructive border-destructive/30' },
 };
 
-export function ReleaseDiffViewer() {
+export function ReleaseDiffViewer({ canPublish = true }: { canPublish?: boolean }) {
   const [openId, setOpenId] = useState<string | null>(MOCK_RELEASES[0]?.id ?? null);
 
   return (

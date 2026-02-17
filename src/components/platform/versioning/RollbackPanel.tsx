@@ -51,7 +51,7 @@ const STATUS_CLASS: Record<string, string> = {
   failed: 'text-destructive',
 };
 
-export function RollbackPanel() {
+export function RollbackPanel({ canRollback = true }: { canRollback?: boolean }) {
   const [scope, setScope] = useState<'module' | 'release'>('release');
   const [steps, setSteps] = useState(MOCK_STEPS);
   const [executing, setExecuting] = useState(false);
@@ -139,8 +139,9 @@ export function RollbackPanel() {
           <Button
             size="sm"
             variant="destructive"
-            disabled={pendingCount === 0 || executing}
+            disabled={pendingCount === 0 || executing || !canRollback}
             onClick={handleExecute}
+            title={!canRollback ? 'Permissão necessária: versioning.rollback' : undefined}
           >
             <RotateCcw className="h-3.5 w-3.5 mr-1" />
             {executing ? 'Executando...' : 'Executar Rollback'}

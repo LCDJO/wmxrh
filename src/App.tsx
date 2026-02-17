@@ -167,7 +167,7 @@ function AppRoutes() {
         <Route path="structure/events" element={<PlatformEvents />} />
         <Route path="structure/menus" element={<PlatformMenuStructure />} />
         <Route path="structure/modules" element={<PlatformModulesCatalog />} />
-        <Route path="settings/versioning" element={<PlatformVersioning />} />
+        <Route path="settings/versioning" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformVersioning /></PlatformGuard>} />
         <Route path="growth" element={<PlatformGrowthAI />} />
         <Route path="growth/insights" element={<GrowthInsights />} />
         <Route path="growth/landing-pages" element={<GrowthLandingPages />} />
