@@ -38,23 +38,23 @@ export class PlatformVersionRegistry {
     return pv;
   }
 
-  publish(versionId: string): PlatformVersion | null {
-    const v = this.versions.find(x => x.id === versionId);
-    if (!v || v.status === 'published') return null;
-    v.status = 'published';
+  publish(vId: string): PlatformVersion | null {
+    const v = this.versions.find(x => x.id === vId);
+    if (!v || v.status === 'final') return null;
+    v.status = 'final';
     v.released_at = new Date().toISOString();
     return v;
   }
 
-  transition(versionId: string, status: ReleaseStatus): PlatformVersion | null {
-    const v = this.versions.find(x => x.id === versionId);
+  transition(vId: string, status: ReleaseStatus): PlatformVersion | null {
+    const v = this.versions.find(x => x.id === vId);
     if (!v) return null;
     v.status = status;
     return v;
   }
 
   getCurrent(): PlatformVersion | null {
-    return [...this.versions].reverse().find(v => v.status === 'published') ?? null;
+    return [...this.versions].reverse().find(v => v.status === 'final') ?? null;
   }
 
   getById(id: string): PlatformVersion | null {
