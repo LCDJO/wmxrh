@@ -127,6 +127,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/website/structure', label: 'Estrutura do Site', requiredPermission: 'website.structure_manage' },
       { to: '/platform/website/pages', label: 'Editor Drag & Drop', requiredPermission: 'website.edit' },
       { to: '/platform/website/seo', label: 'SEO & Performance', requiredPermission: 'website.seo_manage' },
+      { to: '/platform/website/approvals', label: 'Aprovações', requiredPermission: 'website.approve' },
       { to: '/platform/website/versions', label: 'Versões', requiredPermission: 'website.publish' },
     ],
   },

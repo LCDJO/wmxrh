@@ -97,6 +97,7 @@ import LandingPagePreview from "./pages/landing/LandingPagePreview";
 import WebsitePages from "./pages/platform/website/WebsitePages";
 import WebsiteStructure from "./pages/platform/website/WebsiteStructure";
 import WebsiteSEO from "./pages/platform/website/WebsiteSEO";
+import WebsiteApprovals from "./pages/platform/website/WebsiteApprovals";
 
 const queryClient = new QueryClient();
 
@@ -185,6 +186,7 @@ function AppRoutes() {
         <Route path="website/ai-designer" element={<GrowthAIDesigner />} />
         <Route path="website/templates" element={<GrowthTemplateEngine />} />
         <Route path="website/versions" element={<GrowthVersionPublish />} />
+        <Route path="website/approvals" element={<WebsiteApprovals />} />
         <Route path="marketing/analytics" element={<MarketingAnalytics />} />
         <Route path="landing/drafts" element={<LandingDrafts />} />
         <Route path="landing/review" element={<LandingReview />} />
