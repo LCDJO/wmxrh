@@ -5,12 +5,71 @@
  * Executes safe rollbacks between already-approved/published versions.
  */
 
+// ── Monitored Event Types ──
+
+export type LandingMetricEventType =
+  | 'page_view'
+  | 'cta_click'
+  | 'signup'
+  | 'trial_start'
+  | 'plan_selected'
+  | 'revenue_generated'
+  | 'referral_click'
+  | 'referral_conversion';
+
+export interface LandingMetricEvent {
+  id: string;
+  landingPageId: string;
+  versionId: string;
+  type: LandingMetricEventType;
+  value: number;
+  source: string;
+  referralCode?: string;
+  sessionId?: string;
+  trackedAt: string;
+}
+
+// ── Revenue Metrics ──
+
+export interface RevenueMetrics {
+  totalRevenue: number;
+  revenuePerVisit: number;
+  averageOrderValue: number;
+  revenueEvents: number;
+  topSources: Array<{ source: string; revenue: number }>;
+}
+
+// ── Referral Conversions ──
+
+export interface ReferralConversionMetrics {
+  totalReferralClicks: number;
+  totalReferralConversions: number;
+  referralConversionRate: number;
+  referralRevenue: number;
+  topReferralCodes: Array<{ code: string; conversions: number; revenue: number }>;
+}
+
+// ── KPI Indicators ──
+
+export interface ConversionIndicators {
+  /** Overall conversion rate: conversions / impressions (0–100) */
+  conversion_rate: number;
+  /** Revenue per visit: totalRevenue / impressions */
+  revenue_per_visit: number;
+  /** CTA click rate: ctaClicks / impressions (0–100) */
+  cta_click_rate: number;
+  /** Signup rate: signups / impressions (0–100) */
+  signup_rate: number;
+}
+
 // ── Conversion Monitoring ──
 
 export interface ConversionSnapshot {
   landingPageId: string;
   versionId: string;
   versionNumber: number;
+  /** Core KPI indicators */
+  indicators: ConversionIndicators;
   /** Conversion rate as percentage (0–100) */
   conversionRate: number;
   /** Total conversions in sample window */
@@ -21,6 +80,12 @@ export interface ConversionSnapshot {
   revenue: number;
   /** Bounce rate as percentage */
   bounceRate: number;
+  /** Revenue metrics breakdown */
+  revenueMetrics: RevenueMetrics;
+  /** Referral conversion metrics */
+  referralMetrics: ReferralConversionMetrics;
+  /** Raw metric events in this window */
+  metricEvents: LandingMetricEvent[];
   /** Timestamp of snapshot */
   capturedAt: string;
 }
