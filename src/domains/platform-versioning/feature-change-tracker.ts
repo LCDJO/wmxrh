@@ -1,13 +1,25 @@
 /**
- * FeatureChangeTracker — Records feature-level mutations across versions.
+ * FeatureChangeTracker — DB-backed feature-level mutation log.
  */
+import { supabase } from '@/integrations/supabase/client';
 import type { FeatureChange } from './types';
-import { versionId } from './version-utils';
+
+function rowToChange(row: Record<string, any>): FeatureChange {
+  return {
+    id: row.id,
+    feature_key: row.feature_key,
+    change_type: row.change_type as FeatureChange['change_type'],
+    previous_state: row.previous_state ?? undefined,
+    new_state: row.new_state ?? {},
+    module_key: row.module_key ?? undefined,
+    version_id: row.version_id ?? undefined,
+    author: row.author,
+    created_at: row.created_at,
+  };
+}
 
 export class FeatureChangeTracker {
-  private changes: FeatureChange[] = [];
-
-  track(opts: {
+  async track(opts: {
     feature_key: string;
     change_type: FeatureChange['change_type'];
     previous_state?: Record<string, unknown>;
@@ -15,35 +27,51 @@ export class FeatureChangeTracker {
     module_key?: string;
     version_id?: string;
     author: string;
-  }): FeatureChange {
-    const change: FeatureChange = {
-      id: versionId(),
-      feature_key: opts.feature_key,
-      change_type: opts.change_type,
-      previous_state: opts.previous_state,
-      new_state: opts.new_state,
-      module_key: opts.module_key,
-      version_id: opts.version_id,
-      author: opts.author,
-      created_at: new Date().toISOString(),
-    };
-    this.changes.push(change);
-    return change;
+  }): Promise<FeatureChange> {
+    const { data, error } = await (supabase.from('feature_changes') as any)
+      .insert({
+        feature_key: opts.feature_key,
+        change_type: opts.change_type,
+        previous_state: opts.previous_state ?? null,
+        new_state: opts.new_state,
+        module_key: opts.module_key ?? null,
+        version_id: opts.version_id ?? null,
+        author: opts.author,
+      })
+      .select()
+      .single();
+    if (error) throw new Error(`FeatureChangeTracker.track: ${error.message}`);
+    return rowToChange(data);
   }
 
-  getByFeature(featureKey: string): FeatureChange[] {
-    return this.changes.filter(c => c.feature_key === featureKey);
+  async getByFeature(featureKey: string): Promise<FeatureChange[]> {
+    const { data } = await (supabase.from('feature_changes') as any)
+      .select('*')
+      .eq('feature_key', featureKey)
+      .order('created_at', { ascending: false });
+    return (data ?? []).map(rowToChange);
   }
 
-  getByModule(moduleKey: string): FeatureChange[] {
-    return this.changes.filter(c => c.module_key === moduleKey);
+  async getByModule(moduleKey: string): Promise<FeatureChange[]> {
+    const { data } = await (supabase.from('feature_changes') as any)
+      .select('*')
+      .eq('module_key', moduleKey)
+      .order('created_at', { ascending: false });
+    return (data ?? []).map(rowToChange);
   }
 
-  getByVersion(versionId: string): FeatureChange[] {
-    return this.changes.filter(c => c.version_id === versionId);
+  async getByVersion(versionId: string): Promise<FeatureChange[]> {
+    const { data } = await (supabase.from('feature_changes') as any)
+      .select('*')
+      .eq('version_id', versionId)
+      .order('created_at', { ascending: false });
+    return (data ?? []).map(rowToChange);
   }
 
-  getAll(): FeatureChange[] {
-    return [...this.changes];
+  async getAll(): Promise<FeatureChange[]> {
+    const { data } = await (supabase.from('feature_changes') as any)
+      .select('*')
+      .order('created_at', { ascending: false });
+    return (data ?? []).map(rowToChange);
   }
 }

@@ -223,41 +223,11 @@ export function exportPrometheus(): PrometheusExportResult {
   }
 
   // ── Platform Versioning metrics ─────────────────────────────
-  try {
-    const { createAdvancedVersioningEngine } = require('@/domains/platform-versioning') as {
-      createAdvancedVersioningEngine: () => import('@/domains/platform-versioning').AdvancedVersioningEngineAPI;
-    };
-    const vEngine = createAdvancedVersioningEngine();
-
-    // platform_release_total — by status
-    const allReleases = vEngine.releases.list();
-    collector.gauge('platform_release_total', allReleases.length);
-    for (const status of ['draft', 'candidate', 'final', 'rolled_back', 'archived'] as const) {
-      const count = allReleases.filter(r => r.status === status).length;
-      collector.gauge('platform_release_total', count, { status });
-    }
-
-    // module_version_total — per module
-    const moduleKeys = vEngine.modules.listModuleKeys();
-    let totalVersions = 0;
-    let totalBreaking = 0;
-    for (const key of moduleKeys) {
-      const versions = vEngine.modules.listForModule(key);
-      const breakingCount = versions.filter(v => v.breaking_changes).length;
-      collector.gauge('module_version_total', versions.length, { module: key });
-      collector.gauge('module_breaking_changes_total', breakingCount, { module: key });
-      totalVersions += versions.length;
-      totalBreaking += breakingCount;
-    }
-    collector.gauge('module_version_total', totalVersions);
-    collector.gauge('module_breaking_changes_total', totalBreaking);
-
-    // rollback_actions_total — count rolled_back releases
-    const rolledBack = allReleases.filter(r => r.status === 'rolled_back').length;
-    collector.gauge('rollback_actions_total', rolledBack);
-  } catch {
-    // Versioning engine not initialised — skip
-  }
+  // Note: versioning methods are now async (DB-backed). We skip them in
+  // the sync exportPrometheus to avoid blocking. Support metrics collector
+  // handles its own async collection with caching.
+  // Versioning metrics can be collected via collectSupportMetrics() or
+  // a dedicated async collector if needed.
 
   // ── Support metrics ────────────────────────────────────────
   try {

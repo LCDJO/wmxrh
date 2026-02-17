@@ -24,29 +24,33 @@ export class ChangelogRenderer {
     private releaseManager: ReleaseManager,
   ) {}
 
-  renderRelease(releaseId: string): string {
-    const release = this.releaseManager.getById(releaseId);
+  async renderRelease(releaseId: string): Promise<string> {
+    const release = await this.releaseManager.getById(releaseId);
     if (!release) return '';
-    const entries = this.changeLogger.getByRelease(releaseId);
+    const entries = await this.changeLogger.getByRelease(releaseId);
     const date = release.finalized_at ?? release.created_at;
     return this.renderMarkdown(release.name, date, entries);
   }
 
-  renderVersion(versionId: string): string {
-    const entries = this.changeLogger.getByVersion(versionId);
+  async renderVersion(versionId: string): Promise<string> {
+    const entries = await this.changeLogger.getByVersion(versionId);
     return this.renderMarkdown(`Version ${versionId}`, new Date().toISOString(), entries);
   }
 
-  renderFull(limit?: number): string {
-    const releases = this.releaseManager.list()
+  async renderFull(limit?: number): Promise<string> {
+    const releases = (await this.releaseManager.list())
       .filter(r => r.status === 'final')
       .reverse()
       .slice(0, limit);
-    return releases.map(r => this.renderRelease(r.id)).join('\n\n---\n\n');
+    const parts: string[] = [];
+    for (const r of releases) {
+      parts.push(await this.renderRelease(r.id));
+    }
+    return parts.join('\n\n---\n\n');
   }
 
-  renderModule(moduleKey: string): string {
-    const entries = this.changeLogger.getByScope('module', moduleKey);
+  async renderModule(moduleKey: string): Promise<string> {
+    const entries = await this.changeLogger.getByScope('module', moduleKey);
     return this.renderMarkdown(`Módulo: ${moduleKey}`, new Date().toISOString(), entries);
   }
 
@@ -79,8 +83,8 @@ export class ChangelogRenderer {
     return map;
   }
 
-  toStructured(releaseId: string): Array<{ category: ChangeCategory; label: string; entries: ChangeLogEntry[] }> {
-    const entries = this.changeLogger.getByRelease(releaseId);
+  async toStructured(releaseId: string): Promise<Array<{ category: ChangeCategory; label: string; entries: ChangeLogEntry[] }>> {
+    const entries = await this.changeLogger.getByRelease(releaseId);
     const grouped = this.groupByCategory(entries);
     return CATEGORY_ORDER
       .filter(cat => grouped.has(cat))
