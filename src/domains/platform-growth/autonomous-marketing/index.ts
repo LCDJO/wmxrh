@@ -19,6 +19,7 @@ export { conversionMetricsCollector, ConversionMetricsCollector } from './conver
 export { conversionAnalyzer, ConversionAnalyzer } from './conversion-analyzer';
 export type { ConversionKPIs, VariantKPIs } from './conversion-analyzer';
 export { landingPerformanceRanker, LandingPerformanceRanker } from './landing-performance-ranker';
+export type { TopConversionsResponse, PageRanking } from './landing-performance-ranker';
 export { aiExperimentAdvisor, AIExperimentAdvisor } from './ai-experiment-advisor';
 export { trafficRouter, TrafficRouter } from './traffic-router';
 export { marketingInsightsService, MarketingInsightsService } from './marketing-insights-service';

@@ -1,12 +1,83 @@
 /**
  * LandingPerformanceRanker — Ranks landing pages by composite performance score.
- * Integrates conversion, engagement, revenue, and SEO signals.
+ *
+ * Ranking dimensions:
+ *  - Top by Conversion Rate (signup_completed / page_view)
+ *  - Top by Revenue (total revenue_generated)
+ *  - Top by ROI Score (weighted composite: conversion 35%, revenue 40%, engagement 25%)
+ *
+ * Integrates with ConversionAnalyzer KPIs and the top-conversions edge function.
  */
 import type { LandingPerformanceScore } from './types';
 import type { LandingPage } from '../types';
+import { supabase } from '@/integrations/supabase/client';
+
+// ── Types for DB-backed ranking ──
+
+export interface TopConversionsResponse {
+  period_days: number;
+  since: string;
+  total_pages_analyzed: number;
+  top_by_conversion: PageRanking[];
+  top_by_revenue: PageRanking[];
+  top_by_roi: PageRanking[];
+}
+
+export interface PageRanking {
+  landing_page_id: string;
+  page_name: string;
+  page_views: number;
+  unique_visitors: number;
+  signups_completed: number;
+  cta_clicks: number;
+  conversion_rate: number;
+  ctr: number;
+  total_revenue: number;
+  revenue_per_visitor: number;
+  roi_score: number;
+}
 
 class LandingPerformanceRanker {
-  /** Score and rank a set of landing pages */
+
+  // ══════════════════════════════════════════════
+  //  DB-BACKED RANKING (via edge function)
+  // ══════════════════════════════════════════════
+
+  /** Fetch ranked landing pages from the top-conversions edge function */
+  async fetchTopConversions(days = 30, limit = 10): Promise<TopConversionsResponse> {
+    const { data, error } = await supabase.functions.invoke('top-conversions', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      body: null,
+    });
+
+    if (error) throw new Error(`top-conversions error: ${error.message}`);
+    return data as TopConversionsResponse;
+  }
+
+  /** Get top pages by conversion rate */
+  async getTopByConversion(days = 30, limit = 10): Promise<PageRanking[]> {
+    const result = await this.fetchTopConversions(days, limit);
+    return result.top_by_conversion;
+  }
+
+  /** Get top pages by revenue */
+  async getTopByRevenue(days = 30, limit = 10): Promise<PageRanking[]> {
+    const result = await this.fetchTopConversions(days, limit);
+    return result.top_by_revenue;
+  }
+
+  /** Get top pages by ROI score */
+  async getTopByROI(days = 30, limit = 10): Promise<PageRanking[]> {
+    const result = await this.fetchTopConversions(days, limit);
+    return result.top_by_roi;
+  }
+
+  // ══════════════════════════════════════════════
+  //  IN-MEMORY RANKING (legacy, from LandingPage objects)
+  // ══════════════════════════════════════════════
+
+  /** Score and rank a set of landing pages (in-memory) */
   rank(pages: LandingPage[]): LandingPerformanceScore[] {
     const scores = pages.map(page => this.scorePage(page));
     scores.sort((a, b) => b.overallScore - a.overallScore);
@@ -43,7 +114,7 @@ class LandingPerformanceRanker {
       seoScore * 0.15
     );
 
-    // Trend detection (simplified — would use historical data in production)
+    // Trend detection (simplified)
     const trend: 'improving' | 'stable' | 'declining' =
       a.conversionRate > 5 ? 'improving' :
       a.conversionRate < 1 ? 'declining' : 'stable';
@@ -63,7 +134,7 @@ class LandingPerformanceRanker {
     };
   }
 
-  /** Get top N pages */
+  /** Get top N pages (in-memory) */
   getTopPerformers(pages: LandingPage[], n: number = 5): LandingPerformanceScore[] {
     return this.rank(pages).slice(0, n);
   }

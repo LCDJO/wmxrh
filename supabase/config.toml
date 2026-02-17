@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.metrics-export]
 verify_jwt = false
+
+[functions.top-conversions]
+verify_jwt = false
