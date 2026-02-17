@@ -19,5 +19,7 @@ export { RollbackExecutor, rollbackExecutor } from './rollback-executor';
 export { RollbackAuditService, rollbackAuditService } from './rollback-audit-service';
 export { ExperimentSafetyGuard, experimentSafetyGuard } from './experiment-safety-guard';
 export type { SafetyCheckResult, OverrideApproval } from './experiment-safety-guard';
+export { GovernanceAIVersionAnalyzer, governanceVersionAnalyzer } from './governance-version-analyzer';
+export type { GovernanceVersionReport, GovernanceVersionIssue, GovernanceRiskLevel, GovernanceIssueType } from './governance-version-analyzer';
 export { DEFAULT_ROLLBACK_THRESHOLDS } from './types';
 export type * from './types';
