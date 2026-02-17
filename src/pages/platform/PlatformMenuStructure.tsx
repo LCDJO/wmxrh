@@ -91,6 +91,7 @@ const createDefaultTree = (): MenuNode[] => [
       { id: 'growth-conversions', label: 'Conversões', path: '/platform/growth/conversions' },
       { id: 'growth-fab', label: 'FAB Builder', path: '/platform/growth/fab-builder' },
       { id: 'growth-templates', label: 'Template Engine', path: '/platform/growth/template-engine' },
+      { id: 'growth-versions', label: 'Versionamento & Publicação', path: '/platform/growth/version-publish' },
     ],
   },
   { id: 'fiscal', label: 'Fiscal', path: '/platform/fiscal', icon: ScrollText },

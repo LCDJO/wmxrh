@@ -129,9 +129,30 @@ export class VersioningManager {
     return version ? structuredClone(version.snapshot) : null;
   }
 
+  /**
+   * Get an isolated preview of a specific version.
+   * Returns a full LandingPage-like object suitable for rendering in preview mode,
+   * without modifying the live page.
+   */
+  getPreviewSnapshot(pageId: string, versionNumber: number): (PageSnapshot & { versionNumber: number; previewMode: true }) | null {
+    const version = this.getVersion(pageId, versionNumber);
+    if (!version) return null;
+    const snapshot = structuredClone(version.snapshot);
+    return {
+      ...snapshot,
+      versionNumber: version.version,
+      previewMode: true as const,
+    };
+  }
+
   /** Total version count */
   getVersionCount(pageId: string): number {
     return (this.versions.get(pageId) ?? []).length;
+  }
+
+  /** Delete all versions for a page */
+  clearVersions(pageId: string): void {
+    this.versions.delete(pageId);
   }
 }
 
