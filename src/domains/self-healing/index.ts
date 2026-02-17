@@ -6,7 +6,7 @@
  *  ├── IncidentDetector           (pattern matching)
  *  ├── RecoveryOrchestrator       (action coordination)
  *  ├── ModuleAutoRecoveryService  (via RecoveryOrchestrator + ModuleOrchestrator)
- *  ├── AccessSafetyGuard          (via CircuitBreakerManager)
+ *  ├── AccessSafetyGuard          (blocks sensitive perms during critical incidents)
  *  ├── CircuitBreakerManager      (state machines)
  *  └── HealingAuditLogger         (immutable log)
  */
@@ -15,5 +15,6 @@ export { IncidentDetector, type DetectionRule } from './incident-detector';
 export { RecoveryOrchestrator } from './recovery-orchestrator';
 export { ModuleAutoRecoveryService } from './module-auto-recovery-service';
 export { CircuitBreakerManager } from './circuit-breaker-manager';
+export { AccessSafetyGuard, type SafetyBlockRule } from './access-safety-guard';
 export { HealingAuditLogger } from './healing-audit-logger';
 export type * from './types';

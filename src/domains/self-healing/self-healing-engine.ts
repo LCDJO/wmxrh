@@ -15,6 +15,7 @@ import { IncidentDetector } from './incident-detector';
 import { RecoveryOrchestrator } from './recovery-orchestrator';
 import { CircuitBreakerManager } from './circuit-breaker-manager';
 import { HealingAuditLogger } from './healing-audit-logger';
+import { AccessSafetyGuard } from './access-safety-guard';
 import { getHealthMonitor } from '@/domains/observability/health-monitor';
 import { getErrorTracker } from '@/domains/observability/error-tracker';
 import { getGatewayPerformanceTracker } from '@/domains/observability/gateway-performance-tracker';
@@ -34,6 +35,7 @@ export class SelfHealingEngine {
   readonly auditLogger = new HealingAuditLogger();
   readonly incidentDetector = new IncidentDetector();
   readonly recoveryOrchestrator: RecoveryOrchestrator;
+  readonly accessSafetyGuard: AccessSafetyGuard;
 
   private listeners = new Set<() => void>();
 
@@ -44,11 +46,14 @@ export class SelfHealingEngine {
     this.recoveryOrchestrator = new RecoveryOrchestrator(
       this.circuitBreakers, this.auditLogger, events, modules,
     );
+    this.accessSafetyGuard = new AccessSafetyGuard(events);
   }
 
   /** Start listening to platform events via GlobalEventKernel. */
   start(): void {
     if (this.disposers.length > 0) return; // already started
+
+    this.accessSafetyGuard.start();
 
     // Wire observability singletons to emit via GlobalEventKernel
     getHealthMonitor().setEventKernel(this.events);
@@ -156,6 +161,7 @@ export class SelfHealingEngine {
   stop(): void {
     this.disposers.forEach(fn => fn());
     this.disposers = [];
+    this.accessSafetyGuard.stop();
     this.events.emit('self_healing:stopped', 'SelfHealingEngine', {});
   }
 
