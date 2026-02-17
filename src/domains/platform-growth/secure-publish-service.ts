@@ -72,18 +72,30 @@ export class SecurePublishService {
       };
     }
 
-    // 3. Pre-publish validation
+    // 3. Status gate — only approved pages can be published
+    if (page.status !== 'approved') {
+      return {
+        success: false,
+        errors: [{
+          code: 'NOT_APPROVED',
+          message: `Página "${page.name}" não está aprovada (status atual: "${page.status}"). Somente páginas com status "approved" podem ser publicadas.`,
+          severity: 'blocking',
+        }],
+      };
+    }
+
+    // 4. Pre-publish validation
     if (!config.skipValidation) {
       errors.push(...this.validate(page));
     }
 
-    // 4. Check blocking errors
+    // 5. Check blocking errors
     const blocking = errors.filter(e => e.severity === 'blocking');
     if (blocking.length > 0 && !config.forcePublish) {
       return { success: false, errors };
     }
 
-    // 5. Snapshot current version
+    // 6. Snapshot current version
     const version = versioningManager.snapshot(page, userId, config.changeNotes ?? 'Publicação');
 
     // 6. Update status to published
