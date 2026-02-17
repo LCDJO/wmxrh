@@ -13,7 +13,7 @@ import {
   Shield, Wallet, HeartPulse, AlertTriangle, Wrench, Brain,
   UserPlus, Calculator, Users, GraduationCap, Cpu, TrendingUp,
   ChevronDown, ChevronRight, Fingerprint, Network, GitMerge,
-  FileSignature, Sparkles, KeyRound, ShoppingCart, HelpCircle, X,
+  FileSignature, Sparkles, KeyRound, ShoppingCart, HelpCircle, X, MessageSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { buildCatalog, getEventCatalog, getAllDomains, type EventCatalogEntry } from './event-catalog-data';
@@ -45,6 +45,7 @@ const DOMAIN_META: Record<string, { icon: typeof Shield }> = {
   'Growth AI':            { icon: Sparkles },
   'Versioning':           { icon: GitMerge },
   'Usage Metering':       { icon: Activity },
+  'Support':              { icon: MessageSquare },
 };
 
 const DEFAULT_DOMAIN_META = { icon: Zap };
