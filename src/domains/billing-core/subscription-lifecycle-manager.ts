@@ -95,6 +95,11 @@ export function createSubscriptionLifecycleManager(
 
       ledger.recordCharge(tenantId, invoice.id, finalAmount, `Fatura #${invoice.id.slice(0, 8)}`);
 
+      // Record coupon discount in ledger
+      if (discountBrl > 0) {
+        ledger.recordCouponDiscount(tenantId, invoice.id, discountBrl, couponCode ?? 'recurring');
+      }
+
       emitBillingEvent({
         type: 'TenantPlanAssigned',
         timestamp: Date.now(),
@@ -154,6 +159,9 @@ export function createSubscriptionLifecycleManager(
           notes: invoiceNotes,
         });
         ledger.recordCharge(tenantId, invoice.id, finalAmount, 'Proration charge');
+        if (discountBrl > 0) {
+          ledger.recordCouponDiscount(tenantId, invoice.id, discountBrl, couponCode ?? 'recurring');
+        }
 
         emitBillingEvent({
           type: 'InvoiceGenerated',
@@ -226,6 +234,9 @@ export function createSubscriptionLifecycleManager(
       });
 
       ledger.recordCharge(tenantId, invoice.id, finalAmount, `Renovação #${invoice.id.slice(0, 8)}`);
+      if (discountBrl > 0) {
+        ledger.recordCouponDiscount(tenantId, invoice.id, discountBrl, couponCode ?? 'recurring');
+      }
 
       emitBillingEvent({
         type: 'InvoiceGenerated',
