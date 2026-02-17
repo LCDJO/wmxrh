@@ -117,10 +117,11 @@ interface MessageTimelineProps {
   senderType: ChatSenderType;
   loading: boolean;
   senderIdentities?: Record<string, ChatIdentity>;
+  isCounterpartTyping?: boolean;
 }
 
 const MessageTimeline = forwardRef<HTMLDivElement, MessageTimelineProps>(
-  ({ messages, senderType, loading, senderIdentities = {} }, ref) => {
+  ({ messages, senderType, loading, senderIdentities = {}, isCounterpartTyping = false }, ref) => {
     const groupedMessages = messages.reduce<Array<{ date: string; msgs: ChatMessage[] }>>(
       (acc, msg) => {
         const d = new Date(msg.created_at).toLocaleDateString('pt-BR', {
@@ -175,6 +176,19 @@ const MessageTimeline = forwardRef<HTMLDivElement, MessageTimelineProps>(
               ))}
             </div>
           ))
+        )}
+
+        {/* Typing indicator */}
+        {isCounterpartTyping && (
+          <div className="flex justify-start mb-1">
+            <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm">
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          </div>
         )}
       </div>
     );

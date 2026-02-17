@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatService } from '@/domains/support/chat-service';
+import { usePresence } from '@/domains/support/use-presence';
 import ChatHeader from './chat/ChatHeader';
 import MessageTimeline from './chat/MessageTimeline';
 import QuickReplyBox from './chat/QuickReplyBox';
@@ -38,17 +39,28 @@ export default function LiveChatWindow({
   const [session, setSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [connected, setConnected] = useState(false);
   const [counterpartIdentity, setCounterpartIdentity] = useState<ChatIdentity | null>(null);
   const [senderIdentities, setSenderIdentities] = useState<Record<string, ChatIdentity>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Presence
+  const {
+    isCounterpartOnline,
+    isCounterpartTyping,
+    setTyping,
+    setOnline,
+  } = usePresence({
+    sessionId: session?.id ?? null,
+    userId,
+    senderType: senderType === 'agent' ? 'agent' : 'tenant',
+    name: senderType === 'agent' ? 'Suporte' : 'Cliente',
+  });
 
   // Fetch identity information for header & bubbles
   useEffect(() => {
     async function fetchIdentities() {
       try {
         if (senderType === 'tenant') {
-          // Client view: fetch agent info
           if (assignedAgentId) {
             const { data: agent } = await supabase
               .from('platform_users')
@@ -70,7 +82,6 @@ export default function LiveChatWindow({
             }
           }
         } else {
-          // Agent view: fetch tenant user info (ticket creator)
           const { data: ticket } = await supabase
             .from('support_tickets')
             .select('created_by')
@@ -116,7 +127,7 @@ export default function LiveChatWindow({
           }
         }
       } catch {
-        // silent — identity is supplementary
+        // silent
       }
     }
     fetchIdentities();
@@ -151,7 +162,6 @@ export default function LiveChatWindow({
   // Realtime subscription
   useEffect(() => {
     if (!session) return;
-    setConnected(true);
     const unsubscribe = ChatService.subscribeToSession(session.id, (msg) => {
       setMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
@@ -159,7 +169,6 @@ export default function LiveChatWindow({
       });
     });
     return () => {
-      setConnected(false);
       unsubscribe();
     };
   }, [session]);
@@ -186,6 +195,7 @@ export default function LiveChatWindow({
     attachments?: Array<{ name: string; url: string; type: string }>,
   ) => {
     if (!session) return;
+    setOnline();
     await ChatService.sendMessage(
       {
         session_id: session.id,
@@ -216,12 +226,13 @@ export default function LiveChatWindow({
       <ChatHeader
         session={session}
         senderType={senderType}
-        connected={connected}
+        connected={isCounterpartOnline}
         ticketSubject={ticketSubject}
         ticketId={ticketId}
         onBack={onBack}
         onClose={handleCloseChat}
         counterpartIdentity={counterpartIdentity}
+        isTyping={isCounterpartTyping}
       />
 
       <MessageTimeline
@@ -230,6 +241,7 @@ export default function LiveChatWindow({
         senderType={senderType}
         loading={loading}
         senderIdentities={senderIdentities}
+        isCounterpartTyping={isCounterpartTyping}
       />
 
       <QuickReplyBox
@@ -238,6 +250,7 @@ export default function LiveChatWindow({
         isClosed={isClosed}
         sessionId={session?.id}
         userId={userId}
+        onTyping={setTyping}
       />
     </div>
   );

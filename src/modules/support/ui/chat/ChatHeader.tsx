@@ -13,6 +13,7 @@ interface ChatHeaderProps {
   onBack?: () => void;
   onClose?: () => void;
   counterpartIdentity?: ChatIdentity | null;
+  isTyping?: boolean;
 }
 
 function PresenceDot({ online }: { online: boolean }) {
@@ -33,14 +34,21 @@ export default function ChatHeader({
   onBack,
   onClose,
   counterpartIdentity,
+  isTyping,
 }: ChatHeaderProps) {
   const isClosed = session?.status === 'closed';
 
-  // Derive display info from identity or fallback
   const headerName = counterpartIdentity?.name
     ?? (senderType === 'agent' ? 'Cliente' : 'Suporte');
   const headerRole = counterpartIdentity?.role
     ?? (senderType === 'agent' ? 'Colaborador' : 'Agente de Suporte');
+
+  // Status text below name
+  const statusText = isTyping
+    ? 'digitando...'
+    : connected
+      ? 'online'
+      : 'offline';
 
   return (
     <div className="flex items-center gap-3 px-4 py-3 bg-primary text-primary-foreground shrink-0">
@@ -64,11 +72,12 @@ export default function ChatHeader({
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold truncate">{headerName}</p>
-        <p className="text-[10px] opacity-80 truncate">{headerRole}</p>
+        <p className={`text-[10px] truncate ${isTyping ? 'text-green-300 italic' : 'opacity-80'}`}>
+          {isTyping ? statusText : headerRole}
+        </p>
 
         {/* Contextual info line */}
         <div className="flex items-center gap-2 mt-0.5">
-          {/* Agent view: show company + tenant_id */}
           {senderType === 'agent' && counterpartIdentity?.company && (
             <span className="text-[10px] opacity-60 flex items-center gap-0.5 truncate">
               <Building2 className="h-2.5 w-2.5" />
@@ -82,7 +91,6 @@ export default function ChatHeader({
             </span>
           )}
 
-          {/* Client view: show protocol number */}
           {senderType === 'tenant' && (
             <span className="text-[10px] opacity-60 truncate">
               {session?.protocol_number
@@ -91,7 +99,6 @@ export default function ChatHeader({
             </span>
           )}
 
-          {/* Agent view fallback: show protocol if no company */}
           {senderType === 'agent' && !counterpartIdentity?.company && (
             <span className="text-[10px] opacity-60 truncate">
               {session?.protocol_number
@@ -99,15 +106,17 @@ export default function ChatHeader({
                 : ticketSubject ?? `Ticket #${ticketId.slice(0, 8)}`}
             </span>
           )}
+
+          {/* Online/offline indicator text */}
+          {!isTyping && (
+            <span className={`text-[9px] ml-auto ${connected ? 'opacity-70' : 'opacity-40'}`}>
+              {connected ? '● online' : '○ offline'}
+            </span>
+          )}
         </div>
       </div>
 
       <div className="flex items-center gap-1.5">
-        {connected ? (
-          <Wifi className="h-4 w-4 opacity-70" />
-        ) : (
-          <WifiOff className="h-4 w-4 opacity-50" />
-        )}
         {session && (
           <Badge
             variant="secondary"
