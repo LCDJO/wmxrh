@@ -24,12 +24,16 @@ const ROLE_META: Record<string, { icon: typeof Shield; accent: string }> = {
   platform_finance: { icon: Wallet, accent: 'text-warning' },
   platform_fiscal: { icon: Shield, accent: 'text-accent-foreground' },
   platform_read_only: { icon: Eye, accent: 'text-muted-foreground' },
+  platform_delegated_support: { icon: Headphones, accent: 'text-info' },
+  platform_marketplace_admin: { icon: Zap, accent: 'text-[hsl(265_80%_55%)]' },
+  platform_compliance: { icon: Shield, accent: 'text-warning' },
 };
 
 const MODULE_LABELS: Record<string, string> = {
   tenants: 'Tenants', modulos: 'Módulos', auditoria: 'Auditoria',
   financeiro: 'Financeiro', fiscal: 'Fiscal', suporte: 'Suporte',
   usuarios: 'Usuários', seguranca: 'Segurança',
+  marketplace: 'Marketplace', compliance: 'Compliance',
 };
 
 interface Props {

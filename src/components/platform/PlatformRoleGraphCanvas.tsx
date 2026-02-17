@@ -22,6 +22,9 @@ const ROLE_STYLE: Record<string, { icon: typeof Shield; bg: string; text: string
   platform_finance: { icon: Wallet, bg: 'hsl(38 92% 50% / 0.12)', text: 'hsl(38 92% 50%)', border: 'hsl(38 92% 50% / 0.4)' },
   platform_fiscal: { icon: Shield, bg: 'hsl(var(--accent) / 0.3)', text: 'hsl(var(--accent-foreground))', border: 'hsl(var(--accent-foreground) / 0.3)' },
   platform_read_only: { icon: Eye, bg: 'hsl(var(--muted))', text: 'hsl(var(--muted-foreground))', border: 'hsl(var(--border))' },
+  platform_delegated_support: { icon: Headphones, bg: 'hsl(210 100% 52% / 0.12)', text: 'hsl(210 100% 52%)', border: 'hsl(210 100% 52% / 0.4)' },
+  platform_marketplace_admin: { icon: Zap, bg: 'hsl(265 80% 55% / 0.12)', text: 'hsl(265 80% 55%)', border: 'hsl(265 80% 55% / 0.4)' },
+  platform_compliance: { icon: Shield, bg: 'hsl(38 92% 50% / 0.12)', text: 'hsl(38 92% 50%)', border: 'hsl(38 92% 50% / 0.4)' },
 };
 
 const DEFAULT_STYLE = { icon: Shield, bg: 'hsl(var(--muted))', text: 'hsl(var(--muted-foreground))', border: 'hsl(var(--border))' };
