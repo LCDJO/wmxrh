@@ -1,12 +1,28 @@
 /**
  * SelfHealingEngine — Main orchestrator integrating all sub-systems.
  *
+ * ╔══════════════════════════════════════════════════════════════════╗
+ * ║  SECURITY INVARIANT — IMMUTABLE RULE                            ║
+ * ║                                                                  ║
+ * ║  SelfHealingEngine MUST NEVER:                                   ║
+ * ║   1. Alter user roles or custom_roles                            ║
+ * ║   2. Alter permissions or RLS policies                           ║
+ * ║   3. Alter tenant plans (saas_plans / experience_profiles)       ║
+ * ║                                                                  ║
+ * ║  It may ONLY operate on logical infrastructure:                  ║
+ * ║   - Module lifecycle (restart, deactivate, circuit-break)        ║
+ * ║   - Caches, sandboxes, routes, widgets                           ║
+ * ║   - Rate limiting and escalation                                 ║
+ * ║                                                                  ║
+ * ║  Any attempt to exceed this boundary MUST throw.                 ║
+ * ╚══════════════════════════════════════════════════════════════════╝
+ *
  * Integrations:
  *  - GlobalEventKernel (health/error events)
  *  - HealthMonitor (module health)
  *  - ErrorTracker (error spikes)
  *  - ModuleOrchestrator (restart/deactivate)
- *  - GovernanceAI (risk correlation)
+ *  - GovernanceAI (risk correlation — SUGGEST only)
  */
 
 import type { GlobalEventKernelAPI, ModuleOrchestratorAPI } from '@/domains/platform-os/types';

@@ -1,9 +1,23 @@
 /**
  * RecoveryOrchestrator — Coordinates recovery actions for incidents.
  *
+ * ╔══════════════════════════════════════════════════════════════════╗
+ * ║  SECURITY INVARIANT — IMMUTABLE RULE                            ║
+ * ║                                                                  ║
+ * ║  This orchestrator MUST NEVER:                                   ║
+ * ║   1. Alter user roles (user_roles, custom_roles)                 ║
+ * ║   2. Alter permissions or RLS policies                           ║
+ * ║   3. Alter tenant plans (saas_plans, experience_profiles)        ║
+ * ║                                                                  ║
+ * ║  Allowed actions are STRICTLY limited to:                        ║
+ * ║   module_restart, module_deactivate, circuit_break, cache_clear, ║
+ * ║   sandbox_reset, access_graph_rebuild, rate_limit_engage,        ║
+ * ║   route_isolate, widget_disable, escalate                        ║
+ * ╚══════════════════════════════════════════════════════════════════╝
+ *
  * Strategy per severity:
- *  - medium  → restart module, clear cache
- *  - high    → circuit break + restart + sandbox reset
+ *  - minor    → restart module, clear cache
+ *  - major    → circuit break + restart + sandbox reset
  *  - critical → deactivate + circuit break + escalate
  */
 
@@ -12,6 +26,7 @@ import { CircuitBreakerManager } from './circuit-breaker-manager';
 import { HealingAuditLogger } from './healing-audit-logger';
 import { ModuleAutoRecoveryService } from './module-auto-recovery-service';
 import type { GlobalEventKernelAPI, ModuleOrchestratorAPI } from '@/domains/platform-os/types';
+import { assertAllowedAction } from './security-boundary';
 
 let _actionCounter = 0;
 
@@ -74,6 +89,9 @@ export class RecoveryOrchestrator {
   }
 
   private async executeAction(type: RecoveryActionType, moduleId: string, _incident: Incident): Promise<RecoveryAction> {
+    // ── SECURITY BOUNDARY — throws if action is forbidden ──
+    assertAllowedAction(type, moduleId);
+
     const start = performance.now();
     const action: RecoveryAction = {
       id: `ra_${++_actionCounter}_${Date.now()}`,

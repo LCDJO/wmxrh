@@ -18,4 +18,5 @@ export { CircuitBreakerManager } from './circuit-breaker-manager';
 export { AccessSafetyGuard, type SafetyBlockRule } from './access-safety-guard';
 export { HealingAuditLogger, type TriggerSource } from './healing-audit-logger';
 export { GovernanceHealingBridge, type GovernanceHealingSuggestion } from './governance-healing-bridge';
+export { assertAllowedAction, isAllowedAction, SelfHealingSecurityViolation } from './security-boundary';
 export type * from './types';
