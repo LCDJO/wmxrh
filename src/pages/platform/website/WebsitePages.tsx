@@ -1,23 +1,22 @@
 /**
- * /platform/website/pages — Website institutional pages manager.
+ * /platform/website/pages — Website Drag & Drop Editor
  */
-import { FileText } from 'lucide-react';
+import { Paintbrush } from 'lucide-react';
+import { DragDropEditor } from '@/components/website-builder/DragDropEditor';
 
 export default function WebsitePages() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-          <FileText className="h-5 w-5 text-primary" />
+          <Paintbrush className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold font-display text-foreground">Páginas do Website</h1>
-          <p className="text-sm text-muted-foreground">Gerencie as páginas institucionais do website da plataforma.</p>
+          <h1 className="text-2xl font-bold font-display text-foreground">Editor Drag & Drop</h1>
+          <p className="text-sm text-muted-foreground">Monte o layout das páginas arrastando e reorganizando seções.</p>
         </div>
       </div>
-      <div className="rounded-lg border border-border/60 bg-card/60 p-8 text-center">
-        <p className="text-sm text-muted-foreground">Editor de páginas em desenvolvimento — em breve com drag-and-drop híbrido.</p>
-      </div>
+      <DragDropEditor />
     </div>
   );
 }
