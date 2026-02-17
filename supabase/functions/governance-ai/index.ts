@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, tenant_id, trend_data, compliance_data, audit_data, coupon_data } = await req.json();
+    const { action, tenant_id, trend_data, compliance_data, audit_data, coupon_data, landing_data } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -258,6 +258,77 @@ ENTRADAS FINANCEIRAS (coupon_discount): ${JSON.stringify(coupon_data?.financial_
         break;
       }
 
+      // ═══════════════════════════════════
+      // LANDING PAGE CONTENT ANALYSIS
+      // ═══════════════════════════════════
+      case "analyze_landing_content": {
+        const ld = landing_data ?? { blocks: [], name: '', slug: '' };
+        systemPrompt = `Você é um analista de Governance AI para landing pages de uma plataforma SaaS B2B de RH.
+Analise o conteúdo da landing page e detecte os seguintes problemas:
+
+1. LINGUAGEM INADEQUADA: Termos informais demais, erros gramaticais, linguagem ofensiva, promessas exageradas sem base ("garantimos 100%"), termos vagos sem dados.
+2. FAB MAL ESTRUTURADO: Blocos sem Feature, Advantage ou Benefit preenchidos corretamente. Feature deve descrever "o que é", Advantage "por que importa", Benefit "resultado mensurável para o cliente".
+3. CTA SEM TRACKING: Blocos CTA sem link configurado, sem UTM parameters, sem event tracking habilitado (gtm_container_id ausente).
+
+Seja rigoroso mas justo. Responda em Português (BR).`;
+
+        userPrompt = `Analise o conteúdo desta landing page:
+
+NOME: ${ld.name ?? 'Sem nome'}
+SLUG: ${ld.slug ?? 'Sem slug'}
+GTM CONTAINER: ${ld.gtm_container_id ?? 'NÃO CONFIGURADO'}
+
+BLOCOS (${(ld.blocks ?? []).length} total):
+${JSON.stringify((ld.blocks ?? []).map((b: any, i: number) => ({
+  index: i,
+  type: b.type,
+  fab_feature: b.fab?.feature || '[VAZIO]',
+  fab_advantage: b.fab?.advantage || '[VAZIO]',
+  fab_benefit: b.fab?.benefit || '[VAZIO]',
+  content: b.content ?? {},
+  has_cta_link: b.type === 'cta' ? !!(b.content?.ctaLink || b.content?.link) : 'N/A',
+})), null, 2)}
+
+Identifique todos os problemas encontrados.`;
+
+        tools = [{
+          type: "function",
+          function: {
+            name: "landing_content_analysis",
+            description: "Return landing page content analysis findings",
+            parameters: {
+              type: "object",
+              properties: {
+                overall_risk: { type: "string", enum: ["low", "medium", "high", "critical"] },
+                summary: { type: "string" },
+                findings: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      category: { type: "string", enum: ["linguagem_inadequada", "fab_mal_estruturado", "cta_sem_tracking"] },
+                      severity: { type: "string", enum: ["info", "warning", "critical"] },
+                      title: { type: "string" },
+                      description: { type: "string" },
+                      block_index: { type: "number" },
+                      suggested_fix: { type: "string" },
+                    },
+                    required: ["category", "severity", "title", "description", "suggested_fix"],
+                    additionalProperties: false,
+                  },
+                },
+                approval_recommendation: { type: "string", enum: ["approve", "review_needed", "reject"] },
+                approval_reasoning: { type: "string" },
+              },
+              required: ["overall_risk", "summary", "findings", "approval_recommendation", "approval_reasoning"],
+              additionalProperties: false,
+            },
+          },
+        }];
+        tool_choice = { type: "function", function: { name: "landing_content_analysis" } };
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: `Unknown action: ${action}` }),
@@ -332,6 +403,8 @@ ENTRADAS FINANCEIRAS (coupon_discount): ${JSON.stringify(coupon_data?.financial_
     } else if (action === "analyze_audit") {
       responseData.analysis = result;
     } else if (action === "analyze_coupon_abuse") {
+      responseData.analysis = result;
+    } else if (action === "analyze_landing_content") {
       responseData.analysis = result;
     }
 
