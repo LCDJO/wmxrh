@@ -1,7 +1,5 @@
 /**
  * RollbackOrchestrator — Plans and executes rollbacks by module or full release.
- *
- * Financial modules are NEVER rolled back (immutable ledger rule).
  */
 import type { RollbackPlan, RollbackStep, Release, RollbackScope, SemanticVersion } from './types';
 import { ROLLBACK_PROTECTED_MODULES } from './types';
@@ -17,21 +15,15 @@ export class RollbackOrchestrator {
     private dependencyResolver: DependencyResolver,
   ) {}
 
-  // ── Per-module rollback ──────────────────────────────────────────
-
-  /**
-   * Rollback a single module to a previous version.
-   * Returns null if the module is financially protected.
-   */
-  planModuleRollback(
+  async planModuleRollback(
     moduleKey: string,
     targetVersionId: string,
     createdBy: string,
-  ): RollbackPlan | null {
+  ): Promise<RollbackPlan | null> {
     if (this.isProtected(moduleKey)) return null;
 
-    const current = this.moduleRegistry.getCurrent(moduleKey);
-    const target = this.moduleRegistry.getById(moduleKey, targetVersionId);
+    const current = await this.moduleRegistry.getCurrent(moduleKey);
+    const target = await this.moduleRegistry.getById(moduleKey, targetVersionId);
     if (!current || !target) return null;
 
     const steps: RollbackStep[] = [];
@@ -45,8 +37,7 @@ export class RollbackOrchestrator {
       status: 'pending',
     });
 
-    // Check if dependents would break
-    const broken = this.dependencyResolver.wouldBreak(moduleKey, target.version);
+    const broken = await this.dependencyResolver.wouldBreak(moduleKey, target.version);
     for (const dep of broken) {
       if (this.isProtected(dep)) {
         steps.push({
@@ -61,7 +52,7 @@ export class RollbackOrchestrator {
 
     steps.push({ order: steps.length + 1, action: 'notify', target: 'all_stakeholders', status: 'pending' });
 
-    const snapshot = this.dependencyResolver.snapshot();
+    const snapshot = await this.dependencyResolver.snapshot();
     const depSafe = snapshot.conflicts.filter(c => c.severity === 'error').length === 0;
 
     return {
@@ -79,15 +70,9 @@ export class RollbackOrchestrator {
     };
   }
 
-  // ── Full release rollback ────────────────────────────────────────
-
-  /**
-   * Plan a rollback from one release to another.
-   * Financial modules are automatically skipped with audit trail.
-   */
-  plan(currentReleaseId: string, targetReleaseId: string, createdBy: string): RollbackPlan | null {
-    const current = this.releaseManager.getById(currentReleaseId);
-    const target = this.releaseManager.getById(targetReleaseId);
+  async plan(currentReleaseId: string, targetReleaseId: string, createdBy: string): Promise<RollbackPlan | null> {
+    const current = await this.releaseManager.getById(currentReleaseId);
+    const target = await this.releaseManager.getById(targetReleaseId);
     if (!current || !target) return null;
 
     const steps: RollbackStep[] = [];
@@ -98,13 +83,14 @@ export class RollbackOrchestrator {
     const currentModules = new Set(current.module_versions);
     const targetModules = new Set(target.module_versions);
 
+    const allKeys = await this.moduleRegistry.listModuleKeys();
+
     for (const mvId of currentModules) {
       if (!targetModules.has(mvId)) {
-        for (const key of this.moduleRegistry.listModuleKeys()) {
-          const mv = this.moduleRegistry.getById(key, mvId);
+        for (const key of allKeys) {
+          const mv = await this.moduleRegistry.getById(key, mvId);
           if (!mv) continue;
 
-          // ── Financial protection gate ──
           if (this.isProtected(key)) {
             modulesSkipped.push(key);
             steps.push({
@@ -119,7 +105,7 @@ export class RollbackOrchestrator {
           }
 
           modulesAffected.push(key);
-          const targetMv = this.findModuleInRelease(target, key);
+          const targetMv = await this.findModuleInRelease(target, key);
 
           if (targetMv) {
             steps.push({
@@ -156,7 +142,7 @@ export class RollbackOrchestrator {
 
     steps.push({ order: steps.length + 1, action: 'notify', target: 'all_stakeholders', status: 'pending' });
 
-    const snapshot = this.dependencyResolver.snapshot();
+    const snapshot = await this.dependencyResolver.snapshot();
     const depSafe = snapshot.conflicts.filter(c => c.severity === 'error').length === 0;
 
     return {
@@ -174,8 +160,6 @@ export class RollbackOrchestrator {
     };
   }
 
-  // ── Execution ────────────────────────────────────────────────────
-
   executeStep(plan: RollbackPlan, stepOrder: number): RollbackStep | null {
     const step = plan.steps.find(s => s.order === stepOrder);
     if (!step || step.status === 'skipped' || step.status === 'done') return null;
@@ -185,27 +169,24 @@ export class RollbackOrchestrator {
     return step;
   }
 
-  executeFull(plan: RollbackPlan): RollbackPlan {
+  async executeFull(plan: RollbackPlan): Promise<RollbackPlan> {
     for (const step of plan.steps.sort((a, b) => a.order - b.order)) {
       if (step.status === 'skipped') continue;
       this.executeStep(plan, step.order);
     }
     if (plan.scope === 'release' && plan.release_id) {
-      this.releaseManager.transition(plan.release_id, 'rolled_back');
+      await this.releaseManager.transition(plan.release_id, 'rolled_back');
     }
     return plan;
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────
-
-  /** Check if a module is financially protected */
   isProtected(moduleKey: string): boolean {
     return ROLLBACK_PROTECTED_MODULES.includes(moduleKey);
   }
 
-  private findModuleInRelease(release: Release, moduleKey: string) {
+  private async findModuleInRelease(release: Release, moduleKey: string) {
     for (const mvId of release.module_versions) {
-      const mv = this.moduleRegistry.getById(moduleKey, mvId);
+      const mv = await this.moduleRegistry.getById(moduleKey, mvId);
       if (mv) return mv;
     }
     return null;

@@ -1,9 +1,5 @@
 /**
  * DependencyResolver — Validates inter-module dependencies before publish.
- *
- * Pre-publish gate:
- *   1. Version compatibility (actual >= required)
- *   2. Mandatory dependencies present & satisfied
  */
 import type { ModuleVersion, ModuleDependency, DependencySnapshot, DependencyConflict, SemanticVersion } from './types';
 import { compareVersions, formatVersion } from './version-utils';
@@ -31,15 +27,8 @@ export interface PrePublishWarning {
 export class DependencyResolver {
   constructor(private moduleRegistry: ModuleVersionRegistry) {}
 
-  // ── Pre-publish validation gate ──────────────────────────────────
-
-  /**
-   * Validate a module before publishing.
-   * Checks version compatibility + mandatory dependencies.
-   * Returns { ok: false } if any blocking error exists.
-   */
-  validateBeforePublish(moduleKey: string, targetVersion?: SemanticVersion): PrePublishResult {
-    const current = this.moduleRegistry.getCurrent(moduleKey);
+  async validateBeforePublish(moduleKey: string, targetVersion?: SemanticVersion): Promise<PrePublishResult> {
+    const current = await this.moduleRegistry.getCurrent(moduleKey);
     if (!current) {
       return { ok: false, errors: [{ module_key: moduleKey, dependency: '-', required_version: '-', actual_version: null, message: `Module "${moduleKey}" not found in registry` }], warnings: [] };
     }
@@ -47,10 +36,9 @@ export class DependencyResolver {
     const errors: PrePublishError[] = [];
     const warnings: PrePublishWarning[] = [];
 
-    // 1. Check this module's own dependencies are satisfied
     for (const dep of current.dependencies) {
-      const actual = this.moduleRegistry.getCurrent(dep.required_module_id);
-      const isMandatory = dep.is_mandatory !== false; // default true
+      const actual = await this.moduleRegistry.getCurrent(dep.required_module_id);
+      const isMandatory = dep.is_mandatory !== false;
 
       if (!actual) {
         const msg = `Dependência obrigatória não encontrada: "${dep.required_module_id}"${dep.compatibility_note ? ` — ${dep.compatibility_note}` : ''}`;
@@ -72,9 +60,8 @@ export class DependencyResolver {
       }
     }
 
-    // 2. If a target version is provided, check dependents won't break
     if (targetVersion) {
-      const broken = this.wouldBreak(moduleKey, targetVersion);
+      const broken = await this.wouldBreak(moduleKey, targetVersion);
       for (const b of broken) {
         warnings.push({ module_key: b, message: `Dependente "${b}" pode quebrar se "${moduleKey}" for publicado como v${formatVersion(targetVersion)}` });
       }
@@ -83,16 +70,13 @@ export class DependencyResolver {
     return { ok: errors.length === 0, errors, warnings };
   }
 
-  /**
-   * Validate ALL modules at once (useful before a release).
-   */
-  validateAll(): PrePublishResult {
-    const allCurrent = this.moduleRegistry.listAllCurrent();
+  async validateAll(): Promise<PrePublishResult> {
+    const allCurrent = await this.moduleRegistry.listAllCurrent();
     const errors: PrePublishError[] = [];
     const warnings: PrePublishWarning[] = [];
 
     for (const mod of allCurrent) {
-      const result = this.validateBeforePublish(mod.module_id);
+      const result = await this.validateBeforePublish(mod.module_id);
       errors.push(...result.errors);
       warnings.push(...result.warnings);
     }
@@ -100,10 +84,9 @@ export class DependencyResolver {
     return { ok: errors.length === 0, errors, warnings };
   }
 
-  // ── Snapshot & conflict detection ────────────────────────────────
-
-  snapshot(): DependencySnapshot {
-    const modules = this.moduleRegistry.listAllCurrent().map(mv => ({
+  async snapshot(): Promise<DependencySnapshot> {
+    const allCurrent = await this.moduleRegistry.listAllCurrent();
+    const modules = allCurrent.map(mv => ({
       module_key: mv.module_id,
       version: mv.version,
       dependencies: mv.dependencies,
@@ -133,24 +116,23 @@ export class DependencyResolver {
     return conflicts;
   }
 
-  // ── Graph utilities ──────────────────────────────────────────────
-
-  activationOrder(moduleKey: string, visited = new Set<string>()): string[] {
+  async activationOrder(moduleKey: string, visited = new Set<string>()): Promise<string[]> {
     if (visited.has(moduleKey)) return [];
     visited.add(moduleKey);
-    const current = this.moduleRegistry.getCurrent(moduleKey);
+    const current = await this.moduleRegistry.getCurrent(moduleKey);
     if (!current) return [moduleKey];
     const order: string[] = [];
     for (const dep of current.dependencies) {
-      order.push(...this.activationOrder(dep.required_module_id, visited));
+      order.push(...await this.activationOrder(dep.required_module_id, visited));
     }
     order.push(moduleKey);
     return order;
   }
 
-  wouldBreak(moduleKey: string, toVersion: SemanticVersion): string[] {
+  async wouldBreak(moduleKey: string, toVersion: SemanticVersion): Promise<string[]> {
     const broken: string[] = [];
-    for (const mod of this.moduleRegistry.listAllCurrent()) {
+    const allCurrent = await this.moduleRegistry.listAllCurrent();
+    for (const mod of allCurrent) {
       for (const dep of mod.dependencies) {
         if (dep.required_module_id === moduleKey && compareVersions(toVersion, dep.required_version) < 0) {
           broken.push(mod.module_id);
@@ -160,10 +142,11 @@ export class DependencyResolver {
     return broken;
   }
 
-  graph(): Record<string, string[]> {
+  async graph(): Promise<Record<string, string[]>> {
+    const keys = await this.moduleRegistry.listModuleKeys();
     const g: Record<string, string[]> = {};
-    for (const key of this.moduleRegistry.listModuleKeys()) {
-      const cur = this.moduleRegistry.getCurrent(key);
+    for (const key of keys) {
+      const cur = await this.moduleRegistry.getCurrent(key);
       g[key] = cur?.dependencies.map(d => d.required_module_id) ?? [];
     }
     return g;

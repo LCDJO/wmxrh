@@ -1,18 +1,43 @@
 /**
- * ChangeLogger — Immutable audit log for all platform/module changes.
- *
- * Supports both the new PlatformChangeLog (primary) and legacy ChangeLogEntry.
+ * ChangeLogger — DB-backed immutable audit log for platform/module changes.
  */
+import { supabase } from '@/integrations/supabase/client';
 import type { PlatformChangeLog, ChangeType, ChangeLogEntry, ChangeCategory } from './types';
-import { versionId } from './version-utils';
+
+function rowToChangeLog(row: Record<string, any>): PlatformChangeLog {
+  return {
+    id: row.id,
+    module_id: row.module_id ?? undefined,
+    entity_type: row.entity_type,
+    entity_id: row.entity_id,
+    change_type: row.change_type as ChangeType,
+    version_tag: row.version_tag,
+    payload_diff: row.payload_diff ?? {},
+    changed_by: row.changed_by,
+    changed_at: row.changed_at,
+  };
+}
+
+function rowToLegacy(row: Record<string, any>): ChangeLogEntry {
+  return {
+    id: row.id,
+    category: (row.category ?? 'feature') as ChangeCategory,
+    scope: (row.scope ?? 'platform') as 'platform' | 'module',
+    scope_key: row.scope_key ?? undefined,
+    title: row.title ?? '',
+    description: row.description ?? '',
+    author: row.author ?? row.changed_by ?? '',
+    linked_version_id: row.linked_version_id ?? undefined,
+    linked_release_id: row.linked_release_id ?? undefined,
+    tags: row.tags ?? [],
+    created_at: row.changed_at,
+  };
+}
 
 export class ChangeLogger {
-  private logs: PlatformChangeLog[] = [];
-  private legacyEntries: ChangeLogEntry[] = [];
-
   // ── Primary API (PlatformChangeLog) ──
 
-  log(opts: {
+  async log(opts: {
     module_id?: string;
     entity_type: string;
     entity_id: string;
@@ -20,59 +45,81 @@ export class ChangeLogger {
     version_tag: string;
     payload_diff: Record<string, unknown>;
     changed_by: string;
-  }): PlatformChangeLog {
-    const entry: PlatformChangeLog = {
-      id: versionId(),
-      module_id: opts.module_id,
-      entity_type: opts.entity_type,
-      entity_id: opts.entity_id,
-      change_type: opts.change_type,
-      version_tag: opts.version_tag,
-      payload_diff: opts.payload_diff,
-      changed_by: opts.changed_by,
-      changed_at: new Date().toISOString(),
-    };
-    this.logs.push(entry);
-    return entry;
+  }): Promise<PlatformChangeLog> {
+    const { data, error } = await (supabase.from('platform_changelogs') as any)
+      .insert({
+        module_id: opts.module_id ?? null,
+        entity_type: opts.entity_type,
+        entity_id: opts.entity_id,
+        change_type: opts.change_type,
+        version_tag: opts.version_tag,
+        payload_diff: opts.payload_diff,
+        changed_by: opts.changed_by,
+      })
+      .select()
+      .single();
+    if (error) throw new Error(`ChangeLogger.log: ${error.message}`);
+    return rowToChangeLog(data);
   }
 
-  getAll(): PlatformChangeLog[] {
-    return [...this.logs];
+  async getAll(): Promise<PlatformChangeLog[]> {
+    const { data } = await (supabase.from('platform_changelogs') as any)
+      .select('*')
+      .order('changed_at', { ascending: false });
+    return (data ?? []).map(rowToChangeLog);
   }
 
-  getByModule(moduleId: string): PlatformChangeLog[] {
-    return this.logs.filter(e => e.module_id === moduleId);
+  async getByModule(moduleId: string): Promise<PlatformChangeLog[]> {
+    const { data } = await (supabase.from('platform_changelogs') as any)
+      .select('*')
+      .eq('module_id', moduleId)
+      .order('changed_at', { ascending: false });
+    return (data ?? []).map(rowToChangeLog);
   }
 
-  getByEntity(entityType: string, entityId?: string): PlatformChangeLog[] {
-    return this.logs.filter(e => e.entity_type === entityType && (!entityId || e.entity_id === entityId));
+  async getByEntity(entityType: string, entityId?: string): Promise<PlatformChangeLog[]> {
+    let q = (supabase.from('platform_changelogs') as any).select('*').eq('entity_type', entityType);
+    if (entityId) q = q.eq('entity_id', entityId);
+    const { data } = await q.order('changed_at', { ascending: false });
+    return (data ?? []).map(rowToChangeLog);
   }
 
-  getByChangeType(changeType: ChangeType): PlatformChangeLog[] {
-    return this.logs.filter(e => e.change_type === changeType);
+  async getByChangeType(changeType: ChangeType): Promise<PlatformChangeLog[]> {
+    const { data } = await (supabase.from('platform_changelogs') as any)
+      .select('*')
+      .eq('change_type', changeType)
+      .order('changed_at', { ascending: false });
+    return (data ?? []).map(rowToChangeLog);
   }
 
-  getByVersionTag(versionTag: string): PlatformChangeLog[] {
-    return this.logs.filter(e => e.version_tag === versionTag);
+  async getByVersionTag(versionTag: string): Promise<PlatformChangeLog[]> {
+    const { data } = await (supabase.from('platform_changelogs') as any)
+      .select('*')
+      .eq('version_tag', versionTag)
+      .order('changed_at', { ascending: false });
+    return (data ?? []).map(rowToChangeLog);
   }
 
-  getPlatformLevel(): PlatformChangeLog[] {
-    return this.logs.filter(e => !e.module_id);
+  async getPlatformLevel(): Promise<PlatformChangeLog[]> {
+    const { data } = await (supabase.from('platform_changelogs') as any)
+      .select('*')
+      .is('module_id', null)
+      .order('changed_at', { ascending: false });
+    return (data ?? []).map(rowToChangeLog);
   }
 
-  search(query: string): PlatformChangeLog[] {
-    const q = query.toLowerCase();
-    return this.logs.filter(
-      e => e.entity_type.toLowerCase().includes(q) ||
-           e.entity_id.toLowerCase().includes(q) ||
-           e.change_type.toLowerCase().includes(q) ||
-           (e.module_id?.toLowerCase().includes(q) ?? false),
-    );
+  async search(query: string): Promise<PlatformChangeLog[]> {
+    // Simple text search via ilike on entity_type + entity_id
+    const { data } = await (supabase.from('platform_changelogs') as any)
+      .select('*')
+      .or(`entity_type.ilike.%${query}%,entity_id.ilike.%${query}%,module_id.ilike.%${query}%`)
+      .order('changed_at', { ascending: false });
+    return (data ?? []).map(rowToChangeLog);
   }
 
-  // ── Legacy API (ChangeLogEntry) — kept for ChangelogRenderer compatibility ──
+  // ── Legacy API (ChangeLogEntry) ──
 
-  logLegacy(opts: {
+  async logLegacy(opts: {
     category: ChangeCategory;
     scope: 'platform' | 'module';
     scope_key?: string;
@@ -82,41 +129,67 @@ export class ChangeLogger {
     linked_version_id?: string;
     linked_release_id?: string;
     tags?: string[];
-  }): ChangeLogEntry {
-    const entry: ChangeLogEntry = {
-      id: versionId(),
-      category: opts.category,
-      scope: opts.scope,
-      scope_key: opts.scope_key,
-      title: opts.title,
-      description: opts.description,
-      author: opts.author,
-      linked_version_id: opts.linked_version_id,
-      linked_release_id: opts.linked_release_id,
-      tags: opts.tags ?? [],
-      created_at: new Date().toISOString(),
-    };
-    this.legacyEntries.push(entry);
-    return entry;
+  }): Promise<ChangeLogEntry> {
+    const { data, error } = await (supabase.from('platform_changelogs') as any)
+      .insert({
+        entity_type: opts.scope === 'module' ? (opts.scope_key ?? 'module') : 'platform',
+        entity_id: opts.scope_key ?? 'platform',
+        change_type: 'created',
+        version_tag: '',
+        payload_diff: {},
+        changed_by: opts.author,
+        category: opts.category,
+        scope: opts.scope,
+        scope_key: opts.scope_key ?? null,
+        title: opts.title,
+        description: opts.description,
+        author: opts.author,
+        linked_version_id: opts.linked_version_id ?? null,
+        linked_release_id: opts.linked_release_id ?? null,
+        tags: opts.tags ?? [],
+      })
+      .select()
+      .single();
+    if (error) throw new Error(`ChangeLogger.logLegacy: ${error.message}`);
+    return rowToLegacy(data);
   }
 
-  getLegacyAll(): ChangeLogEntry[] {
-    return [...this.legacyEntries];
+  async getLegacyAll(): Promise<ChangeLogEntry[]> {
+    const { data } = await (supabase.from('platform_changelogs') as any)
+      .select('*')
+      .not('category', 'is', null)
+      .order('changed_at', { ascending: false });
+    return (data ?? []).map(rowToLegacy);
   }
 
-  getByVersion(versionId: string): ChangeLogEntry[] {
-    return this.legacyEntries.filter(e => e.linked_version_id === versionId);
+  async getByVersion(versionId: string): Promise<ChangeLogEntry[]> {
+    const { data } = await (supabase.from('platform_changelogs') as any)
+      .select('*')
+      .eq('linked_version_id', versionId)
+      .order('changed_at', { ascending: false });
+    return (data ?? []).map(rowToLegacy);
   }
 
-  getByRelease(releaseId: string): ChangeLogEntry[] {
-    return this.legacyEntries.filter(e => e.linked_release_id === releaseId);
+  async getByRelease(releaseId: string): Promise<ChangeLogEntry[]> {
+    const { data } = await (supabase.from('platform_changelogs') as any)
+      .select('*')
+      .eq('linked_release_id', releaseId)
+      .order('changed_at', { ascending: false });
+    return (data ?? []).map(rowToLegacy);
   }
 
-  getByCategory(category: ChangeCategory): ChangeLogEntry[] {
-    return this.legacyEntries.filter(e => e.category === category);
+  async getByCategory(category: ChangeCategory): Promise<ChangeLogEntry[]> {
+    const { data } = await (supabase.from('platform_changelogs') as any)
+      .select('*')
+      .eq('category', category)
+      .order('changed_at', { ascending: false });
+    return (data ?? []).map(rowToLegacy);
   }
 
-  getByScope(scope: 'platform' | 'module', scopeKey?: string): ChangeLogEntry[] {
-    return this.legacyEntries.filter(e => e.scope === scope && (!scopeKey || e.scope_key === scopeKey));
+  async getByScope(scope: 'platform' | 'module', scopeKey?: string): Promise<ChangeLogEntry[]> {
+    let q = (supabase.from('platform_changelogs') as any).select('*').eq('scope', scope);
+    if (scopeKey) q = q.eq('scope_key', scopeKey);
+    const { data } = await q.order('changed_at', { ascending: false });
+    return (data ?? []).map(rowToLegacy);
   }
 }

@@ -2667,6 +2667,42 @@ export type Database = {
           },
         ]
       }
+      feature_changes: {
+        Row: {
+          author: string
+          change_type: string
+          created_at: string
+          feature_key: string
+          id: string
+          module_key: string | null
+          new_state: Json
+          previous_state: Json | null
+          version_id: string | null
+        }
+        Insert: {
+          author: string
+          change_type: string
+          created_at?: string
+          feature_key: string
+          id?: string
+          module_key?: string | null
+          new_state?: Json
+          previous_state?: Json | null
+          version_id?: string | null
+        }
+        Update: {
+          author?: string
+          change_type?: string
+          created_at?: string
+          feature_key?: string
+          id?: string
+          module_key?: string | null
+          new_state?: Json
+          previous_state?: Json | null
+          version_id?: string | null
+        }
+        Relationships: []
+      }
       feature_flags: {
         Row: {
           company_group_id: string | null
@@ -3987,6 +4023,57 @@ export type Database = {
           },
         ]
       }
+      module_versions: {
+        Row: {
+          breaking_changes: boolean
+          changelog_summary: string
+          created_at: string
+          created_by: string
+          dependencies: Json
+          id: string
+          module_id: string
+          released_at: string | null
+          status: string
+          version_major: number
+          version_minor: number
+          version_patch: number
+          version_prerelease: string | null
+          version_tag: string
+        }
+        Insert: {
+          breaking_changes?: boolean
+          changelog_summary?: string
+          created_at?: string
+          created_by: string
+          dependencies?: Json
+          id?: string
+          module_id: string
+          released_at?: string | null
+          status?: string
+          version_major?: number
+          version_minor?: number
+          version_patch?: number
+          version_prerelease?: string | null
+          version_tag: string
+        }
+        Update: {
+          breaking_changes?: boolean
+          changelog_summary?: string
+          created_at?: string
+          created_by?: string
+          dependencies?: Json
+          id?: string
+          module_id?: string
+          released_at?: string | null
+          status?: string
+          version_major?: number
+          version_minor?: number
+          version_patch?: number
+          version_prerelease?: string | null
+          version_tag?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           action_command: string | null
@@ -4848,6 +4935,69 @@ export type Database = {
           },
         ]
       }
+      platform_changelogs: {
+        Row: {
+          author: string | null
+          category: string | null
+          change_type: string
+          changed_at: string
+          changed_by: string
+          description: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          linked_release_id: string | null
+          linked_version_id: string | null
+          module_id: string | null
+          payload_diff: Json
+          scope: string | null
+          scope_key: string | null
+          tags: string[] | null
+          title: string | null
+          version_tag: string
+        }
+        Insert: {
+          author?: string | null
+          category?: string | null
+          change_type: string
+          changed_at?: string
+          changed_by: string
+          description?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          linked_release_id?: string | null
+          linked_version_id?: string | null
+          module_id?: string | null
+          payload_diff?: Json
+          scope?: string | null
+          scope_key?: string | null
+          tags?: string[] | null
+          title?: string | null
+          version_tag: string
+        }
+        Update: {
+          author?: string | null
+          category?: string | null
+          change_type?: string
+          changed_at?: string
+          changed_by?: string
+          description?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          linked_release_id?: string | null
+          linked_version_id?: string | null
+          module_id?: string | null
+          payload_diff?: Json
+          scope?: string | null
+          scope_key?: string | null
+          tags?: string[] | null
+          title?: string | null
+          version_tag?: string
+        }
+        Relationships: []
+      }
       platform_cognitive_events: {
         Row: {
           created_at: string
@@ -5087,6 +5237,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_versions: {
+        Row: {
+          changelog_entries: string[]
+          created_at: string
+          description: string
+          id: string
+          modules_included: string[]
+          release_id: string | null
+          release_type: string
+          released_at: string | null
+          released_by: string
+          rollback_from: string | null
+          status: string
+          title: string
+          version_build: string | null
+          version_major: number
+          version_minor: number
+          version_patch: number
+          version_prerelease: string | null
+          version_tag: string
+        }
+        Insert: {
+          changelog_entries?: string[]
+          created_at?: string
+          description?: string
+          id?: string
+          modules_included?: string[]
+          release_id?: string | null
+          release_type?: string
+          released_at?: string | null
+          released_by: string
+          rollback_from?: string | null
+          status?: string
+          title: string
+          version_build?: string | null
+          version_major?: number
+          version_minor?: number
+          version_patch?: number
+          version_prerelease?: string | null
+          version_tag: string
+        }
+        Update: {
+          changelog_entries?: string[]
+          created_at?: string
+          description?: string
+          id?: string
+          modules_included?: string[]
+          release_id?: string | null
+          release_type?: string
+          released_at?: string | null
+          released_by?: string
+          rollback_from?: string | null
+          status?: string
+          title?: string
+          version_build?: string | null
+          version_major?: number
+          version_minor?: number
+          version_patch?: number
+          version_prerelease?: string | null
+          version_tag?: string
+        }
+        Relationships: []
       }
       positions: {
         Row: {
@@ -5547,6 +5760,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rollback_plans: {
+        Row: {
+          breaking_rollback: boolean
+          created_at: string
+          created_by: string
+          dependency_safe: boolean
+          id: string
+          modules_affected: string[]
+          modules_skipped: string[]
+          release_id: string | null
+          scope: string
+          steps: Json
+          target_release_id: string | null
+        }
+        Insert: {
+          breaking_rollback?: boolean
+          created_at?: string
+          created_by: string
+          dependency_safe?: boolean
+          id?: string
+          modules_affected?: string[]
+          modules_skipped?: string[]
+          release_id?: string | null
+          scope?: string
+          steps?: Json
+          target_release_id?: string | null
+        }
+        Update: {
+          breaking_rollback?: boolean
+          created_at?: string
+          created_by?: string
+          dependency_safe?: boolean
+          id?: string
+          modules_affected?: string[]
+          modules_skipped?: string[]
+          release_id?: string | null
+          scope?: string
+          steps?: Json
+          target_release_id?: string | null
+        }
+        Relationships: []
       }
       saas_plans: {
         Row: {
@@ -7301,6 +7556,71 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      versioning_releases: {
+        Row: {
+          changelog_entries: string[]
+          created_at: string
+          created_by: string
+          dependency_snapshot: Json
+          finalized_at: string | null
+          finalized_by: string | null
+          id: string
+          module_versions: string[]
+          name: string
+          platform_version_id: string | null
+          pre_checks: Json
+          promoted_to_candidate_at: string | null
+          promoted_to_candidate_by: string | null
+          rollback_reason: string | null
+          rolled_back_at: string | null
+          status: string
+        }
+        Insert: {
+          changelog_entries?: string[]
+          created_at?: string
+          created_by: string
+          dependency_snapshot?: Json
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          module_versions?: string[]
+          name: string
+          platform_version_id?: string | null
+          pre_checks?: Json
+          promoted_to_candidate_at?: string | null
+          promoted_to_candidate_by?: string | null
+          rollback_reason?: string | null
+          rolled_back_at?: string | null
+          status?: string
+        }
+        Update: {
+          changelog_entries?: string[]
+          created_at?: string
+          created_by?: string
+          dependency_snapshot?: Json
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          module_versions?: string[]
+          name?: string
+          platform_version_id?: string | null
+          pre_checks?: Json
+          promoted_to_candidate_at?: string | null
+          promoted_to_candidate_by?: string | null
+          rollback_reason?: string | null
+          rolled_back_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "versioning_releases_platform_version_id_fkey"
+            columns: ["platform_version_id"]
+            isOneToOne: false
+            referencedRelation: "platform_versions"
             referencedColumns: ["id"]
           },
         ]
