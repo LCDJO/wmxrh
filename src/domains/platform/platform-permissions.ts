@@ -44,6 +44,15 @@ export const PLATFORM_PERMISSIONS = [
   'landing_page.create',
   'landing_page.publish',
   'landing_page.delete',
+  // ── Growth AI / Marketing ──
+  'growth.view',
+  'growth.create',
+  'growth.edit',
+  'growth.submit',
+  'growth.approve',
+  'growth.publish',
+  'growth.delete',
+  'growth.version_view',
   // ── Future: Marketplace ──
   'marketplace.view',
   'marketplace.publish',
@@ -158,6 +167,33 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
 
   platform_marketing: [
     'tenant.view',
+    'landing_page.view',
+    'landing_page.create',
+    'landing_page.publish',
+    'landing_page.delete',
+    'audit.view',
+  ],
+
+  platform_marketing_team: [
+    'growth.view',
+    'growth.create',
+    'growth.edit',
+    'growth.submit',
+    'growth.version_view',
+    'landing_page.view',
+    'landing_page.create',
+    'audit.view',
+  ],
+
+  platform_marketing_director: [
+    'growth.view',
+    'growth.create',
+    'growth.edit',
+    'growth.submit',
+    'growth.approve',
+    'growth.publish',
+    'growth.delete',
+    'growth.version_view',
     'landing_page.view',
     'landing_page.create',
     'landing_page.publish',
