@@ -45,14 +45,12 @@ export default function TenantOnboarding() {
     }
 
     const check = async () => {
-      const { count } = await supabase
-        .from('companies')
-        .select('id', { count: 'exact', head: true })
-        .eq('tenant_id', currentTenant.id)
-        .is('deleted_at', null);
+      // Use SECURITY DEFINER function — bypasses RLS for reliable check
+      const { data: needsOnboarding, error } = await supabase
+        .rpc('check_tenant_needs_onboarding', { p_tenant_id: currentTenant.id });
 
-      if (count && count > 0) {
-        // Tenant already has companies — no need for onboarding
+      if (error || needsOnboarding === false) {
+        // Tenant already has companies or onboarding completed — redirect
         navigate('/dashboard', { replace: true });
         return;
       }

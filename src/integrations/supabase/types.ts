@@ -5543,6 +5543,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_tenant_needs_onboarding: {
+        Args: { p_tenant_id: string }
+        Returns: boolean
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       generate_billing_alerts: { Args: never; Returns: undefined }
       get_cognitive_event_stats: { Args: { days_back?: number }; Returns: Json }

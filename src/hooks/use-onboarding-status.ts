@@ -8,18 +8,15 @@
  * Consumers: AppSidebar, Dashboard widgets, Navigation guards
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { isOnboardingCompleteFromCache, loadProgressFromCache } from '@/domains/adaptive-onboarding/onboarding-progress-cache';
 import { useTenant } from '@/contexts/TenantContext';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface OnboardingStatus {
-  /** Whether onboarding is still in progress */
   isOnboarding: boolean;
-  /** Completion percentage (0–100) */
   completionPct: number;
-  /** Current step ID, if available */
   currentStepId: string | null;
-  /** Tenant ID this status belongs to */
   tenantId: string | null;
 }
 
@@ -33,20 +30,33 @@ const COMPLETED_STATUS: OnboardingStatus = {
 export function useOnboardingStatus(): OnboardingStatus {
   const { currentTenant } = useTenant();
   const tenantId = currentTenant?.id ?? null;
+  const [dbNeedsOnboarding, setDbNeedsOnboarding] = useState<boolean | null>(null);
+
+  // Check DB reliably via SECURITY DEFINER function (bypasses RLS)
+  useEffect(() => {
+    if (!tenantId) { setDbNeedsOnboarding(false); return; }
+
+    supabase.rpc('check_tenant_needs_onboarding', { p_tenant_id: tenantId })
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('[OnboardingStatus] RPC error, assuming completed:', error.message);
+          setDbNeedsOnboarding(false);
+        } else {
+          setDbNeedsOnboarding(data === true);
+        }
+      });
+  }, [tenantId]);
 
   return useMemo(() => {
     if (!tenantId) return COMPLETED_STATUS;
 
-    // Try cache first (O(1))
-    const cacheComplete = isOnboardingCompleteFromCache(tenantId);
-
-    // Cache hit: completed
-    if (cacheComplete === true) {
+    // DB says no onboarding needed → done
+    if (dbNeedsOnboarding === false) {
       return { isOnboarding: false, completionPct: 100, currentStepId: null, tenantId };
     }
 
-    // Cache hit: in progress
-    if (cacheComplete === false) {
+    // DB says onboarding needed → check cache for progress details
+    if (dbNeedsOnboarding === true) {
       const snapshot = loadProgressFromCache(tenantId);
       if (snapshot) {
         return {
@@ -56,9 +66,11 @@ export function useOnboardingStatus(): OnboardingStatus {
           tenantId,
         };
       }
+      // No cache but DB says needs onboarding
+      return { isOnboarding: true, completionPct: 0, currentStepId: null, tenantId };
     }
 
-    // Cache miss: no onboarding data → assume completed (already onboarded tenant)
-    return { isOnboarding: false, completionPct: 100, currentStepId: null, tenantId };
-  }, [tenantId]);
+    // Still loading from DB → assume completed to avoid flash
+    return COMPLETED_STATUS;
+  }, [tenantId, dbNeedsOnboarding]);
 }
