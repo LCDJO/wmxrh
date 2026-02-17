@@ -24,6 +24,7 @@ import {
   KeyRound,
   Brain,
   Activity,
+  Monitor,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,18 @@ const NAV_ITEMS: PlatformNavItem[] = [
   },
   { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
   { to: '/platform/automation', label: 'Automação', icon: Zap, requiredPermission: 'security.manage' },
+  {
+    to: '/platform/monitoring',
+    label: 'Monitoramento',
+    icon: Monitor,
+    requiredPermission: 'security.view',
+    children: [
+      { to: '/platform/monitoring', label: 'Status' },
+      { to: '/platform/monitoring/modules', label: 'Módulos' },
+      { to: '/platform/monitoring/errors', label: 'Erros' },
+      { to: '/platform/monitoring/performance', label: 'Performance' },
+    ],
+  },
   { to: '/platform/observability', label: 'Observability', icon: Activity, requiredPermission: 'security.view' },
   { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
   { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'audit.view' },
