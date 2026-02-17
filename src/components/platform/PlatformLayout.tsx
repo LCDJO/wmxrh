@@ -38,13 +38,20 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useMemo } from 'react';
 
+interface NavChild {
+  to: string;
+  label: string;
+  requiredPermission?: PlatformPermission;
+  children?: Array<{ to: string; label: string; requiredPermission?: PlatformPermission }>;
+}
+
 interface PlatformNavItem {
   to: string;
   label: string;
   icon: typeof LayoutDashboard;
   /** Permission required to see this item. Omit = always visible. */
   requiredPermission?: PlatformPermission;
-  children?: Array<{ to: string; label: string; requiredPermission?: PlatformPermission }>;
+  children?: NavChild[];
 }
 
 const NAV_ITEMS: PlatformNavItem[] = [
@@ -145,9 +152,15 @@ const NAV_ITEMS: PlatformNavItem[] = [
     icon: Settings,
     children: [
       { to: '/platform/settings/versioning', label: 'Versionamento' },
-      { to: '/platform/structure/events', label: 'Eventos' },
-      { to: '/platform/structure/menus', label: 'Menus' },
-      { to: '/platform/structure/modules', label: 'Módulos' },
+      {
+        to: '/platform/structure',
+        label: 'Estrutura',
+        children: [
+          { to: '/platform/structure/events', label: 'Eventos' },
+          { to: '/platform/structure/menus', label: 'Menus' },
+          { to: '/platform/structure/modules', label: 'Módulos' },
+        ],
+      },
     ],
   },
 ];
@@ -160,6 +173,7 @@ export default function PlatformLayout() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedNav, setExpandedNav] = useState<string | null>(null);
+  const [expandedChild, setExpandedChild] = useState<string | null>(null);
 
   // Apply saved menu order, then filter by permissions
   const savedOrder = useMemo(() => getSavedMenuOrder(), []);
@@ -307,22 +321,67 @@ export default function PlatformLayout() {
                 {/* Sub-items */}
                 {hasChildren && isExpanded && !collapsed && (
                   <div className="ml-6 mt-0.5 space-y-0.5 border-l border-[hsl(250_25%_22%)] pl-3">
-                    {children.map(child => (
-                      <NavLink
-                        key={child.to}
-                        to={child.to}
-                        className={({ isActive }) =>
-                          cn(
-                            'flex items-center px-3 py-2 rounded-md text-xs font-medium transition-all duration-200',
-                            isActive
-                              ? 'bg-[hsl(265_60%_50%/0.18)] text-[hsl(265_80%_75%)]'
-                              : 'text-[hsl(250_15%_60%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
-                          )
-                        }
-                      >
-                        {child.label}
-                      </NavLink>
-                    ))}
+                    {children.map(child => {
+                      const hasGrandchildren = child.children && child.children.length > 0;
+                      const isChildActive = location.pathname.startsWith(child.to);
+                      const isChildExpanded = expandedChild === child.to || (hasGrandchildren && isChildActive);
+
+                      return (
+                        <div key={child.to}>
+                          {hasGrandchildren ? (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedChild(prev => prev === child.to ? null : child.to)}
+                              className={cn(
+                                'flex items-center w-full px-3 py-2 rounded-md text-xs font-medium transition-all duration-200',
+                                isChildActive
+                                  ? 'bg-[hsl(265_60%_50%/0.18)] text-[hsl(265_80%_75%)]'
+                                  : 'text-[hsl(250_15%_60%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
+                              )}
+                            >
+                              <span className="flex-1 text-left">{child.label}</span>
+                              <ChevronRight className={cn('h-3 w-3 shrink-0 transition-transform', isChildExpanded && 'rotate-90')} />
+                            </button>
+                          ) : (
+                            <NavLink
+                              to={child.to}
+                              className={({ isActive }) =>
+                                cn(
+                                  'flex items-center px-3 py-2 rounded-md text-xs font-medium transition-all duration-200',
+                                  isActive
+                                    ? 'bg-[hsl(265_60%_50%/0.18)] text-[hsl(265_80%_75%)]'
+                                    : 'text-[hsl(250_15%_60%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
+                                )
+                              }
+                            >
+                              {child.label}
+                            </NavLink>
+                          )}
+
+                          {/* Grandchildren (3rd level) */}
+                          {hasGrandchildren && isChildExpanded && (
+                            <div className="ml-4 mt-0.5 space-y-0.5 border-l border-[hsl(250_25%_24%)] pl-3">
+                              {child.children!.map(gc => (
+                                <NavLink
+                                  key={gc.to}
+                                  to={gc.to}
+                                  className={({ isActive }) =>
+                                    cn(
+                                      'flex items-center px-3 py-1.5 rounded-md text-[11px] font-medium transition-all duration-200',
+                                      isActive
+                                        ? 'bg-[hsl(265_60%_50%/0.18)] text-[hsl(265_80%_75%)]'
+                                        : 'text-[hsl(250_15%_55%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
+                                    )
+                                  }
+                                >
+                                  {gc.label}
+                                </NavLink>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
