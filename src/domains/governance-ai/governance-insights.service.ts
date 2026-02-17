@@ -17,6 +17,7 @@ import { detectSoDConflicts } from './segregation-of-duties-checker';
 import { detectPermissionAnomalies } from './permission-anomaly-detector';
 import { detectRoleOverlaps } from './role-optimization-advisor';
 import { analyzeAccessRisk } from './access-risk-analyzer';
+import { analyzePlanUsage } from './plan-usage-analyzer';
 
 const SEVERITY_ORDER: Record<InsightSeverity, number> = { critical: 0, warning: 1, info: 2 };
 
@@ -42,4 +43,23 @@ export function runHeuristicScan(
   });
 
   return insights;
+}
+
+/**
+ * Run async analyzers that require database access (plan usage, etc.)
+ * and merge results with existing insights.
+ */
+export async function runAsyncAnalyzers(
+  existingInsights: GovernanceInsight[] = [],
+): Promise<GovernanceInsight[]> {
+  const planInsights = await analyzePlanUsage();
+
+  const all = [...existingInsights, ...planInsights];
+
+  all.sort((a, b) => {
+    const sd = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
+    return sd !== 0 ? sd : b.confidence - a.confidence;
+  });
+
+  return all;
 }

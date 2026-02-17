@@ -9,6 +9,7 @@ import { unifiedGraphEngine } from '@/domains/security/kernel/unified-graph-engi
 import { analyzeGraph } from '@/domains/security/kernel/unified-graph-engine/graph-analyzer';
 import { assessRisk } from '@/domains/security/kernel/unified-graph-engine/risk-assessment-service';
 import { runHeuristicScan } from './heuristic-engine';
+import { runAsyncAnalyzers } from './governance-insights.service';
 import type { GovernanceInsight, GovernanceAIRequest, GovernanceAIResponse, GovernanceAIState } from './types';
 import { supabase } from '@/integrations/supabase/client';
 import { emitRiskDetected, emitConflictDetected } from './governance-events';
@@ -41,7 +42,7 @@ export class GovernanceAIService {
   /**
    * Run local heuristic scan — instant, no network.
    */
-  scan(sessionId?: string): GovernanceInsight[] {
+  async scan(sessionId?: string): Promise<GovernanceInsight[]> {
     this.state.scanning = true;
     this.notify();
 
@@ -50,22 +51,26 @@ export class GovernanceAIService {
       const analysis = analyzeGraph(snapshot);
       const risk = assessRisk(snapshot);
 
-      const insights = runHeuristicScan(snapshot, analysis, risk);
+      // 1. Instant local heuristics
+      const localInsights = runHeuristicScan(snapshot, analysis, risk);
 
-      this.state.insights = insights;
+      // 2. Async analyzers (plan usage, etc.)
+      const allInsights = await runAsyncAnalyzers(localInsights);
+
+      this.state.insights = allInsights;
       this.state.last_scan_at = Date.now();
       this.state.scanning = false;
       this.notify();
 
       // Emit governance events (read-only / suggestion-only)
-      emitRiskDetected(insights);
-      for (const insight of insights) {
+      emitRiskDetected(allInsights);
+      for (const insight of allInsights) {
         if (insight.category === 'sod_conflict' || insight.category === 'role_overlap' || insight.category === 'privilege_escalation') {
           emitConflictDetected(insight);
         }
       }
 
-      return insights;
+      return allInsights;
     } catch (err) {
       console.error('[GovernanceAI] Heuristic scan failed:', err);
       this.state.scanning = false;
@@ -86,7 +91,7 @@ export class GovernanceAIService {
 
     try {
       // Run a fresh scan first
-      if (this.state.insights.length === 0) this.scan();
+      if (this.state.insights.length === 0) await this.scan();
 
       const snapshot = unifiedGraphEngine.compose();
       const risk = assessRisk(snapshot);
