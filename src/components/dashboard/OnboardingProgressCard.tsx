@@ -42,27 +42,26 @@ export function OnboardingProgressCard() {
   useEffect(() => {
     if (!currentTenant?.id) { setLoading(false); return; }
 
-    const fetch = async () => {
-      const [progressRes, companiesRes] = await Promise.all([
+    const fetchData = async () => {
+      // Use SECURITY DEFINER function to reliably check onboarding need
+      const [needsOnboardingRes, progressRes] = await Promise.all([
+        supabase.rpc('check_tenant_needs_onboarding', { p_tenant_id: currentTenant.id }),
         supabase
           .from('onboarding_progress')
           .select('tenant_id, steps_completed, steps_skipped, last_step, is_completed')
           .eq('tenant_id', currentTenant.id)
           .maybeSingle(),
-        supabase
-          .from('companies')
-          .select('id', { count: 'exact', head: true })
-          .eq('tenant_id', currentTenant.id)
-          .is('deleted_at', null),
       ]);
+
+      const needsOnboarding = needsOnboardingRes.data === true;
+      setHasCompanies(!needsOnboarding);
       setProgress(progressRes.data as OnboardingRow | null);
-      setHasCompanies((companiesRes.count ?? 0) > 0);
       setLoading(false);
     };
-    fetch();
+    fetchData();
   }, [currentTenant?.id]);
 
-  // Tenant already has companies — no onboarding needed
+  // Tenant already has companies or completed onboarding — no card needed
   if (hasCompanies) return null;
 
   if (loading) return null;
