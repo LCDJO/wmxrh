@@ -13,13 +13,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import {
   MessageSquare, Clock, CheckCircle2, AlertCircle, Send, Users,
   BookOpen, Search, Star, ArrowLeft, Loader2, Eye, Lock, BarChart3,
-  Plus, Inbox, UserCheck, Building2, Package, Layers,
+  Plus, Inbox, UserCheck, Building2, Package, Layers, Radio,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { TicketService } from '@/domains/support/ticket-service';
 import { WikiService } from '@/domains/support/wiki-service';
 import { EvaluationService } from '@/domains/support/evaluation-service';
+import LiveChatWindow from './LiveChatWindow';
 import type {
   SupportTicket, TicketMessage, WikiArticle, WikiCategory,
   SupportEvaluation, TicketStatus,
@@ -543,72 +544,96 @@ function AgentTicketView({ ticket, userId, onBack }: { ticket: SupportTicket; us
             </CardContent>
           </Card>
 
-          {/* Messages */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Conversação</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-              ) : (
-                <ScrollArea className="max-h-[400px]">
-                  <div className="space-y-3">
-                    {messages.map(msg => {
-                      const isAgent = msg.sender_type === 'platform_agent';
-                      return (
-                        <div key={msg.id} className={`flex ${isAgent ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                            msg.is_internal
-                              ? 'bg-amber-500/10 border border-amber-500/20 text-foreground'
-                              : isAgent
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted text-foreground'
-                          }`}>
-                            {msg.is_internal && (
-                              <div className="flex items-center gap-1 text-[10px] text-amber-600 mb-1">
-                                <Lock className="h-3 w-3" /> Nota interna
-                              </div>
-                            )}
-                            <p className="whitespace-pre-wrap">{msg.content}</p>
-                            <p className={`text-[10px] mt-1 ${isAgent ? (msg.is_internal ? 'text-muted-foreground' : 'text-primary-foreground/60') : 'text-muted-foreground'}`}>
-                              {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                              {' · '}{isAgent ? 'Você' : 'Cliente'}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              )}
+          {/* Communication */}
+          <Tabs defaultValue="livechat" className="w-full">
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="livechat" className="gap-2">
+                <Radio className="h-3.5 w-3.5" /> Chat ao Vivo
+              </TabsTrigger>
+              <TabsTrigger value="messages" className="gap-2">
+                <MessageSquare className="h-3.5 w-3.5" /> Mensagens
+              </TabsTrigger>
+            </TabsList>
 
-              <div className="flex gap-2 mt-4 items-end">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isInternal}
-                        onChange={e => setIsInternal(e.target.checked)}
-                        className="rounded border-border"
+            <TabsContent value="livechat" className="mt-3">
+              <LiveChatWindow
+                ticketId={ticket.id}
+                tenantId={ticket.tenant_id}
+                userId={userId}
+                senderType="agent"
+                assignedAgentId={ticket.assigned_to}
+                ticketSubject={ticket.subject}
+              />
+            </TabsContent>
+
+            <TabsContent value="messages" className="mt-3">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Histórico de Mensagens</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                  ) : (
+                    <ScrollArea className="max-h-[400px]">
+                      <div className="space-y-3">
+                        {messages.map(msg => {
+                          const isAgent = msg.sender_type === 'platform_agent';
+                          return (
+                            <div key={msg.id} className={`flex ${isAgent ? 'justify-end' : 'justify-start'}`}>
+                              <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                                msg.is_internal
+                                  ? 'bg-amber-500/10 border border-amber-500/20 text-foreground'
+                                  : isAgent
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-muted text-foreground'
+                              }`}>
+                                {msg.is_internal && (
+                                  <div className="flex items-center gap-1 text-[10px] text-amber-600 mb-1">
+                                    <Lock className="h-3 w-3" /> Nota interna
+                                  </div>
+                                )}
+                                <p className="whitespace-pre-wrap">{msg.content}</p>
+                                <p className={`text-[10px] mt-1 ${isAgent ? (msg.is_internal ? 'text-muted-foreground' : 'text-primary-foreground/60') : 'text-muted-foreground'}`}>
+                                  {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  {' · '}{isAgent ? 'Você' : 'Cliente'}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+                  )}
+
+                  <div className="flex gap-2 mt-4 items-end">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isInternal}
+                            onChange={e => setIsInternal(e.target.checked)}
+                            className="rounded border-border"
+                          />
+                          <Lock className="h-3 w-3" /> Nota interna
+                        </label>
+                      </div>
+                      <Input
+                        placeholder={isInternal ? 'Nota interna (invisível ao cliente)...' : 'Responder ao cliente...'}
+                        value={newMsg}
+                        onChange={e => setNewMsg(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                       />
-                      <Lock className="h-3 w-3" /> Nota interna
-                    </label>
+                    </div>
+                    <Button size="icon" onClick={handleSend} disabled={sending || !newMsg.trim()}>
+                      {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </Button>
                   </div>
-                  <Input
-                    placeholder={isInternal ? 'Nota interna (invisível ao cliente)...' : 'Responder ao cliente...'}
-                    value={newMsg}
-                    onChange={e => setNewMsg(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                  />
-                </div>
-                <Button size="icon" onClick={handleSend} disabled={sending || !newMsg.trim()}>
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Right: Tenant Info Card */}
