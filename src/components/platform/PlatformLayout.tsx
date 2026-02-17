@@ -32,6 +32,7 @@ import {
   Globe,
   GitBranch,
   Settings,
+  Headphones,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -146,6 +147,15 @@ const NAV_ITEMS: PlatformNavItem[] = [
     ],
   },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
+  {
+    to: '/platform/support',
+    label: 'Suporte',
+    icon: Headphones,
+    children: [
+      { to: '/platform/support/console', label: 'Console de Suporte' },
+      { to: '/platform/support/analytics', label: 'Analytics' },
+    ],
+  },
   {
     to: '/platform/settings',
     label: 'Settings',

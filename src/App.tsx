@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -99,6 +100,7 @@ import SupportNewTicket from "./pages/support/SupportNewTicket";
 import SupportTickets from "./pages/support/SupportTickets";
 import SupportWiki from "./pages/support/SupportWiki";
 import PlatformSupportAnalytics from "./pages/platform/PlatformSupportAnalytics";
+const PlatformSupportConsole = lazy(() => import("./modules/support/ui/PlatformSupportConsole"));
 
 const queryClient = new QueryClient();
 
@@ -189,6 +191,7 @@ function AppRoutes() {
         <Route path="landing/drafts" element={<LandingDrafts />} />
         <Route path="landing/review" element={<LandingReview />} />
         <Route path="landing/published" element={<LandingPublished />} />
+        <Route path="support/console" element={<Suspense fallback={<div className="p-8 text-muted-foreground">Carregando...</div>}><PlatformSupportConsole /></Suspense>} />
         <Route path="support/analytics" element={<PlatformSupportAnalytics />} />
       </Route>
 
