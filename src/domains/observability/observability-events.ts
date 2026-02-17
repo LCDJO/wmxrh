@@ -14,6 +14,11 @@ export const OBSERVABILITY_KERNEL_EVENTS = {
   LatencyThresholdExceeded: 'observability:latency_threshold_exceeded',
   /** Fired when error rate spikes above normal */
   ErrorRateSpike: 'observability:error_rate_spike',
+  // Marketing Digital OS
+  FunnelCreated: 'observability:funnel_created',
+  FunnelActivated: 'observability:funnel_activated',
+  AIOptimizationSuggested: 'observability:ai_optimization_suggested',
+  PipelineConversionUpdated: 'observability:pipeline_conversion_updated',
 } as const;
 
 export type ObservabilityKernelEvent = typeof OBSERVABILITY_KERNEL_EVENTS[keyof typeof OBSERVABILITY_KERNEL_EVENTS];
@@ -52,4 +57,34 @@ export interface ErrorRateSpikePayload {
   threshold_per_min: number;
   top_module?: string;
   total_errors_1h: number;
+}
+
+// ── Marketing Digital OS Payloads ───────────────────────────────
+
+export interface FunnelCreatedPayload {
+  funnel_id: string;
+  funnel_name: string;
+  stages: string[];
+}
+
+export interface FunnelActivatedPayload {
+  funnel_id: string;
+  funnel_name: string;
+  stage_count: number;
+}
+
+export interface AIOptimizationSuggestedPayload {
+  suggestion_id: string;
+  target_type: 'funnel' | 'landing' | 'campaign' | 'headline';
+  target_id: string;
+  predicted_lift: number;
+  title: string;
+}
+
+export interface PipelineConversionUpdatedPayload {
+  funnel_id: string;
+  stage_from: string;
+  stage_to: string;
+  conversion_rate: number;
+  previous_rate?: number;
 }
