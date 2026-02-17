@@ -89,12 +89,13 @@ class ConversionAnalyzer {
     const dataPoints = conversionMetricsCollector.getByLandingPage(landingPageId);
 
     const stepOrder: Array<{ name: string; type: string }> = [
-      { name: 'Page View', type: 'impression' },
+      { name: 'Page View', type: 'page_view' },
+      { name: 'Scroll Depth', type: 'scroll_depth' },
       { name: 'CTA Click', type: 'cta_click' },
-      { name: 'Form Submit', type: 'form_submit' },
-      { name: 'Signup', type: 'signup' },
-      { name: 'Trial Start', type: 'trial_start' },
-      { name: 'Purchase', type: 'purchase' },
+      { name: 'Signup Started', type: 'signup_started' },
+      { name: 'Signup Completed', type: 'signup_completed' },
+      { name: 'Plan Selected', type: 'plan_selected' },
+      { name: 'Revenue Generated', type: 'revenue_generated' },
     ];
 
     const counts = new Map<string, number>();

@@ -57,15 +57,13 @@ export interface VariantMetrics {
 // ── Conversion Metrics ──
 
 export type ConversionMetricType =
-  | 'signup'
-  | 'trial_start'
-  | 'purchase'
-  | 'form_submit'
-  | 'cta_click'
-  | 'referral_click'
+  | 'page_view'
   | 'scroll_depth'
-  | 'time_on_page'
-  | 'custom';
+  | 'cta_click'
+  | 'signup_started'
+  | 'signup_completed'
+  | 'plan_selected'
+  | 'revenue_generated';
 
 export interface ConversionDataPoint {
   id: string;

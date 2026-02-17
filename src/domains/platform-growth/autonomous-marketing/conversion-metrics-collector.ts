@@ -98,7 +98,7 @@ class ConversionMetricsCollector {
     for (const p of points) {
       const entry = sourceMap.get(p.source) || { count: 0, conversions: 0 };
       entry.count++;
-      if (['signup', 'trial_start', 'purchase', 'form_submit'].includes(p.metricType)) {
+      if (['signup_completed', 'plan_selected', 'revenue_generated'].includes(p.metricType)) {
         entry.conversions++;
       }
       sourceMap.set(p.source, entry);
@@ -120,10 +120,10 @@ class ConversionMetricsCollector {
       const variant = exp.variants.find(v => v.id === point.variantId);
       if (!variant) return;
 
-      if (['signup', 'trial_start', 'purchase', 'form_submit'].includes(point.metricType)) {
+      if (['signup_completed', 'plan_selected', 'revenue_generated'].includes(point.metricType)) {
         variant.metrics.conversions++;
       }
-      if (point.metricType === 'purchase') {
+      if (point.metricType === 'revenue_generated') {
         variant.metrics.revenue += point.value;
       }
       this.recalcConversionRate(variant);
