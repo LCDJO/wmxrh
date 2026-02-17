@@ -137,6 +137,29 @@ const MODULES: ModuleDef[] = [
     structure: ['manifest/', 'gateway/', 'ui/', 'events/'],
     status: 'active',
   },
+  {
+    id: 'growth_ai',
+    name: 'Growth AI',
+    icon: BarChart3,
+    color: 'hsl(340 75% 55%)',
+    description: 'Motor de crescimento com landing pages, FAB content, templates, GTM e conversão otimizada por IA.',
+    purpose: 'Módulo responsável por toda a camada de aquisição e conversão da plataforma. Inclui criação de landing pages com drag-and-drop, geração de conteúdo FAB (Feature-Advantage-Benefit), templates pré-construídos, integração com Google Tag Manager e tracking de conversões com atribuição de referral.',
+    events: [
+      { key: 'LandingPageCreated', label: 'Landing Page Created', description: 'Emitido quando uma nova landing page é criada.' },
+      { key: 'LandingPagePublished', label: 'Landing Page Published', description: 'Emitido quando uma landing page é publicada.' },
+      { key: 'FABContentUpdated', label: 'FAB Content Updated', description: 'Emitido quando conteúdo FAB de um bloco é alterado.' },
+      { key: 'ConversionTracked', label: 'Conversion Tracked', description: 'Emitido quando um evento de conversão é registrado.' },
+      { key: 'GrowthInsightGenerated', label: 'Growth Insight Generated', description: 'Emitido quando um insight de governança é criado.' },
+      { key: 'GTMPageView', label: 'GTM Page View', description: 'Evento page_view enviado ao Google Tag Manager.' },
+      { key: 'GTMCTAClick', label: 'GTM CTA Click', description: 'Evento cta_click enviado ao Google Tag Manager.' },
+      { key: 'GTMTrialStart', label: 'GTM Trial Start', description: 'Evento trial_start enviado ao Google Tag Manager.' },
+      { key: 'GTMPlanSelected', label: 'GTM Plan Selected', description: 'Evento plan_selected enviado ao Google Tag Manager.' },
+      { key: 'GTMReferralSignup', label: 'GTM Referral Signup', description: 'Evento referral_signup enviado ao Google Tag Manager.' },
+    ],
+    usedIn: ['Landing Pages', 'FAB Builder', 'Template Engine', 'Conversões', 'Referral Program', 'GTM Integration'],
+    structure: ['manifest/', 'gateway/', 'ui/', 'events/'],
+    status: 'active',
+  },
 ];
 
 const statusMap = {

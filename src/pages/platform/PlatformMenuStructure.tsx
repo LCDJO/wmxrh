@@ -80,7 +80,17 @@ const createDefaultTree = (): MenuNode[] => [
       { id: 'rev-ref', label: 'Referrals', path: '/platform/referrals' },
       { id: 'rev-gam', label: 'Gamificação', path: '/platform/gamification' },
       { id: 'rev-intel', label: 'Intelligence', path: '/platform/revenue/intelligence' },
-      { id: 'rev-growth', label: 'Growth AI', path: '/platform/growth' },
+    ],
+  },
+  {
+    id: 'growth-ai', label: 'Growth AI', path: '/platform/growth', icon: TrendingUp,
+    children: [
+      { id: 'growth-overview', label: 'Visão Geral', path: '/platform/growth' },
+      { id: 'growth-insights', label: 'Insights', path: '/platform/growth/insights' },
+      { id: 'growth-landing', label: 'Landing Pages', path: '/platform/growth/landing-pages' },
+      { id: 'growth-conversions', label: 'Conversões', path: '/platform/growth/conversions' },
+      { id: 'growth-fab', label: 'FAB Builder', path: '/platform/growth/fab-builder' },
+      { id: 'growth-templates', label: 'Template Engine', path: '/platform/growth/template-engine' },
     ],
   },
   { id: 'fiscal', label: 'Fiscal', path: '/platform/fiscal', icon: ScrollText },

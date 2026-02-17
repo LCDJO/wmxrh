@@ -312,6 +312,30 @@ const DOMAIN_REGISTRIES: DomainRegistry[] = [
       { name: 'UpgradeRecommended', description: 'Upgrade recomendado para tenant' },
     ],
   },
+
+  // ─── Growth AI ───
+  {
+    domain: 'Growth AI',
+    color: 'hsl(340 75% 55%)',
+    events: [
+      { name: 'LandingPageCreated', description: 'Nova landing page criada no builder' },
+      { name: 'LandingPagePublished', description: 'Landing page publicada (permission-gated)' },
+      { name: 'FABContentUpdated', description: 'Conteúdo FAB de um bloco atualizado' },
+      { name: 'ConversionTracked', description: 'Evento de conversão registrado no funil' },
+      { name: 'GrowthInsightGenerated', description: 'Insight de crescimento gerado por IA' },
+      { name: 'TemplateApplied', description: 'Template de landing page aplicado' },
+      { name: 'GTMContainerInjected', description: 'Container GTM injetado na página' },
+      { name: 'GTMPageView', description: 'Evento page_view enviado ao GTM dataLayer' },
+      { name: 'GTMCTAClick', description: 'Evento cta_click enviado ao GTM dataLayer' },
+      { name: 'GTMTrialStart', description: 'Evento trial_start enviado ao GTM dataLayer' },
+      { name: 'GTMPlanSelected', description: 'Evento plan_selected enviado ao GTM dataLayer' },
+      { name: 'GTMReferralSignup', description: 'Evento referral_signup enviado ao GTM dataLayer' },
+      { name: 'AIHeadlineSuggested', description: 'Headline sugerida pelo AI Conversion Designer' },
+      { name: 'AIFABGenerated', description: 'Conteúdo FAB gerado pelo AI Content Generator' },
+      { name: 'AICTAOptimized', description: 'CTA otimizado pelo AI Conversion Designer' },
+      { name: 'AILayoutSuggested', description: 'Layout sugerido pelo AI Conversion Designer' },
+    ],
+  },
 ];
 
 // ── Builder ────────────────────────────────────────────────────
