@@ -2,19 +2,19 @@
  * PlatformMenuStructure — Advanced Menu Structure Builder
  *
  * Hierarchical drag-and-drop tree editor with:
- * - Indent/outdent (level changes)
+ * - Horizontal drag detection (indent/outdent by dragging left/right)
+ * - Vertical reordering with visual drop indicators
  * - Role-based permission per node
  * - Automatic version snapshots
- * - Diff viewer between versions
  * - Layout validation
  */
 import {
   LayoutDashboard, Building2, Puzzle, ShieldCheck, ScrollText,
   Zap, Users, Package, Megaphone, KeyRound, Activity, Monitor,
-  TrendingUp, RefreshCw, HelpCircle, X, GripVertical, Lock,
+  TrendingUp, RefreshCw, GripVertical, Lock,
   ChevronRight, ChevronDown, Save, ChevronUp, ArrowRight, ArrowLeft,
-  Shield, AlertTriangle, CheckCircle2, History, GitBranch, Eye,
-  Rocket, Globe, Settings, Trash2,
+  Shield, AlertTriangle, CheckCircle2, History, GitBranch,
+  Rocket, Globe, Settings,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,14 +22,15 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { useCallback, useRef, useState, useMemo, type DragEvent } from 'react';
+import { useCallback, useRef, useState, useMemo } from 'react';
 import { toast } from 'sonner';
+import { MAX_TREE_DEPTH } from '@/domains/menu-structure/types';
 import { saveMenuOrder, type SavedMenuOrder } from '@/lib/platform-menu-order';
 import {
   createMenuStructureEngine,
   type MenuStructureEngineAPI,
 } from '@/domains/menu-structure/menu-structure-engine';
-import type { MenuTreeNode, MenuDiff, MenuValidationResult, MenuVersion } from '@/domains/menu-structure/types';
+import type { MenuTreeNode, MenuValidationResult } from '@/domains/menu-structure/types';
 
 /* ─── Icon map ─── */
 const ICON_MAP: Record<string, typeof LayoutDashboard> = {
@@ -37,24 +38,14 @@ const ICON_MAP: Record<string, typeof LayoutDashboard> = {
   Zap, Users, Package, Megaphone, KeyRound, Activity, Monitor,
   TrendingUp, Rocket, Globe, Settings, Shield, GitBranch,
 };
-
 const getIcon = (key?: string) => ICON_MAP[key ?? ''] ?? Puzzle;
 
-/* ─── Helper to create a MenuTreeNode ─── */
+/* ─── Helper ─── */
 const mn = (
-  id: string,
-  label: string,
-  slug: string,
+  id: string, label: string, slug: string,
   opts?: Partial<Pick<MenuTreeNode, 'icon' | 'role_permissions' | 'locked' | 'children' | 'visibility_rules'>>,
 ): MenuTreeNode => ({
-  id,
-  label,
-  slug,
-  parent_id: null,
-  order_index: 0,
-  depth_level: 0,
-  role_permissions: [],
-  ...opts,
+  id, label, slug, parent_id: null, order_index: 0, depth_level: 0, role_permissions: [], ...opts,
 });
 
 /* ─── Default tree ─── */
@@ -65,8 +56,7 @@ const createDefaultTree = (): MenuTreeNode[] => [
   mn('plans', 'Planos', '/platform/plans', { icon: 'Package', role_permissions: ['platform_super_admin', 'platform_finance'] }),
   mn('users', 'Usuários', '/platform/users', { icon: 'Users', role_permissions: ['platform_super_admin', 'platform_operations'] }),
   mn('security', 'Segurança', '/platform/security', {
-    icon: 'ShieldCheck',
-    role_permissions: ['platform_super_admin', 'platform_operations'],
+    icon: 'ShieldCheck', role_permissions: ['platform_super_admin', 'platform_operations'],
     children: [
       mn('sec-roles', 'Cargos', '/platform/security/roles'),
       mn('sec-perms', 'Permissões', '/platform/security/permissions'),
@@ -92,8 +82,7 @@ const createDefaultTree = (): MenuTreeNode[] => [
   mn('comms', 'Comunicação', '/platform/communications', { icon: 'Megaphone' }),
   mn('audit', 'Auditoria', '/platform/audit', { icon: 'ScrollText' }),
   mn('billing', 'Financeiro', '/platform/billing', {
-    icon: 'Package',
-    role_permissions: ['platform_super_admin', 'platform_finance'],
+    icon: 'Package', role_permissions: ['platform_super_admin', 'platform_finance'],
     children: [
       mn('bill-overview', 'Visão Geral', '/platform/billing'),
       mn('bill-coupons', 'Cupons', '/platform/billing/coupons'),
@@ -148,9 +137,16 @@ const createDefaultTree = (): MenuTreeNode[] => [
   }),
 ];
 
-/* ─── Component ─── */
+/* ═══════════════ Drop target types ═══════════════ */
+interface DropTarget {
+  targetId: string;
+  position: 'before' | 'after' | 'child';
+  depth: number;
+}
+
+/* ═══════════════ Component ═══════════════ */
 export default function PlatformMenuStructure() {
-  const canEdit = true; // gated by route guard
+  const canEdit = true;
   const [engine] = useState<MenuStructureEngineAPI>(() => createMenuStructureEngine(createDefaultTree()));
   const [tree, setTree] = useState<MenuTreeNode[]>(() => engine.tree.getTree());
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -158,10 +154,7 @@ export default function PlatformMenuStructure() {
     const expanded = new Set<string>();
     const walk = (nodes: MenuTreeNode[]) => {
       for (const n of nodes) {
-        if (n.children && n.children.length > 0) {
-          expanded.add(n.id);
-          walk(n.children);
-        }
+        if (n.children && n.children.length > 0) { expanded.add(n.id); walk(n.children); }
       }
     };
     walk(createDefaultTree());
@@ -172,26 +165,44 @@ export default function PlatformMenuStructure() {
   const [tab, setTab] = useState('tree');
   const [validation, setValidation] = useState<MenuValidationResult | null>(null);
 
-  // Drag state
+  // ─── Drag state ───
+  const HORIZONTAL_THRESHOLD = 40;
   const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
-  const dragCounter = useRef(0);
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  const [dragIntent, setDragIntent] = useState<'none' | 'indent' | 'outdent'>('none');
+  const dragStartXRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const treeContainerRef = useRef<HTMLDivElement>(null);
 
+  // ─── Computed ───
   const flatNodes = useMemo(() => engine.tree.flattenAll(tree), [tree]);
   const totalRoots = tree.length;
   const totalNodes = flatNodes.length;
   const withRoles = flatNodes.filter(n => n.role_permissions && n.role_permissions.length > 0).length;
-
   const versions = engine.versions.getVersions();
 
-  // ─── Sync engine ───
+  // Flat ordered list for drop calculations (only visible/expanded nodes)
+  const flatVisible = useMemo(() => {
+    const result: { node: MenuTreeNode; depth: number; parentId: string | null; index: number }[] = [];
+    const walk = (nodes: MenuTreeNode[], depth: number, parentId: string | null) => {
+      for (let i = 0; i < nodes.length; i++) {
+        result.push({ node: nodes[i], depth, parentId, index: i });
+        if (nodes[i].children && nodes[i].children!.length > 0 && expandedIds.has(nodes[i].id)) {
+          walk(nodes[i].children!, depth + 1, nodes[i].id);
+        }
+      }
+    };
+    walk(tree, 0, null);
+    return result;
+  }, [tree, expandedIds]);
+
+  // ─── Sync ───
   const syncTree = useCallback(() => {
-    const newTree = structuredClone(engine.tree.getTree());
-    setTree(newTree);
+    setTree(structuredClone(engine.tree.getTree()));
     setHasChanges(true);
   }, [engine]);
 
-  // ─── Actions ───
+  // ─── Button actions ───
   const handleMoveUp = (id: string) => {
     const parent = engine.tree.findParent(id);
     const siblings = parent?.children ?? engine.tree.getTree();
@@ -200,7 +211,6 @@ export default function PlatformMenuStructure() {
     engine.tree.moveNode(id, parent?.id ?? null, idx - 1);
     syncTree();
   };
-
   const handleMoveDown = (id: string) => {
     const parent = engine.tree.findParent(id);
     const siblings = parent?.children ?? engine.tree.getTree();
@@ -209,189 +219,208 @@ export default function PlatformMenuStructure() {
     engine.tree.moveNode(id, parent?.id ?? null, idx + 2);
     syncTree();
   };
-
-  const handleIndentRight = (id: string) => {
-    engine.tree.demoteNode(id);
-    syncTree();
-    toast.success('Nível aumentado');
-  };
-
-  const handleIndentLeft = (id: string) => {
-    engine.tree.promoteNode(id);
-    syncTree();
-    toast.success('Nível reduzido');
-  };
-
+  const handleIndentRight = (id: string) => { engine.tree.demoteNode(id); syncTree(); toast.success('Nível aumentado'); };
+  const handleIndentLeft = (id: string) => { engine.tree.promoteNode(id); syncTree(); toast.success('Nível reduzido'); };
   const toggleExpand = (id: string) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    setExpandedIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   };
 
   const handleValidate = () => {
     const result = engine.validator.validate(tree);
-    setValidation(result);
-    setTab('validation');
-    if (result.valid) toast.success('Estrutura válida ✓');
-    else toast.error(`${result.errors.length} erro(s) encontrado(s)`);
+    setValidation(result); setTab('validation');
+    result.valid ? toast.success('Estrutura válida ✓') : toast.error(`${result.errors.length} erro(s)`);
   };
 
   const handleSave = () => {
     const result = engine.validator.validate(tree);
-    if (!result.valid) {
-      setValidation(result);
-      setTab('validation');
-      toast.error('Corrija os erros antes de salvar');
-      return;
-    }
-
+    if (!result.valid) { setValidation(result); setTab('validation'); toast.error('Corrija os erros'); return; }
     setIsSaving(true);
     engine.versions.snapshot(tree, 'admin', `v${(versions[0]?.version ?? 0) + 1}`);
-
-    // Persist for sidebar
     const order: SavedMenuOrder = {
       rootOrder: tree.map(n => n.slug),
       childrenOrder: tree.reduce((acc, n) => {
-        if (n.children && n.children.length > 0) {
-          acc[n.slug] = n.children.map(c => c.slug);
-        }
+        if (n.children && n.children.length > 0) acc[n.slug] = n.children.map(c => c.slug);
         return acc;
       }, {} as Record<string, string[]>),
       savedAt: new Date().toISOString(),
     };
     saveMenuOrder(order);
-
-    setTimeout(() => {
-      setIsSaving(false);
-      setHasChanges(false);
-      toast.success('Estrutura salva e versionada!');
-    }, 400);
+    setTimeout(() => { setIsSaving(false); setHasChanges(false); toast.success('Salvo & Versionado!'); }, 400);
   };
 
   const handleRestore = (versionId: string) => {
     const restored = engine.versions.restore(versionId);
     if (!restored) return;
-    engine.tree.setTree(restored);
-    syncTree();
-    toast.success('Versão restaurada');
+    engine.tree.setTree(restored); syncTree(); toast.success('Versão restaurada');
   };
 
-  // ─── Drag handlers ───
-  const handleDragStart = (e: DragEvent, id: string) => {
+  // ═══════════════════════════════════════
+  // HIERARCHICAL DRAG CONTROLLER
+  // ═══════════════════════════════════════
+
+  const executeDrop = useCallback((sourceId: string, target: DropTarget) => {
+    if (sourceId === target.targetId) return;
+    const entry = flatVisible.find(f => f.node.id === target.targetId);
+    if (!entry) return;
+
+    if (target.position === 'child') {
+      const tgt = engine.tree.findNode(target.targetId);
+      engine.tree.moveNode(sourceId, target.targetId, tgt?.children?.length ?? 0);
+      setExpandedIds(prev => new Set([...prev, target.targetId]));
+      toast.success('Movido como filho');
+    } else if (target.position === 'before') {
+      engine.tree.moveNode(sourceId, entry.parentId, entry.index);
+      toast.success('Reordenado');
+    } else {
+      engine.tree.moveNode(sourceId, entry.parentId, entry.index + 1);
+      toast.success('Reordenado');
+    }
+    syncTree();
+  }, [engine, flatVisible, syncTree]);
+
+  const handleGripPointerDown = useCallback((e: React.PointerEvent, nodeId: string) => {
     if (!canEdit) return;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', id);
-    setDraggedId(id);
-  };
-
-  const handleDragOver = (e: DragEvent, id: string) => {
-    e.preventDefault();
-    if (draggedId && draggedId !== id) setDragOverId(id);
-  };
-
-  const handleDragEnter = (e: DragEvent) => {
-    e.preventDefault();
-    dragCounter.current++;
-  };
-
-  const handleDragLeave = () => {
-    dragCounter.current--;
-    if (dragCounter.current === 0) setDragOverId(null);
-  };
-
-  const handleDrop = (e: DragEvent, targetId: string) => {
+    const node = engine.tree.findNode(nodeId);
+    if (node?.locked) return;
     e.preventDefault();
     e.stopPropagation();
-    dragCounter.current = 0;
-    if (!draggedId || draggedId === targetId) {
-      resetDrag();
-      return;
-    }
 
-    const targetParent = engine.tree.findParent(targetId);
-    const targetSiblings = targetParent?.children ?? engine.tree.getTree();
-    const targetIdx = targetSiblings.findIndex(n => n.id === targetId);
+    dragStartXRef.current = e.clientX;
+    isDraggingRef.current = false;
 
-    engine.tree.moveNode(draggedId, targetParent?.id ?? null, targetIdx);
-    syncTree();
-    toast.success('Menu movido');
-    resetDrag();
-  };
+    const sourceId = nodeId;
+    let currentTarget: DropTarget | null = null;
+    let currentIntent: 'none' | 'indent' | 'outdent' = 'none';
 
-  const handleDropInto = (e: DragEvent, parentId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current = 0;
-    if (!draggedId || draggedId === parentId) {
-      resetDrag();
-      return;
-    }
-    const parent = engine.tree.findNode(parentId);
-    engine.tree.moveNode(draggedId, parentId, parent?.children?.length ?? 0);
-    syncTree();
-    toast.success('Movido como filho');
-    resetDrag();
-  };
+    const onMove = (me: PointerEvent) => {
+      if (!isDraggingRef.current) {
+        const dist = Math.abs(me.clientX - dragStartXRef.current) + Math.abs(me.clientY - (e.clientY));
+        if (dist < 5) return;
+        isDraggingRef.current = true;
+        setDraggedId(sourceId);
+      }
 
-  const resetDrag = () => {
-    setDraggedId(null);
-    setDragOverId(null);
-    dragCounter.current = 0;
-  };
+      const deltaX = me.clientX - dragStartXRef.current;
+      if (deltaX > HORIZONTAL_THRESHOLD) currentIntent = 'indent';
+      else if (deltaX < -HORIZONTAL_THRESHOLD) currentIntent = 'outdent';
+      else currentIntent = 'none';
+      setDragIntent(currentIntent);
 
-  // ─── Recursive tree renderer ───
+      // Find closest visible row
+      if (!treeContainerRef.current) return;
+      const rows = treeContainerRef.current.querySelectorAll<HTMLElement>('[data-node-id]');
+      let closestId: string | null = null;
+      let closestDist = Infinity;
+      let closestRect: DOMRect | null = null;
+
+      rows.forEach(row => {
+        const id = row.dataset.nodeId!;
+        if (id === sourceId) return;
+        const rect = row.getBoundingClientRect();
+        const cy = rect.top + rect.height / 2;
+        const d = Math.abs(me.clientY - cy);
+        if (d < closestDist) { closestDist = d; closestId = id; closestRect = rect; }
+      });
+
+      if (closestId && closestRect && closestDist < 60) {
+        const idx = flatVisible.findIndex(f => f.node.id === closestId);
+        if (idx < 0) { currentTarget = null; setDropTarget(null); return; }
+        const entry = flatVisible[idx];
+        const rect = closestRect as DOMRect;
+        const relY = me.clientY - rect.top;
+        const isTopHalf = relY < rect.height / 2;
+
+        if (currentIntent === 'indent' && entry.depth + 1 < MAX_TREE_DEPTH) {
+          currentTarget = { targetId: closestId, position: 'child', depth: entry.depth + 1 };
+        } else if (isTopHalf) {
+          currentTarget = { targetId: closestId, position: 'before', depth: entry.depth };
+        } else {
+          currentTarget = { targetId: closestId, position: 'after', depth: entry.depth };
+        }
+        setDropTarget(currentTarget);
+      } else {
+        currentTarget = null;
+        setDropTarget(null);
+      }
+    };
+
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+
+      if (isDraggingRef.current && currentTarget) {
+        executeDrop(sourceId, currentTarget);
+      }
+
+      isDraggingRef.current = false;
+      setDraggedId(null);
+      setDropTarget(null);
+      setDragIntent('none');
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  }, [canEdit, engine, flatVisible, executeDrop]);
+
+  // ═══════════════════════════════════════
+  // RENDER NODE
+  // ═══════════════════════════════════════
+
   const renderNode = (node: MenuTreeNode, depth: number, index: number, siblings: MenuTreeNode[]) => {
     const Icon = getIcon(node.icon);
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedIds.has(node.id);
     const isSelected = selectedId === node.id;
     const isDragged = draggedId === node.id;
-    const isDragOver = dragOverId === node.id;
     const isFirst = index === 0;
     const isLast = index === siblings.length - 1;
 
+    // Drop indicator state
+    const isDropBefore = dropTarget?.targetId === node.id && dropTarget.position === 'before';
+    const isDropAfter = dropTarget?.targetId === node.id && dropTarget.position === 'after';
+    const isDropChild = dropTarget?.targetId === node.id && dropTarget.position === 'child';
+
     return (
-      <div key={node.id} className="select-none">
+      <div key={node.id} className="select-none relative">
+        {/* ── Drop indicator: BEFORE ── */}
+        {isDropBefore && (
+          <div
+            className="absolute left-0 right-0 h-0.5 bg-primary rounded-full z-10 pointer-events-none"
+            style={{ marginLeft: depth * 24, top: 0 }}
+          >
+            <div className="absolute -left-1 -top-[3px] w-2 h-2 rounded-full bg-primary" />
+          </div>
+        )}
+
         <div
-          draggable={canEdit && !node.locked}
-          onDragStart={(e) => handleDragStart(e, node.id)}
-          onDragOver={(e) => handleDragOver(e, node.id)}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDrop={(e) => handleDrop(e, node.id)}
-          onDragEnd={resetDrag}
+          data-node-id={node.id}
           onClick={() => setSelectedId(isSelected ? null : node.id)}
           className={cn(
-            'group flex items-center gap-2 py-2 px-3 rounded-lg transition-all duration-150 cursor-pointer',
-            isDragged && 'opacity-30 scale-[0.97]',
-            isDragOver && 'ring-2 ring-primary/50 bg-primary/5',
-            isSelected && !isDragOver && 'bg-primary/10 ring-1 ring-primary/30',
-            !isSelected && !isDragOver && !isDragged && 'hover:bg-muted/40',
+            'group flex items-center gap-2 py-2 px-3 rounded-lg transition-all duration-150 cursor-pointer relative',
+            isDragged && 'opacity-20 scale-[0.97] pointer-events-none',
+            isDropChild && 'ring-2 ring-primary bg-primary/10',
+            isSelected && !isDropChild && 'bg-primary/10 ring-1 ring-primary/30',
+            !isSelected && !isDropChild && !isDragged && 'hover:bg-muted/40',
           )}
           style={{ marginLeft: depth * 24 }}
         >
-          {/* Grip */}
+          {/* Grip — pointer-based drag */}
           {canEdit && !node.locked && (
-            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0 cursor-grab active:cursor-grabbing" />
+            <div
+              onPointerDown={(e) => handleGripPointerDown(e, node.id)}
+              className="touch-none p-0.5 -m-0.5 cursor-grab active:cursor-grabbing shrink-0"
+            >
+              <GripVertical className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-muted-foreground" />
+            </div>
           )}
           {node.locked && <Lock className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />}
 
-          {/* Expand toggle */}
+          {/* Expand */}
           {hasChildren ? (
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleExpand(node.id); }}
-              className="p-0.5 rounded hover:bg-muted/60 shrink-0"
-            >
-              {isExpanded
-                ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-              }
+            <button onClick={(e) => { e.stopPropagation(); toggleExpand(node.id); }} className="p-0.5 rounded hover:bg-muted/60 shrink-0">
+              {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
             </button>
-          ) : (
-            <div className="w-[18px]" />
-          )}
+          ) : <div className="w-[18px]" />}
 
           {/* Icon */}
           <div className={cn(
@@ -401,21 +430,16 @@ export default function PlatformMenuStructure() {
             <Icon className={cn('h-3.5 w-3.5', depth === 0 ? 'text-primary' : 'text-muted-foreground')} />
           </div>
 
-          {/* Label & slug */}
+          {/* Label */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className={cn('text-sm font-medium truncate', depth === 0 ? 'font-semibold text-foreground' : 'text-foreground/80')}>
                 {node.label}
               </span>
-              {node.locked && (
-                <Badge variant="outline" className="text-[9px] border-amber-500/30 text-amber-400 bg-amber-500/10">
-                  locked
-                </Badge>
-              )}
+              {node.locked && <Badge variant="outline" className="text-[9px] border-amber-500/30 text-amber-400 bg-amber-500/10">locked</Badge>}
               {node.role_permissions && node.role_permissions.length > 0 && (
                 <Badge variant="outline" className="text-[9px] border-primary/30 text-primary/70 gap-0.5">
-                  <Shield className="h-2.5 w-2.5" />
-                  {node.role_permissions.length}
+                  <Shield className="h-2.5 w-2.5" />{node.role_permissions.length}
                 </Badge>
               )}
             </div>
@@ -423,81 +447,82 @@ export default function PlatformMenuStructure() {
           </div>
 
           {/* Depth badge */}
-          <Badge variant="secondary" className="text-[9px] px-1.5 py-0 shrink-0">
-            L{depth}
-          </Badge>
+          <Badge variant="secondary" className="text-[9px] px-1.5 py-0 shrink-0">L{depth}</Badge>
 
-          {/* Action buttons (visible on hover or selected) */}
+          {/* Actions */}
           {canEdit && isSelected && (
             <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
-              <button
-                onClick={() => handleMoveUp(node.id)}
-                disabled={isFirst}
-                className="p-1 rounded hover:bg-muted/60 disabled:opacity-20"
-                title="Mover para cima"
-              >
-                <ChevronUp className="h-3 w-3" />
-              </button>
-              <button
-                onClick={() => handleMoveDown(node.id)}
-                disabled={isLast}
-                className="p-1 rounded hover:bg-muted/60 disabled:opacity-20"
-                title="Mover para baixo"
-              >
-                <ChevronDown className="h-3 w-3" />
-              </button>
-              <button
-                onClick={() => handleIndentRight(node.id)}
-                className="p-1 rounded hover:bg-muted/60"
-                title="Aumentar nível (tornar filho)"
-              >
-                <ArrowRight className="h-3 w-3" />
-              </button>
-              <button
-                onClick={() => handleIndentLeft(node.id)}
-                disabled={depth === 0}
-                className="p-1 rounded hover:bg-muted/60 disabled:opacity-20"
-                title="Reduzir nível (promover)"
-              >
-                <ArrowLeft className="h-3 w-3" />
-              </button>
+              <button onClick={() => handleMoveUp(node.id)} disabled={isFirst} className="p-1 rounded hover:bg-muted/60 disabled:opacity-20" title="Mover para cima"><ChevronUp className="h-3 w-3" /></button>
+              <button onClick={() => handleMoveDown(node.id)} disabled={isLast} className="p-1 rounded hover:bg-muted/60 disabled:opacity-20" title="Mover para baixo"><ChevronDown className="h-3 w-3" /></button>
+              <button onClick={() => handleIndentRight(node.id)} className="p-1 rounded hover:bg-muted/60" title="Tornar filho"><ArrowRight className="h-3 w-3" /></button>
+              <button onClick={() => handleIndentLeft(node.id)} disabled={depth === 0} className="p-1 rounded hover:bg-muted/60 disabled:opacity-20" title="Promover"><ArrowLeft className="h-3 w-3" /></button>
             </div>
           )}
 
-          {/* Children count */}
-          {hasChildren && (
-            <span className="text-[10px] text-muted-foreground shrink-0">{node.children!.length}</span>
-          )}
+          {hasChildren && <span className="text-[10px] text-muted-foreground shrink-0">{node.children!.length}</span>}
         </div>
 
-        {/* Drop zone into parent */}
-        {hasChildren && isExpanded && draggedId && draggedId !== node.id && (
+        {/* ── Drop indicator: AFTER ── */}
+        {isDropAfter && !hasChildren && (
           <div
-            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            onDrop={(e) => handleDropInto(e, node.id)}
-            className="mx-4 my-0.5 h-6 rounded border border-dashed border-primary/30 flex items-center justify-center text-[10px] text-primary/50 hover:bg-primary/5 transition-colors"
-            style={{ marginLeft: (depth + 1) * 24 + 16 }}
+            className="absolute left-0 right-0 h-0.5 bg-primary rounded-full z-10 pointer-events-none"
+            style={{ marginLeft: depth * 24, bottom: 0 }}
           >
-            Soltar como filho de {node.label}
+            <div className="absolute -left-1 -top-[3px] w-2 h-2 rounded-full bg-primary" />
           </div>
         )}
 
-        {/* Render children */}
-        {hasChildren && isExpanded && (
-          <div>
-            {node.children!.map((child, cIdx) => renderNode(child, depth + 1, cIdx, node.children!))}
+        {/* ── Drop "child" visual badge ── */}
+        {isDropChild && (
+          <div
+            className="mx-4 my-0.5 py-1 rounded border border-dashed border-primary/40 flex items-center justify-center text-[10px] text-primary/60 bg-primary/5 pointer-events-none"
+            style={{ marginLeft: (depth + 1) * 24 + 16 }}
+          >
+            <ArrowRight className="h-3 w-3 mr-1" />
+            Soltar como filho de <span className="font-semibold ml-1">{node.label}</span>
           </div>
+        )}
+
+        {/* Children */}
+        {hasChildren && isExpanded && (
+          <div>{node.children!.map((child, cIdx) => renderNode(child, depth + 1, cIdx, node.children!))}</div>
         )}
       </div>
     );
   };
 
+  // ═══════════════════════════════════════
+  // DRAG INTENT HUD
+  // ═══════════════════════════════════════
+
+  const dragHud = draggedId && dragIntent !== 'none' && (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-fade-in">
+      <div className={cn(
+        'px-4 py-2 rounded-full text-xs font-medium shadow-lg border flex items-center gap-2',
+        dragIntent === 'indent'
+          ? 'bg-primary/15 border-primary/30 text-primary'
+          : 'bg-amber-500/15 border-amber-500/30 text-amber-400',
+      )}>
+        {dragIntent === 'indent' ? (
+          <><ArrowRight className="h-3.5 w-3.5" />Solte para tornar filho (indent)</>
+        ) : (
+          <><ArrowLeft className="h-3.5 w-3.5" />Solte para promover (outdent)</>
+        )}
+      </div>
+    </div>
+  );
+
+  // ═══════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════
+
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* ── Header ── */}
+      {dragHud}
+
+      {/* Header */}
       <div className="relative overflow-hidden rounded-xl gradient-platform-surface border border-platform p-6">
         <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full opacity-[0.07]" style={{ background: 'radial-gradient(circle, hsl(265 80% 55%), transparent 70%)' }} />
-
         <div className="relative flex items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
@@ -509,37 +534,25 @@ export default function PlatformMenuStructure() {
                   Advanced Menu Structure Builder
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Editor hierárquico com drag & drop, versionamento e segurança por roles.
+                  Arraste o grip ⠿ para reordenar · Arraste → para tornar filho · Arraste ← para promover
                 </p>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleValidate}
-              className="border-platform hover:bg-accent/50 gap-1.5"
-            >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Validar
+            <Button variant="outline" size="sm" onClick={handleValidate} className="border-platform hover:bg-accent/50 gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5" />Validar
             </Button>
             {hasChanges && (
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="gradient-platform-accent text-white hover:opacity-90 gap-1.5"
-              >
-                <Save className={cn('h-3.5 w-3.5', isSaving && 'animate-spin')} />
-                Salvar & Versionar
+              <Button size="sm" onClick={handleSave} disabled={isSaving} className="gradient-platform-accent text-white hover:opacity-90 gap-1.5">
+                <Save className={cn('h-3.5 w-3.5', isSaving && 'animate-spin')} />Salvar & Versionar
               </Button>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── Stats ── */}
+      {/* Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
           { label: 'Nós Raiz', value: totalRoots, color: 'hsl(265 80% 55%)' },
@@ -558,31 +571,27 @@ export default function PlatformMenuStructure() {
         ))}
       </div>
 
-      {/* ── Tabs ── */}
+      {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="bg-muted/50 border border-border/40">
           <TabsTrigger value="tree" className="gap-1.5 text-xs data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
-            <Puzzle className="h-3.5 w-3.5" />
-            Árvore
+            <Puzzle className="h-3.5 w-3.5" />Árvore
           </TabsTrigger>
           <TabsTrigger value="versions" className="gap-1.5 text-xs data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
-            <History className="h-3.5 w-3.5" />
-            Versões ({versions.length})
+            <History className="h-3.5 w-3.5" />Versões ({versions.length})
           </TabsTrigger>
           <TabsTrigger value="validation" className="gap-1.5 text-xs data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Validação
+            <CheckCircle2 className="h-3.5 w-3.5" />Validação
           </TabsTrigger>
         </TabsList>
 
-        {/* ── Tree Tab ── */}
+        {/* Tree */}
         <TabsContent value="tree" className="mt-4">
           <Card className="border-border/50 bg-card/80 backdrop-blur">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
-                  <GitBranch className="h-4 w-4" />
-                  Hierarquia de Menus
+                  <GitBranch className="h-4 w-4" />Hierarquia de Menus
                 </CardTitle>
                 <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
                   <span className="flex items-center gap-1"><GripVertical className="h-3 w-3" /> Arrastar</span>
@@ -593,7 +602,7 @@ export default function PlatformMenuStructure() {
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[520px] pr-2">
-                <div className="space-y-0.5">
+                <div ref={treeContainerRef} className="space-y-0.5">
                   {tree.map((node, idx) => renderNode(node, 0, idx, tree))}
                 </div>
               </ScrollArea>
@@ -601,20 +610,17 @@ export default function PlatformMenuStructure() {
           </Card>
         </TabsContent>
 
-        {/* ── Versions Tab ── */}
+        {/* Versions */}
         <TabsContent value="versions" className="mt-4">
           <Card className="border-border/50 bg-card/80 backdrop-blur">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
-                <History className="h-4 w-4" />
-                Histórico de Versões
+                <History className="h-4 w-4" />Histórico de Versões
               </CardTitle>
             </CardHeader>
             <CardContent>
               {versions.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-12">
-                  Nenhuma versão salva ainda. Faça alterações e clique em "Salvar & Versionar".
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-12">Nenhuma versão salva ainda.</p>
               ) : (
                 <ScrollArea className="h-[400px] pr-2">
                   <div className="space-y-2">
@@ -629,14 +635,8 @@ export default function PlatformMenuStructure() {
                             {new Date(v.createdAt).toLocaleString('pt-BR')} · {v.createdBy} · {v.tree.length} raízes
                           </p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs gap-1"
-                          onClick={() => handleRestore(v.id)}
-                        >
-                          <RefreshCw className="h-3 w-3" />
-                          Restaurar
+                        <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => handleRestore(v.id)}>
+                          <RefreshCw className="h-3 w-3" />Restaurar
                         </Button>
                       </div>
                     ))}
@@ -647,37 +647,26 @@ export default function PlatformMenuStructure() {
           </Card>
         </TabsContent>
 
-        {/* ── Validation Tab ── */}
+        {/* Validation */}
         <TabsContent value="validation" className="mt-4">
           <Card className="border-border/50 bg-card/80 backdrop-blur">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4" />
-                Resultado da Validação
+                <CheckCircle2 className="h-4 w-4" />Resultado da Validação
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!validation ? (
-                <p className="text-sm text-muted-foreground text-center py-12">
-                  Clique em "Validar" para verificar a estrutura.
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-12">Clique em "Validar" para verificar.</p>
               ) : (
                 <div className="space-y-4">
-                  {/* Status */}
                   <div className={cn(
                     'flex items-center gap-2 rounded-lg border p-3 text-sm',
-                    validation.valid
-                      ? 'border-emerald-500/30 bg-emerald-500/8 text-emerald-400'
-                      : 'border-destructive/30 bg-destructive/8 text-destructive'
+                    validation.valid ? 'border-emerald-500/30 bg-emerald-500/8 text-emerald-400' : 'border-destructive/30 bg-destructive/8 text-destructive'
                   )}>
                     {validation.valid ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-                    {validation.valid
-                      ? 'Estrutura válida — nenhum erro encontrado.'
-                      : `${validation.errors.length} erro(s) encontrado(s).`
-                    }
+                    {validation.valid ? 'Estrutura válida ✓' : `${validation.errors.length} erro(s) encontrado(s).`}
                   </div>
-
-                  {/* Errors */}
                   {validation.errors.length > 0 && (
                     <div className="space-y-1.5">
                       <p className="text-xs font-semibold text-destructive uppercase tracking-wider">Erros</p>
@@ -690,8 +679,6 @@ export default function PlatformMenuStructure() {
                       ))}
                     </div>
                   )}
-
-                  {/* Warnings */}
                   {validation.warnings.length > 0 && (
                     <div className="space-y-1.5">
                       <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Avisos ({validation.warnings.length})</p>
