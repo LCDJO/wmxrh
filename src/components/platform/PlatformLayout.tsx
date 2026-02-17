@@ -1,12 +1,14 @@
 /**
  * PlatformLayout — Shell layout for /platform/* routes.
  * Visually distinct from tenant AppLayout with purple accent and "Modo Plataforma" label.
+ * Reads saved menu order from localStorage to dynamically reorder sidebar navigation.
  */
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import type { PlatformPermission } from '@/domains/platform/platform-permissions';
+import { getSavedMenuOrder, applyOrder } from '@/lib/platform-menu-order';
 import {
   LayoutDashboard,
   Building2,
@@ -30,7 +32,7 @@ import {
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface PlatformNavItem {
   to: string;
@@ -110,6 +112,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
     children: [
       { to: '/platform/structure/events', label: 'Eventos' },
       { to: '/platform/structure/menus', label: 'Menus' },
+      { to: '/platform/structure/modules', label: 'Módulos' },
     ],
   },
 ];
@@ -123,19 +126,37 @@ export default function PlatformLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [expandedNav, setExpandedNav] = useState<string | null>(null);
 
-  // Filter nav items based on PlatformAccessGraph permissions
-  const visibleNavItems = NAV_ITEMS.filter(item => {
-    if (!item.requiredPermission) return true;
-    return can(item.requiredPermission);
-  }).map(item => {
-    if (!item.children) return item;
-    return {
-      ...item,
-      children: item.children.filter(child =>
-        !child.requiredPermission || can(child.requiredPermission)
-      ),
-    };
-  });
+  // Apply saved menu order, then filter by permissions
+  const savedOrder = useMemo(() => getSavedMenuOrder(), []);
+
+  const visibleNavItems = useMemo(() => {
+    let items = NAV_ITEMS.filter(item => {
+      if (!item.requiredPermission) return true;
+      return can(item.requiredPermission);
+    }).map(item => {
+      if (!item.children) return item;
+      return {
+        ...item,
+        children: item.children.filter(child =>
+          !child.requiredPermission || can(child.requiredPermission)
+        ),
+      };
+    });
+
+    // Reorder based on saved menu structure
+    if (savedOrder) {
+      items = applyOrder(items, savedOrder.rootOrder, i => i.to);
+      items = items.map(item => {
+        if (!item.children || !savedOrder.childrenOrder[item.to]) return item;
+        return {
+          ...item,
+          children: applyOrder(item.children, savedOrder.childrenOrder[item.to], c => c.to),
+        };
+      });
+    }
+
+    return items;
+  }, [can, savedOrder]);
 
   const handleLogout = async () => {
     await signOut();
