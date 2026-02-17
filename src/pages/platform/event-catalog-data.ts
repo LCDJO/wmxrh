@@ -334,6 +334,12 @@ const DOMAIN_REGISTRIES: DomainRegistry[] = [
       { name: 'AIFABGenerated', description: 'Conteúdo FAB gerado pelo AI Content Generator' },
       { name: 'AICTAOptimized', description: 'CTA otimizado pelo AI Conversion Designer' },
       { name: 'AILayoutSuggested', description: 'Layout sugerido pelo AI Conversion Designer' },
+      { name: 'PublicAPIRequest', description: 'Requisição processada pelo PublicAPI Gateway' },
+      { name: 'PublicAPIRateLimited', description: 'Requisição bloqueada por rate limiting no gateway público' },
+      { name: 'PublicAPITokenIssued', description: 'Token público limitado emitido para visitante' },
+      { name: 'VersionSnapshotCreated', description: 'Snapshot de versão criado para landing page' },
+      { name: 'SecurePublishExecuted', description: 'Publicação segura executada via pipeline' },
+      { name: 'RollbackApplied', description: 'Rollback de versão aplicado em landing page' },
     ],
   },
 ];

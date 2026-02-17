@@ -45,4 +45,8 @@ export type { SEOReport, SEOIssue, MetaTags } from './seo-optimization-service';
 export { landingTemplateEngine, LandingTemplateEngine } from './landing-template-engine';
 export type { LandingTemplate, TemplateSection, TemplateSectionType } from './landing-template-engine';
 
+// ── PublicAPI Gateway (security boundary) ──
+export { publicAPIGateway, PublicAPIGateway, RateLimiter, createPublicToken, isPublicTokenValid } from './public-api-gateway';
+export type { PublicEndpoint, PublicToken, PublicAPIRequest, PublicAPIResponse } from './public-api-gateway';
+
 export type * from './types';
