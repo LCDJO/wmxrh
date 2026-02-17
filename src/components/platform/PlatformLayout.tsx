@@ -92,6 +92,14 @@ const NAV_ITEMS: PlatformNavItem[] = [
   },
   { to: '/platform/revenue', label: 'Revenue', icon: TrendingUp, requiredPermission: 'billing.view' },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
+  {
+    to: '/platform/structure',
+    label: 'Estrutura',
+    icon: Puzzle,
+    children: [
+      { to: '/platform/structure/events', label: 'Eventos' },
+    ],
+  },
 ];
 
 export default function PlatformLayout() {
