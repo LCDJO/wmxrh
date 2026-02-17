@@ -4,6 +4,7 @@ import { AppBreadcrumbs } from './AppBreadcrumbs';
 import { ImpersonationBanner } from './ImpersonationBanner';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useSecurityMonitor } from '@/domains/security/useSecurityMonitor';
 import { dualIdentityEngine } from '@/domains/security/kernel/dual-identity-engine';
@@ -17,6 +18,7 @@ export function AppLayout() {
     <div className="flex min-h-screen">
       <AppSidebar />
       <div className="flex-1 flex flex-col">
+        <AnnouncementBanner />
         <ImpersonationBanner />
         <header
           className={`sticky top-0 z-10 flex items-center justify-between px-8 py-4 backdrop-blur-md border-b ${
