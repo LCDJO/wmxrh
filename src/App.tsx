@@ -48,6 +48,7 @@ import PlatformDashboard from "./pages/platform/PlatformDashboard";
 import PlatformTenants from "./pages/platform/PlatformTenants";
 import PlatformModules from "./pages/platform/PlatformModules";
 import PlatformSecurity from "./pages/platform/PlatformSecurity";
+import PlatformCommunications from "./pages/platform/PlatformCommunications";
 import PlatformAudit from "./pages/platform/PlatformAudit";
 import PlatformUsers from "./pages/platform/PlatformUsers";
 import PlatformPlans from "./pages/platform/PlatformPlans";
@@ -100,6 +101,7 @@ function AppRoutes() {
         <Route path="security" element={<PlatformSecurity />} />
         <Route path="plans" element={<PlatformPlans />} />
         <Route path="audit" element={<PlatformAudit />} />
+        <Route path="communications" element={<PlatformCommunications />} />
       </Route>
 
       <Route path="/auth/login" element={<Navigate to="/" replace />} />
