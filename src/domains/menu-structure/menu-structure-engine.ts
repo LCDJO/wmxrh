@@ -342,6 +342,57 @@ export class MenuLayoutValidator {
     return { valid: errors.length === 0, errors, warnings };
   }
 
+  /** Auto-fix common validation errors. Returns the fixed tree + list of fixes applied. */
+  autoFix(tree: MenuTreeNode[]): { fixed: MenuTreeNode[]; fixes: string[] } {
+    const result = structuredClone(tree);
+    const fixes: string[] = [];
+    const slugs = new Set<string>();
+
+    const fixWalk = (nodes: MenuTreeNode[], depth: number, parentId: string | null) => {
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+
+        // Fix parent_id sync
+        if (n.parent_id !== parentId) {
+          n.parent_id = parentId;
+        }
+
+        // Fix depth
+        n.depth_level = depth;
+        n.order_index = i;
+
+        // Fix empty slug
+        if (!n.slug || n.slug.trim() === '') {
+          n.slug = `/${n.id}`;
+          fixes.push(`Slug vazio corrigido para "${n.label}" → ${n.slug}`);
+        }
+
+        // Fix duplicate slug
+        if (slugs.has(n.slug)) {
+          const original = n.slug;
+          n.slug = `${n.slug}-${n.id.slice(0, 4)}`;
+          fixes.push(`Slug duplicado "${original}" renomeado → ${n.slug}`);
+        }
+        slugs.add(n.slug);
+
+        // Fix max depth: move nodes exceeding max depth up to their grandparent
+        if (depth >= MAX_TREE_DEPTH && n.children && n.children.length > 0) {
+          fixes.push(`Filhos de "${n.label}" promovidos (profundidade ${depth + 1} > max ${MAX_TREE_DEPTH})`);
+          // Promote children to current level
+          nodes.splice(i + 1, 0, ...n.children.map(c => ({ ...c, parent_id: parentId, depth_level: depth })));
+          n.children = [];
+        }
+
+        if (n.children && n.children.length > 0) {
+          fixWalk(n.children, depth + 1, n.id);
+        }
+      }
+    };
+
+    fixWalk(result, 0, null);
+    return { fixed: result, fixes };
+  }
+
   /** Detect circular loops: a node whose parent_id is one of its own descendants */
   private detectCircularRefs(tree: MenuTreeNode[], errors: MenuValidationError[]): void {
     const flat = this.flatten(tree);
