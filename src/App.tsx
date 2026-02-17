@@ -73,6 +73,7 @@ import PlatformCoupons from "./pages/platform/PlatformCoupons";
 import BillingControlCenter from "./pages/platform/BillingControlCenter";
 import PlatformEvents from "./pages/platform/PlatformEvents";
 import PlatformMenuStructure from "./pages/platform/PlatformMenuStructure";
+import PlatformModulesCatalog from "./pages/platform/PlatformModulesCatalog";
 import PlatformRevenueIntelligence from "./pages/platform/PlatformRevenueIntelligence";
 import PlatformReferrals from "./pages/platform/PlatformReferrals";
 import PlatformGamification from "./pages/platform/PlatformGamification";
@@ -148,6 +149,7 @@ function AppRoutes() {
         <Route path="iam" element={<PlatformIAM />} />
         <Route path="structure/events" element={<PlatformEvents />} />
         <Route path="structure/menus" element={<PlatformMenuStructure />} />
+        <Route path="structure/modules" element={<PlatformModulesCatalog />} />
       </Route>
 
       <Route path="/auth/login" element={<Navigate to="/" replace />} />
