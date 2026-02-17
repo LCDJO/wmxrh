@@ -38,7 +38,12 @@ export type PermissionEntity =
   | 'labor_rules'
   | 'esocial_events'
   | 'agreement_templates'
-  | 'employee_agreements';
+  | 'employee_agreements'
+  // ── Platform-level entities ──
+  | 'platform_roles'
+  | 'platform_permissions'
+  | 'platform_billing'
+  | 'platform_impersonation';
 
 // ========================
 // ROLE SETS (mirrors DB functions)
@@ -212,6 +217,32 @@ export const PERMISSION_MATRIX: PermissionMatrix = {
     create: EMPLOYEE_MANAGERS,
     update: EMPLOYEE_MANAGERS,
     delete: TENANT_ADMINS,
+  },
+
+  // ── Platform-level entities (managed via PolicyEngine, not tenant RBAC) ──
+  platform_roles: {
+    view: ALL_MEMBERS,
+    create: [], // enforced by PolicyEngine (platform_super_admin only)
+    update: [],
+    delete: [],
+  },
+  platform_permissions: {
+    view: ALL_MEMBERS,
+    create: [],
+    update: [],
+    delete: [],
+  },
+  platform_billing: {
+    view: ALL_MEMBERS,
+    create: [],
+    update: [],
+    delete: [],
+  },
+  platform_impersonation: {
+    view: ALL_MEMBERS,
+    create: [], // enforced by PolicyEngine
+    update: [],
+    delete: [],
   },
 };
 
