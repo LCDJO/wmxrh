@@ -22,6 +22,7 @@ import { DependencyResolver } from './dependency-resolver';
 import { FeatureChangeTracker } from './feature-change-tracker';
 import { RollbackOrchestrator } from './rollback-orchestrator';
 import { ChangelogRenderer } from './changelog-renderer';
+import { AutoChangeTracker } from './auto-change-tracker';
 
 export interface AdvancedVersioningEngineAPI {
   platform: PlatformVersionRegistry;
@@ -32,6 +33,7 @@ export interface AdvancedVersioningEngineAPI {
   features: FeatureChangeTracker;
   rollback: RollbackOrchestrator;
   renderer: ChangelogRenderer;
+  tracker: AutoChangeTracker;
 }
 
 export function createAdvancedVersioningEngine(): AdvancedVersioningEngineAPI {
@@ -43,8 +45,9 @@ export function createAdvancedVersioningEngine(): AdvancedVersioningEngineAPI {
   const features = new FeatureChangeTracker();
   const rollback = new RollbackOrchestrator(releases, modules, dependencies);
   const renderer = new ChangelogRenderer(changelog, releases);
+  const tracker = new AutoChangeTracker(changelog);
 
-  return { platform, modules, changelog, releases, dependencies, features, rollback, renderer };
+  return { platform, modules, changelog, releases, dependencies, features, rollback, renderer, tracker };
 }
 
 // Singleton
@@ -69,4 +72,5 @@ export { DependencyResolver } from './dependency-resolver';
 export { FeatureChangeTracker } from './feature-change-tracker';
 export { RollbackOrchestrator } from './rollback-orchestrator';
 export { ChangelogRenderer } from './changelog-renderer';
+export { AutoChangeTracker } from './auto-change-tracker';
 export { formatVersion, parseVersion, compareVersions, bumpVersion, satisfiesRange } from './version-utils';
