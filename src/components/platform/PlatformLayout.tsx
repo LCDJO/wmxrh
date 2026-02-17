@@ -107,15 +107,44 @@ const NAV_ITEMS: PlatformNavItem[] = [
     ],
   },
   {
+    to: '/platform/growth-ai',
+    label: 'Growth AI',
+    icon: Brain,
+    requiredPermission: 'growth.view',
+    children: [
+      { to: '/platform/marketing/insights', label: 'Insights de Crescimento' },
+      { to: '/platform/growth/designer', label: 'AI Designer' },
+    ],
+  },
+  {
+    to: '/platform/website',
+    label: 'Website',
+    icon: Globe,
+    requiredPermission: 'website.view',
+    children: [
+      { to: '/platform/website', label: 'Editor' },
+      { to: '/platform/website/approvals', label: 'Aprovações' },
+    ],
+  },
+  {
+    to: '/platform/landing',
+    label: 'Landing Pages',
+    icon: Megaphone,
+    requiredPermission: 'landing_page.view',
+    children: [
+      { to: '/platform/landing', label: 'Todas' },
+      { to: '/platform/landing/drafts', label: 'Rascunhos' },
+      { to: '/platform/landing/review', label: 'Em Revisão' },
+      { to: '/platform/landing/published', label: 'Publicadas' },
+    ],
+  },
+  {
     to: '/platform/marketing-digital',
     label: 'Marketing Digital',
     icon: Rocket,
     requiredPermission: 'growth.view',
     children: [
       { to: '/platform/marketing/dashboard', label: 'Dashboard' },
-      { to: '/platform/website', label: 'Website', requiredPermission: 'website.view' },
-      { to: '/platform/landing', label: 'Landing Pages', requiredPermission: 'landing_page.view' },
-      { to: '/platform/marketing/insights', label: 'Insights de Crescimento' },
       { to: '/platform/marketing/funnels', label: 'Funis' },
       { to: '/platform/marketing/pipeline', label: 'Pipeline de Conversão' },
       { to: '/platform/marketing/campaigns', label: 'Campanhas' },
