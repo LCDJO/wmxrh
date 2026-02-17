@@ -223,7 +223,13 @@ export default function LiveChatWindow({
   const isClosed = session?.status === 'closed';
 
   return (
-    <div className={`flex flex-col ${embedded ? 'h-full' : 'h-[600px] max-h-[80vh] border border-border rounded-xl shadow-lg'} overflow-hidden bg-background`}>
+    <div
+      className={`flex flex-col ${
+        embedded
+          ? 'h-full'
+          : 'h-[calc(100vh-200px)] max-h-[700px] min-h-[400px] border border-border rounded-xl shadow-xl'
+      } overflow-hidden bg-background transition-all duration-300`}
+    >
       <ChatHeader
         session={session}
         senderType={senderType}

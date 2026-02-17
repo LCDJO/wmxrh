@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -20,15 +19,6 @@ interface ChatHeaderProps {
   isTyping?: boolean;
 }
 
-function PresenceDot({ online }: { online: boolean }) {
-  return (
-    <span
-      className="absolute -bottom-0.5 -right-0.5 inline-block w-3 h-3 rounded-full border-2 border-primary"
-      style={{ backgroundColor: online ? 'hsl(145 60% 42%)' : 'hsl(0 0% 60%)' }}
-    />
-  );
-}
-
 export default function ChatHeader({
   session,
   senderType,
@@ -47,81 +37,86 @@ export default function ChatHeader({
   const headerRole = counterpartIdentity?.role
     ?? (senderType === 'agent' ? 'Colaborador' : 'Agente de Suporte');
 
-  // Status text below name
-  const statusText = isTyping
-    ? 'digitando...'
-    : connected
-      ? 'online'
-      : 'offline';
-
   return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-primary text-primary-foreground shrink-0">
+    <div className="flex items-center gap-3 px-4 py-3 bg-primary text-primary-foreground shrink-0 shadow-sm">
       {onBack && (
         <Button
           variant="ghost"
           size="icon"
           onClick={onBack}
-          className="text-primary-foreground hover:bg-primary-foreground/10 -ml-2"
+          className="text-primary-foreground hover:bg-primary-foreground/10 -ml-2 h-9 w-9"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
       )}
 
-      <div className="relative">
-        <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+      {/* Avatar with presence */}
+      <div className="relative shrink-0">
+        <div className="w-10 h-10 rounded-full bg-primary-foreground/15 flex items-center justify-center ring-2 ring-primary-foreground/10">
           <span className="text-sm font-bold">{headerName[0]?.toUpperCase()}</span>
         </div>
-        <PresenceDot online={connected} />
+        <span
+          className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-primary transition-colors duration-300"
+          style={{ backgroundColor: connected ? 'hsl(145 60% 50%)' : 'hsl(0 0% 55%)' }}
+        />
       </div>
 
+      {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate">{headerName}</p>
-        <p className={`text-[10px] truncate ${isTyping ? 'text-green-300 italic' : 'opacity-80'}`}>
-          {isTyping ? statusText : headerRole}
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold truncate">{headerName}</p>
+          {session && (
+            <Badge
+              variant="secondary"
+              className="text-[8px] px-1.5 py-0 shrink-0"
+              style={{
+                backgroundColor: isClosed ? 'hsla(0,0%,100%,0.1)' : 'hsla(145,60%,50%,0.2)',
+                color: isClosed ? 'hsla(0,0%,100%,0.5)' : 'hsl(145 60% 80%)',
+              }}
+            >
+              {isClosed ? 'Encerrado' : 'Ao Vivo'}
+            </Badge>
+          )}
+        </div>
+
+        {/* Status line */}
+        <p className={`text-[11px] truncate transition-all duration-200 ${isTyping ? 'text-green-300' : 'opacity-70'}`}>
+          {isTyping ? (
+            <span className="italic">digitando...</span>
+          ) : (
+            <>
+              {headerRole}
+              {senderType === 'agent' && counterpartIdentity?.company && (
+                <span className="opacity-60 ml-1.5 inline-flex items-center gap-0.5">
+                  <Building2 className="h-2.5 w-2.5 inline" />
+                  {counterpartIdentity.company}
+                </span>
+              )}
+            </>
+          )}
         </p>
 
-        {/* Contextual info line */}
+        {/* Protocol / tenant info */}
         <div className="flex items-center gap-2 mt-0.5">
-          {senderType === 'agent' && counterpartIdentity?.company && (
-            <span className="text-[10px] opacity-60 flex items-center gap-0.5 truncate">
-              <Building2 className="h-2.5 w-2.5" />
-              {counterpartIdentity.company}
-            </span>
-          )}
           {senderType === 'agent' && counterpartIdentity?.tenantId && (
-            <span className="text-[10px] opacity-50 flex items-center gap-0.5">
+            <span className="text-[9px] opacity-40 flex items-center gap-0.5">
               <IdCard className="h-2.5 w-2.5" />
               {counterpartIdentity.tenantId}
             </span>
           )}
-
-          {senderType === 'tenant' && (
-            <span className="text-[10px] opacity-60 truncate">
-              {session?.protocol_number
-                ? `Protocolo: ${session.protocol_number}`
-                : ticketSubject ?? `Ticket #${ticketId.slice(0, 8)}`}
+          {session?.protocol_number && (
+            <span className="text-[9px] opacity-50">
+              {session.protocol_number}
             </span>
           )}
-
-          {senderType === 'agent' && !counterpartIdentity?.company && (
-            <span className="text-[10px] opacity-60 truncate">
-              {session?.protocol_number
-                ? `Protocolo: ${session.protocol_number}`
-                : ticketSubject ?? `Ticket #${ticketId.slice(0, 8)}`}
-            </span>
-          )}
-
-          {/* Online/offline indicator text */}
-          {!isTyping && (
-            <span className={`text-[9px] ml-auto ${connected ? 'opacity-70' : 'opacity-40'}`}>
-              {connected ? '● online' : '○ offline'}
-            </span>
+          {!session?.protocol_number && ticketSubject && (
+            <span className="text-[9px] opacity-50 truncate">{ticketSubject}</span>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5">
-        {/* Export transcript */}
+      {/* Actions */}
+      <div className="flex items-center gap-1 shrink-0">
         {session && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -139,15 +134,9 @@ export default function ChatHeader({
                 onClick={async () => {
                   try {
                     const text = await ChatTranscriptArchive.exportAsText(session.id);
-                    ChatTranscriptArchive.downloadFile(
-                      text,
-                      `transcript-${session.protocol_number}.txt`,
-                      'text/plain',
-                    );
+                    ChatTranscriptArchive.downloadFile(text, `transcript-${session.protocol_number}.txt`, 'text/plain');
                     toast.success('Transcrição exportada');
-                  } catch {
-                    toast.error('Erro ao exportar');
-                  }
+                  } catch { toast.error('Erro ao exportar'); }
                 }}
                 className="gap-2"
               >
@@ -157,15 +146,9 @@ export default function ChatHeader({
                 onClick={async () => {
                   try {
                     const json = await ChatTranscriptArchive.exportAsJSON(session.id);
-                    ChatTranscriptArchive.downloadFile(
-                      json,
-                      `transcript-${session.protocol_number}.json`,
-                      'application/json',
-                    );
+                    ChatTranscriptArchive.downloadFile(json, `transcript-${session.protocol_number}.json`, 'application/json');
                     toast.success('Transcrição exportada');
-                  } catch {
-                    toast.error('Erro ao exportar');
-                  }
+                  } catch { toast.error('Erro ao exportar'); }
                 }}
                 className="gap-2"
               >
@@ -175,24 +158,12 @@ export default function ChatHeader({
           </DropdownMenu>
         )}
 
-        {session && (
-          <Badge
-            variant="secondary"
-            className="text-[9px] ml-1"
-            style={{
-              backgroundColor: isClosed ? 'hsla(0,0%,50%,0.2)' : 'hsla(145,60%,42%,0.2)',
-              color: isClosed ? 'hsl(0 0% 70%)' : 'hsl(145 60% 70%)',
-            }}
-          >
-            {isClosed ? 'Encerrado' : 'Ao Vivo'}
-          </Badge>
-        )}
         {onClose && !isClosed && (
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="text-primary-foreground hover:bg-primary-foreground/10 h-8 w-8"
+            className="text-primary-foreground hover:bg-red-500/20 h-8 w-8"
             title="Encerrar atendimento"
           >
             <X className="h-4 w-4" />
