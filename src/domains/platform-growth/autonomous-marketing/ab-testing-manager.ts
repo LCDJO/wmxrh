@@ -8,6 +8,8 @@ import type {
   VariantAllocationStrategy, ConversionMetricType,
 } from './types';
 import { tagManagerIntegration } from '../tag-manager-integration';
+import { hasPlatformPermission } from '@/domains/platform/platform-permissions';
+import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 
 class ABTestingManager {
   private experiments: Map<ExperimentId, ABExperiment> = new Map();
@@ -65,8 +67,13 @@ class ABTestingManager {
     return variant;
   }
 
-  /** Start running an experiment */
-  startExperiment(experimentId: ExperimentId): ABExperiment {
+  /** Start running an experiment (requires ab_experiment.start permission) */
+  startExperiment(experimentId: ExperimentId, callerRole?: PlatformRoleType): ABExperiment {
+    // Security gate: only platform_marketing, platform_operations, platform_super_admin
+    if (!callerRole || !hasPlatformPermission(callerRole, 'ab_experiment.start')) {
+      throw new Error('Forbidden: you do not have permission to start experiments (ab_experiment.start required)');
+    }
+
     const exp = this.getExperiment(experimentId);
     if (exp.variants.length < 2) throw new Error('Need at least 2 variants to start');
     if (exp.status !== 'draft' && exp.status !== 'paused') throw new Error(`Cannot start experiment in ${exp.status} status`);
