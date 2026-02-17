@@ -30,6 +30,7 @@ import {
   TrendingUp,
   Rocket,
   Globe,
+  GitBranch,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -146,6 +147,11 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/structure/menus', label: 'Menus' },
       { to: '/platform/structure/modules', label: 'Módulos' },
     ],
+  },
+  {
+    to: '/platform/settings/versioning',
+    label: 'Versionamento',
+    icon: GitBranch,
   },
 ];
 

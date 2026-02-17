@@ -94,6 +94,7 @@ import LandingReview from "./pages/platform/landing/LandingReview";
 import LandingPublished from "./pages/platform/landing/LandingPublished";
 import ReferralPage from "./pages/ReferralPage";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
+import PlatformVersioning from "./pages/platform/PlatformVersioning";
 
 const queryClient = new QueryClient();
 
@@ -166,6 +167,7 @@ function AppRoutes() {
         <Route path="structure/events" element={<PlatformEvents />} />
         <Route path="structure/menus" element={<PlatformMenuStructure />} />
         <Route path="structure/modules" element={<PlatformModulesCatalog />} />
+        <Route path="settings/versioning" element={<PlatformVersioning />} />
         <Route path="growth" element={<PlatformGrowthAI />} />
         <Route path="growth/insights" element={<GrowthInsights />} />
         <Route path="growth/landing-pages" element={<GrowthLandingPages />} />
