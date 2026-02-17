@@ -19,6 +19,16 @@ export type {
 export {
   emitRevenueIntelligenceEvent,
   onRevenueIntelligenceEvent,
+  onRevenueEventType,
   getRevenueIntelligenceEventLog,
+  clearRevenueIntelligenceEventLog,
 } from './revenue-events';
-export type { RevenueIntelligenceDomainEvent, RevenueIntelligenceEventType } from './revenue-events';
+export type {
+  RevenueIntelligenceDomainEvent,
+  RevenueIntelligenceEventType,
+  ReferralLinkCreatedEvent,
+  ReferralConvertedEvent,
+  RewardGrantedEvent,
+  RevenueForecastUpdatedEvent,
+  GamificationLevelUpEvent,
+} from './revenue-events';
