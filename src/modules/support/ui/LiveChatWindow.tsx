@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ChatService } from '@/domains/support/chat-service';
 import { usePresence } from '@/domains/support/use-presence';
 import ChatHeader from './chat/ChatHeader';
+import ChatEvaluationCard from './chat/ChatEvaluationCard';
 import MessageTimeline from './chat/MessageTimeline';
 import QuickReplyBox from './chat/QuickReplyBox';
 import type { ChatSession, ChatMessage, ChatSenderType } from '@/domains/support/types';
@@ -243,6 +244,14 @@ export default function LiveChatWindow({
         senderIdentities={senderIdentities}
         isCounterpartTyping={isCounterpartTyping}
       />
+
+      {isClosed && senderType === 'tenant' && (
+        <ChatEvaluationCard
+          ticketId={ticketId}
+          tenantId={tenantId}
+          agentId={assignedAgentId ?? null}
+        />
+      )}
 
       <QuickReplyBox
         onSend={handleSend}
