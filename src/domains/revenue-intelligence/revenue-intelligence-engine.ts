@@ -29,6 +29,9 @@ import type {
   GamificationLeaderboardEntry,
   GamificationPointEntry,
   GamificationTier,
+  GamificationLevel,
+  GamificationPointWeight,
+  GamificationProfile,
 } from './types';
 
 // ══════════════════════════════════════════════════════════════
@@ -650,11 +653,17 @@ export function createReferralManager(): ReferralManagerAPI {
 // GAMIFICATION ENGINE
 // ══════════════════════════════════════════════════════════════
 
-const POINTS_MAP: Record<string, number> = {
-  referral_signup: 100,
-  referral_conversion: 500,
-  referral_payment: 200,
-};
+async function fetchPointWeightsMap(): Promise<Record<string, number>> {
+  const { data } = await supabase
+    .from('gamification_point_weights' as any)
+    .select('action_key, points')
+    .eq('is_active', true);
+  const map: Record<string, number> = {};
+  for (const row of (data ?? []) as any[]) {
+    map[row.action_key] = row.points;
+  }
+  return map;
+}
 
 export function createGamificationEngine(): GamificationEngineAPI {
   return {
@@ -676,11 +685,27 @@ export function createGamificationEngine(): GamificationEngineAPI {
       return (data ?? []) as unknown as GamificationPointEntry[];
     },
 
+    async getProfile(userId) {
+      const { data } = await supabase
+        .from('gamification_profiles' as any)
+        .select('*, level:gamification_levels(*)')
+        .eq('user_id', userId)
+        .maybeSingle();
+      return data as unknown as GamificationProfile | null;
+    },
+
     async awardPoints(userId, action, points, source, description) {
+      // Use configurable weights if points=0
+      let finalPoints = points;
+      if (!finalPoints) {
+        const weights = await fetchPointWeightsMap();
+        finalPoints = weights[action] || 0;
+      }
+
       await supabase.from('gamification_points').insert({
         user_id: userId,
         action,
-        points: points || POINTS_MAP[action] || 0,
+        points: finalPoints,
         source,
         description: description ?? null,
       });
@@ -696,7 +721,7 @@ export function createGamificationEngine(): GamificationEngineAPI {
         await supabase
           .from('gamification_leaderboard')
           .update({
-            total_points: existing.total_points + (points || POINTS_MAP[action] || 0),
+            total_points: existing.total_points + finalPoints,
             total_referrals: existing.total_referrals + (action === 'referral_signup' ? 1 : 0),
             total_conversions: existing.total_conversions + (action === 'referral_conversion' ? 1 : 0),
             updated_at: new Date().toISOString(),
@@ -705,11 +730,41 @@ export function createGamificationEngine(): GamificationEngineAPI {
       } else {
         await supabase.from('gamification_leaderboard').insert({
           user_id: userId,
-          total_points: points || POINTS_MAP[action] || 0,
+          total_points: finalPoints,
           total_referrals: action === 'referral_signup' ? 1 : 0,
           total_conversions: action === 'referral_conversion' ? 1 : 0,
           current_tier: 'bronze',
         });
+      }
+
+      // Upsert gamification_profiles
+      const { data: profile } = await supabase
+        .from('gamification_profiles' as any)
+        .select('id, total_points')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (profile) {
+        await supabase
+          .from('gamification_profiles' as any)
+          .update({
+            total_points: (profile as any).total_points + finalPoints,
+            last_activity_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as any)
+          .eq('user_id', userId);
+      } else {
+        const { data: bronzeLevel } = await supabase
+          .from('gamification_levels' as any)
+          .select('id')
+          .eq('slug', 'bronze')
+          .single();
+        await supabase.from('gamification_profiles' as any).insert({
+          user_id: userId,
+          total_points: finalPoints,
+          level_id: bronzeLevel ? (bronzeLevel as any).id : null,
+          last_activity_at: new Date().toISOString(),
+        } as any);
       }
 
       // Recalculate tier
@@ -717,19 +772,38 @@ export function createGamificationEngine(): GamificationEngineAPI {
     },
 
     async recalculateTier(userId): Promise<GamificationTier> {
-      const { data } = await supabase
-        .from('gamification_leaderboard')
+      const { data: profile } = await supabase
+        .from('gamification_profiles' as any)
         .select('total_points')
         .eq('user_id', userId)
         .single();
 
-      const pts = data?.total_points ?? 0;
-      let tier: GamificationTier = 'bronze';
-      if (pts >= TIER_THRESHOLDS.diamond) tier = 'diamond';
-      else if (pts >= TIER_THRESHOLDS.platinum) tier = 'platinum';
-      else if (pts >= TIER_THRESHOLDS.gold) tier = 'gold';
-      else if (pts >= TIER_THRESHOLDS.silver) tier = 'silver';
+      const pts = (profile as any)?.total_points ?? 0;
 
+      // Fetch levels sorted descending by min_points
+      const { data: levels } = await supabase
+        .from('gamification_levels' as any)
+        .select('*')
+        .eq('is_active', true)
+        .order('min_points', { ascending: false });
+
+      let matchedLevel = (levels as any[])?.[((levels as any[])?.length ?? 1) - 1]; // fallback to lowest
+      for (const lvl of (levels ?? []) as any[]) {
+        if (pts >= lvl.min_points) {
+          matchedLevel = lvl;
+          break;
+        }
+      }
+
+      const tier = (matchedLevel?.slug ?? 'bronze') as GamificationTier;
+
+      // Update profile
+      await supabase
+        .from('gamification_profiles' as any)
+        .update({ level_id: matchedLevel?.id, updated_at: new Date().toISOString() } as any)
+        .eq('user_id', userId);
+
+      // Update leaderboard
       await supabase
         .from('gamification_leaderboard')
         .update({ current_tier: tier, updated_at: new Date().toISOString() })
@@ -737,9 +811,60 @@ export function createGamificationEngine(): GamificationEngineAPI {
 
       return tier;
     },
+
+    // ── Config: Levels ──
+    async getLevels() {
+      const { data } = await supabase
+        .from('gamification_levels' as any)
+        .select('*')
+        .order('sort_order', { ascending: true });
+      return (data ?? []) as unknown as GamificationLevel[];
+    },
+
+    async createLevel(level) {
+      const { data, error } = await supabase
+        .from('gamification_levels' as any)
+        .insert(level as any)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return data as unknown as GamificationLevel;
+    },
+
+    async updateLevel(id, updates) {
+      const { error } = await supabase
+        .from('gamification_levels' as any)
+        .update({ ...updates, updated_at: new Date().toISOString() } as any)
+        .eq('id', id);
+      if (error) throw new Error(error.message);
+    },
+
+    async deleteLevel(id) {
+      const { error } = await supabase
+        .from('gamification_levels' as any)
+        .delete()
+        .eq('id', id);
+      if (error) throw new Error(error.message);
+    },
+
+    // ── Config: Point Weights ──
+    async getPointWeights() {
+      const { data } = await supabase
+        .from('gamification_point_weights' as any)
+        .select('*')
+        .order('action_key', { ascending: true });
+      return (data ?? []) as unknown as GamificationPointWeight[];
+    },
+
+    async updatePointWeight(id, updates) {
+      const { error } = await supabase
+        .from('gamification_point_weights' as any)
+        .update({ ...updates, updated_at: new Date().toISOString() } as any)
+        .eq('id', id);
+      if (error) throw new Error(error.message);
+    },
   };
 }
-
 // ══════════════════════════════════════════════════════════════
 // FACADE
 // ══════════════════════════════════════════════════════════════

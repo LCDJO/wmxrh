@@ -2755,6 +2755,81 @@ export type Database = {
         }
         Relationships: []
       }
+      gamification_levels: {
+        Row: {
+          badge_label: string | null
+          color: string
+          created_at: string
+          icon: string | null
+          id: string
+          is_active: boolean
+          min_points: number
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          badge_label?: string | null
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          min_points?: number
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          badge_label?: string | null
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          min_points?: number
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      gamification_point_weights: {
+        Row: {
+          action_key: string
+          action_label: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          points: number
+          updated_at: string
+        }
+        Insert: {
+          action_key: string
+          action_label: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          points?: number
+          updated_at?: string
+        }
+        Update: {
+          action_key?: string
+          action_label?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          points?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gamification_points: {
         Row: {
           action: string
@@ -2787,6 +2862,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      gamification_profiles: {
+        Row: {
+          badges: string[]
+          created_at: string
+          id: string
+          last_activity_at: string | null
+          level_id: string | null
+          streak_months: number
+          total_points: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          badges?: string[]
+          created_at?: string
+          id?: string
+          last_activity_at?: string | null
+          level_id?: string | null
+          streak_months?: number
+          total_points?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          badges?: string[]
+          created_at?: string
+          id?: string
+          last_activity_at?: string | null
+          level_id?: string | null
+          streak_months?: number
+          total_points?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_profiles_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "gamification_levels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       governance_audit_snapshots: {
         Row: {

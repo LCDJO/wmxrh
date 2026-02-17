@@ -125,6 +125,45 @@ export interface ReferralReward {
 
 export type GamificationTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
 
+export interface GamificationLevel {
+  id: string;
+  name: string;
+  slug: string;
+  min_points: number;
+  color: string;
+  icon: string | null;
+  badge_label: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GamificationPointWeight {
+  id: string;
+  action_key: string;
+  action_label: string;
+  points: number;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GamificationProfile {
+  id: string;
+  user_id: string;
+  total_points: number;
+  level_id: string | null;
+  badges: string[];
+  streak_months: number;
+  last_activity_at: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined
+  level?: GamificationLevel;
+}
+
 export interface GamificationLeaderboardEntry {
   user_id: string;
   total_points: number;
@@ -179,8 +218,16 @@ export interface ReferralManagerAPI {
 export interface GamificationEngineAPI {
   getLeaderboard(limit?: number): Promise<GamificationLeaderboardEntry[]>;
   getUserPoints(userId: string): Promise<GamificationPointEntry[]>;
+  getProfile(userId: string): Promise<GamificationProfile | null>;
   awardPoints(userId: string, action: string, points: number, source: string, description?: string): Promise<void>;
   recalculateTier(userId: string): Promise<GamificationTier>;
+  // Config
+  getLevels(): Promise<GamificationLevel[]>;
+  createLevel(level: Omit<GamificationLevel, 'id' | 'created_at' | 'updated_at'>): Promise<GamificationLevel>;
+  updateLevel(id: string, updates: Partial<GamificationLevel>): Promise<void>;
+  deleteLevel(id: string): Promise<void>;
+  getPointWeights(): Promise<GamificationPointWeight[]>;
+  updatePointWeight(id: string, updates: Partial<GamificationPointWeight>): Promise<void>;
 }
 
 export interface RewardCalculatorAPI {
