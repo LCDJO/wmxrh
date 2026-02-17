@@ -2,10 +2,13 @@
  * HealthMonitor — Tracks module health, uptime, and heartbeats.
  *
  * Integrates with Module Federation via PlatformOS module orchestrator.
+ * Emits canonical events through GlobalEventKernel when module health changes.
  */
 
 import type { ModuleHealthReport, PlatformHealthSummary, HealthStatus } from './types';
 import { getMetricsCollector } from './metrics-collector';
+import { OBSERVABILITY_KERNEL_EVENTS, type ModuleHealthChangedPayload } from './observability-events';
+import type { GlobalEventKernelAPI } from '@/domains/platform-os/types';
 
 interface ModuleHeartbeat {
   module_id: string;
@@ -24,6 +27,12 @@ const ERROR_WINDOW_MS = 3_600_000; // 1 hour for error counting
 class HealthMonitor {
   private modules = new Map<string, ModuleHeartbeat>();
   private listeners = new Set<() => void>();
+  private eventKernel: GlobalEventKernelAPI | null = null;
+
+  /** Bind to GlobalEventKernel for emitting canonical events */
+  setEventKernel(kernel: GlobalEventKernelAPI) {
+    this.eventKernel = kernel;
+  }
 
   registerModule(moduleId: string, label: string) {
     if (this.modules.has(moduleId)) return;
@@ -115,6 +124,7 @@ class HealthMonitor {
   private refreshStatus(mod: ModuleHeartbeat) {
     const now = Date.now();
     const elapsed = now - mod.last_heartbeat;
+    const previousStatus = mod.status;
 
     // Prune old errors
     mod.error_timestamps = mod.error_timestamps.filter(t => now - t < ERROR_WINDOW_MS);
@@ -127,6 +137,24 @@ class HealthMonitor {
       mod.status = 'degraded';
     } else {
       mod.status = 'healthy';
+    }
+
+    // Emit canonical event on status change
+    if (previousStatus !== mod.status && this.eventKernel) {
+      const report = this.toReport(mod);
+      this.eventKernel.emit<ModuleHealthChangedPayload>(
+        OBSERVABILITY_KERNEL_EVENTS.ModuleHealthChanged,
+        'HealthMonitor',
+        {
+          module_id: mod.module_id,
+          module_label: mod.module_label,
+          previous_status: previousStatus,
+          current_status: mod.status,
+          error_count_1h: report.error_count_1h,
+          latency_ms: report.latency_ms,
+        },
+        { priority: mod.status === 'down' ? 'critical' : 'high' },
+      );
     }
   }
 

@@ -30,3 +30,5 @@ export {
   TraceCollector,
 } from './grafana-integration-adapter';
 export type * from './types';
+export { OBSERVABILITY_KERNEL_EVENTS } from './observability-events';
+export type * from './observability-events';

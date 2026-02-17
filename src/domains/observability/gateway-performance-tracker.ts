@@ -3,11 +3,15 @@
  * latency per module, and AccessGraph recomposition time.
  *
  * Provides histogram-style tracking with percentile computation.
+ * Emits LatencyThresholdExceeded via GlobalEventKernel when p95 exceeds threshold.
  */
 
 import { getMetricsCollector } from './metrics-collector';
+import { OBSERVABILITY_KERNEL_EVENTS, type LatencyThresholdExceededPayload } from './observability-events';
+import type { GlobalEventKernelAPI } from '@/domains/platform-os/types';
 
 const MAX_SAMPLES = 2000;
+const LATENCY_THRESHOLD_MS = 2000;
 
 export interface LatencySample {
   /** e.g. 'iam', 'hr_core', 'payroll' */
@@ -23,6 +27,12 @@ export interface LatencySample {
 class GatewayPerformanceTracker {
   private samples: LatencySample[] = [];
   private listeners = new Set<() => void>();
+  private eventKernel: GlobalEventKernelAPI | null = null;
+  private lastSpikeEmit: Record<string, number> = {};
+
+  setEventKernel(kernel: GlobalEventKernelAPI) {
+    this.eventKernel = kernel;
+  }
 
   // ── Record ──────────────────────────────────────────────────
 
@@ -186,6 +196,31 @@ class GatewayPerformanceTracker {
     if (this.samples.length > MAX_SAMPLES) {
       this.samples.splice(0, this.samples.length - MAX_SAMPLES);
     }
+
+    // Check latency threshold (debounce per source: max 1 event per 30s)
+    if (this.eventKernel) {
+      const now = Date.now();
+      const lastEmit = this.lastSpikeEmit[sample.source] ?? 0;
+      if (sample.duration_ms > LATENCY_THRESHOLD_MS && now - lastEmit > 30_000) {
+        const stats = this.getStats(sample.category, 300_000); // 5 min window
+        if (stats.p95 > LATENCY_THRESHOLD_MS) {
+          this.lastSpikeEmit[sample.source] = now;
+          this.eventKernel.emit<LatencyThresholdExceededPayload>(
+            OBSERVABILITY_KERNEL_EVENTS.LatencyThresholdExceeded,
+            'GatewayPerformanceTracker',
+            {
+              source: sample.source,
+              category: sample.category,
+              p95_ms: stats.p95,
+              threshold_ms: LATENCY_THRESHOLD_MS,
+              sample_count: stats.count,
+            },
+            { priority: 'high' },
+          );
+        }
+      }
+    }
+
     this.notify();
   }
 
