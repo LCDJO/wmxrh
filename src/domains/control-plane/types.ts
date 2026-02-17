@@ -21,28 +21,71 @@ export interface PlatformStateSnapshot {
   runtime_phase: string;
   uptime_ms: number;
 
-  // Aggregated counts
+  // ── ModuleOrchestrator ──────────────────────────────────────
   total_services: number;
   total_modules: number;
   active_modules: number;
   error_modules: number;
+  suspended_modules: number;
   total_features: number;
   active_features: number;
+  module_dependency_depth: number;
 
-  // Observability
-  total_errors_last_hour: number;
-  active_incidents: number;
-  open_circuit_breakers: number;
+  // ── ObservabilityCore ───────────────────────────────────────
+  observability: {
+    total_errors_last_hour: number;
+    healthy_modules: number;
+    degraded_modules: number;
+    down_modules: number;
+    avg_latency_ms: number;
+    error_rate_pct: number;
+    metrics_collected: number;
+  };
 
-  // Identity
+  // ── SelfHealingEngine ───────────────────────────────────────
+  self_healing: {
+    enabled: boolean;
+    active_incidents: number;
+    resolved_incidents_total: number;
+    open_circuit_breakers: number;
+    auto_recovered_total: number;
+    escalated_total: number;
+    avg_recovery_time_ms: number;
+    uptime_pct: number;
+  };
+
+  // ── GovernanceAI ────────────────────────────────────────────
+  governance: {
+    total_insights: number;
+    critical_insights: number;
+    warning_insights: number;
+    sod_conflicts: number;
+    excessive_permissions: number;
+    role_overlaps: number;
+    last_scan_at: number | null;
+    ai_analysis_available: boolean;
+  };
+
+  // ── UnifiedGraphEngine (UGE) ────────────────────────────────
+  unified_graph: {
+    total_nodes: number;
+    total_edges: number;
+    registered_domains: string[];
+    graph_version: number;
+    built_at: number | null;
+    risk_signals_count: number;
+    high_risk_users: number;
+  };
+
+  // ── Identity ────────────────────────────────────────────────
   active_sessions_estimate: number;
   active_impersonations: number;
 
-  // Risk
+  // ── Aggregated Risk ─────────────────────────────────────────
   overall_risk_score: number;
   risk_level: 'low' | 'medium' | 'high' | 'critical';
 
-  // Sub-system health
+  // ── Sub-system health ───────────────────────────────────────
   subsystem_health: SubsystemHealth[];
 }
 

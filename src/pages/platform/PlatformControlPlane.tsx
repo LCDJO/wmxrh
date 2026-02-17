@@ -108,14 +108,22 @@ function StateOverview({ state, onRefresh }: { state: PlatformStateSnapshot | nu
         <MetricCard icon={<Server className="h-4 w-4" />} label="Serviços" value={state.total_services} />
         <MetricCard icon={<Cpu className="h-4 w-4" />} label="Módulos Ativos" value={`${state.active_modules}/${state.total_modules}`} accent={state.error_modules > 0 ? 'destructive' : undefined} />
         <MetricCard icon={<Zap className="h-4 w-4" />} label="Features Ativas" value={`${state.active_features}/${state.total_features}`} />
-        <MetricCard icon={<AlertTriangle className="h-4 w-4" />} label="Erros (1h)" value={state.total_errors_last_hour} accent={state.total_errors_last_hour > 10 ? 'destructive' : undefined} />
+        <MetricCard icon={<AlertTriangle className="h-4 w-4" />} label="Erros (1h)" value={state.observability.total_errors_last_hour} accent={state.observability.total_errors_last_hour > 10 ? 'destructive' : undefined} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MetricCard icon={<Activity className="h-4 w-4" />} label="Incidentes" value={state.active_incidents} />
-        <MetricCard icon={<Shield className="h-4 w-4" />} label="Circuits Abertos" value={state.open_circuit_breakers} accent={state.open_circuit_breakers > 0 ? 'destructive' : undefined} />
+        <MetricCard icon={<Activity className="h-4 w-4" />} label="Incidentes" value={state.self_healing.active_incidents} />
+        <MetricCard icon={<Shield className="h-4 w-4" />} label="Circuits Abertos" value={state.self_healing.open_circuit_breakers} accent={state.self_healing.open_circuit_breakers > 0 ? 'destructive' : undefined} />
         <MetricCard icon={<Users className="h-4 w-4" />} label="Sessões" value={state.active_sessions_estimate} />
         <MetricCard icon={<Eye className="h-4 w-4" />} label="Impersonações" value={state.active_impersonations} accent={state.active_impersonations > 0 ? 'secondary' : undefined} />
+      </div>
+
+      {/* Governance & UGE summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <MetricCard icon={<Brain className="h-4 w-4" />} label="Insights Gov." value={state.governance.total_insights} accent={state.governance.critical_insights > 0 ? 'destructive' : undefined} />
+        <MetricCard icon={<Shield className="h-4 w-4" />} label="Conflitos SoD" value={state.governance.sod_conflicts} accent={state.governance.sod_conflicts > 0 ? 'secondary' : undefined} />
+        <MetricCard icon={<Activity className="h-4 w-4" />} label="Grafo UGE" value={`${state.unified_graph.total_nodes}n / ${state.unified_graph.total_edges}e`} />
+        <MetricCard icon={<AlertTriangle className="h-4 w-4" />} label="Usuários Alto Risco" value={state.unified_graph.high_risk_users} accent={state.unified_graph.high_risk_users > 0 ? 'destructive' : undefined} />
       </div>
 
       {/* Subsystem Health */}
