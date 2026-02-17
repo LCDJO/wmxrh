@@ -54,6 +54,8 @@ export interface ModuleDependency {
   module_id: string;
   required_module_id: string;
   required_version: SemanticVersion;
+  is_mandatory?: boolean;       // default true — blocks publish if unmet
+  compatibility_note?: string;  // e.g. "GrowthEngine v2.0 requer BillingCore >= v1.5"
 }
 
 // ── Changelog ──
