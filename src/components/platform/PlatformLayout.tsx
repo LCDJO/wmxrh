@@ -2,7 +2,7 @@
  * PlatformLayout — Shell layout for /platform/* routes.
  * Visually distinct from tenant AppLayout with purple accent and "Modo Plataforma" label.
  */
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
 import {
@@ -26,13 +26,27 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
-const NAV_ITEMS = [
+const NAV_ITEMS: Array<{
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  children?: Array<{ to: string; label: string }>;
+}> = [
   { to: '/platform/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/platform/tenants', label: 'Tenants', icon: Building2 },
   { to: '/platform/modules', label: 'Módulos', icon: Puzzle },
   { to: '/platform/plans', label: 'Planos', icon: Package },
   { to: '/platform/users', label: 'Usuários', icon: Users },
-  { to: '/platform/security', label: 'Segurança', icon: ShieldCheck },
+  {
+    to: '/platform/security',
+    label: 'Segurança',
+    icon: ShieldCheck,
+    children: [
+      { to: '/platform/security/roles', label: 'Cargos' },
+      { to: '/platform/security/permissions', label: 'Permissões' },
+      { to: '/platform/security/access-graph', label: 'Access Graph' },
+    ],
+  },
   { to: '/platform/iam', label: 'IAM', icon: KeyRound },
   { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
   { to: '/platform/audit', label: 'Auditoria', icon: ScrollText },
@@ -42,7 +56,9 @@ export default function PlatformLayout() {
   const { signOut } = useAuth();
   const { identity } = usePlatformIdentity();
   const navigate = useNavigate();
+  const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [expandedNav, setExpandedNav] = useState<string | null>(null);
 
   const handleLogout = async () => {
     await signOut();
@@ -100,24 +116,82 @@ export default function PlatformLayout() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-                  collapsed && 'justify-center',
-                  isActive
-                    ? 'bg-[hsl(265_60%_50%/0.18)] text-[hsl(265_80%_75%)]'
-                    : 'text-[hsl(250_15%_65%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
-                )
-              }
-            >
-              <Icon className="h-4.5 w-4.5 shrink-0" />
-              {!collapsed && <span className="truncate">{label}</span>}
-            </NavLink>
-          ))}
+          {NAV_ITEMS.map(({ to, label, icon: Icon, children }) => {
+            const isParentActive = location.pathname.startsWith(to);
+            const hasChildren = children && children.length > 0;
+            const isExpanded = expandedNav === to || (hasChildren && isParentActive);
+
+            return (
+              <div key={to}>
+                {hasChildren ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (collapsed) {
+                        navigate(to);
+                      } else {
+                        setExpandedNav(prev => prev === to ? null : to);
+                      }
+                    }}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                      collapsed && 'justify-center',
+                      isParentActive
+                        ? 'bg-[hsl(265_60%_50%/0.18)] text-[hsl(265_80%_75%)]'
+                        : 'text-[hsl(250_15%_65%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
+                    )}
+                  >
+                    <Icon className="h-4.5 w-4.5 shrink-0" />
+                    {!collapsed && (
+                      <>
+                        <span className="truncate flex-1 text-left">{label}</span>
+                        <ChevronRight className={cn('h-3.5 w-3.5 shrink-0 transition-transform', isExpanded && 'rotate-90')} />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <NavLink
+                    to={to}
+                    end={to === '/platform/security'}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                        collapsed && 'justify-center',
+                        isActive
+                          ? 'bg-[hsl(265_60%_50%/0.18)] text-[hsl(265_80%_75%)]'
+                          : 'text-[hsl(250_15%_65%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
+                      )
+                    }
+                  >
+                    <Icon className="h-4.5 w-4.5 shrink-0" />
+                    {!collapsed && <span className="truncate">{label}</span>}
+                  </NavLink>
+                )}
+
+                {/* Sub-items */}
+                {hasChildren && isExpanded && !collapsed && (
+                  <div className="ml-6 mt-0.5 space-y-0.5 border-l border-[hsl(250_25%_22%)] pl-3">
+                    {children.map(child => (
+                      <NavLink
+                        key={child.to}
+                        to={child.to}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center px-3 py-2 rounded-md text-xs font-medium transition-all duration-200',
+                            isActive
+                              ? 'bg-[hsl(265_60%_50%/0.18)] text-[hsl(265_80%_75%)]'
+                              : 'text-[hsl(250_15%_60%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
+                          )
+                        }
+                      >
+                        {child.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         {/* User info */}
