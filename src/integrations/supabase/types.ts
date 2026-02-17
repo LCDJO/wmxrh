@@ -6479,6 +6479,42 @@ export type Database = {
           },
         ]
       }
+      websites: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          domain: string
+          id: string
+          published_at: string | null
+          status: string
+          theme: Json
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          domain: string
+          id?: string
+          published_at?: string | null
+          status?: string
+          theme?: Json
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          domain?: string
+          id?: string
+          published_at?: string | null
+          status?: string
+          theme?: Json
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       workforce_insights: {
         Row: {
           company_id: string | null
