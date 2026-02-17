@@ -91,6 +91,8 @@ import GrowthAIDesigner from "./pages/platform/growth/GrowthAIDesigner";
 import MarketingAnalytics from "./pages/platform/marketing/MarketingAnalytics";
 import MarketingInsights from "./pages/platform/marketing/MarketingInsights";
 import MarketingRollbackDashboard from "./pages/platform/marketing/MarketingRollbackDashboard";
+import MarketingFunnels from "./pages/platform/marketing/MarketingFunnels";
+import MarketingCampaigns from "./pages/platform/marketing/MarketingCampaigns";
 import LandingDrafts from "./pages/platform/landing/LandingDrafts";
 import LandingReview from "./pages/platform/landing/LandingReview";
 import LandingPublished from "./pages/platform/landing/LandingPublished";
@@ -191,7 +193,9 @@ function AppRoutes() {
         <Route path="website/approvals" element={<WebsiteApprovals />} />
         <Route path="marketing/analytics" element={<MarketingAnalytics />} />
         <Route path="marketing/insights" element={<MarketingInsights />} />
-        <Route path="marketing/rollback" element={<MarketingRollbackDashboard />} />
+                <Route path="marketing/rollback" element={<MarketingRollbackDashboard />} />
+                <Route path="marketing/funnels" element={<MarketingFunnels />} />
+                <Route path="marketing/campaigns" element={<MarketingCampaigns />} />
         <Route path="landing/drafts" element={<LandingDrafts />} />
         <Route path="landing/review" element={<LandingReview />} />
         <Route path="landing/published" element={<LandingPublished />} />
