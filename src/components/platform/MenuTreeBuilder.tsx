@@ -36,6 +36,7 @@ export interface MenuTreeBuilderProps {
   permissionResolver: MenuPermissionResolver;
   editorRole: MenuEditorRole;
   onTreeChange: () => void;
+  onItemMoved?: (item: MenuTreeNode, fromParent: string | null, toParent: string | null, newIndex: number) => void;
   selectedId: string | null;
   onSelectNode: (id: string | null) => void;
 }
@@ -52,6 +53,7 @@ export function MenuTreeBuilder({
   permissionResolver,
   editorRole,
   onTreeChange,
+  onItemMoved,
   selectedId,
   onSelectNode,
 }: MenuTreeBuilderProps) {
@@ -104,19 +106,39 @@ export function MenuTreeBuilder({
     const siblings = parent?.children ?? treeManager.getTree();
     const idx = siblings.findIndex(n => n.id === id);
     if (idx <= 0) return;
+    const node = siblings[idx];
     treeManager.moveNode(id, parent?.id ?? null, idx - 1);
     onTreeChange();
+    onItemMoved?.(node, parent?.id ?? null, parent?.id ?? null, idx - 1);
   };
   const handleMoveDown = (id: string) => {
     const parent = treeManager.findParent(id);
     const siblings = parent?.children ?? treeManager.getTree();
     const idx = siblings.findIndex(n => n.id === id);
     if (idx < 0 || idx >= siblings.length - 1) return;
+    const node = siblings[idx];
     treeManager.moveNode(id, parent?.id ?? null, idx + 2);
     onTreeChange();
+    onItemMoved?.(node, parent?.id ?? null, parent?.id ?? null, idx + 2);
   };
-  const handleIndentRight = (id: string) => { treeManager.demoteNode(id); onTreeChange(); toast.success('Nível aumentado'); };
-  const handleIndentLeft = (id: string) => { treeManager.promoteNode(id); onTreeChange(); toast.success('Nível reduzido'); };
+  const handleIndentRight = (id: string) => {
+    const node = flatVisible.find(f => f.node.id === id);
+    const fromParent = node?.parentId ?? null;
+    treeManager.demoteNode(id);
+    onTreeChange();
+    const newParent = treeManager.findParent(id);
+    onItemMoved?.(node!.node, fromParent, newParent?.id ?? null, 0);
+    toast.success('Nível aumentado');
+  };
+  const handleIndentLeft = (id: string) => {
+    const node = flatVisible.find(f => f.node.id === id);
+    const fromParent = node?.parentId ?? null;
+    treeManager.promoteNode(id);
+    onTreeChange();
+    const newParent = treeManager.findParent(id);
+    onItemMoved?.(node!.node, fromParent, newParent?.id ?? null, 0);
+    toast.success('Nível reduzido');
+  };
 
   // ─── Drag controller ───
   const executeDrop = useCallback((sourceId: string, target: DropTarget) => {

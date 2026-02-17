@@ -71,6 +71,14 @@ export const PLATFORM_EVENTS = {
   DependencyConflictDetected: 'platform:dependency_conflict_detected',
   /** A rollback was executed on a release or module */
   RollbackExecuted: 'platform:rollback_executed',
+
+  // ── Menu Structure Events ─────────────────────────────────
+  /** The full menu structure was saved / updated */
+  MenuStructureUpdated: 'platform:menu_structure_updated',
+  /** A single menu item was moved (reordered or reparented) */
+  MenuItemMoved: 'platform:menu_item_moved',
+  /** A new versioned snapshot of the menu structure was created */
+  MenuVersionCreated: 'platform:menu_version_created',
 } as const;
 
 export type PlatformEventType = typeof PLATFORM_EVENTS[keyof typeof PLATFORM_EVENTS];
@@ -237,4 +245,28 @@ export interface RollbackExecutedPayload {
   modules_skipped: string[];
   executed_by: string;
   reason?: string;
+}
+
+// ── Menu Structure Payloads ───────────────────────────────
+
+export interface MenuStructureUpdatedPayload {
+  total_nodes: number;
+  root_count: number;
+  max_depth: number;
+  updated_by: string;
+}
+
+export interface MenuItemMovedPayload {
+  item_id: string;
+  item_label: string;
+  from_parent: string | null;
+  to_parent: string | null;
+  new_index: number;
+}
+
+export interface MenuVersionCreatedPayload {
+  version_id: string;
+  version_number: number;
+  created_by: string;
+  node_count: number;
 }
