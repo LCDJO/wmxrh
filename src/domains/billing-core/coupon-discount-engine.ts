@@ -40,6 +40,7 @@ function createCouponManager(): CouponManagerAPI {
           description: dto.description ?? null,
           discount_type: dto.discount_type,
           discount_value: dto.discount_value,
+          applies_to: dto.applies_to ?? 'invoice',
           max_discount_brl: dto.max_discount_brl ?? null,
           applicable_plan_ids: dto.applicable_plan_ids ?? null,
           applicable_billing_cycles: dto.applicable_billing_cycles ?? null,
