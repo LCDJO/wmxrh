@@ -18,7 +18,7 @@ export { detectRoleOverlaps, buildOptimizationHints } from './role-optimization-
 export type { RoleOptimizationHint } from './role-optimization-advisor';
 export type { AccessRiskProfile } from './access-risk-analyzer';
 export { detectSoDConflicts } from './segregation-of-duties-checker';
-
+export { runGrowthGovernanceScan, scanABTestGovernance, scanLandingRevenueLoss } from './growth-governance-analyzer';
 // Orchestrators
 export { runHeuristicScan } from './governance-insights.service';
 export { GovernanceAIService, getGovernanceAIService } from './governance-ai.service';
