@@ -12,8 +12,8 @@
  */
 
 // Individual analyzers
-export { analyzeAccessRisk } from './access-risk-analyzer';
-export { detectExcessivePermissions, detectOperationalRisks } from './permission-anomaly-detector';
+export { analyzeAccessRisk, buildAccessRiskProfiles } from './access-risk-analyzer';
+export { detectPermissionAnomalies, detectExcessivePermissions, detectOperationalRisks } from './permission-anomaly-detector';
 export { detectRoleOverlaps } from './role-optimization-advisor';
 export { detectSoDConflicts } from './segregation-of-duties-checker';
 
