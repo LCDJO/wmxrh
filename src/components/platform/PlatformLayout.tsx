@@ -19,6 +19,7 @@ import {
   Users,
   Package,
   Megaphone,
+  KeyRound,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { to: '/platform/plans', label: 'Planos', icon: Package },
   { to: '/platform/users', label: 'Usuários', icon: Users },
   { to: '/platform/security', label: 'Segurança', icon: ShieldCheck },
+  { to: '/platform/iam', label: 'IAM', icon: KeyRound },
   { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
   { to: '/platform/audit', label: 'Auditoria', icon: ScrollText },
 ];
