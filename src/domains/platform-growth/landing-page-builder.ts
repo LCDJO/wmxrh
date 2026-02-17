@@ -4,7 +4,7 @@
  * FABContentEngine generates high-conversion block content.
  */
 import { supabase } from '@/integrations/supabase/client';
-import type { LandingPage, FABBlock, FABBlockType, LandingPageAnalytics } from './types';
+import type { LandingPage, FABBlock, FABBlockType, FABContent, LandingPageAnalytics } from './types';
 
 // ── Default analytics for new pages ────────────────────────────
 const DEFAULT_ANALYTICS: LandingPageAnalytics = {
@@ -144,8 +144,8 @@ export class LandingPageBuilder {
     return true;
   }
 
-  /** Add a block to a page */
-  async addBlock(pageId: string, type: FABBlockType): Promise<FABBlock | null> {
+  /** Add a block to a page with FAB content */
+  async addBlock(pageId: string, type: FABBlockType, fab?: Partial<FABContent>): Promise<FABBlock | null> {
     const page = await this.getById(pageId);
     if (!page) return null;
 
@@ -153,6 +153,11 @@ export class LandingPageBuilder {
       id: `b-${Date.now()}`,
       type,
       order: page.blocks.length,
+      fab: {
+        feature: fab?.feature ?? '',
+        advantage: fab?.advantage ?? '',
+        benefit: fab?.benefit ?? '',
+      },
       content: {},
     };
 
@@ -166,14 +171,74 @@ export class LandingPageBuilder {
 export const landingPageBuilder = new LandingPageBuilder();
 
 /**
- * FABContentEngine — Generates Features-Advantages-Benefits copy for landing page blocks.
+ * FABContentEngine — Generates Feature-Advantage-Benefit copy for landing page blocks.
+ *
+ * Each block must answer:
+ *   Feature   → O que é?
+ *   Advantage → Por que importa?
+ *   Benefit   → Qual o resultado para o cliente?
  */
 export class FABContentEngine {
-  generateHeroCopy(industry: string): { headline: string; subheadline: string; ctaText: string } {
-    const templates: Record<string, { headline: string; subheadline: string; ctaText: string }> = {
-      default: { headline: 'Gestão de RH sem complicação', subheadline: 'Automatize admissões, folha e compliance em uma plataforma.', ctaText: 'Experimente grátis' },
-      tech: { headline: 'RH para empresas de tecnologia', subheadline: 'Escale seu time com processos ágeis e integrados.', ctaText: 'Comece agora' },
-      healthcare: { headline: 'Compliance em saúde ocupacional', subheadline: 'NRs, ASOs e PCMSO em conformidade total.', ctaText: 'Conheça a plataforma' },
+  /** Pre-built FAB sets by module/industry */
+  private readonly catalog: Record<string, FABContent[]> = {
+    'multi-tenant': [
+      { feature: 'Multi-tenant avançado', advantage: 'Gestão centralizada de múltiplas empresas', benefit: 'Redução de custos operacionais em até 40%' },
+      { feature: 'Isolamento de dados por tenant', advantage: 'Segurança e compliance garantidos', benefit: 'Zero risco de vazamento entre clientes' },
+    ],
+    'admissao-digital': [
+      { feature: 'Admissão 100% digital', advantage: 'Eliminação de papelada e retrabalho', benefit: 'Onboarding 70% mais rápido' },
+      { feature: 'Checklist automático de documentos', advantage: 'Nenhum documento esquecido', benefit: 'Compliance trabalhista desde o dia 1' },
+    ],
+    'folha': [
+      { feature: 'Cálculo automático de folha', advantage: 'Regras CLT e convenções aplicadas automaticamente', benefit: 'Economia de 20h/mês do time de DP' },
+      { feature: 'Integração com eSocial', advantage: 'Envio direto sem retrabalho', benefit: 'Zero multas por atraso ou inconsistência' },
+    ],
+    'compliance': [
+      { feature: 'Motor de compliance em tempo real', advantage: 'Monitoramento contínuo de NRs e prazos', benefit: 'Proteção contra autuações e passivos trabalhistas' },
+      { feature: 'Alertas preditivos de vencimento', advantage: 'Ação preventiva antes do prazo', benefit: 'Redução de 90% em não-conformidades' },
+    ],
+    'referral': [
+      { feature: 'Programa de indicação integrado', advantage: 'Aquisição via rede de clientes satisfeitos', benefit: 'CAC até 60% menor que canais pagos' },
+    ],
+  };
+
+  /** Get FAB content sets for a given module key */
+  getByModule(moduleKey: string): FABContent[] {
+    return this.catalog[moduleKey] ?? [];
+  }
+
+  /** List all available module keys */
+  getAvailableModules(): string[] {
+    return Object.keys(this.catalog);
+  }
+
+  /** Generate a hero block FAB */
+  generateHeroFAB(industry: string): FABContent & { headline: string; subheadline: string; ctaText: string } {
+    const templates: Record<string, FABContent & { headline: string; subheadline: string; ctaText: string }> = {
+      default: {
+        feature: 'Plataforma completa de gestão de pessoas',
+        advantage: 'Tudo integrado: admissão, folha, compliance',
+        benefit: 'Gestão de RH sem complicação',
+        headline: 'Gestão de RH sem complicação',
+        subheadline: 'Automatize admissões, folha e compliance em uma plataforma.',
+        ctaText: 'Experimente grátis',
+      },
+      tech: {
+        feature: 'RH otimizado para empresas de tecnologia',
+        advantage: 'Processos ágeis que acompanham seu crescimento',
+        benefit: 'Escale seu time sem gargalos operacionais',
+        headline: 'RH para empresas de tecnologia',
+        subheadline: 'Escale seu time com processos ágeis e integrados.',
+        ctaText: 'Comece agora',
+      },
+      healthcare: {
+        feature: 'Compliance ocupacional automatizado',
+        advantage: 'NRs, ASOs e PCMSO sempre em dia',
+        benefit: 'Zero risco de autuação em saúde ocupacional',
+        headline: 'Compliance em saúde ocupacional',
+        subheadline: 'NRs, ASOs e PCMSO em conformidade total.',
+        ctaText: 'Conheça a plataforma',
+      },
     };
     return templates[industry] ?? templates.default;
   }

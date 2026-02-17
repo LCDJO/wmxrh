@@ -41,10 +41,18 @@ export interface ConversionPrediction {
 // ── Landing Page Builder ──
 export type FABBlockType = 'hero' | 'features' | 'pricing' | 'testimonials' | 'cta' | 'faq' | 'stats' | 'custom';
 
+/** Feature-Advantage-Benefit content model */
+export interface FABContent {
+  feature: string;    // O que é (ex: "Multi-tenant avançado")
+  advantage: string;  // Por que importa (ex: "Gestão centralizada")
+  benefit: string;    // Resultado para o cliente (ex: "Redução de custos operacionais")
+}
+
 export interface FABBlock {
   id: string;
   type: FABBlockType;
   order: number;
+  fab: FABContent;
   content: Record<string, unknown>;
   styling?: Record<string, string>;
 }
