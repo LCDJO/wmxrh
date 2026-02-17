@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -14,11 +14,12 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Monitor, Smartphone, Tablet } from 'lucide-react';
+import { Monitor, Smartphone, Tablet, ShieldCheck } from 'lucide-react';
 import type { WebsiteBlock, WebsiteBlockType, Viewport } from '@/domains/website-builder/types';
 import { BLOCK_DEFINITIONS } from '@/domains/website-builder/types';
 import { ComponentPalette } from './ComponentPalette';
 import { SortableBlock } from './SortableBlock';
+import { CompliancePanel } from './CompliancePanel';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 
@@ -26,7 +27,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 export function DragDropEditor() {
   const [blocks, setBlocks] = useState<WebsiteBlock[]>([]);
   const [viewport, setViewport] = useState<Viewport>('desktop');
+  const [showCompliance, setShowCompliance] = useState(true);
 
+  const complianceOptions = useMemo(() => ({
+    hasGTM: false,
+    hasPrivacyLink: false,
+    hasTermsLink: false,
+  }), []);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -74,6 +81,16 @@ export function DragDropEditor() {
           <span className="text-xs text-muted-foreground font-medium">
             {blocks.length} {blocks.length === 1 ? 'seção' : 'seções'}
           </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCompliance((v) => !v)}
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                showCompliance ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Compliance
+            </button>
           <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/60 p-0.5">
             {([
               { key: 'desktop', Icon: Monitor },
@@ -90,6 +107,7 @@ export function DragDropEditor() {
                 <Icon className="h-3.5 w-3.5" />
               </button>
             ))}
+            </div>
           </div>
         </div>
 
@@ -118,6 +136,11 @@ export function DragDropEditor() {
           </div>
         </ScrollArea>
       </div>
+
+      {/* Compliance Panel */}
+      {showCompliance && blocks.length > 0 && (
+        <CompliancePanel blocks={blocks} options={complianceOptions} />
+      )}
     </div>
   );
 }
