@@ -84,7 +84,7 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
   const experience = createPlatformExperienceEngine();
 
   // ── Platform Billing Core ──────────────────────────────────
-  const billing = createPlatformBillingCore(experience, modules);
+  const billing = createPlatformBillingCore(experience, modules, events);
 
   // ── Lifecycle ────────────────────────────────────────────────
 
