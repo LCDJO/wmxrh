@@ -5,7 +5,7 @@
  */
 import {
   Puzzle, RefreshCw, GripVertical, Save, ArrowRight, ArrowLeft,
-  AlertTriangle, CheckCircle2, History, GitBranch, Shield, FileDiff, Monitor,
+  AlertTriangle, CheckCircle2, History, GitBranch, Shield, FileDiff, Monitor, Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -74,7 +74,7 @@ const createDefaultTree = (): MenuTreeNode[] => [
   mn('monitoring', 'Monitoramento', '/platform/monitoring', {
     icon: 'Monitor',
     children: [
-      mn('mon-status', 'Status', '/platform/monitoring'),
+      mn('mon-status', 'Status', '/platform/monitoring/status'),
       mn('mon-mods', 'Módulos', '/platform/monitoring/modules'),
       mn('mon-err', 'Erros', '/platform/monitoring/errors'),
       mn('mon-perf', 'Performance', '/platform/monitoring/performance'),
@@ -87,7 +87,7 @@ const createDefaultTree = (): MenuTreeNode[] => [
   mn('billing', 'Financeiro', '/platform/billing', {
     icon: 'Package', role_permissions: ['platform_super_admin', 'platform_finance'],
     children: [
-      mn('bill-overview', 'Visão Geral', '/platform/billing'),
+      mn('bill-overview', 'Visão Geral', '/platform/billing/overview'),
       mn('bill-coupons', 'Cupons', '/platform/billing/coupons'),
       mn('bill-cc', 'Control Center', '/platform/billing/control-center'),
     ],
@@ -95,7 +95,7 @@ const createDefaultTree = (): MenuTreeNode[] => [
   mn('revenue', 'Revenue', '/platform/revenue', {
     icon: 'TrendingUp',
     children: [
-      mn('rev-overview', 'Visão Geral', '/platform/revenue'),
+      mn('rev-overview', 'Visão Geral', '/platform/revenue/overview'),
       mn('rev-ref', 'Referrals', '/platform/referrals'),
       mn('rev-gam', 'Gamificação', '/platform/gamification'),
       mn('rev-intel', 'Intelligence', '/platform/revenue/intelligence'),
@@ -104,7 +104,7 @@ const createDefaultTree = (): MenuTreeNode[] => [
   mn('growth-ai', 'Growth AI', '/platform/growth', {
     icon: 'Rocket',
     children: [
-      mn('growth-overview', 'Visão Geral', '/platform/growth'),
+      mn('growth-overview', 'Visão Geral', '/platform/growth/overview'),
       mn('growth-insights', 'Insights', '/platform/growth/insights'),
       mn('growth-landing', 'Landing Pages', '/platform/growth/landing-pages'),
       mn('growth-conversions', 'Conversões', '/platform/growth/conversions'),
@@ -118,7 +118,7 @@ const createDefaultTree = (): MenuTreeNode[] => [
   mn('website', 'Website', '/platform/website', {
     icon: 'Globe',
     children: [
-      mn('web-dash', 'Dashboard', '/platform/website'),
+      mn('web-dash', 'Dashboard', '/platform/website/dashboard'),
       mn('web-ai', 'AI Designer', '/platform/website/ai-designer'),
       mn('web-tpl', 'Templates', '/platform/website/templates'),
       mn('web-ver', 'Versionamento', '/platform/website/versions'),
@@ -230,6 +230,16 @@ export default function PlatformMenuStructure() {
     const restored = engine.versions.restore(versionId);
     if (!restored) return;
     engine.tree.setTree(restored); syncTree(); toast.success('Versão restaurada');
+  };
+
+  const handleAutoFix = () => {
+    const { fixed, fixes } = engine.validator.autoFix(tree);
+    if (fixes.length === 0) { toast.info('Nenhuma correção necessária'); return; }
+    engine.tree.setTree(fixed);
+    syncTree();
+    const result = engine.validator.validate(engine.tree.getTree());
+    setValidation(result);
+    toast.success(`${fixes.length} correção(ões) aplicada(s)`);
   };
 
   const canSave = engine.permissions.canEditTree(editorRole);
@@ -436,8 +446,14 @@ export default function PlatformMenuStructure() {
                     {validation.valid ? 'Estrutura válida ✓' : `${validation.errors.length} erro(s) encontrado(s).`}
                   </div>
                   {validation.errors.length > 0 && (
-                    <div className="space-y-1.5">
-                      <p className="text-xs font-semibold text-destructive uppercase tracking-wider">Erros</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-destructive uppercase tracking-wider">Erros ({validation.errors.length})</p>
+                        <Button variant="outline" size="sm" className="text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10" onClick={handleAutoFix}>
+                          <Zap className="h-3 w-3" />
+                          Corrigir Automaticamente
+                        </Button>
+                      </div>
                       {validation.errors.map((err, i) => (
                         <div key={i} className="flex items-center gap-2 rounded border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive">
                           <AlertTriangle className="h-3 w-3 shrink-0" />
