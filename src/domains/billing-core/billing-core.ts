@@ -65,7 +65,8 @@ export function createPlatformBillingCore(
     invoices,
     ledger,
     pxe.payment,
-    modulePlanSync
+    modulePlanSync,
+    discounts,
   );
 
   return {
