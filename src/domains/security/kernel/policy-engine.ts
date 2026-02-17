@@ -332,6 +332,21 @@ export const BUILTIN_RULES: PolicyRule[] = [
     priority: 0,
   },
 
+  // RULE: Only PlatformSuperAdmin + PlatformFinance can create/update/delete coupons
+  {
+    id: 'platform_deny_non_authorized_coupon_mutation',
+    effect: 'deny',
+    roles: [],
+    platform_roles: ['platform_operations', 'platform_support', 'platform_fiscal', 'platform_read_only', 'platform_delegated_support', 'platform_marketplace_admin', 'platform_compliance'],
+    actions: ['create', 'update', 'delete'],
+    resources: ['platform_coupons'],
+    condition: {
+      custom: (ctx) => ctx.securityContext.user_type === 'platform',
+    },
+    description: 'Apenas PlatformSuperAdmin e PlatformFinance podem criar, alterar ou desativar cupons. Demais roles de plataforma são bloqueados.',
+    priority: 0,
+  },
+
   // ── IAM-Specific Rules ──
   {
     id: 'iam_admin_manage_roles',
