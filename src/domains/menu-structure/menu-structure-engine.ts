@@ -28,7 +28,7 @@ export class MenuTreeManager {
 
   constructor(initial: MenuTreeNode[]) {
     this.tree = structuredClone(initial);
-    this.recomputeDepths(this.tree, 0);
+    this.recomputeDepths(this.tree, 0, null);
   }
 
   getTree(): MenuTreeNode[] {
@@ -37,7 +37,7 @@ export class MenuTreeManager {
 
   setTree(tree: MenuTreeNode[]): void {
     this.tree = structuredClone(tree);
-    this.recomputeDepths(this.tree, 0);
+    this.recomputeDepths(this.tree, 0, null);
   }
 
   findNode(id: string, nodes: MenuTreeNode[] = this.tree): MenuTreeNode | null {
@@ -81,14 +81,14 @@ export class MenuTreeManager {
   insertNode(node: MenuTreeNode, parentId: string | null, index: number): boolean {
     if (!parentId) {
       this.tree.splice(Math.min(index, this.tree.length), 0, node);
-      this.recomputeDepths(this.tree, 0);
+      this.recomputeDepths(this.tree, 0, null);
       return true;
     }
     const parent = this.findNode(parentId);
     if (!parent) return false;
     if (!parent.children) parent.children = [];
     parent.children.splice(Math.min(index, parent.children.length), 0, node);
-    this.recomputeDepths(this.tree, 0);
+    this.recomputeDepths(this.tree, 0, null);
     return true;
   }
 
@@ -135,10 +135,13 @@ export class MenuTreeManager {
     return result;
   }
 
-  private recomputeDepths(nodes: MenuTreeNode[], depth: number): void {
-    for (const n of nodes) {
-      n.depth = depth;
-      if (n.children) this.recomputeDepths(n.children, depth + 1);
+  private recomputeDepths(nodes: MenuTreeNode[], depth: number, parentId: string | null): void {
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      n.depth_level = depth;
+      n.parent_id = parentId;
+      n.order_index = i;
+      if (n.children) this.recomputeDepths(n.children, depth + 1, n.id);
     }
   }
 }
@@ -150,7 +153,7 @@ export class MenuTreeManager {
 export class MenuPermissionResolver {
   filterByRole(tree: MenuTreeNode[], userRole: string): MenuTreeNode[] {
     return tree
-      .filter(n => !n.allowedRoles || n.allowedRoles.length === 0 || n.allowedRoles.includes(userRole))
+      .filter(n => !n.role_permissions || n.role_permissions.length === 0 || n.role_permissions.includes(userRole))
       .map(n => ({
         ...n,
         children: n.children ? this.filterByRole(n.children, userRole) : undefined,
@@ -160,7 +163,7 @@ export class MenuPermissionResolver {
   getNodePermissions(nodeId: string, tree: MenuTreeNode[]): string[] {
     const mgr = new MenuTreeManager(tree);
     const node = mgr.findNode(nodeId);
-    return node?.allowedRoles ?? [];
+    return node?.role_permissions ?? [];
   }
 }
 
@@ -234,14 +237,14 @@ export class MenuDiffAnalyzer {
     // Added
     for (const [id, node] of afterMap) {
       if (!beforeMap.has(id)) {
-        diffs.push({ type: 'added', nodeId: id, nodeLabel: node.label, details: `Adicionado: ${node.path}` });
+        diffs.push({ type: 'added', nodeId: id, nodeLabel: node.label, details: `Adicionado: ${node.slug}` });
       }
     }
 
     // Removed
     for (const [id, node] of beforeMap) {
       if (!afterMap.has(id)) {
-        diffs.push({ type: 'removed', nodeId: id, nodeLabel: node.label, details: `Removido: ${node.path}` });
+        diffs.push({ type: 'removed', nodeId: id, nodeLabel: node.label, details: `Removido: ${node.slug}` });
       }
     }
 
@@ -252,19 +255,19 @@ export class MenuDiffAnalyzer {
       if (beforeNode.label !== afterNode.label) {
         diffs.push({ type: 'renamed', nodeId: id, nodeLabel: afterNode.label, details: `${beforeNode.label} → ${afterNode.label}` });
       }
-      if (beforeNode.path !== afterNode.path || beforeNode.depth !== afterNode.depth) {
-        diffs.push({ type: 'moved', nodeId: id, nodeLabel: afterNode.label, details: `Depth ${beforeNode.depth} → ${afterNode.depth}` });
+      if (beforeNode.slug !== afterNode.slug || beforeNode.depth_level !== afterNode.depth_level) {
+        diffs.push({ type: 'moved', nodeId: id, nodeLabel: afterNode.label, details: `Depth ${beforeNode.depth_level} → ${afterNode.depth_level}` });
       }
     }
 
     return diffs;
   }
 
-  private flatten(nodes: MenuTreeNode[], depth = 0): (MenuTreeNode & { depth: number })[] {
-    const result: (MenuTreeNode & { depth: number })[] = [];
+  private flatten(nodes: MenuTreeNode[]): MenuTreeNode[] {
+    const result: MenuTreeNode[] = [];
     for (const n of nodes) {
-      result.push({ ...n, depth });
-      if (n.children) result.push(...this.flatten(n.children, depth + 1));
+      result.push(n);
+      if (n.children) result.push(...this.flatten(n.children));
     }
     return result;
   }
@@ -278,9 +281,9 @@ export class MenuLayoutValidator {
   validate(tree: MenuTreeNode[]): MenuValidationResult {
     const errors: MenuValidationError[] = [];
     const warnings: MenuValidationWarning[] = [];
-    const paths = new Set<string>();
+    const slugs = new Set<string>();
 
-    this.walk(tree, 0, paths, errors, warnings);
+    this.walk(tree, 0, slugs, errors, warnings);
 
     return { valid: errors.length === 0, errors, warnings };
   }
@@ -288,20 +291,20 @@ export class MenuLayoutValidator {
   private walk(
     nodes: MenuTreeNode[],
     depth: number,
-    paths: Set<string>,
+    slugs: Set<string>,
     errors: MenuValidationError[],
     warnings: MenuValidationWarning[],
   ): void {
     for (const n of nodes) {
-      // Duplicate path
-      if (paths.has(n.path)) {
-        errors.push({ nodeId: n.id, message: `Caminho duplicado: ${n.path}`, type: 'duplicate_path' });
+      // Duplicate slug
+      if (slugs.has(n.slug)) {
+        errors.push({ nodeId: n.id, message: `Slug duplicado: ${n.slug}`, type: 'duplicate_path' });
       }
-      paths.add(n.path);
+      slugs.add(n.slug);
 
-      // Missing path
-      if (!n.path || n.path.trim() === '') {
-        errors.push({ nodeId: n.id, message: `Caminho vazio para "${n.label}"`, type: 'missing_path' });
+      // Missing slug
+      if (!n.slug || n.slug.trim() === '') {
+        errors.push({ nodeId: n.id, message: `Slug vazio para "${n.label}"`, type: 'missing_path' });
       }
 
       // Max depth
@@ -318,12 +321,12 @@ export class MenuLayoutValidator {
         warnings.push({ nodeId: n.id, message: `${n.children.length} filhos (max recomendado: ${MAX_CHILDREN})`, type: 'too_many_children' });
       }
 
-      if (!n.allowedRoles || n.allowedRoles.length === 0) {
+      if (!n.role_permissions || n.role_permissions.length === 0) {
         warnings.push({ nodeId: n.id, message: `Sem restrição de role`, type: 'no_permission' });
       }
 
       if (n.children) {
-        this.walk(n.children, depth + 1, paths, errors, warnings);
+        this.walk(n.children, depth + 1, slugs, errors, warnings);
       }
     }
   }

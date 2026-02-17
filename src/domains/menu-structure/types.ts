@@ -7,17 +7,18 @@
 export interface MenuTreeNode {
   id: string;
   label: string;
-  path: string;
+  slug: string;
+  parent_id: string | null;
+  order_index: number;
+  depth_level: number;
   icon?: string;
-  /** Permission key required to see this menu */
-  requiredPermission?: string;
+  /** Visibility rules (e.g. plan tier, feature flags) */
+  visibility_rules?: Record<string, unknown>;
   /** Allowed platform roles (empty = all) */
-  allowedRoles?: string[];
+  role_permissions: string[];
   /** Whether this node is locked from being moved */
   locked?: boolean;
   children?: MenuTreeNode[];
-  /** Depth level in the tree (computed) */
-  depth?: number;
 }
 
 export interface MenuVersion {
