@@ -14,6 +14,7 @@ import type { Json } from '@/integrations/supabase/types';
 import type { LandingVersionStatus } from './landing-page-status-machine';
 import { getVersionTransitions, requiresNewVersion, validateVersionCreation, validateVersionPublish } from './landing-page-status-machine';
 import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
+import { landingAuditLog } from './landing-audit-log';
 
 // ═══════════════════════════════════
 // Types
@@ -96,19 +97,14 @@ export const landingVersionService = {
 
     if (vError) throw new Error(vError.message);
 
-    // 5. Audit log
-    await supabase.from('audit_logs').insert({
-      tenant_id: '00000000-0000-0000-0000-000000000000',
-      entity_type: 'landing_page_version',
-      entity_id: version.id,
-      action: 'VersionDraftCreated',
-      user_id: actor.userId,
-      metadata: {
-        landing_page_id: landingPageId,
-        version_number: nextVersion,
-        created_by_role: actor.role,
-        created_by_email: actor.email,
-      },
+    // 5. Audit log (standardized)
+    await landingAuditLog.versionCreated({
+      landingPageId,
+      versionId: version.id,
+      versionNumber: nextVersion,
+      actorId: actor.userId,
+      actorEmail: actor.email,
+      actorRole: actor.role,
     });
 
     return version as LandingVersion;
@@ -199,21 +195,17 @@ export const landingVersionService = {
           .update({ status: 'superseded' })
           .in('id', oldIds);
 
-        // Audit: record supersession for each old version
+        // Audit: record supersession via standardized audit log
         for (const old of oldPublished) {
-          await supabase.from('audit_logs').insert({
-            tenant_id: '00000000-0000-0000-0000-000000000000',
-            entity_type: 'landing_page_version',
-            entity_id: old.id,
-            action: 'VersionSuperseded',
-            user_id: actor.userId,
-            old_value: { status: 'published' },
-            new_value: { status: 'superseded', superseded_by: versionId },
-            metadata: {
-              landing_page_id: version.landing_page_id,
-              superseded_version: old.version_number,
-              new_active_version: version.version_number,
-            },
+          await landingAuditLog.versionSuperseded({
+            landingPageId: version.landing_page_id,
+            versionId: old.id,
+            versionNumber: old.version_number,
+            supersededByVersionId: versionId,
+            newActiveVersion: version.version_number,
+            actorId: actor.userId,
+            actorEmail: actor.email,
+            actorRole: actor.role,
           });
         }
       }
@@ -239,21 +231,32 @@ export const landingVersionService = {
 
     if (uErr) throw new Error(uErr.message);
 
-    // 5. Audit log
-    await supabase.from('audit_logs').insert({
-      tenant_id: '00000000-0000-0000-0000-000000000000',
-      entity_type: 'landing_page_version',
-      entity_id: versionId,
-      action: `VersionStatus_${targetStatus}`,
-      user_id: actor.userId,
-      old_value: { status: currentStatus },
-      new_value: { status: targetStatus },
-      metadata: {
-        landing_page_id: version.landing_page_id,
-        version_number: version.version_number,
-        transitioned_by_role: actor.role,
-      },
-    });
+    // 5. Audit log (standardized)
+    if (targetStatus === 'published') {
+      await landingAuditLog.versionPublished({
+        landingPageId: version.landing_page_id,
+        versionId,
+        versionNumber: version.version_number,
+        actorId: actor.userId,
+        actorEmail: actor.email,
+        actorRole: actor.role,
+      });
+    } else {
+      await (supabase.from('audit_logs') as any).insert({
+        tenant_id: '00000000-0000-0000-0000-000000000000',
+        entity_type: 'landing_page_version',
+        entity_id: versionId,
+        action: `version_status_${targetStatus}`,
+        user_id: actor.userId,
+        old_value: { status: currentStatus },
+        new_value: { status: targetStatus },
+        metadata: {
+          landing_page_id: version.landing_page_id,
+          version_number: version.version_number,
+          transitioned_by_role: actor.role,
+        },
+      });
+    }
 
     return updated as LandingVersion;
   },
