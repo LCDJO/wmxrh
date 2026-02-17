@@ -1,7 +1,6 @@
 /**
  * PlatformGuard — Route guard for platform-level routes.
- * Checks if the authenticated user is an active platform_user.
- * Redirects non-platform users to tenant workspace.
+ * Now joins platform_roles to resolve role slug from role_id.
  */
 import { useState, useEffect, ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
@@ -18,12 +17,12 @@ export type PlatformRoleType =
 interface PlatformIdentity {
   id: string;
   role: PlatformRoleType;
+  role_id: string;
   email: string;
 }
 
 interface PlatformGuardProps {
   children: ReactNode;
-  /** Optional: restrict to specific roles */
   allowedRoles?: PlatformRoleType[];
 }
 
@@ -41,12 +40,22 @@ export function usePlatformIdentity() {
 
     supabase
       .from('platform_users')
-      .select('id, role, email')
+      .select('id, role, role_id, email, platform_roles(slug)')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .maybeSingle()
       .then(({ data }) => {
-        setIdentity(data as PlatformIdentity | null);
+        if (data) {
+          const slug = (data as any).platform_roles?.slug ?? data.role;
+          setIdentity({
+            id: data.id,
+            role: slug as PlatformRoleType,
+            role_id: data.role_id,
+            email: data.email,
+          });
+        } else {
+          setIdentity(null);
+        }
         setLoading(false);
       });
   }, [user?.id]);
@@ -75,7 +84,6 @@ export function PlatformGuard({ children, allowedRoles }: PlatformGuardProps) {
     );
   }
 
-  // SECURITY: Tenant users can NEVER access platform routes
   if (!identity) {
     return <Navigate to="/" replace />;
   }

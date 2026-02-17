@@ -1,6 +1,5 @@
 /**
  * /platform/users — Dedicated platform users management page.
- * Re-uses PlatformUsersTab with its own data fetching.
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,19 +7,24 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
 import { PlatformUsersTab } from '@/components/platform/PlatformUsersTab';
 import { Users } from 'lucide-react';
-import type { PlatformUser } from './PlatformSecurity';
+import type { PlatformUser, PlatformRole } from './PlatformSecurity';
 
 export default function PlatformUsers() {
   const { user } = useAuth();
   const { identity } = usePlatformIdentity();
   const [users, setUsers] = useState<PlatformUser[]>([]);
+  const [roles, setRoles] = useState<PlatformRole[]>([]);
   const [loading, setLoading] = useState(true);
   const isSuperAdmin = identity?.role === 'platform_super_admin';
 
   const fetchUsers = async () => {
     setLoading(true);
-    const { data } = await supabase.from('platform_users').select('*').order('created_at', { ascending: false });
-    setUsers((data as PlatformUser[]) ?? []);
+    const [usersRes, rolesRes] = await Promise.all([
+      supabase.from('platform_users').select('*, platform_roles(*)').order('created_at', { ascending: false }),
+      supabase.from('platform_roles').select('*').order('name'),
+    ]);
+    setUsers((usersRes.data as PlatformUser[]) ?? []);
+    setRoles((rolesRes.data as PlatformRole[]) ?? []);
     setLoading(false);
   };
 
@@ -42,6 +46,7 @@ export default function PlatformUsers() {
 
       <PlatformUsersTab
         users={users}
+        roles={roles}
         loading={loading}
         isSuperAdmin={isSuperAdmin}
         currentUserId={user?.id}

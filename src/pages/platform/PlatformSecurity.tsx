@@ -11,27 +11,53 @@ import { ShieldCheck, Users, Key } from 'lucide-react';
 import { PlatformUsersTab } from '@/components/platform/PlatformUsersTab';
 import { PlatformRolesTab } from '@/components/platform/PlatformRolesTab';
 
+export interface PlatformRole {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  is_system_role: boolean;
+  inherits_role_ids: string[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PlatformUser {
   id: string;
   user_id: string;
   email: string;
   display_name: string | null;
   role: string;
+  role_id: string;
   status: string;
   created_at: string;
+  /** Joined from platform_roles */
+  platform_roles?: PlatformRole;
 }
 
 export interface PlatformPermissionDef {
   id: string;
   code: string;
   module: string;
+  resource: string;
+  action: string;
+  domain: string;
   description: string | null;
 }
 
 export interface PlatformRolePermission {
   id: string;
   role: string;
+  role_id: string;
   permission_id: string;
+}
+
+export interface PlatformAccessScope {
+  id: string;
+  role_id: string;
+  scope_type: 'global' | 'platform_section';
+  scope_id: string | null;
+  created_at: string;
 }
 
 export default function PlatformSecurity() {
@@ -39,6 +65,7 @@ export default function PlatformSecurity() {
   const { can } = usePlatformPermissions();
   const { identity } = usePlatformIdentity();
   const [users, setUsers] = useState<PlatformUser[]>([]);
+  const [roles, setRoles] = useState<PlatformRole[]>([]);
   const [permissions, setPermissions] = useState<PlatformPermissionDef[]>([]);
   const [rolePerms, setRolePerms] = useState<PlatformRolePermission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,12 +74,14 @@ export default function PlatformSecurity() {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [usersRes, permsRes, rpRes] = await Promise.all([
-      supabase.from('platform_users').select('*').order('created_at', { ascending: false }),
+    const [usersRes, rolesRes, permsRes, rpRes] = await Promise.all([
+      supabase.from('platform_users').select('*, platform_roles(*)').order('created_at', { ascending: false }),
+      supabase.from('platform_roles').select('*').order('name'),
       supabase.from('platform_permission_definitions').select('*').order('module, code'),
       supabase.from('platform_role_permissions').select('*'),
     ]);
     setUsers((usersRes.data as PlatformUser[]) ?? []);
+    setRoles((rolesRes.data as PlatformRole[]) ?? []);
     setPermissions((permsRes.data as PlatformPermissionDef[]) ?? []);
     setRolePerms((rpRes.data as PlatformRolePermission[]) ?? []);
     setLoading(false);
@@ -87,6 +116,7 @@ export default function PlatformSecurity() {
         <TabsContent value="users">
           <PlatformUsersTab
             users={users}
+            roles={roles}
             loading={loading}
             isSuperAdmin={isSuperAdmin}
             currentUserId={user?.id}
@@ -96,6 +126,7 @@ export default function PlatformSecurity() {
 
         <TabsContent value="roles">
           <PlatformRolesTab
+            roles={roles}
             permissions={permissions}
             rolePerms={rolePerms}
             loading={loading}

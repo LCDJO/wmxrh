@@ -1,11 +1,6 @@
 /**
  * AccessGraphView — Shows effective access paths: User → Role → Permissions.
- *
- * Features:
- *   - Select a user to see their role and all effective permissions
- *   - Expandable permission list per user
- *   - Visual path: User node → Role node → Permission badges
- *   - Summary stats
+ * Uses platform_roles table data instead of hardcoded role metadata.
  */
 
 import { useState, useMemo } from 'react';
@@ -17,79 +12,80 @@ import {
   User, Shield, Lock, Eye, Headphones, Wallet, Settings,
   ChevronDown, ChevronRight, Search, Network, ArrowRight,
 } from 'lucide-react';
-import type { PlatformUser, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/PlatformSecurity';
+import type { PlatformUser, PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/PlatformSecurity';
 
-// ── Role display metadata ───────────────────────────────────────
+// ── Role display metadata by slug ───────────────────────────────
 
-const ROLE_META: Record<string, { label: string; icon: typeof Shield; color: string; bgColor: string }> = {
-  platform_super_admin: { label: 'Super Admin', icon: Lock, color: 'text-destructive', bgColor: 'bg-destructive/10' },
-  platform_operations: { label: 'Operações', icon: Settings, color: 'text-primary', bgColor: 'bg-primary/10' },
-  platform_support: { label: 'Suporte', icon: Headphones, color: 'text-info', bgColor: 'bg-info/10' },
-  platform_finance: { label: 'Financeiro', icon: Wallet, color: 'text-warning', bgColor: 'bg-warning/10' },
-  platform_read_only: { label: 'Somente Leitura', icon: Eye, color: 'text-muted-foreground', bgColor: 'bg-muted' },
+const ROLE_META: Record<string, { icon: typeof Shield; color: string; bgColor: string }> = {
+  platform_super_admin: { icon: Lock, color: 'text-destructive', bgColor: 'bg-destructive/10' },
+  platform_operations: { icon: Settings, color: 'text-primary', bgColor: 'bg-primary/10' },
+  platform_support: { icon: Headphones, color: 'text-info', bgColor: 'bg-info/10' },
+  platform_finance: { icon: Wallet, color: 'text-warning', bgColor: 'bg-warning/10' },
+  platform_read_only: { icon: Eye, color: 'text-muted-foreground', bgColor: 'bg-muted' },
 };
 
+const DEFAULT_META = { icon: Shield, color: 'text-muted-foreground', bgColor: 'bg-muted' };
+
 const MODULE_LABELS: Record<string, string> = {
-  tenants: 'Tenants',
-  modulos: 'Módulos',
-  auditoria: 'Auditoria',
-  financeiro: 'Financeiro',
-  usuarios: 'Usuários',
-  seguranca: 'Segurança',
+  tenants: 'Tenants', modulos: 'Módulos', auditoria: 'Auditoria',
+  financeiro: 'Financeiro', usuarios: 'Usuários', seguranca: 'Segurança',
 };
 
 // ── Props ────────────────────────────────────────────────────────
 
 interface AccessGraphViewProps {
   users: PlatformUser[];
+  roles: PlatformRole[];
   permissions: PlatformPermissionDef[];
   rolePerms: PlatformRolePermission[];
 }
 
-export function AccessGraphView({ users, permissions, rolePerms }: AccessGraphViewProps) {
+export function AccessGraphView({ users, roles, permissions, rolePerms }: AccessGraphViewProps) {
   const [search, setSearch] = useState('');
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
 
-  // Role → permission IDs
+  const roleById = useMemo(() => new Map(roles.map(r => [r.id, r])), [roles]);
+
+  // role_id → permission IDs
   const rolePermMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
     rolePerms.forEach(rp => {
-      if (!map.has(rp.role)) map.set(rp.role, new Set());
-      map.get(rp.role)!.add(rp.permission_id);
+      if (!map.has(rp.role_id)) map.set(rp.role_id, new Set());
+      map.get(rp.role_id)!.add(rp.permission_id);
     });
     return map;
   }, [rolePerms]);
 
-  // Permission ID → definition
-  const permById = useMemo(() => {
-    return new Map(permissions.map(p => [p.id, p]));
-  }, [permissions]);
+  const permById = useMemo(() => new Map(permissions.map(p => [p.id, p])), [permissions]);
 
-  // Filtered users
+  const getRoleForUser = (user: PlatformUser): PlatformRole | undefined => {
+    return user.platform_roles ?? roleById.get(user.role_id);
+  };
+
   const filteredUsers = useMemo(() => {
     const q = search.toLowerCase();
-    return users.filter(u =>
-      u.email.toLowerCase().includes(q) ||
-      u.display_name?.toLowerCase().includes(q) ||
-      ROLE_META[u.role]?.label.toLowerCase().includes(q)
-    );
-  }, [users, search]);
-
-  // Stats
-  const stats = useMemo(() => {
-    const roleCounts = new Map<string, number>();
-    users.forEach(u => {
-      roleCounts.set(u.role, (roleCounts.get(u.role) ?? 0) + 1);
+    return users.filter(u => {
+      const role = getRoleForUser(u);
+      return u.email.toLowerCase().includes(q) ||
+        u.display_name?.toLowerCase().includes(q) ||
+        role?.name.toLowerCase().includes(q);
     });
-    return {
-      totalUsers: users.length,
-      activeUsers: users.filter(u => u.status === 'active').length,
-      roleCounts,
-    };
-  }, [users]);
+  }, [users, search, roleById]);
 
-  const getEffectivePermissions = (role: string): PlatformPermissionDef[] => {
-    const permIds = rolePermMap.get(role) ?? new Set();
+  const stats = useMemo(() => {
+    const roleCounts = new Map<string, { count: number; role: PlatformRole }>();
+    users.forEach(u => {
+      const role = getRoleForUser(u);
+      if (!role) return;
+      const entry = roleCounts.get(role.id) ?? { count: 0, role };
+      entry.count++;
+      roleCounts.set(role.id, entry);
+    });
+    return roleCounts;
+  }, [users, roleById]);
+
+  const getEffectivePermissions = (roleId: string): PlatformPermissionDef[] => {
+    const permIds = rolePermMap.get(roleId) ?? new Set();
     return Array.from(permIds)
       .map(id => permById.get(id))
       .filter((p): p is PlatformPermissionDef => !!p)
@@ -118,29 +114,22 @@ export function AccessGraphView({ users, permissions, rolePerms }: AccessGraphVi
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Search */}
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar usuário..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9 h-9"
-          />
+          <Input placeholder="Buscar usuário..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9" />
         </div>
 
         {/* Stats bar */}
         <div className="flex items-center gap-4 flex-wrap">
-          {Array.from(stats.roleCounts.entries()).map(([role, count]) => {
-            const meta = ROLE_META[role];
-            if (!meta) return null;
+          {Array.from(stats.values()).map(({ count, role }) => {
+            const meta = ROLE_META[role.slug] ?? DEFAULT_META;
             const Icon = meta.icon;
             return (
-              <div key={role} className="flex items-center gap-1.5 text-xs">
+              <div key={role.id} className="flex items-center gap-1.5 text-xs">
                 <div className={cn('flex h-5 w-5 items-center justify-center rounded', meta.bgColor)}>
                   <Icon className={cn('h-3 w-3', meta.color)} />
                 </div>
-                <span className="text-muted-foreground">{meta.label}:</span>
+                <span className="text-muted-foreground">{role.name}:</span>
                 <span className="font-semibold text-foreground">{count}</span>
               </div>
             );
@@ -150,15 +139,14 @@ export function AccessGraphView({ users, permissions, rolePerms }: AccessGraphVi
         {/* User access cards */}
         <div className="space-y-2">
           {filteredUsers.length === 0 ? (
-            <div className="text-center py-8 text-sm text-muted-foreground">
-              Nenhum usuário encontrado.
-            </div>
+            <div className="text-center py-8 text-sm text-muted-foreground">Nenhum usuário encontrado.</div>
           ) : (
             filteredUsers.map(user => {
               const isExpanded = expandedUser === user.id;
-              const meta = ROLE_META[user.role] ?? ROLE_META.platform_read_only;
+              const role = getRoleForUser(user);
+              const meta = ROLE_META[role?.slug ?? ''] ?? DEFAULT_META;
               const Icon = meta.icon;
-              const effectivePerms = getEffectivePermissions(user.role);
+              const effectivePerms = getEffectivePermissions(user.role_id);
               const groupedPerms = groupPermsByModule(effectivePerms);
 
               return (
@@ -169,7 +157,6 @@ export function AccessGraphView({ users, permissions, rolePerms }: AccessGraphVi
                     isExpanded ? 'border-primary/30 shadow-sm' : 'border-border',
                   )}
                 >
-                  {/* User row */}
                   <button
                     type="button"
                     onClick={() => setExpandedUser(isExpanded ? null : user.id)}
@@ -181,7 +168,6 @@ export function AccessGraphView({ users, permissions, rolePerms }: AccessGraphVi
                       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     )}
 
-                    {/* User node */}
                     <div className="flex items-center gap-2 min-w-[180px]">
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                         <User className="h-4 w-4 text-muted-foreground" />
@@ -194,24 +180,19 @@ export function AccessGraphView({ users, permissions, rolePerms }: AccessGraphVi
                       </div>
                     </div>
 
-                    {/* Arrow */}
                     <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
 
-                    {/* Role node */}
                     <div className={cn('flex items-center gap-2 px-3 py-1.5 rounded-md', meta.bgColor)}>
                       <Icon className={cn('h-3.5 w-3.5', meta.color)} />
-                      <span className={cn('text-xs font-semibold', meta.color)}>{meta.label}</span>
+                      <span className={cn('text-xs font-semibold', meta.color)}>{role?.name ?? '—'}</span>
                     </div>
 
-                    {/* Arrow */}
                     <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
 
-                    {/* Permission count */}
                     <Badge variant="outline" className="text-xs shrink-0">
                       {effectivePerms.length} permissões
                     </Badge>
 
-                    {/* Status */}
                     <Badge
                       variant={user.status === 'active' ? 'default' : user.status === 'suspended' ? 'destructive' : 'secondary'}
                       className="text-[10px] ml-auto shrink-0"
@@ -220,7 +201,6 @@ export function AccessGraphView({ users, permissions, rolePerms }: AccessGraphVi
                     </Badge>
                   </button>
 
-                  {/* Expanded: permission details */}
                   {isExpanded && (
                     <div className="px-4 pb-4 pt-1 border-t border-border/50">
                       <div className="ml-12 space-y-3">
