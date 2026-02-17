@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import {
   Globe, Eye, Users, Target, Percent, BarChart3, ArrowUpRight,
-  Layout, ExternalLink, Plus, Upload, Send,
+  Layout, ExternalLink, Plus, Upload, Send, FlaskConical,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,9 +14,12 @@ import { cn } from '@/lib/utils';
 import { landingPageBuilder } from '@/domains/platform-growth';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import type { LandingPage } from '@/domains/platform-growth/types';
+import { AIExperimentAdvisor } from '@/components/landing/AIExperimentAdvisor';
+import { ConversionPredictionPanel } from '@/components/landing/ConversionPredictionPanel';
 
 export default function GrowthLandingPages() {
   const [pages, setPages] = useState<LandingPage[]>([]);
+  const [expandedPageId, setExpandedPageId] = useState<string | null>(null);
   const { can } = usePlatformPermissions();
   const canPublish = can('landing_page.publish');
 
@@ -117,6 +120,27 @@ export default function GrowthLandingPages() {
                 </div>
               ))}
             </div>
+
+            {/* AI Advisor toggle */}
+            <div className="pt-2 border-t border-border/40">
+              <Button
+                size="sm"
+                variant={expandedPageId === page.id ? 'default' : 'outline'}
+                className="gap-1.5 text-xs"
+                onClick={() => setExpandedPageId(prev => prev === page.id ? null : page.id)}
+              >
+                <FlaskConical className="h-3 w-3" />
+                {expandedPageId === page.id ? 'Fechar AI Advisor' : 'AI Experiment Advisor'}
+              </Button>
+            </div>
+
+            {/* Expanded AI Panels */}
+            {expandedPageId === page.id && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
+                <AIExperimentAdvisor page={page} />
+                <ConversionPredictionPanel page={page} />
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}
