@@ -14,6 +14,7 @@ import { getHealthMonitor } from './health-monitor';
 import { getErrorTracker } from './error-tracker';
 import { getPerformanceProfiler } from './performance-profiler';
 import { getLogStreamAdapter, type LogEntry } from './log-stream-adapter';
+import { getSecurityEventCollector } from './security-event-collector';
 import type { PrometheusMetric } from './types';
 
 // ═══════════════════════════════════════════════════════════════
@@ -29,21 +30,47 @@ export interface PrometheusExportResult {
 export function exportPrometheus(): PrometheusExportResult {
   const collector = getMetricsCollector();
 
-  // Inject platform health as gauges
+  // ── Standard metrics ───────────────────────────────────────
+  // platform_requests_total — tracked via increment calls across the app
+  // platform_error_total — tracked via increment calls across the app
+  // (these are already populated by subsystems calling collector.increment)
+
+  // module_health_status
   const health = getHealthMonitor().getSummary();
-  collector.gauge('platform_health_status', health.overall === 'healthy' ? 1 : health.overall === 'degraded' ? 0.5 : 0);
+  collector.gauge('module_health_status', health.overall === 'healthy' ? 1 : health.overall === 'degraded' ? 0.5 : 0);
   collector.gauge('platform_modules_total', health.total_modules);
   collector.gauge('platform_modules_healthy', health.healthy_count);
   collector.gauge('platform_modules_degraded', health.degraded_count);
   collector.gauge('platform_modules_down', health.down_count);
 
-  // Inject error stats
+  // Per-module health
+  for (const mod of health.modules) {
+    collector.gauge('module_health_status', mod.status === 'healthy' ? 1 : mod.status === 'degraded' ? 0.5 : 0, { module: mod.module_id });
+  }
+
+  // active_identity_sessions / tenant_active_count / impersonation_active_count
+  const security = getSecurityEventCollector();
+  const now = Date.now();
+  const sessionWindow = 30 * 60_000; // 30 min
+  const secEvents = security.getEvents({ since: now - sessionWindow });
+
+  const recentSessions = secEvents.filter(e => e.type === 'access_granted');
+  collector.gauge('active_identity_sessions', recentSessions.length);
+
+  const activeTenants = new Set(secEvents.filter(e => e.tenant_id).map(e => e.tenant_id));
+  collector.gauge('tenant_active_count', activeTenants.size);
+
+  const activeImpersonations = secEvents.filter(e => e.type === 'impersonation_start');
+  collector.gauge('impersonation_active_count', activeImpersonations.length);
+
+  // Error stats
   const errors = getErrorTracker().getSummary();
+  collector.gauge('platform_error_total', errors.total_errors_24h);
   collector.gauge('errors_1h_total', errors.total_errors_1h);
   collector.gauge('errors_24h_total', errors.total_errors_24h);
   collector.gauge('error_rate_per_min', errors.error_rate_per_min);
 
-  // Inject perf stats
+  // Perf stats
   const perf = getPerformanceProfiler().getSummary();
   if (perf.current) {
     collector.gauge('perf_page_load_ms', perf.current.page_load_ms);
@@ -53,7 +80,7 @@ export function exportPrometheus(): PrometheusExportResult {
     collector.gauge('perf_dom_nodes', perf.current.dom_nodes);
   }
 
-  // Inject trace stats
+  // Trace stats
   const traceStats = getTraceCollector().getStats();
   collector.gauge('traces_total', traceStats.total);
   collector.gauge('traces_active', traceStats.active);
