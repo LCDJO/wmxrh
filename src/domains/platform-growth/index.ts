@@ -54,3 +54,20 @@ export { landingConversionOrchestrator, LandingConversionOrchestrator } from './
 export type { LandingConversionInput, LandingConversionResult } from './landing-conversion-orchestrator';
 
 export type * from './types';
+
+// ── Autonomous Marketing Engine (A/B Testing + Conversion Intelligence) ──
+export {
+  abTestingManager, ABTestingManager,
+  variantAllocator, VariantAllocator,
+  conversionMetricsCollector, ConversionMetricsCollector,
+  conversionAnalyzer, ConversionAnalyzer,
+  landingPerformanceRanker, LandingPerformanceRanker,
+  aiExperimentAdvisor, AIExperimentAdvisor,
+  trafficRouter, TrafficRouter,
+  marketingInsightsService, MarketingInsightsService,
+} from './autonomous-marketing';
+export type {
+  ABExperiment, ABVariant, VariantMetrics, ExperimentSuggestion,
+  ConversionDataPoint, ConversionFunnel, LandingPerformanceScore,
+  MarketingInsight, TrafficRule, TrafficAllocation,
+} from './autonomous-marketing';
