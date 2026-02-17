@@ -1,7 +1,7 @@
 /**
  * PlatformGrowthAI — Dashboard for Growth AI + Landing Page Builder.
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Rocket, Brain, TrendingUp, Layout, Tag, Target, BarChart3,
   ChevronRight, Zap, Globe, Eye, Users, DollarSign, Percent,
@@ -38,7 +38,8 @@ export default function PlatformGrowthAI() {
   const [showHelp, setShowHelp] = useState(false);
 
   const { insights, metrics: growthMetrics, loading, error, refresh } = useGrowthInsights();
-  const planSuggestions = useMemo(() => planOptimizationAdvisor.getSuggestions(), []);
+  const [planSuggestions, setPlanSuggestions] = useState<import('@/domains/platform-growth/types').PlanOptimizationSuggestion[]>([]);
+  useEffect(() => { planOptimizationAdvisor.getSuggestions().then(setPlanSuggestions); }, []);
   const predictions = useMemo(() => conversionPredictionService.getBatchPredictions(), []);
   const pages = useMemo(() => landingPageBuilder.getAll(), []);
   const funnel = useMemo(() => conversionTrackingService.getConversionFunnel('lp-1'), []);
