@@ -280,6 +280,119 @@ export type Database = {
           },
         ]
       }
+      automation_rule_executions: {
+        Row: {
+          actions_executed: Json
+          conditions_met: boolean
+          error_message: string | null
+          executed_at: string
+          id: string
+          result: string
+          rule_id: string
+          tenant_id: string
+          trigger_event: string
+          trigger_payload: Json | null
+        }
+        Insert: {
+          actions_executed?: Json
+          conditions_met: boolean
+          error_message?: string | null
+          executed_at?: string
+          id?: string
+          result?: string
+          rule_id: string
+          tenant_id: string
+          trigger_event: string
+          trigger_payload?: Json | null
+        }
+        Update: {
+          actions_executed?: Json
+          conditions_met?: boolean
+          error_message?: string | null
+          executed_at?: string
+          id?: string
+          result?: string
+          rule_id?: string
+          tenant_id?: string
+          trigger_event?: string
+          trigger_payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rule_executions_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_rule_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_rules: {
+        Row: {
+          actions: Json
+          conditions: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          last_triggered_at: string | null
+          name: string
+          priority: number
+          tenant_id: string
+          trigger_count: number
+          trigger_event: string
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          name: string
+          priority?: number
+          tenant_id: string
+          trigger_count?: number
+          trigger_event: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          name?: string
+          priority?: number
+          tenant_id?: string
+          trigger_count?: number
+          trigger_event?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       benefit_plans: {
         Row: {
           base_value: number

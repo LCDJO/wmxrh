@@ -60,6 +60,7 @@ import PlatformSecurityPermissions from "./pages/platform/PlatformSecurityPermis
 import PlatformSecurityAccessGraph from "./pages/platform/PlatformSecurityAccessGraph";
 import PlatformUnifiedGraph from "./pages/platform/PlatformUnifiedGraph";
 import PlatformGovernance from "./pages/platform/PlatformGovernance";
+import PlatformAutomation from "./pages/platform/PlatformAutomation";
 
 const queryClient = new QueryClient();
 
@@ -112,6 +113,7 @@ function AppRoutes() {
         <Route path="security/access-graph" element={<PlatformSecurityAccessGraph />} />
         <Route path="security/unified-graph" element={<PlatformUnifiedGraph />} />
         <Route path="security/governance" element={<PlatformGovernance />} />
+        <Route path="automation" element={<PlatformAutomation />} />
         <Route path="plans" element={<PlatformPlans />} />
         <Route path="audit" element={<PlatformAudit />} />
         <Route path="communications" element={<PlatformCommunications />} />

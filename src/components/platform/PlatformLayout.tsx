@@ -57,6 +57,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
     ],
   },
   { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
+  { to: '/platform/automation', label: 'Automação', icon: Zap, requiredPermission: 'security.manage' },
   { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
   { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'audit.view' },
   { to: '/platform/billing', label: 'Financeiro', icon: Package, requiredPermission: 'billing.view' },
