@@ -41,6 +41,9 @@ const ENTRY_TYPE_MAP: Record<string, string> = {
   adjustment: 'Ajuste',
   payment: 'Pagamento',
   credit: 'Crédito',
+  coupon_discount: 'Desconto Cupom',
+  usage_overage: 'Excedente Uso',
+  plan_charge: 'Cobrança Plano',
 };
 
 function formatBRL(v: number) {
