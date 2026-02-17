@@ -6243,6 +6243,316 @@ export type Database = {
           },
         ]
       }
+      support_evaluations: {
+        Row: {
+          agent_id: string | null
+          created_at: string
+          evaluator_id: string
+          feedback: string | null
+          id: string
+          rating: number
+          tenant_id: string
+          ticket_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string
+          evaluator_id: string
+          feedback?: string | null
+          id?: string
+          rating: number
+          tenant_id: string
+          ticket_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string
+          evaluator_id?: string
+          feedback?: string | null
+          id?: string
+          rating?: number
+          tenant_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_evaluations_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "platform_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_evaluations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_evaluations_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: true
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_system_ratings: {
+        Row: {
+          category: string
+          created_at: string
+          feedback: string | null
+          id: string
+          metadata: Json | null
+          rating: number
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          metadata?: Json | null
+          rating: number
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          metadata?: Json | null
+          rating?: number
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_system_ratings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_ticket_messages: {
+        Row: {
+          attachments: Json | null
+          content: string
+          created_at: string
+          id: string
+          is_internal: boolean
+          sender_id: string
+          sender_type: Database["public"]["Enums"]["support_sender_type"]
+          ticket_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          content: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          sender_id: string
+          sender_type: Database["public"]["Enums"]["support_sender_type"]
+          ticket_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          content?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          sender_id?: string
+          sender_type?: Database["public"]["Enums"]["support_sender_type"]
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          category: Database["public"]["Enums"]["support_ticket_category"]
+          closed_at: string | null
+          created_at: string
+          created_by: string
+          description: string
+          first_response_at: string | null
+          id: string
+          metadata: Json | null
+          priority: Database["public"]["Enums"]["support_ticket_priority"]
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string
+          tags: string[] | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["support_ticket_category"]
+          closed_at?: string | null
+          created_at?: string
+          created_by: string
+          description: string
+          first_response_at?: string | null
+          id?: string
+          metadata?: Json | null
+          priority?: Database["public"]["Enums"]["support_ticket_priority"]
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string
+          tags?: string[] | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["support_ticket_category"]
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          first_response_at?: string | null
+          id?: string
+          metadata?: Json | null
+          priority?: Database["public"]["Enums"]["support_ticket_priority"]
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["support_ticket_status"]
+          subject?: string
+          tags?: string[] | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "platform_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_wiki_articles: {
+        Row: {
+          author_id: string | null
+          category_id: string | null
+          content_html: string
+          content_plain: string | null
+          created_at: string
+          helpful_count: number
+          id: string
+          is_featured: boolean
+          is_published: boolean
+          not_helpful_count: number
+          published_at: string | null
+          slug: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          author_id?: string | null
+          category_id?: string | null
+          content_html?: string
+          content_plain?: string | null
+          created_at?: string
+          helpful_count?: number
+          id?: string
+          is_featured?: boolean
+          is_published?: boolean
+          not_helpful_count?: number
+          published_at?: string | null
+          slug: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          author_id?: string | null
+          category_id?: string | null
+          content_html?: string
+          content_plain?: string | null
+          created_at?: string
+          helpful_count?: number
+          id?: string
+          is_featured?: boolean
+          is_published?: boolean
+          not_helpful_count?: number
+          published_at?: string | null
+          slug?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_wiki_articles_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "support_wiki_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_wiki_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tax_brackets: {
         Row: {
           bracket_order: number
@@ -7566,6 +7876,23 @@ export type Database = {
         | "past_due"
         | "cancelled"
         | "churned"
+      support_sender_type: "tenant_user" | "platform_agent" | "system"
+      support_ticket_category:
+        | "billing"
+        | "technical"
+        | "feature_request"
+        | "bug_report"
+        | "account"
+        | "general"
+      support_ticket_priority: "low" | "medium" | "high" | "urgent"
+      support_ticket_status:
+        | "open"
+        | "awaiting_agent"
+        | "awaiting_customer"
+        | "in_progress"
+        | "resolved"
+        | "closed"
+        | "cancelled"
       tenant_role:
         | "owner"
         | "admin"
@@ -7840,6 +8167,25 @@ export const Constants = {
         "past_due",
         "cancelled",
         "churned",
+      ],
+      support_sender_type: ["tenant_user", "platform_agent", "system"],
+      support_ticket_category: [
+        "billing",
+        "technical",
+        "feature_request",
+        "bug_report",
+        "account",
+        "general",
+      ],
+      support_ticket_priority: ["low", "medium", "high", "urgent"],
+      support_ticket_status: [
+        "open",
+        "awaiting_agent",
+        "awaiting_customer",
+        "in_progress",
+        "resolved",
+        "closed",
+        "cancelled",
       ],
       tenant_role: [
         "owner",
