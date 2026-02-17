@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import {
   MessageSquare, Clock, CheckCircle2, AlertCircle, Send, Users,
   BookOpen, Search, Star, ArrowLeft, Loader2, Eye, Lock, BarChart3,
-  Plus, Inbox, UserCheck,
+  Plus, Inbox, UserCheck, Building2, Package, Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -419,108 +419,233 @@ function AgentTicketView({ ticket, userId, onBack }: { ticket: SupportTicket; us
         <ArrowLeft className="h-4 w-4" /> Voltar à Fila
       </Button>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-lg">{ticket.subject}</CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
-                Tenant: {ticket.tenant_id.slice(0, 8)}… · {CATEGORY_LABELS[ticket.category]} · {new Date(ticket.created_at).toLocaleString('pt-BR')}
-              </p>
-            </div>
-            <Badge style={{ backgroundColor: `${st.color}15`, color: st.color }}>{st.label}</Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{ticket.description}</p>
-          <div className="flex gap-2 pt-2 border-t">
-            {!ticket.assigned_to && (
-              <Button size="sm" variant="outline" onClick={handleAssign} className="gap-2">
-                <UserCheck className="h-4 w-4" /> Assumir Ticket
-              </Button>
-            )}
-            <Select value={newStatus} onValueChange={setNewStatus}>
-              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button size="sm" onClick={handleStatusChange} disabled={newStatus === ticket.status}>
-              Atualizar Status
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left: Ticket + Messages */}
+        <div className="lg:col-span-2 space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-lg">{ticket.subject}</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {CATEGORY_LABELS[ticket.category]} · {new Date(ticket.created_at).toLocaleString('pt-BR')}
+                  </p>
+                </div>
+                <Badge style={{ backgroundColor: `${st.color}15`, color: st.color }}>{st.label}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{ticket.description}</p>
+              <div className="flex gap-2 pt-2 border-t">
+                {!ticket.assigned_to && (
+                  <Button size="sm" variant="outline" onClick={handleAssign} className="gap-2">
+                    <UserCheck className="h-4 w-4" /> Assumir Ticket
+                  </Button>
+                )}
+                <Select value={newStatus} onValueChange={setNewStatus}>
+                  <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" onClick={handleStatusChange} disabled={newStatus === ticket.status}>
+                  Atualizar Status
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Messages */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Conversação</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-          ) : (
-            <ScrollArea className="max-h-[400px]">
-              <div className="space-y-3">
-                {messages.map(msg => {
-                  const isAgent = msg.sender_type === 'platform_agent';
-                  return (
-                    <div key={msg.id} className={`flex ${isAgent ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                        msg.is_internal
-                          ? 'bg-amber-500/10 border border-amber-500/20 text-foreground'
-                          : isAgent
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted text-foreground'
-                      }`}>
-                        {msg.is_internal && (
-                          <div className="flex items-center gap-1 text-[10px] text-amber-600 mb-1">
-                            <Lock className="h-3 w-3" /> Nota interna
+          {/* Messages */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Conversação</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : (
+                <ScrollArea className="max-h-[400px]">
+                  <div className="space-y-3">
+                    {messages.map(msg => {
+                      const isAgent = msg.sender_type === 'platform_agent';
+                      return (
+                        <div key={msg.id} className={`flex ${isAgent ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                            msg.is_internal
+                              ? 'bg-amber-500/10 border border-amber-500/20 text-foreground'
+                              : isAgent
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted text-foreground'
+                          }`}>
+                            {msg.is_internal && (
+                              <div className="flex items-center gap-1 text-[10px] text-amber-600 mb-1">
+                                <Lock className="h-3 w-3" /> Nota interna
+                              </div>
+                            )}
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                            <p className={`text-[10px] mt-1 ${isAgent ? (msg.is_internal ? 'text-muted-foreground' : 'text-primary-foreground/60') : 'text-muted-foreground'}`}>
+                              {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              {' · '}{isAgent ? 'Você' : 'Cliente'}
+                            </p>
                           </div>
-                        )}
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                        <p className={`text-[10px] mt-1 ${isAgent ? (msg.is_internal ? 'text-muted-foreground' : 'text-primary-foreground/60') : 'text-muted-foreground'}`}>
-                          {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                          {' · '}{isAgent ? 'Você' : 'Cliente'}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              )}
 
-          <div className="flex gap-2 mt-4 items-end">
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isInternal}
-                    onChange={e => setIsInternal(e.target.checked)}
-                    className="rounded border-border"
+              <div className="flex gap-2 mt-4 items-end">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isInternal}
+                        onChange={e => setIsInternal(e.target.checked)}
+                        className="rounded border-border"
+                      />
+                      <Lock className="h-3 w-3" /> Nota interna
+                    </label>
+                  </div>
+                  <Input
+                    placeholder={isInternal ? 'Nota interna (invisível ao cliente)...' : 'Responder ao cliente...'}
+                    value={newMsg}
+                    onChange={e => setNewMsg(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                   />
-                  <Lock className="h-3 w-3" /> Nota interna
-                </label>
+                </div>
+                <Button size="icon" onClick={handleSend} disabled={sending || !newMsg.trim()}>
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </Button>
               </div>
-              <Input
-                placeholder={isInternal ? 'Nota interna (invisível ao cliente)...' : 'Responder ao cliente...'}
-                value={newMsg}
-                onChange={e => setNewMsg(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-              />
-            </div>
-            <Button size="icon" onClick={handleSend} disabled={sending || !newMsg.trim()}>
-              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
-          </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right: Tenant Info Card */}
+        <div className="space-y-4">
+          <TenantInfoCard tenantId={ticket.tenant_id} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Tenant Info Card ──
+
+function TenantInfoCard({ tenantId }: { tenantId: string }) {
+  const [info, setInfo] = useState<{
+    name: string;
+    plan: string;
+    status: string;
+    modules: string[];
+    ticketHistory: { total: number; open: number; resolved: number };
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [tenantRes, subRes, modulesRes, ticketsRes] = await Promise.all([
+          supabase.from('tenants').select('name, status').eq('id', tenantId).maybeSingle(),
+          supabase.from('tenant_subscriptions').select('plan, status').eq('tenant_id', tenantId).maybeSingle(),
+          supabase.from('tenant_modules').select('module_key').eq('tenant_id', tenantId).eq('is_active', true),
+          supabase.from('support_tickets').select('id, status').eq('tenant_id', tenantId),
+        ]);
+
+        const tickets = ticketsRes.data ?? [];
+        setInfo({
+          name: tenantRes.data?.name ?? 'Desconhecido',
+          plan: (subRes.data?.plan as string) ?? 'Sem plano',
+          status: (subRes.data?.status as string) ?? tenantRes.data?.status ?? '—',
+          modules: (modulesRes.data ?? []).map(m => m.module_key),
+          ticketHistory: {
+            total: tickets.length,
+            open: tickets.filter(t => !['resolved', 'closed', 'cancelled'].includes(t.status)).length,
+            resolved: tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length,
+          },
+        });
+      } catch {
+        toast.error('Erro ao carregar info do tenant');
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [tenantId]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-8 flex justify-center">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
-    </div>
+    );
+  }
+
+  if (!info) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Building2 className="h-4 w-4 text-primary" /> Identificação do Cliente
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Empresa */}
+        <div>
+          <p className="text-xs text-muted-foreground">Empresa</p>
+          <p className="text-sm font-semibold text-foreground">{info.name}</p>
+        </div>
+
+        {/* Plano */}
+        <div>
+          <p className="text-xs text-muted-foreground flex items-center gap-1"><Package className="h-3 w-3" /> Plano Ativo</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <Badge variant="secondary" className="text-xs capitalize">{info.plan}</Badge>
+            <Badge variant="outline" className="text-[10px] capitalize">{info.status}</Badge>
+          </div>
+        </div>
+
+        {/* Módulos Ativos */}
+        <div>
+          <p className="text-xs text-muted-foreground flex items-center gap-1"><Layers className="h-3 w-3" /> Módulos Ativos</p>
+          {info.modules.length === 0 ? (
+            <p className="text-xs text-muted-foreground mt-0.5">Nenhum módulo ativo</p>
+          ) : (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {info.modules.map(m => (
+                <Badge key={m} variant="outline" className="text-[10px]">{m}</Badge>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Histórico de Tickets */}
+        <div>
+          <p className="text-xs text-muted-foreground flex items-center gap-1"><MessageSquare className="h-3 w-3" /> Histórico de Tickets</p>
+          <div className="grid grid-cols-3 gap-2 mt-1">
+            <div className="text-center py-1.5 bg-muted/50 rounded">
+              <p className="text-lg font-bold text-foreground">{info.ticketHistory.total}</p>
+              <p className="text-[10px] text-muted-foreground">Total</p>
+            </div>
+            <div className="text-center py-1.5 bg-muted/50 rounded">
+              <p className="text-lg font-bold" style={{ color: 'hsl(35 80% 50%)' }}>{info.ticketHistory.open}</p>
+              <p className="text-[10px] text-muted-foreground">Abertos</p>
+            </div>
+            <div className="text-center py-1.5 bg-muted/50 rounded">
+              <p className="text-lg font-bold" style={{ color: 'hsl(145 60% 42%)' }}>{info.ticketHistory.resolved}</p>
+              <p className="text-[10px] text-muted-foreground">Resolvidos</p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
