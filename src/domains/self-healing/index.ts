@@ -11,7 +11,7 @@
  *  └── HealingAuditLogger         (immutable log)
  */
 export { SelfHealingEngine, getSelfHealingEngine, resetSelfHealingEngine } from './self-healing-engine';
-export { IncidentDetector } from './incident-detector';
+export { IncidentDetector, type DetectionRule } from './incident-detector';
 export { RecoveryOrchestrator } from './recovery-orchestrator';
 export { CircuitBreakerManager } from './circuit-breaker-manager';
 export { HealingAuditLogger } from './healing-audit-logger';
