@@ -1,20 +1,24 @@
 /**
  * GrowthLandingPages — LP management + analytics.
+ * Publishing restricted to: PlatformSuperAdmin, PlatformOperations, PlatformMarketing.
  */
 import { useState, useEffect } from 'react';
 import {
   Globe, Eye, Users, Target, Percent, BarChart3, ArrowUpRight,
-  Layout, ExternalLink, Plus,
+  Layout, ExternalLink, Plus, Upload,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { landingPageBuilder } from '@/domains/platform-growth';
+import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import type { LandingPage } from '@/domains/platform-growth/types';
 
 export default function GrowthLandingPages() {
   const [pages, setPages] = useState<LandingPage[]>([]);
+  const { can } = usePlatformPermissions();
+  const canPublish = can('landing_page.publish');
 
   useEffect(() => {
     landingPageBuilder.getAll().then(setPages);
@@ -50,9 +54,16 @@ export default function GrowthLandingPages() {
                   <p className="text-xs text-muted-foreground">/{page.slug} • {page.blocks.length} blocos</p>
                 </div>
               </div>
-              <Badge variant="outline" className={cn('text-[10px]', page.status === 'published' ? 'border-emerald-500/30 text-emerald-400' : 'border-amber-500/30 text-amber-400')}>
-                {page.status}
-              </Badge>
+              <div className="flex items-center gap-2">
+                {canPublish && page.status === 'draft' && (
+                  <Button size="sm" variant="outline" className="gap-1 text-xs">
+                    <Upload className="h-3 w-3" />Publicar
+                  </Button>
+                )}
+                <Badge variant="outline" className={cn('text-[10px]', page.status === 'published' ? 'border-emerald-500/30 text-emerald-400' : 'border-amber-500/30 text-amber-400')}>
+                  {page.status}
+                </Badge>
+              </div>
             </div>
 
             <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
