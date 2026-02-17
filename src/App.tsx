@@ -65,6 +65,7 @@ import PlatformGovernanceAI from "./pages/platform/PlatformGovernanceAI";
 import PlatformGovernanceDashboard from "./pages/platform/PlatformGovernanceDashboard";
 import PlatformObservability from "./pages/platform/PlatformObservability";
 import PlatformMonitoring from "./pages/platform/PlatformMonitoring";
+import PlatformControlPlane from "./pages/platform/PlatformControlPlane";
 
 const queryClient = new QueryClient();
 
@@ -122,6 +123,7 @@ function AppRoutes() {
         <Route path="automation" element={<PlatformAutomation />} />
         <Route path="observability" element={<PlatformObservability />} />
         <Route path="monitoring/*" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformMonitoring /></PlatformGuard>} />
+        <Route path="control-plane" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformControlPlane /></PlatformGuard>} />
         <Route path="plans" element={<PlatformPlans />} />
         <Route path="audit" element={<PlatformAudit />} />
         <Route path="communications" element={<PlatformCommunications />} />

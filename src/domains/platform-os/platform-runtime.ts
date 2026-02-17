@@ -41,6 +41,7 @@ import { PLATFORM_EVENTS } from './platform-events';
 import { createPlatformExperienceEngine } from '@/domains/platform-experience';
 import type { PlatformBootstrappedPayload } from './platform-events';
 import { getSelfHealingEngine } from '@/domains/self-healing';
+import { getControlPlaneEngine } from '@/domains/control-plane/control-plane-engine';
 
 // ── Security Kernel imports ──────────────────────────────────────
 import {
@@ -219,6 +220,19 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
         required_permissions: ['platform:monitoring:read'],
       });
       disposers.push(() => selfHealing.stop());
+
+      // ── 7. Start Autonomous Control Plane ─────────────────────
+      const controlPlane = getControlPlaneEngine({
+        boot, shutdown, status, authorize, events, services, modules,
+        identity, navigation, features, cognitive, experience,
+      } as any);
+      controlPlane.start();
+      services.register('AutonomousControlPlane', controlPlane, {
+        version: '1.0.0',
+        capabilities: ['apcp:state', 'apcp:automation', 'apcp:actions', 'apcp:risk', 'apcp:modules', 'apcp:identity'],
+        required_permissions: ['platform:monitoring:read'],
+      });
+      disposers.push(() => controlPlane.stop());
 
       bootedAt = Date.now();
       phase = 'ready';
