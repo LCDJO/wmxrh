@@ -40,6 +40,8 @@ const SUGGESTION_KIND_MAP: Record<SuggestionType, CognitiveSignalKind> = {
   pattern: 'pattern_detection',
   setup: 'quick_setup',
   'plan-upgrade': 'dashboard_recommendation',
+  'role-simplification': 'permission_suggestion',
+  'redundant-permission': 'permission_suggestion',
 };
 
 function mapSuggestionToSignal(
