@@ -87,8 +87,11 @@ export const EVENT_CATALOG: EventCatalogEntry[] = [
   { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'ReferralLinkCreated', description: 'Link de referral criado' },
   { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'ReferralSignup', description: 'Signup via referral registrado' },
   { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'ReferralConverted', description: 'Referral convertido em pagante' },
-  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'RewardAwarded', description: 'Recompensa concedida ao referrer' },
-  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'TierUpgraded', description: 'Tier de gamificação elevado' },
+  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'RewardGranted', description: 'Recompensa concedida (crédito, cupom ou pontos)' },
+  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'RewardAwarded', description: '[legacy] Recompensa concedida ao referrer' },
+  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'GamificationLevelUp', description: 'Usuário subiu de tier na gamificação' },
+  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'TierUpgraded', description: '[legacy] Tier de gamificação elevado' },
+  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'RevenueForecastUpdated', description: 'Projeção de receita (MRR) recalculada' },
   { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'ChurnRiskDetected', description: 'Risco de churn detectado' },
   { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'UpgradeRecommended', description: 'Upgrade recomendado para tenant' },
 ];
