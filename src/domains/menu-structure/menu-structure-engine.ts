@@ -375,10 +375,16 @@ export class MenuLayoutValidator {
         }
         slugs.add(n.slug);
 
-        // Fix warnings: inherit parent roles if node has no permissions
-        if (fixWarnings && (!n.role_permissions || n.role_permissions.length === 0) && parentRoles.length > 0) {
-          n.role_permissions = [...parentRoles];
-          fixes.push(`"${n.label}" herdou roles do pai: ${parentRoles.join(', ')}`);
+        // Fix warnings: inherit parent roles or assign defaults
+        if (fixWarnings && (!n.role_permissions || n.role_permissions.length === 0)) {
+          if (parentRoles.length > 0) {
+            n.role_permissions = [...parentRoles];
+            fixes.push(`"${n.label}" herdou roles do pai: ${parentRoles.join(', ')}`);
+          } else {
+            const defaultRoles = ['PlatformSuperAdmin', 'PlatformOperations', 'PlatformMarketing'];
+            n.role_permissions = [...defaultRoles];
+            fixes.push(`"${n.label}" recebeu roles padrão: ${defaultRoles.join(', ')}`);
+          }
         }
 
         // Fix max depth: move nodes exceeding max depth up to their grandparent
