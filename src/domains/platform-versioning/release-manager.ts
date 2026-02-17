@@ -1,5 +1,7 @@
 /**
  * ReleaseManager — Groups platform + module versions into auditable releases.
+ *
+ * Lifecycle: draft → candidate → final
  */
 import type { Release, ReleaseStatus, DependencySnapshot, PreReleaseCheck } from './types';
 import { versionId } from './version-utils';
@@ -7,6 +9,7 @@ import { versionId } from './version-utils';
 export class ReleaseManager {
   private releases: Release[] = [];
 
+  /** Create a Release Draft */
   create(opts: {
     name: string;
     createdBy: string;
@@ -18,7 +21,7 @@ export class ReleaseManager {
       id: versionId(),
       name: opts.name,
       status: 'draft',
-      platform_version_id: opts.platform_version_id,
+      platform_version_id: opts.platform_version_id ?? null,
       module_versions: opts.module_versions ?? [],
       changelog_entries: [],
       dependency_snapshot: opts.dependency_snapshot ?? { timestamp: new Date().toISOString(), modules: [], conflicts: [] },
@@ -30,11 +33,18 @@ export class ReleaseManager {
     return release;
   }
 
+  /** Add a module version to a draft release */
   addModuleVersion(releaseId: string, moduleVersionId: string): void {
     const r = this.getById(releaseId);
     if (r && !r.module_versions.includes(moduleVersionId)) {
       r.module_versions.push(moduleVersionId);
     }
+  }
+
+  /** Set or update the platform version for this release */
+  setPlatformVersion(releaseId: string, platformVersionId: string): void {
+    const r = this.getById(releaseId);
+    if (r) r.platform_version_id = platformVersionId;
   }
 
   addChangelogEntry(releaseId: string, entryId: string): void {
@@ -49,12 +59,26 @@ export class ReleaseManager {
     if (r) r.pre_checks.push(check);
   }
 
-  approve(releaseId: string, approvedBy: string): Release | null {
+  /** Promote draft → candidate */
+  promoteToCandidate(releaseId: string, promotedBy: string): Release | null {
     const r = this.getById(releaseId);
     if (!r || r.status !== 'draft') return null;
-    r.approved_by = approvedBy;
-    r.approved_at = new Date().toISOString();
-    r.status = 'staging';
+    r.status = 'candidate';
+    r.promoted_to_candidate_by = promotedBy;
+    r.promoted_to_candidate_at = new Date().toISOString();
+    return r;
+  }
+
+  /** Finalize candidate → final */
+  finalize(releaseId: string, finalizedBy: string): Release | null {
+    const r = this.getById(releaseId);
+    if (!r || r.status !== 'candidate') return null;
+    // Block if any pre-check failed
+    const failed = r.pre_checks.filter(c => c.status === 'failed');
+    if (failed.length > 0) return null;
+    r.status = 'final';
+    r.finalized_by = finalizedBy;
+    r.finalized_at = new Date().toISOString();
     return r;
   }
 
@@ -62,18 +86,8 @@ export class ReleaseManager {
     const r = this.getById(releaseId);
     if (!r) return null;
     r.status = status;
-    if (status === 'published') r.published_at = new Date().toISOString();
     if (status === 'rolled_back') r.rolled_back_at = new Date().toISOString();
     return r;
-  }
-
-  publish(releaseId: string): Release | null {
-    const r = this.getById(releaseId);
-    if (!r || !r.approved_by) return null;
-    // Check pre-checks
-    const failed = r.pre_checks.filter(c => c.status === 'failed');
-    if (failed.length > 0) return null;
-    return this.transition(releaseId, 'published');
   }
 
   getById(id: string): Release | null {
@@ -81,7 +95,7 @@ export class ReleaseManager {
   }
 
   getCurrent(): Release | null {
-    return [...this.releases].reverse().find(r => r.status === 'published') ?? null;
+    return [...this.releases].reverse().find(r => r.status === 'final') ?? null;
   }
 
   list(): Release[] {

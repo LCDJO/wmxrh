@@ -24,32 +24,27 @@ export class ChangelogRenderer {
     private releaseManager: ReleaseManager,
   ) {}
 
-  /** Render full changelog for a release as Markdown */
   renderRelease(releaseId: string): string {
     const release = this.releaseManager.getById(releaseId);
     if (!release) return '';
-
     const entries = this.changeLogger.getByRelease(releaseId);
-    return this.renderMarkdown(release.name, release.published_at ?? release.created_at, entries);
+    const date = release.finalized_at ?? release.created_at;
+    return this.renderMarkdown(release.name, date, entries);
   }
 
-  /** Render changelog for a specific version */
   renderVersion(versionId: string): string {
     const entries = this.changeLogger.getByVersion(versionId);
     return this.renderMarkdown(`Version ${versionId}`, new Date().toISOString(), entries);
   }
 
-  /** Render full platform changelog */
   renderFull(limit?: number): string {
     const releases = this.releaseManager.list()
-      .filter(r => r.status === 'published')
+      .filter(r => r.status === 'final')
       .reverse()
       .slice(0, limit);
-
     return releases.map(r => this.renderRelease(r.id)).join('\n\n---\n\n');
   }
 
-  /** Render for a module */
   renderModule(moduleKey: string): string {
     const entries = this.changeLogger.getByScope('module', moduleKey);
     return this.renderMarkdown(`Módulo: ${moduleKey}`, new Date().toISOString(), entries);
@@ -58,10 +53,8 @@ export class ChangelogRenderer {
   private renderMarkdown(title: string, date: string, entries: ChangeLogEntry[]): string {
     const grouped = this.groupByCategory(entries);
     const lines: string[] = [];
-
     lines.push(`## ${title}`);
     lines.push(`_${new Date(date).toLocaleDateString('pt-BR')}_\n`);
-
     for (const cat of CATEGORY_ORDER) {
       const group = grouped.get(cat);
       if (!group?.length) continue;
@@ -73,7 +66,6 @@ export class ChangelogRenderer {
       }
       lines.push('');
     }
-
     return lines.join('\n');
   }
 
@@ -87,16 +79,11 @@ export class ChangelogRenderer {
     return map;
   }
 
-  /** Structured output for UI rendering */
   toStructured(releaseId: string): Array<{ category: ChangeCategory; label: string; entries: ChangeLogEntry[] }> {
     const entries = this.changeLogger.getByRelease(releaseId);
     const grouped = this.groupByCategory(entries);
     return CATEGORY_ORDER
       .filter(cat => grouped.has(cat))
-      .map(cat => ({
-        category: cat,
-        label: CATEGORY_LABELS[cat],
-        entries: grouped.get(cat)!,
-      }));
+      .map(cat => ({ category: cat, label: CATEGORY_LABELS[cat], entries: grouped.get(cat)! }));
   }
 }

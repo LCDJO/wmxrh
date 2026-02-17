@@ -88,20 +88,21 @@ export interface ChangeLogEntry {
 }
 
 // ── Release ──
-export type ReleaseStatus = 'draft' | 'staging' | 'canary' | 'published' | 'rolled_back' | 'archived';
+export type ReleaseStatus = 'draft' | 'candidate' | 'final' | 'rolled_back' | 'archived';
 
 export interface Release {
   id: string;
-  name: string;              // e.g. "Sprint 42 Release"
+  name: string;                        // e.g. "Sprint 42 Release"
   status: ReleaseStatus;
-  platform_version_id?: string;
-  module_versions: string[]; // ModuleVersion ids
+  platform_version_id: string | null;  // linked PlatformVersion
+  module_versions: string[];           // ModuleVersion ids grouped in this release
   changelog_entries: string[];
   dependency_snapshot: DependencySnapshot;
   pre_checks: PreReleaseCheck[];
-  approved_by?: string;
-  approved_at?: string;
-  published_at?: string;
+  promoted_to_candidate_by?: string;
+  promoted_to_candidate_at?: string;
+  finalized_by?: string;
+  finalized_at?: string;
   rolled_back_at?: string;
   rollback_reason?: string;
   created_at: string;
