@@ -11,6 +11,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { emitBillingEvent } from './billing-events';
 import type {
   CouponManagerAPI,
   CouponValidationServiceAPI,
@@ -60,7 +61,19 @@ function createCouponManager(): CouponManagerAPI {
         .single();
 
       if (error) throw new Error(`CouponManager.create: ${error.message}`);
-      return data as unknown as Coupon;
+      const coupon = data as unknown as Coupon;
+
+      emitBillingEvent({
+        type: 'CouponCreated',
+        timestamp: Date.now(),
+        tenant_id: dto.tenant_scope ?? 'platform',
+        coupon_id: coupon.id,
+        code: coupon.code,
+        discount_type: coupon.discount_type,
+        discount_value: Number(coupon.discount_value),
+      });
+
+      return coupon;
     },
 
     async getById(couponId) {
@@ -333,12 +346,35 @@ function createDiscountEngine(): DiscountEngineAPI {
           .eq('id', coupon.id);
       }
 
+      const finalAmount = Math.round((subtotalBrl - discountBrl) * 100) / 100;
+
+      // Emit domain events
+      emitBillingEvent({
+        type: 'CouponRedeemed',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        coupon_id: coupon.id,
+        code: coupon.code,
+        discount_applied_brl: discountBrl,
+        invoice_id: null,
+      });
+
+      emitBillingEvent({
+        type: 'InvoiceDiscountApplied',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        invoice_id: '',
+        coupon_code: coupon.code,
+        discount_brl: discountBrl,
+        final_amount_brl: finalAmount,
+      });
+
       return {
         applied: true,
         coupon,
         redemption: redemption as unknown as CouponRedemption,
         discount_brl: discountBrl,
-        final_amount_brl: Math.round((subtotalBrl - discountBrl) * 100) / 100,
+        final_amount_brl: finalAmount,
       };
     },
 

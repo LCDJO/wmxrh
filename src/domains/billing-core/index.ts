@@ -59,6 +59,11 @@ export type {
   TenantPlanUpgradedEvent,
   InvoiceGeneratedEvent,
   RevenueUpdatedEvent,
+  UsageRecordedEvent,
+  CouponCreatedEvent,
+  CouponRedeemedEvent,
+  InvoiceDiscountAppliedEvent,
+  UsageOverageCalculatedEvent,
 } from './billing-events';
 
 // ── Types ────────────────────────────────────────────────────

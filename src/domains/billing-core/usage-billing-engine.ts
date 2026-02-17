@@ -9,6 +9,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { emitBillingEvent } from './billing-events';
 import type {
   UsageCollectorAPI,
   UsageAggregatorAPI,
@@ -50,7 +51,18 @@ function createUsageCollector(): UsageCollectorAPI {
         .single();
 
       if (error) throw new Error(`UsageCollector.record: ${error.message}`);
-      return data as unknown as UsageRecord;
+      const record = data as unknown as UsageRecord;
+
+      emitBillingEvent({
+        type: 'UsageRecorded',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        metric: metricKey,
+        quantity,
+        unit: opts?.unit ?? 'unit',
+      });
+
+      return record;
     },
 
     async recordBatch(tenantId, records) {
@@ -302,7 +314,25 @@ export function createUsageBillingEngine(): UsageBillingEngineAPI {
 
     async calculateTenantUsageCost(tenantId, planId, periodStart, periodEnd) {
       const aggregates = await aggregator.aggregate(tenantId, periodStart, periodEnd);
-      return pricing.calculateCost(planId, aggregates);
+      const cost = await pricing.calculateCost(planId, aggregates);
+
+      // Emit UsageOverageCalculated for each line item with overage
+      for (const item of cost.line_items) {
+        if (item.total_brl > 0) {
+          emitBillingEvent({
+            type: 'UsageOverageCalculated',
+            timestamp: Date.now(),
+            tenant_id: tenantId,
+            metric: item.metric_key,
+            included_qty: 0, // resolved from tiers
+            actual_qty: item.quantity,
+            overage_qty: item.quantity,
+            overage_amount_brl: item.total_brl,
+          });
+        }
+      }
+
+      return cost;
     },
   };
 }
