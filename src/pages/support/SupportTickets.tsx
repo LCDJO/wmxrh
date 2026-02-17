@@ -5,10 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   MessageSquare, Clock, CheckCircle2, AlertCircle,
-  Send, Star, ArrowLeft, Loader2, Plus, Search,
+  Send, Star, ArrowLeft, Loader2, Plus, Search, Radio,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -16,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { TicketService } from '@/domains/support/ticket-service';
 import { EvaluationService } from '@/domains/support/evaluation-service';
+import LiveChatWindow from '@/modules/support/ui/LiveChatWindow';
 import type { SupportTicket, TicketMessage } from '@/domains/support/types';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof Clock }> = {
@@ -205,7 +207,6 @@ function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTic
 
   const st = STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.open;
   const isResolved = ticket.status === 'resolved' || ticket.status === 'closed';
-  const canChat = !isResolved && ticket.status !== 'cancelled';
 
   return (
     <div className="space-y-4">
@@ -228,50 +229,76 @@ function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTic
         </CardContent>
       </Card>
 
-      {/* Messages */}
-      <Card>
-        <CardContent className="py-4 px-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Conversação</h3>
-          {loading ? (
-            <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-          ) : messages.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-6">Nenhuma mensagem ainda.</p>
-          ) : (
-            <ScrollArea className="max-h-[400px]">
-              <div className="space-y-3">
-                {messages.map(msg => {
-                  const isMe = msg.sender_type === 'tenant_user';
-                  return (
-                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${isMe ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                        <p className={`text-[10px] mt-1 ${isMe ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
-                          {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                          {!isMe && ' · Suporte'}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          )}
+      {/* Communication Tabs — Chat ao Vivo + Mensagens */}
+      <Tabs defaultValue="chat" className="w-full">
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="chat" className="gap-2">
+            <Radio className="h-3.5 w-3.5" /> Chat ao Vivo
+          </TabsTrigger>
+          <TabsTrigger value="messages" className="gap-2">
+            <MessageSquare className="h-3.5 w-3.5" /> Mensagens
+          </TabsTrigger>
+        </TabsList>
 
-          {canChat && (
-            <div className="flex gap-2 mt-4">
-              <Input
-                placeholder="Digite sua mensagem..."
-                value={newMsg}
-                onChange={e => setNewMsg(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-              />
-              <Button size="icon" onClick={handleSend} disabled={sending || !newMsg.trim()}>
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        <TabsContent value="chat" className="mt-3">
+          <LiveChatWindow
+            ticketId={ticket.id}
+            tenantId={tenantId}
+            userId={userId}
+            senderType="tenant"
+            assignedAgentId={ticket.assigned_to}
+            ticketSubject={ticket.subject}
+            onBack={onBack}
+            embedded
+          />
+        </TabsContent>
+
+        <TabsContent value="messages" className="mt-3">
+          <Card>
+            <CardContent className="py-4 px-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Histórico de Mensagens</h3>
+              {loading ? (
+                <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : messages.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">Nenhuma mensagem ainda.</p>
+              ) : (
+                <ScrollArea className="max-h-[400px]">
+                  <div className="space-y-3">
+                    {messages.map(msg => {
+                      const isMe = msg.sender_type === 'tenant_user';
+                      return (
+                        <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${isMe ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                            <p className={`text-[10px] mt-1 ${isMe ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
+                              {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              {!isMe && ' · Suporte'}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              )}
+
+              {!isResolved && ticket.status !== 'cancelled' && (
+                <div className="flex gap-2 mt-4">
+                  <Input
+                    placeholder="Digite sua mensagem..."
+                    value={newMsg}
+                    onChange={e => setNewMsg(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                  />
+                  <Button size="icon" onClick={handleSend} disabled={sending || !newMsg.trim()}>
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Evaluation Card — shown inline when ticket is resolved/closed */}
       {isResolved && !existingEval && (
@@ -282,21 +309,18 @@ function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTic
               <h3 className="text-sm font-semibold text-foreground">Avalie este atendimento</h3>
             </div>
 
-            {/* Agent rating */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-foreground">Avaliação do Atendente</p>
               <p className="text-[11px] text-muted-foreground">Como foi a qualidade do suporte recebido?</p>
               <StarRatingRow value={agentRating} onChange={setAgentRating} />
             </div>
 
-            {/* System rating */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-foreground">Avaliação do Sistema</p>
               <p className="text-[11px] text-muted-foreground">Como avalia a experiência geral com a plataforma?</p>
               <StarRatingRow value={systemRating} onChange={setSystemRating} />
             </div>
 
-            {/* Feedback */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-foreground">Comentário <span className="text-muted-foreground font-normal">(opcional)</span></p>
               <Textarea
