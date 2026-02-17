@@ -66,6 +66,8 @@ import PlatformGovernanceDashboard from "./pages/platform/PlatformGovernanceDash
 import PlatformObservability from "./pages/platform/PlatformObservability";
 import PlatformMonitoring from "./pages/platform/PlatformMonitoring";
 import PlatformControlPlane from "./pages/platform/PlatformControlPlane";
+import PlatformBilling from "./pages/platform/PlatformBilling";
+import PlatformRevenue from "./pages/platform/PlatformRevenue";
 
 const queryClient = new QueryClient();
 
@@ -127,6 +129,8 @@ function AppRoutes() {
         <Route path="plans" element={<PlatformPlans />} />
         <Route path="audit" element={<PlatformAudit />} />
         <Route path="communications" element={<PlatformCommunications />} />
+        <Route path="billing" element={<PlatformBilling />} />
+        <Route path="revenue" element={<PlatformRevenue />} />
         <Route path="iam" element={<PlatformIAM />} />
       </Route>
 

@@ -25,6 +25,7 @@ import {
   Brain,
   Activity,
   Monitor,
+  TrendingUp,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
   { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
   { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'audit.view' },
   { to: '/platform/billing', label: 'Financeiro', icon: Package, requiredPermission: 'billing.view' },
+  { to: '/platform/revenue', label: 'Revenue', icon: TrendingUp, requiredPermission: 'billing.view' },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
 ];
 
