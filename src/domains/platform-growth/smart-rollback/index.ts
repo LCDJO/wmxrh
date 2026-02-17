@@ -10,7 +10,7 @@
  *  └── ExperimentSafetyGuard      (blocks rollback during active A/B tests)
  */
 
-export { SmartRollbackEngine, getSmartRollbackEngine, resetSmartRollbackEngine } from './smart-rollback-engine';
+export { SmartRollbackEngine, getSmartRollbackEngine, resetSmartRollbackEngine, AUTO_ROLLBACK_AUTHORIZED_ROLES } from './smart-rollback-engine';
 export { ConversionMonitor, conversionMonitor } from './conversion-monitor';
 export { PerformanceComparator, performanceComparator, DEFAULT_ROLLBACK_POLICY } from './performance-comparator';
 export type { RollbackPolicy, PerformanceAlert, PerformanceAlertTrigger, PerformanceAlertSeverity } from './performance-comparator';
