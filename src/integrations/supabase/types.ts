@@ -6939,6 +6939,78 @@ export type Database = {
           },
         ]
       }
+      website_pages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          is_visible: boolean
+          layout_schema: Json
+          name: string
+          parent_id: string | null
+          published_at: string | null
+          seo_config: Json
+          slug: string
+          sort_order: number
+          status: string
+          tenant_id: string
+          updated_at: string
+          version_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_visible?: boolean
+          layout_schema?: Json
+          name: string
+          parent_id?: string | null
+          published_at?: string | null
+          seo_config?: Json
+          slug: string
+          sort_order?: number
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          version_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_visible?: boolean
+          layout_schema?: Json
+          name?: string
+          parent_id?: string | null
+          published_at?: string | null
+          seo_config?: Json
+          slug?: string
+          sort_order?: number
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_pages_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "website_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_pages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       websites: {
         Row: {
           created_at: string
