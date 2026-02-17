@@ -33,6 +33,14 @@ export type { PlanTier, BillingCycle, PaymentMethod };
 
 export type InvoiceStatus = 'draft' | 'pending' | 'paid' | 'overdue' | 'cancelled' | 'refunded';
 
+export type InvoiceLineSource = 'plan' | 'usage' | 'coupon';
+
+export interface InvoiceLine {
+  description: string;
+  amount: number;
+  source: InvoiceLineSource;
+}
+
 export interface Invoice {
   id: string;
   tenant_id: string;
@@ -49,6 +57,7 @@ export interface Invoice {
   notes: string | null;
   stripe_invoice_id: string | null;
   stripe_payment_intent_id: string | null;
+  lines: InvoiceLine[];
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -65,6 +74,7 @@ export interface CreateInvoiceDTO {
   due_date: string;
   payment_method?: string;
   notes?: string;
+  lines?: InvoiceLine[];
   metadata?: Record<string, unknown>;
 }
 
