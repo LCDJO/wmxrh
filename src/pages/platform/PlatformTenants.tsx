@@ -451,7 +451,7 @@ export default function PlatformTenants() {
                               <Puzzle className="h-4 w-4 mr-2" /> Módulos
                             </DropdownMenuItem>
                           )}
-                          {can('tenant.impersonate') && tenant.status === 'active' && (
+                          {can('support.impersonate') && tenant.status === 'active' && (
                             <DropdownMenuItem onClick={() => openImpersonate(tenant)}>
                               <UserCog className="h-4 w-4 mr-2" /> Entrar como Tenant
                             </DropdownMenuItem>

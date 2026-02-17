@@ -17,6 +17,7 @@ const MODULE_LABELS: Record<string, string> = {
   auditoria: 'Auditoria',
   financeiro: 'Financeiro',
   fiscal: 'Fiscal',
+  suporte: 'Suporte',
   usuarios: 'Usuários',
   seguranca: 'Segurança',
 };
