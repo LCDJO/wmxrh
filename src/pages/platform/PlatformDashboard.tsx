@@ -23,6 +23,7 @@ import { getHealthMonitor } from '@/domains/observability/health-monitor';
 import { getErrorTracker } from '@/domains/observability/error-tracker';
 import { getGatewayPerformanceTracker } from '@/domains/observability/gateway-performance-tracker';
 import { cn } from '@/lib/utils';
+import { MRRWidget, ARRWidget, ActiveSubscriptionsWidget, RevenueByPlanChart } from '@/components/platform/financial-widgets';
 
 interface PlatformMetrics {
   total_tenants: number;
@@ -180,6 +181,18 @@ export default function PlatformDashboard() {
       {/* ═══ Platform Health Widgets ═══ */}
       <PlatformHealthWidgets />
 
+      {/* ═══ Financial Widgets (Real Data: platform_financial_entries + invoices) ═══ */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <MRRWidget />
+        <ARRWidget />
+        <ActiveSubscriptionsWidget />
+      </div>
+
+
+      {/* ═══ Revenue by Plan Chart (Real Data) ═══ */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <RevenueByPlanChart />
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-5">
         {/* MRR by Tenant (bar) */}
