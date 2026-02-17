@@ -93,6 +93,19 @@ export interface BillingCalculation {
   calculated_at: number;
 }
 
+export interface PlanChangeBreakdown {
+  /** Valor proporcional (prorata) a cobrar/creditar na mudança */
+  proration: BillingCalculation;
+  /** Valor recorrente do novo plano (ciclo cheio) */
+  recurring: BillingCalculation;
+  /** Projeção dos próximos N ciclos */
+  next_cycles: { cycle_number: number; period_start: string; period_end: string; total_brl: number }[];
+  /** Dias restantes do ciclo atual */
+  remaining_days: number;
+  /** Dias totais do ciclo atual */
+  total_cycle_days: number;
+}
+
 export interface BillingCalculatorAPI {
   /** Calculate the full billing amount for a tenant's current plan */
   calculate(tenantId: string): BillingCalculation;
@@ -100,6 +113,8 @@ export interface BillingCalculatorAPI {
   calculateForPlan(tenantId: string, planId: string, cycle: BillingCycle): BillingCalculation;
   /** Calculate proration for a plan change */
   calculateProration(tenantId: string, fromPlanId: string, toPlanId: string): BillingCalculation;
+  /** Full plan-change breakdown: prorata + recurring + next cycles */
+  calculatePlanChange(tenantId: string, fromPlanId: string, toPlanId: string, opts?: { preview_cycles?: number }): PlanChangeBreakdown;
 }
 
 // ══════════════════════════════════════════════════════════════════
