@@ -102,6 +102,47 @@ export function exportPrometheus(): PrometheusExportResult {
     collector.gauge('module_latency_p95_ms', stats.p95, { module: mod });
   }
 
+  // ── Self-Healing metrics ──────────────────────────────────
+  try {
+    const { getSelfHealingEngine } = require('@/domains/self-healing/self-healing-engine') as {
+      getSelfHealingEngine: () => import('@/domains/self-healing/self-healing-engine').SelfHealingEngine | null;
+    };
+    const engine = getSelfHealingEngine();
+    if (engine) {
+      const shState = engine.getState();
+      const shStats = engine.getStats();
+
+      // incident_detected_total
+      collector.gauge('incident_detected_total', shStats.total_incidents);
+
+      // auto_recovery_success_rate (0-100)
+      collector.gauge('auto_recovery_success_rate', shStats.uptime_pct);
+
+      // self_healing_actions_total — per action type
+      const actionCounts: Record<string, number> = {};
+      for (const entry of shState.audit_log) {
+        actionCounts[entry.action_type] = (actionCounts[entry.action_type] ?? 0) + 1;
+      }
+      for (const [action, count] of Object.entries(actionCounts)) {
+        collector.gauge('self_healing_actions_total', count, { action });
+      }
+
+      // module_circuit_state — per module (0=closed, 1=open, 0.5=half_open)
+      for (const cb of shState.circuit_breakers) {
+        const val = cb.state === 'open' ? 1 : cb.state === 'half_open' ? 0.5 : 0;
+        collector.gauge('module_circuit_state', val, { module: cb.module_id });
+      }
+
+      // Extra useful gauges
+      collector.gauge('self_healing_active_incidents', shState.active_incidents.length);
+      collector.gauge('self_healing_escalated_total', shStats.escalated);
+      collector.gauge('self_healing_failed_total', shStats.failed_recoveries);
+      collector.gauge('self_healing_avg_recovery_ms', shStats.avg_recovery_time_ms);
+    }
+  } catch {
+    // Self-healing engine not initialised — skip
+  }
+
   const metrics = collector.toPrometheus();
   const text = collector.toPrometheusText();
 
@@ -415,6 +456,13 @@ export function generateDashboardModel(): {
       { title: 'Security Events', type: 'graph', metric: 'security_events_total', description: 'Security events by type', datasource: 'prometheus' },
       { title: 'Traces Total', type: 'stat', metric: 'traces_total', description: 'Total completed traces in window', datasource: 'prometheus' },
       { title: 'Trace Avg Duration', type: 'gauge', metric: 'traces_avg_duration_ms', description: 'Average trace duration', datasource: 'prometheus' },
+      // ── Self-Healing panels ────────────────────────────────
+      { title: 'Healing Actions Total', type: 'stat', metric: 'self_healing_actions_total', description: 'Total recovery actions by type', datasource: 'prometheus' },
+      { title: 'Circuit Breaker State', type: 'gauge', metric: 'module_circuit_state', description: 'Per-module circuit state (0=closed, 0.5=half_open, 1=open)', datasource: 'prometheus' },
+      { title: 'Incidents Detected', type: 'stat', metric: 'incident_detected_total', description: 'Total incidents detected', datasource: 'prometheus' },
+      { title: 'Auto-Recovery Rate', type: 'gauge', metric: 'auto_recovery_success_rate', description: 'Percentage of auto-recovered incidents', datasource: 'prometheus' },
+      { title: 'Active Incidents', type: 'stat', metric: 'self_healing_active_incidents', description: 'Currently active incidents', datasource: 'prometheus' },
+      { title: 'Avg Recovery Time', type: 'gauge', metric: 'self_healing_avg_recovery_ms', description: 'Average time to auto-recover (ms)', datasource: 'prometheus' },
       // ── Loki panels ────────────────────────────────────────
       { title: 'Log Stream', type: 'logs', metric: 'logs_total', description: 'Structured log stream from all sources', datasource: 'loki' },
       // ── Tempo panels ───────────────────────────────────────
