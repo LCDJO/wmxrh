@@ -13,9 +13,10 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, LogOut, FileText, Heart,
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
-  GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock,
+  GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useAnnouncements } from '@/hooks/use-announcements';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
@@ -136,6 +137,7 @@ const navStructure: NavEntry[] = [
     children: [
       { to: '/settings/users', icon: Users, label: 'Usuários', key: 'iam_users' },
       { to: '/settings/roles', icon: ShieldCheck, label: 'Cargos & Permissões', key: 'iam_roles' },
+      { to: '/announcements', icon: Megaphone, label: 'Avisos do Sistema', key: 'dashboard' },
     ],
   },
 ];
@@ -152,6 +154,8 @@ export function AppSidebar() {
   const { canNav, isFeatureEnabled, effectiveRoles, loading } = useSecurityKernel();
   const { activeContext, isImpersonating, session } = useIdentityIntelligence();
   const { pins, removePin, isPinned } = useNavigationPins();
+  const { announcements } = useAnnouncements();
+  const hasCriticalAnnouncement = announcements.some(a => a.severity === 'critical');
   const { isPathVisible, isPathLocked, profile: expProfile } = useExperienceProfile();
 
   const isVisible = (item: NavChild) => {
@@ -180,6 +184,7 @@ export function AppSidebar() {
     if (!isVisible(item)) return null;
     const active = isActive(item.to);
     const lockInfo = isPathLocked(item.to);
+    const isCriticalHighlight = item.to === '/announcements' && hasCriticalAnnouncement;
 
     // Locked: show but greyed out with lock icon
     if (lockInfo.locked) {
@@ -222,11 +227,24 @@ export function AppSidebar() {
           collapsed ? "justify-center" : "pl-10",
           active
             ? "bg-sidebar-accent text-sidebar-primary"
-            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+            : isCriticalHighlight
+              ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
+              : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
         )}
       >
-        <item.icon className={cn("h-4 w-4 shrink-0", active && "text-sidebar-primary")} />
-        {!collapsed && <span className="truncate">{item.label}</span>}
+        <item.icon className={cn(
+          "h-4 w-4 shrink-0",
+          active && "text-sidebar-primary",
+          isCriticalHighlight && !active && "text-destructive animate-pulse",
+        )} />
+        {!collapsed && (
+          <>
+            <span className="truncate">{item.label}</span>
+            {isCriticalHighlight && (
+              <span className="ml-auto h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" />
+            )}
+          </>
+        )}
       </NavLink>
     );
   };
@@ -259,6 +277,7 @@ export function AppSidebar() {
 
     const groupActive = isGroupActive(entry);
     const open = isGroupOpen(entry);
+    const groupHasCritical = entry.id === 'configuracoes' && hasCriticalAnnouncement;
 
     return (
       <div key={entry.id}>
@@ -266,15 +285,23 @@ export function AppSidebar() {
           onClick={() => collapsed ? undefined : toggleGroup(entry.id)}
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 w-full",
-            groupActive
-              ? "text-sidebar-primary"
-              : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+            groupHasCritical
+              ? "text-destructive bg-destructive/5 hover:bg-destructive/10"
+              : groupActive
+                ? "text-sidebar-primary"
+                : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
           )}
         >
-          <entry.icon className={cn("h-5 w-5 shrink-0", groupActive && "text-sidebar-primary")} />
+          <entry.icon className={cn(
+            "h-5 w-5 shrink-0",
+            groupHasCritical ? "text-destructive" : groupActive && "text-sidebar-primary",
+          )} />
           {!collapsed && (
             <>
               <span className="flex-1 text-left truncate">{entry.label}</span>
+              {groupHasCritical && !open && (
+                <span className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0 mr-1" />
+              )}
               <ChevronDown className={cn(
                 "h-4 w-4 shrink-0 transition-transform duration-200",
                 open ? "rotate-0" : "-rotate-90"
