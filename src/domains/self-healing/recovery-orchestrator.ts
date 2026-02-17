@@ -60,11 +60,11 @@ export class RecoveryOrchestrator {
   private planActions(incident: Incident, _moduleId: string): RecoveryActionType[] {
     switch (incident.severity) {
       case 'minor':
-        return ['module_restart', 'cache_clear'];
+        return ['cache_clear', 'module_restart'];
       case 'major':
-        return ['circuit_break', 'sandbox_reset', 'module_restart'];
+        return ['circuit_break', 'route_isolate', 'widget_disable', 'module_restart'];
       case 'critical':
-        return ['circuit_break', 'module_deactivate', 'escalate'];
+        return ['circuit_break', 'module_deactivate', 'route_isolate', 'widget_disable', 'escalate'];
     }
   }
 
@@ -116,6 +116,20 @@ export class RecoveryOrchestrator {
         case 'access_graph_rebuild':
           action.description = 'Reconstruindo AccessGraph';
           this.events.emit('self_healing:access_graph_rebuild', 'SelfHealingEngine', {});
+          break;
+
+        case 'route_isolate':
+          action.description = `Rotas isoladas para módulo ${moduleId}`;
+          this.events.emit('self_healing:route_isolate', 'SelfHealingEngine', {
+            module: moduleId, isolated: true,
+          }, { priority: 'high' });
+          break;
+
+        case 'widget_disable':
+          action.description = `Widgets desabilitados para módulo ${moduleId}`;
+          this.events.emit('self_healing:widget_disable', 'SelfHealingEngine', {
+            module: moduleId, disabled: true,
+          }, { priority: 'high' });
           break;
 
         case 'rate_limit_engage':
