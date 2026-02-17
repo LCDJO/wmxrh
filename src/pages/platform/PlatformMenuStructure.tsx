@@ -79,6 +79,7 @@ const createDefaultTree = (): MenuNode[] => [
       { id: 'rev-ref', label: 'Referrals', path: '/platform/referrals' },
       { id: 'rev-gam', label: 'Gamificação', path: '/platform/gamification' },
       { id: 'rev-intel', label: 'Intelligence', path: '/platform/revenue/intelligence' },
+      { id: 'rev-growth', label: 'Growth AI', path: '/platform/growth' },
     ],
   },
   { id: 'fiscal', label: 'Fiscal', path: '/platform/fiscal', icon: ScrollText },

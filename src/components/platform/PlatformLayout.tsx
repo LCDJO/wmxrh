@@ -28,6 +28,7 @@ import {
   Activity,
   Monitor,
   TrendingUp,
+  Rocket,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -104,6 +105,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/revenue/intelligence', label: 'Intelligence' },
     ],
   },
+  { to: '/platform/growth', label: 'Growth AI', icon: Rocket, requiredPermission: 'billing.view' },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
   {
     to: '/platform/structure',
