@@ -260,6 +260,11 @@ const DOMAIN_REGISTRIES: DomainRegistry[] = [
       { name: 'ModuleUpgraded', description: 'Módulo atualizado para nova versão' },
       { name: 'TenantCreated', description: 'Tenant criado na plataforma' },
       { name: 'TenantSuspended', description: 'Tenant suspenso' },
+      { name: 'WebsitePublished', description: 'Website/landing page publicado em produção' },
+      { name: 'LandingVersionCreated', description: 'Snapshot versionado de landing page criado' },
+      { name: 'AIConversionSuggested', description: 'Sugestão de otimização de conversão por IA' },
+      { name: 'FABSectionGenerated', description: 'Seção FAB gerada pelo Content Engine' },
+      { name: 'GTMInjected', description: 'Container GTM injetado em página publicada' },
     ],
   },
 
@@ -292,6 +297,13 @@ const DOMAIN_REGISTRIES: DomainRegistry[] = [
       { name: 'PlanUpgraded', description: 'Plano atualizado (upgrade)' },
       { name: 'PlanDowngraded', description: 'Plano rebaixado (downgrade)' },
       { name: 'PaymentMethodRestricted', description: 'Método de pagamento restrito' },
+      { name: 'ABExperimentStarted', description: 'Experimento A/B iniciado' },
+      { name: 'ABVariantAssigned', description: 'Variante A/B atribuída ao visitante' },
+      { name: 'LandingRankUpdated', description: 'Ranking de landing page atualizado' },
+      { name: 'AIExperimentSuggestionGenerated', description: 'Sugestão de experimento gerada por IA' },
+      { name: 'LandingPageSubmitted', description: 'Landing page submetida para aprovação' },
+      { name: 'LandingPageApproved', description: 'Landing page aprovada pela governança' },
+      { name: 'LandingPageRejected', description: 'Landing page rejeitada pela governança' },
     ],
   },
 
@@ -351,6 +363,31 @@ const DOMAIN_REGISTRIES: DomainRegistry[] = [
       { name: 'MenuStructureUpdated', description: 'Estrutura completa do menu salva/atualizada' },
       { name: 'MenuItemMoved', description: 'Item de menu movido (reordenado ou reparentado)' },
       { name: 'MenuVersionCreated', description: 'Snapshot versionado da estrutura de menu criado' },
+    ],
+  },
+
+  // ─── Versioning ───
+  {
+    domain: 'Versioning',
+    color: 'hsl(45 70% 50%)',
+    events: [
+      { name: 'ModuleVersionCreated', description: 'Nova versão de módulo criada (draft)' },
+      { name: 'ModuleVersionReleased', description: 'Versão de módulo promovida a released' },
+      { name: 'PlatformReleasePublished', description: 'Release da plataforma finalizado e publicado' },
+      { name: 'DependencyConflictDetected', description: 'Conflito de dependência detectado entre módulos' },
+      { name: 'RollbackExecuted', description: 'Rollback executado em release ou módulo' },
+    ],
+  },
+
+  // ─── Usage Metering ───
+  {
+    domain: 'Usage Metering',
+    color: 'hsl(25 65% 50%)',
+    events: [
+      { name: 'UserCreated', description: 'Usuário criado (contagem de seats)' },
+      { name: 'APICallExecuted', description: 'Chamada de API executada' },
+      { name: 'WorkflowRun', description: 'Workflow/automação executado' },
+      { name: 'StorageUpdated', description: 'Consumo de storage atualizado' },
     ],
   },
 ];
