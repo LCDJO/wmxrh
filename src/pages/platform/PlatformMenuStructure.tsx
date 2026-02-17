@@ -5,7 +5,7 @@
  */
 import {
   Puzzle, RefreshCw, GripVertical, Save, ArrowRight, ArrowLeft,
-  AlertTriangle, CheckCircle2, History, GitBranch, Shield, FileDiff, Monitor, Zap,
+  AlertTriangle, CheckCircle2, History, GitBranch, Shield, FileDiff, Monitor, Zap, Info,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -473,26 +473,48 @@ export default function PlatformMenuStructure() {
                       ))}
                     </div>
                   )}
-                  {validation.warnings.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Avisos ({validation.warnings.length})</p>
-                        <Button variant="outline" size="sm" className="text-xs gap-1.5 border-amber-500/30 text-amber-400 hover:bg-amber-500/10" onClick={handleAutoFixWarnings}>
-                          <Zap className="h-3 w-3" />
-                          Corrigir Avisos
-                        </Button>
-                      </div>
-                      <ScrollArea className="h-[200px]">
-                        {validation.warnings.map((warn, i) => (
-                          <div key={i} className="flex items-center gap-2 rounded border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-400 mb-1">
-                            <AlertTriangle className="h-3 w-3 shrink-0" />
-                            <span className="font-mono">{warn.nodeId}</span>
-                            <span className="text-foreground/70">{warn.message}</span>
+                  {(() => {
+                    const fixableWarnings = validation.warnings.filter(w => w.type === 'no_permission');
+                    const infoWarnings = validation.warnings.filter(w => w.type !== 'no_permission');
+                    return (
+                      <>
+                        {fixableWarnings.length > 0 && (
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Avisos ({fixableWarnings.length})</p>
+                              <Button variant="outline" size="sm" className="text-xs gap-1.5 border-amber-500/30 text-amber-400 hover:bg-amber-500/10" onClick={handleAutoFixWarnings}>
+                                <Zap className="h-3 w-3" />
+                                Corrigir Avisos
+                              </Button>
+                            </div>
+                            <ScrollArea className="h-[200px]">
+                              {fixableWarnings.map((warn, i) => (
+                                <div key={i} className="flex items-center gap-2 rounded border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-400 mb-1">
+                                  <AlertTriangle className="h-3 w-3 shrink-0" />
+                                  <span className="font-mono">{warn.nodeId}</span>
+                                  <span className="text-foreground/70">{warn.message}</span>
+                                </div>
+                              ))}
+                            </ScrollArea>
                           </div>
-                        ))}
-                      </ScrollArea>
-                    </div>
-                  )}
+                        )}
+                        {infoWarnings.length > 0 && (
+                          <div className="space-y-1.5">
+                            <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Informativos ({infoWarnings.length})</p>
+                            <ScrollArea className="h-[200px]">
+                              {infoWarnings.map((warn, i) => (
+                                <div key={i} className="flex items-center gap-2 rounded border border-emerald-500/20 bg-emerald-500/5 p-2 text-xs text-emerald-400 mb-1">
+                                  <Info className="h-3 w-3 shrink-0" />
+                                  <span className="font-mono">{warn.nodeId}</span>
+                                  <span className="text-foreground/70">{warn.message}</span>
+                                </div>
+                              ))}
+                            </ScrollArea>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </CardContent>
