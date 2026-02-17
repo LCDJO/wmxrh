@@ -15,6 +15,9 @@ function mapEntryType(type: LedgerEntryType): string {
     refund: 'refund',
     credit: 'credit',
     adjustment: 'adjustment',
+    coupon_discount: 'coupon_discount',
+    usage_overage: 'usage_overage',
+    plan_charge: 'plan_charge',
   };
   return map[type] ?? 'adjustment';
 }
@@ -78,13 +81,23 @@ export function createFinancialLedgerAdapter(): FinancialLedgerAdapterAPI {
       return insert(tenantId, 'credit', amount, description) as any;
     },
 
+    recordCouponDiscount(tenantId: string, invoiceId: string, amount: number, couponCode: string) {
+      return insert(tenantId, 'coupon_discount', amount, `Desconto cupom: ${couponCode}`, invoiceId) as any;
+    },
+
+    recordUsageOverage(tenantId: string, amount: number, description: string) {
+      return insert(tenantId, 'usage_overage', amount, description) as any;
+    },
+
+    recordPlanCharge(tenantId: string, invoiceId: string, amount: number, planName: string) {
+      return insert(tenantId, 'plan_charge', amount, `Cobrança plano: ${planName}`, invoiceId) as any;
+    },
+
     getBalance(tenantId) {
-      // Sync interface — return 0 as placeholder; use getBalanceAsync for real data
       return 0;
     },
 
     getHistory(tenantId, limit = 50) {
-      // Sync interface — return empty; use getHistoryAsync for real data
       return [];
     },
   };
@@ -101,10 +114,10 @@ export async function getBalanceAsync(tenantId: string): Promise<number> {
 
   return (data ?? []).reduce((balance, row) => {
     const amount = Number(row.amount);
-    if (row.entry_type === 'payment' || row.entry_type === 'credit') {
+    if (row.entry_type === 'payment' || row.entry_type === 'credit' || row.entry_type === 'coupon_discount') {
       return balance - amount;
     }
-    return balance + amount; // subscription, upgrade, adjustment
+    return balance + amount; // subscription, upgrade, adjustment, usage_overage, plan_charge
   }, 0);
 }
 
