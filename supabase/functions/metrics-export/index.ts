@@ -28,16 +28,18 @@ serve(async (req) => {
       const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const sb = createClient(supabaseUrl, serviceKey);
 
-      // Parallel queries
-      const [usageRes, redemptionsRes, discountRes, overageRes] = await Promise.all([
-        // billing_usage_total — count financial entries grouped by description keyword as module proxy
+      // Parallel queries — billing + support
+      const [usageRes, redemptionsRes, discountRes, overageRes, activeSessions, recentMessages, closedSessions] = await Promise.all([
         sb.from("platform_financial_entries").select("entry_type, description, amount"),
-        // coupon_redemptions_total — count per coupon code
         sb.from("coupon_redemptions").select("coupon_id, discount_applied_brl, coupons(code)"),
-        // billing_discount_amount — sum coupon_discount entries
         sb.from("platform_financial_entries").select("amount, description").eq("entry_type", "coupon_discount"),
-        // billing_overage_amount — sum usage_overage entries
         sb.from("platform_financial_entries").select("amount").eq("entry_type", "usage_overage"),
+        // support: active chat sessions
+        sb.from("support_chat_sessions").select("id", { count: "exact", head: true }).eq("status", "active"),
+        // support: messages in the last hour for rate calc
+        sb.from("support_chat_messages").select("id", { count: "exact", head: true }).gte("created_at", new Date(Date.now() - 3600_000).toISOString()),
+        // support: closed sessions with messages for response time
+        sb.from("support_chat_sessions").select("id").eq("status", "closed").limit(100).order("created_at", { ascending: false }),
       ]);
 
       const lines: string[] = [];
@@ -84,6 +86,22 @@ serve(async (req) => {
       lines.push("# TYPE billing_overage_amount gauge");
       const overageTotal = (overageRes.data ?? []).reduce((s, r) => s + Number(r.amount), 0);
       lines.push(`billing_overage_amount ${overageTotal.toFixed(2)} ${ts}`);
+
+      // ── support_chat_active_total ─────────────────────────────
+      lines.push("# HELP support_chat_active_total Number of currently active chat sessions");
+      lines.push("# TYPE support_chat_active_total gauge");
+      lines.push(`support_chat_active_total ${activeSessions.count ?? 0} ${ts}`);
+
+      // ── support_chat_message_rate ─────────────────────────────
+      lines.push("# HELP support_chat_message_rate Messages sent in the last hour");
+      lines.push("# TYPE support_chat_message_rate gauge");
+      lines.push(`support_chat_message_rate ${recentMessages.count ?? 0} ${ts}`);
+
+      // ── support_agent_response_time ───────────────────────────
+      lines.push("# HELP support_agent_response_time_seconds Average agent response time in seconds");
+      lines.push("# TYPE support_agent_response_time_seconds gauge");
+      const avgResponseSec = await calcAvgResponseTime(sb, closedSessions.data ?? []);
+      lines.push(`support_agent_response_time_seconds ${avgResponseSec.toFixed(1)} ${ts}`);
 
       return new Response(lines.join("\n") + "\n", {
         headers: {
@@ -156,4 +174,45 @@ function inferModule(desc: string): string {
 function extractCouponCode(desc: string): string {
   const match = desc.match(/cupom[:\s]+(\S+)/i);
   return match?.[1] ?? "unknown";
+}
+
+/** Calculate average agent response time from closed sessions */
+async function calcAvgResponseTime(
+  sb: ReturnType<typeof createClient>,
+  sessions: Array<{ id: string }>,
+): Promise<number> {
+  if (!sessions.length) return 0;
+
+  const deltas: number[] = [];
+  // Process in batches of 20
+  for (let i = 0; i < sessions.length; i += 20) {
+    const batch = sessions.slice(i, i + 20).map((s) => s.id);
+    const { data: msgs } = await sb
+      .from("support_chat_messages")
+      .select("session_id, sender_type, created_at")
+      .in("session_id", batch)
+      .order("created_at", { ascending: true });
+
+    if (!msgs) continue;
+
+    const bySession: Record<string, typeof msgs> = {};
+    for (const m of msgs) {
+      (bySession[m.session_id] ??= []).push(m);
+    }
+
+    for (const sessionMsgs of Object.values(bySession)) {
+      for (let j = 0; j < sessionMsgs.length - 1; j++) {
+        if (sessionMsgs[j].sender_type === "tenant" && sessionMsgs[j + 1].sender_type === "agent") {
+          const delta =
+            (new Date(sessionMsgs[j + 1].created_at).getTime() -
+              new Date(sessionMsgs[j].created_at).getTime()) /
+            1000;
+          if (delta > 0 && delta < 86400) deltas.push(delta);
+        }
+      }
+    }
+  }
+
+  if (!deltas.length) return 0;
+  return deltas.reduce((s, v) => s + v, 0) / deltas.length;
 }
