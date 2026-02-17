@@ -179,6 +179,8 @@ export interface PaymentPolicyEngineAPI {
   getPolicy(planTier: PlanTier): PaymentPolicy;
   getAllowedMethods(tenantId: string): PaymentMethod[];
   isMethodAllowed(tenantId: string, method: PaymentMethod): boolean;
+  /** Validate payment method against plan's allowed methods — blocks if not allowed */
+  validatePaymentMethod(tenantId: string, method: PaymentMethod, toPlanId?: string): { valid: boolean; reason?: string; allowed_methods?: PaymentMethod[] };
   canDowngrade(tenantId: string, toPlanId: string): { allowed: boolean; reason?: string };
   canUpgrade(tenantId: string, toPlanId: string): { allowed: boolean; reason?: string };
   calculateProration(tenantId: string, toPlanId: string): { amount_brl: number; credit_brl: number; net_brl: number };

@@ -28,7 +28,8 @@ export function createPlatformBillingCore(
     pxe.lifecycle,
     calculator,
     invoices,
-    ledger
+    ledger,
+    pxe.payment
   );
 
   return {
