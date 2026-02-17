@@ -135,43 +135,58 @@ export class SEOOptimizationService {
     };
   }
 
-  /** Generate JSON-LD structured data */
-  generateJsonLd(page: LandingPage, blueprint: LPCopyBlueprint, baseUrl: string): Record<string, unknown> {
-    return {
-      '@context': 'https://schema.org',
-      '@type': 'WebPage',
-      name: blueprint.hero.headline,
-      description: blueprint.hero.subheadline,
-      url: `${baseUrl}/${page.slug}`,
-      publisher: {
-        '@type': 'Organization',
-        name: 'Plataforma RH',
-        logo: `${baseUrl}/logo.png`,
-      },
-      mainEntity: {
-        '@type': 'SoftwareApplication',
+  /** Generate JSON-LD structured data (WebPage + SoftwareApplication + FAQ) */
+  generateJsonLd(page: LandingPage, blueprint: LPCopyBlueprint, baseUrl: string, faqItems?: Array<{ question: string; answer: string }>): Record<string, unknown> {
+    const graph: Record<string, unknown>[] = [
+      {
+        '@type': 'WebPage',
         name: blueprint.hero.headline,
-        applicationCategory: 'BusinessApplication',
-        operatingSystem: 'Web',
-        offers: {
-          '@type': 'Offer',
-          price: '0',
-          priceCurrency: 'BRL',
-          description: blueprint.cta.urgency ?? 'Teste grátis por 14 dias.',
+        description: blueprint.hero.subheadline,
+        url: `${baseUrl}/${page.slug}`,
+        publisher: {
+          '@type': 'Organization',
+          name: 'Plataforma RH',
+          logo: { '@type': 'ImageObject', url: `${baseUrl}/logo.png` },
+        },
+        mainEntity: {
+          '@type': 'SoftwareApplication',
+          name: blueprint.hero.headline,
+          applicationCategory: 'BusinessApplication',
+          operatingSystem: 'Web',
+          offers: {
+            '@type': 'Offer',
+            price: '0',
+            priceCurrency: 'BRL',
+            description: blueprint.cta.urgency ?? 'Teste grátis por 14 dias.',
+          },
+        },
+        review: blueprint.proof.testimonials.slice(0, 3).map(t => ({
+          '@type': 'Review',
+          author: { '@type': 'Person', name: t.name },
+          reviewBody: t.quote,
+        })),
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: '4.8',
+          reviewCount: String(blueprint.proof.testimonials.length),
+          bestRating: '5',
         },
       },
-      review: blueprint.proof.testimonials.slice(0, 3).map(t => ({
-        '@type': 'Review',
-        author: { '@type': 'Person', name: t.name },
-        reviewBody: t.quote,
-      })),
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: '4.8',
-        reviewCount: String(blueprint.proof.testimonials.length),
-        bestRating: '5',
-      },
-    };
+    ];
+
+    // FAQ schema.org (FAQPage)
+    if (faqItems && faqItems.length > 0) {
+      graph.push({
+        '@type': 'FAQPage',
+        mainEntity: faqItems.map(faq => ({
+          '@type': 'Question',
+          name: faq.question,
+          acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+        })),
+      });
+    }
+
+    return { '@context': 'https://schema.org', '@graph': graph };
   }
 
   /** Generate sitemap XML entry */
@@ -182,6 +197,19 @@ export class SEOOptimizationService {
     <changefreq>${page.status === 'published' ? 'weekly' : 'monthly'}</changefreq>
     <priority>${page.status === 'published' ? '0.8' : '0.4'}</priority>
   </url>`;
+  }
+
+  /** Generate CDN-ready cache-control headers */
+  generateCacheHeaders(page: LandingPage): Record<string, string> {
+    const isPublished = page.status === 'published';
+    return {
+      'Cache-Control': isPublished
+        ? 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=43200'
+        : 'private, no-cache, no-store',
+      'CDN-Cache-Control': isPublished ? 'public, max-age=86400' : 'private',
+      'Vary': 'Accept-Encoding',
+      ...(isPublished ? { 'X-Content-Type-Options': 'nosniff' } : {}),
+    };
   }
 
   // ── Helpers ──────────────────────────────
