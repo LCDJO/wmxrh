@@ -31,7 +31,7 @@ export function runHeuristicScan(
   const insights: GovernanceInsight[] = [
     ...detectSoDConflicts(analysis, snapshot),
     ...detectPermissionAnomalies(snapshot, analysis, risk),
-    ...detectRoleOverlaps(analysis),
+    ...detectRoleOverlaps(analysis, snapshot),
     ...analyzeAccessRisk(risk),
   ];
 

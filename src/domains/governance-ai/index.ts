@@ -14,7 +14,9 @@
 // Individual analyzers
 export { analyzeAccessRisk, buildAccessRiskProfiles } from './access-risk-analyzer';
 export { detectPermissionAnomalies, detectExcessivePermissions, detectOperationalRisks } from './permission-anomaly-detector';
-export { detectRoleOverlaps } from './role-optimization-advisor';
+export { detectRoleOverlaps, buildOptimizationHints } from './role-optimization-advisor';
+export type { RoleOptimizationHint } from './role-optimization-advisor';
+export type { AccessRiskProfile } from './access-risk-analyzer';
 export { detectSoDConflicts } from './segregation-of-duties-checker';
 
 // Orchestrators
