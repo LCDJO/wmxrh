@@ -3893,6 +3893,47 @@ export type Database = {
           },
         ]
       }
+      landing_versions: {
+        Row: {
+          change_notes: string | null
+          content_snapshot: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          landing_page_id: string
+          status: string
+          version_number: number
+        }
+        Insert: {
+          change_notes?: string | null
+          content_snapshot?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          landing_page_id: string
+          status?: string
+          version_number?: number
+        }
+        Update: {
+          change_notes?: string | null
+          content_snapshot?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          landing_page_id?: string
+          status?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_versions_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_command: string | null

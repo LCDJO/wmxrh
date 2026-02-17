@@ -7,6 +7,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { LandingPage, FABBlock, FABBlockType, FABContent, LandingPageAnalytics, LPCopyBlueprint } from './types';
 import { emitGrowthEvent } from './growth.events';
+import { landingVersionService } from './landing-version-service';
 
 // ── Default analytics for new pages ────────────────────────────
 const DEFAULT_ANALYTICS: LandingPageAnalytics = {
@@ -110,7 +111,10 @@ export class LandingPageBuilder {
     return page;
   }
 
-  /** Update an existing landing page */
+  /** Update an existing landing page.
+   *  If page is approved/published and content changes are made,
+   *  creates a new draft version instead of modifying in-place.
+   */
   async update(id: string, fields: Partial<{
     name: string;
     slug: string;
@@ -121,6 +125,25 @@ export class LandingPageBuilder {
     blocks: FABBlock[];
     published_at: string | null;
   }>): Promise<LandingPage | null> {
+    // Check if this is a content edit on an approved/published page
+    const hasContentChanges = fields.name || fields.slug || fields.blocks;
+    const isStatusChangeOnly = fields.status && !fields.name && !fields.slug && !fields.blocks;
+
+    if (hasContentChanges && !isStatusChangeOnly) {
+      const currentPage = await this.getById(id);
+      if (currentPage && (currentPage.status === 'approved' || currentPage.status === 'published')) {
+        // Get current user
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData?.user?.id ?? 'system';
+
+        // Create new draft version with changes
+        await landingVersionService.createDraftFromApproved(currentPage, fields as Partial<LandingPage>, userId);
+
+        // Reset page to draft with the new changes
+        fields.status = 'draft';
+      }
+    }
+
     const payload: Record<string, unknown> = { ...fields };
     if (fields.blocks) {
       payload.blocks = fields.blocks as unknown as Record<string, unknown>;

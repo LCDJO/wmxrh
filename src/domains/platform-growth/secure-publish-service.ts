@@ -13,6 +13,7 @@ import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import { hasPlatformPermission } from '@/domains/platform/platform-permissions';
 import { landingPageBuilder } from './landing-page-builder';
 import { versioningManager } from './versioning-manager';
+import { landingVersionService } from './landing-version-service';
 import { emitGrowthEvent } from './growth.events';
 
 // ── Publish Result ──────────────────────────────────
@@ -95,10 +96,11 @@ export class SecurePublishService {
       return { success: false, errors };
     }
 
-    // 6. Snapshot current version
+    // 6. Snapshot current version (in-memory + DB)
     const version = versioningManager.snapshot(page, userId, config.changeNotes ?? 'Publicação');
+    await landingVersionService.createVersion(page, userId, 'published', config.changeNotes ?? 'Publicação');
 
-    // 6. Update status to published
+    // 7. Update status to published
     const updated = await landingPageBuilder.update(pageId, { status: 'published' });
     if (!updated) {
       return {
