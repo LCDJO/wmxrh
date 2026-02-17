@@ -89,7 +89,6 @@ const createDefaultTree = (): MenuNode[] => [
       { id: 'growth-insights', label: 'Insights', path: '/platform/growth/insights' },
       { id: 'growth-conversions', label: 'Conversões', path: '/platform/growth/conversions' },
       { id: 'growth-mkt-analytics', label: 'Marketing Analytics', path: '/platform/marketing/analytics' },
-      { id: 'growth-rollback', label: 'Smart Rollback', path: '/platform/marketing/rollback' },
     ],
   },
   {

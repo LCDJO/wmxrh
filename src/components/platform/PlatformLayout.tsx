@@ -116,7 +116,6 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/growth/insights', label: 'Insights', requiredPermission: 'growth.view' },
       { to: '/platform/growth/conversions', label: 'Conversões', requiredPermission: 'growth.view' },
       { to: '/platform/marketing/analytics', label: 'Marketing Analytics', requiredPermission: 'growth.view' },
-      { to: '/platform/marketing/rollback', label: 'Smart Rollback', requiredPermission: 'growth.view' },
     ],
   },
   {

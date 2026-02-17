@@ -32,10 +32,6 @@ export class ObservabilityBridge {
     metrics.gauge('landing_revenue_generated', 0);
     metrics.gauge('landing_revenue_generated_total', 0);
     metrics.gauge('fab_engagement_score', 0);
-    // Smart Rollback baselines
-    metrics.increment('landing_rollback_triggered_total', {}, 0);
-    metrics.gauge('landing_performance_drop_score', 0);
-    metrics.gauge('rollback_success_rate', 100);
   }
 
   /** Update gauges from current state */

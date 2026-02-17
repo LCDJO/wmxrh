@@ -44,8 +44,7 @@ export type PermissionEntity =
   | 'platform_permissions'
   | 'platform_billing'
   | 'platform_coupons'
-  | 'platform_impersonation'
-  | 'platform_auto_rollback';
+  | 'platform_impersonation';
 
 // ========================
 // ROLE SETS (mirrors DB functions)
@@ -249,12 +248,6 @@ export const PERMISSION_MATRIX: PermissionMatrix = {
   platform_impersonation: {
     view: ALL_MEMBERS,
     create: [], // enforced by PolicyEngine
-    update: [],
-    delete: [],
-  },
-  platform_auto_rollback: {
-    view: ALL_MEMBERS,
-    create: [], // enforced by PolicyEngine (PlatformMarketingDirector + PlatformSuperAdmin only)
     update: [],
     delete: [],
   },
