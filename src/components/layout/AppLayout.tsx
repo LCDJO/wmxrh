@@ -8,6 +8,9 @@ import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanne
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useSecurityMonitor } from '@/domains/security/useSecurityMonitor';
 import { dualIdentityEngine } from '@/domains/security/kernel/dual-identity-engine';
+import { lazy, Suspense } from 'react';
+
+const FloatingChatWidget = lazy(() => import('@/modules/support/ui/FloatingChatWidget'));
 
 export function AppLayout() {
   useSecurityMonitor();
@@ -51,6 +54,9 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <Suspense fallback={null}>
+        <FloatingChatWidget />
+      </Suspense>
     </div>
   );
 }
