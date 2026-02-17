@@ -27,6 +27,10 @@ import type { PlatformPermission } from '@/domains/platform/platform-permissions
 export const LANDING_PAGE_STATUSES = ['draft', 'submitted', 'approved', 'published', 'archived'] as const;
 export type LandingPageStatus = typeof LANDING_PAGE_STATUSES[number];
 
+/** Version-level statuses (subset — versions don't archive) */
+export const LANDING_VERSION_STATUSES = ['draft', 'submitted', 'approved', 'published'] as const;
+export type LandingVersionStatus = typeof LANDING_VERSION_STATUSES[number];
+
 // ═══════════════════════════════════
 // Transition Matrix
 // ═══════════════════════════════════
@@ -192,8 +196,8 @@ export function getStatusLabel(status: LandingPageStatus): string {
 /**
  * Get badge color variant for a status.
  */
-export function getStatusVariant(status: LandingPageStatus): 'default' | 'secondary' | 'destructive' | 'outline' {
-  const variants: Record<LandingPageStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+export function getStatusVariant(status: LandingPageStatus | LandingVersionStatus): 'default' | 'secondary' | 'destructive' | 'outline' {
+  const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
     draft: 'outline',
     submitted: 'secondary',
     approved: 'default',
@@ -201,4 +205,42 @@ export function getStatusVariant(status: LandingPageStatus): 'default' | 'second
     archived: 'destructive',
   };
   return variants[status] ?? 'outline';
+}
+
+// ═══════════════════════════════════
+// Version Transition Matrix
+// ═══════════════════════════════════
+
+const VERSION_TRANSITION_MAP: Record<LandingVersionStatus, TransitionRule[]> = {
+  draft: [
+    { to: 'submitted', requiredPermission: 'landing.submit_for_review', label: 'Submeter versão para revisão' },
+  ],
+  submitted: [
+    { to: 'approved', requiredPermission: 'landing.approve', label: 'Aprovar versão' },
+    { to: 'draft', requiredPermission: 'landing.reject', label: 'Rejeitar versão' },
+  ],
+  approved: [
+    { to: 'published', requiredPermission: 'landing.publish', label: 'Publicar versão' },
+  ],
+  published: [],
+};
+
+/**
+ * Returns valid transitions for a VERSION (not the parent page).
+ */
+export function getVersionTransitions(
+  currentStatus: LandingVersionStatus,
+  role: PlatformRoleType | null | undefined,
+): TransitionRule[] {
+  if (!role) return [];
+  const rules = VERSION_TRANSITION_MAP[currentStatus] ?? [];
+  return rules.filter(r => hasPlatformPermission(role, r.requiredPermission));
+}
+
+/**
+ * Checks if a version needs creation instead of in-place editing.
+ * Returns true when the parent LP status blocks direct edits.
+ */
+export function requiresNewVersion(parentStatus: LandingPageStatus): boolean {
+  return !canEditInPlace(parentStatus);
 }
