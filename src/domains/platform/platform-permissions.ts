@@ -64,17 +64,6 @@ export const PLATFORM_PERMISSIONS = [
   'growth.publish',
   'growth.delete',
   'growth.version_view',
-  // ── Website (institucional) ──
-  'website.view',
-  'website.create',
-  'website.edit',
-  'website.submit',
-  'website.approve',
-  'website.reject',
-  'website.publish',
-  'website.delete',
-  'website.seo_manage',
-  'website.structure_manage',
   // ── A/B Experiments ──
   'ab_experiment.start',
   // ── Future: Marketplace ──
@@ -206,11 +195,6 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing.edit',
     'landing.submit_for_review',
     'landing.view_drafts',
-    // Website (view + submit)
-    'website.view',
-    'website.create',
-    'website.edit',
-    'website.submit',
   ],
 
   platform_marketing_team: [
@@ -228,11 +212,6 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing.edit',
     'landing.submit_for_review',
     'landing.view_drafts',
-    // Website (create/edit/submit)
-    'website.view',
-    'website.create',
-    'website.edit',
-    'website.submit',
   ],
 
   platform_marketing_director: [
@@ -260,17 +239,6 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing.approve',
     'landing.reject',
     'landing.publish',
-    // Website (full governance)
-    'website.view',
-    'website.create',
-    'website.edit',
-    'website.submit',
-    'website.approve',
-    'website.reject',
-    'website.publish',
-    'website.delete',
-    'website.seo_manage',
-    'website.structure_manage',
   ],
 };
 

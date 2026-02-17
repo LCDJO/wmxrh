@@ -87,26 +87,13 @@ const createDefaultTree = (): MenuNode[] => [
     children: [
       { id: 'growth-overview', label: 'Visão Geral', path: '/platform/growth' },
       { id: 'growth-insights', label: 'Insights', path: '/platform/growth/insights' },
+      { id: 'growth-landing', label: 'Landing Pages', path: '/platform/growth/landing-pages' },
       { id: 'growth-conversions', label: 'Conversões', path: '/platform/growth/conversions' },
+      { id: 'growth-fab', label: 'FAB Builder', path: '/platform/growth/fab-builder' },
+      { id: 'growth-submissions', label: 'Minhas Submissões', path: '/platform/growth/submissions' },
+      { id: 'growth-approvals', label: 'Fila de Aprovação', path: '/platform/growth/approvals' },
+      { id: 'growth-versions', label: 'Versionamento & Publicação', path: '/platform/growth/version-publish' },
       { id: 'growth-mkt-analytics', label: 'Marketing Analytics', path: '/platform/marketing/analytics' },
-    ],
-  },
-  {
-    id: 'website', label: 'Website', path: '/platform/website', icon: TrendingUp,
-    children: [
-      { id: 'web-structure', label: 'Estrutura do Site', path: '/platform/website/structure' },
-      { id: 'web-editor', label: 'Editor Drag & Drop', path: '/platform/website/pages' },
-      { id: 'web-seo', label: 'SEO & Performance', path: '/platform/website/seo' },
-      { id: 'web-versions', label: 'Versões', path: '/platform/website/versions' },
-    ],
-  },
-  {
-    id: 'landing-pages', label: 'Landing Pages', path: '/platform/landing', icon: TrendingUp,
-    children: [
-      { id: 'landing-drafts', label: 'Rascunhos', path: '/platform/growth/submissions' },
-      { id: 'landing-approvals', label: 'Aprovações', path: '/platform/growth/approvals' },
-      { id: 'landing-ab', label: 'Experimentos A/B', path: '/platform/growth/landing-pages' },
-      { id: 'landing-metrics', label: 'Métricas', path: '/platform/marketing/analytics' },
     ],
   },
   { id: 'fiscal', label: 'Fiscal', path: '/platform/fiscal', icon: ScrollText },
