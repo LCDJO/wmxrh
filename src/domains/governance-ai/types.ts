@@ -17,7 +17,10 @@ export type InsightCategory =
   | 'dormant_access'
   | 'compliance_gap'
   | 'anomalous_pattern'
-  | 'plan_waste';
+  | 'plan_waste'
+  | 'referral_abuse'
+  | 'referral_loop'
+  | 'referral_coupon_abuse';
 
 export interface GovernanceInsight {
   id: string;
@@ -36,7 +39,7 @@ export interface GovernanceInsight {
 }
 
 export interface AffectedEntity {
-  type: 'user' | 'role' | 'permission' | 'tenant';
+  type: 'user' | 'role' | 'permission' | 'tenant' | 'referral_link' | 'coupon';
   id: string;
   label: string;
   domain?: string;
@@ -67,7 +70,7 @@ export interface RemediationStep {
 // ── AI Analysis Request/Response ────────────────────────────────
 
 export interface GovernanceAIRequest {
-  analysis_type: 'deep_risk' | 'compliance_audit' | 'remediation_plan' | 'trend_forecast';
+  analysis_type: 'deep_risk' | 'compliance_audit' | 'remediation_plan' | 'trend_forecast' | 'referral_fraud';
   context: {
     insights: GovernanceInsight[];
     risk_score: number;
