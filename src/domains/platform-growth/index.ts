@@ -26,4 +26,18 @@ export { growthGovernanceAnalyzer, GrowthGovernanceAnalyzer } from './growth-gov
 export type { GrowthGovernanceFinding } from './growth-governance-analyzer';
 export { emitGrowthEvent, onGrowthEvent, onGrowthEventType, getGrowthEventLog, clearGrowthEventLog } from './growth.events';
 export type { GrowthDomainEvent, GrowthEventType, LandingPageCreatedPayload, LandingPagePublishedPayload, FABContentUpdatedPayload, ConversionTrackedPayload, GrowthInsightGeneratedPayload } from './growth.events';
+
+// ── Website Platform Engine (AI Conversion Designer) ──
+export { websitePlatformEngine, WebsitePlatformEngine } from './website-platform-engine';
+export { siteStructureManager, SiteStructureManager } from './site-structure-manager';
+export type { SitePage, SiteStructure, SitePageMeta } from './site-structure-manager';
+export { aiConversionDesigner, AIConversionDesigner } from './ai-conversion-designer';
+export type { ConversionScore, ConversionSuggestion, ABTestConfig } from './ai-conversion-designer';
+export { versioningManager, VersioningManager } from './versioning-manager';
+export type { PageVersion, PageSnapshot, VersionDiff } from './versioning-manager';
+export { securePublishService, SecurePublishService } from './secure-publish-service';
+export type { PublishResult, PublishError } from './secure-publish-service';
+export { seoOptimizationService, SEOOptimizationService } from './seo-optimization-service';
+export type { SEOReport, SEOIssue, MetaTags } from './seo-optimization-service';
+
 export type * from './types';
