@@ -73,6 +73,8 @@ import PlatformCoupons from "./pages/platform/PlatformCoupons";
 import BillingControlCenter from "./pages/platform/BillingControlCenter";
 import PlatformEvents from "./pages/platform/PlatformEvents";
 import PlatformRevenueIntelligence from "./pages/platform/PlatformRevenueIntelligence";
+import PlatformReferrals from "./pages/platform/PlatformReferrals";
+import PlatformGamification from "./pages/platform/PlatformGamification";
 
 const queryClient = new QueryClient();
 
@@ -139,6 +141,8 @@ function AppRoutes() {
         <Route path="billing/control-center" element={<BillingControlCenter />} />
         <Route path="revenue" element={<PlatformRevenue />} />
         <Route path="revenue/intelligence" element={<PlatformRevenueIntelligence />} />
+        <Route path="referrals" element={<PlatformReferrals />} />
+        <Route path="gamification" element={<PlatformGamification />} />
         <Route path="iam" element={<PlatformIAM />} />
         <Route path="structure/events" element={<PlatformEvents />} />
       </Route>

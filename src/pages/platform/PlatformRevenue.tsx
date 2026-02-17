@@ -16,6 +16,7 @@ import {
   TrendingUp, DollarSign, Users, ArrowUpRight, RefreshCw, BarChart3,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import RevenueForecastChart from '@/components/platform/widgets/RevenueForecastChart';
 
 const CHART_COLORS = [
   'hsl(var(--primary))',
@@ -281,6 +282,9 @@ export default function PlatformRevenue() {
           </CardContent>
         </Card>
       )}
+
+      {/* Revenue Forecast Widget */}
+      <RevenueForecastChart />
     </div>
   );
 }
