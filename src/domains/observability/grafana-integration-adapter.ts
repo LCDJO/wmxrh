@@ -1,11 +1,12 @@
 /**
- * GrafanaIntegrationAdapter — Formats metrics and logs for Grafana-compatible
- * consumption via Prometheus text format and Loki-style log export.
+ * GrafanaIntegrationAdapter — Formats observability signals for Grafana-compatible
+ * consumption across the three pillars:
  *
- * Provides:
- *  1. Prometheus /metrics text export
- *  2. Loki-compatible log label+stream format
- *  3. Dashboard JSON model generation for import into Grafana
+ *  1. Prometheus  → metrics text export (/metrics)
+ *  2. Loki        → structured log streams with labels
+ *  3. Tempo       → distributed traces (future-ready, W3C Trace Context)
+ *
+ * Also generates a Grafana Dashboard JSON model for one-click import.
  */
 
 import { getMetricsCollector } from './metrics-collector';
@@ -15,7 +16,9 @@ import { getPerformanceProfiler } from './performance-profiler';
 import { getLogStreamAdapter, type LogEntry } from './log-stream-adapter';
 import type { PrometheusMetric } from './types';
 
-// ── Prometheus Export ──────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// 1. PROMETHEUS — Metrics Export
+// ═══════════════════════════════════════════════════════════════
 
 export interface PrometheusExportResult {
   text: string;
@@ -50,13 +53,21 @@ export function exportPrometheus(): PrometheusExportResult {
     collector.gauge('perf_dom_nodes', perf.current.dom_nodes);
   }
 
+  // Inject trace stats
+  const traceStats = getTraceCollector().getStats();
+  collector.gauge('traces_total', traceStats.total);
+  collector.gauge('traces_active', traceStats.active);
+  collector.gauge('traces_avg_duration_ms', traceStats.avg_duration_ms);
+
   const metrics = collector.toPrometheus();
   const text = collector.toPrometheusText();
 
   return { text, metrics, timestamp: Date.now() };
 }
 
-// ── Loki-Style Log Export ──────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// 2. LOKI — Structured Log Export
+// ═══════════════════════════════════════════════════════════════
 
 export interface LokiStream {
   stream: Record<string, string>;
@@ -92,36 +103,279 @@ export function exportLogsAsLoki(opts?: { since?: number; limit?: number }): Lok
   return streams;
 }
 
-// ── Grafana Dashboard Model ────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// 3. TEMPO — Distributed Traces (Future-Ready)
+//
+// Implements W3C Trace Context compatible span model.
+// In-memory ring buffer for local trace collection.
+// Export format matches Tempo/OTLP JSON ingestion.
+// ═══════════════════════════════════════════════════════════════
+
+export type SpanKind = 'internal' | 'server' | 'client' | 'producer' | 'consumer';
+export type SpanStatus = 'ok' | 'error' | 'unset';
+
+export interface TraceSpan {
+  /** 32-hex-char trace identifier (W3C traceparent) */
+  trace_id: string;
+  /** 16-hex-char span identifier */
+  span_id: string;
+  /** Parent span (null for root spans) */
+  parent_span_id: string | null;
+  /** Human-readable operation name */
+  operation: string;
+  /** Service / module that owns this span */
+  service: string;
+  kind: SpanKind;
+  status: SpanStatus;
+  /** Start timestamp in ms */
+  start_ms: number;
+  /** End timestamp in ms (null if still active) */
+  end_ms: number | null;
+  /** Duration in ms (computed on end) */
+  duration_ms: number;
+  /** Structured attributes */
+  attributes: Record<string, string | number | boolean>;
+  /** Events / logs within the span */
+  events: Array<{
+    name: string;
+    timestamp_ms: number;
+    attributes?: Record<string, string | number | boolean>;
+  }>;
+}
+
+/** Tempo-compatible JSON export format (OTLP-like) */
+export interface TempoExportResult {
+  resource: {
+    service_name: string;
+    service_version: string;
+    environment: string;
+  };
+  spans: TraceSpan[];
+  total_traces: number;
+  exported_at: number;
+}
+
+// ── Trace ID Generation (W3C Trace Context) ───────────────────
+
+function generateHex(bytes: number): string {
+  const arr = new Uint8Array(bytes);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function generateTraceId(): string {
+  return generateHex(16); // 32 hex chars
+}
+
+function generateSpanId(): string {
+  return generateHex(8); // 16 hex chars
+}
+
+// ── TraceCollector — In-Memory Span Ring Buffer ───────────────
+
+const MAX_SPANS = 500;
+
+class TraceCollector {
+  private spans: TraceSpan[] = [];
+  private activeSpans = new Map<string, TraceSpan>();
+
+  /**
+   * Start a new span. Returns span_id for later ending.
+   *
+   * Usage:
+   *   const spanId = collector.startSpan({ operation: 'db.query', service: 'iam' });
+   *   // ... work ...
+   *   collector.endSpan(spanId);
+   */
+  startSpan(opts: {
+    operation: string;
+    service: string;
+    trace_id?: string;
+    parent_span_id?: string | null;
+    kind?: SpanKind;
+    attributes?: Record<string, string | number | boolean>;
+  }): string {
+    const span: TraceSpan = {
+      trace_id: opts.trace_id ?? generateTraceId(),
+      span_id: generateSpanId(),
+      parent_span_id: opts.parent_span_id ?? null,
+      operation: opts.operation,
+      service: opts.service,
+      kind: opts.kind ?? 'internal',
+      status: 'unset',
+      start_ms: Date.now(),
+      end_ms: null,
+      duration_ms: 0,
+      attributes: opts.attributes ?? {},
+      events: [],
+    };
+
+    this.activeSpans.set(span.span_id, span);
+    return span.span_id;
+  }
+
+  /** Add an event/log to an active span. */
+  addEvent(spanId: string, name: string, attributes?: Record<string, string | number | boolean>) {
+    const span = this.activeSpans.get(spanId);
+    if (!span) return;
+    span.events.push({ name, timestamp_ms: Date.now(), attributes });
+  }
+
+  /** Set attributes on an active span. */
+  setAttributes(spanId: string, attributes: Record<string, string | number | boolean>) {
+    const span = this.activeSpans.get(spanId);
+    if (!span) return;
+    Object.assign(span.attributes, attributes);
+  }
+
+  /** End a span (moves from active → completed buffer). */
+  endSpan(spanId: string, status: SpanStatus = 'ok') {
+    const span = this.activeSpans.get(spanId);
+    if (!span) return;
+
+    span.end_ms = Date.now();
+    span.duration_ms = span.end_ms - span.start_ms;
+    span.status = status;
+
+    this.activeSpans.delete(spanId);
+    this.spans.push(span);
+
+    // Trim oldest
+    if (this.spans.length > MAX_SPANS) {
+      this.spans.splice(0, this.spans.length - MAX_SPANS);
+    }
+
+    getMetricsCollector().increment('traces_completed', { service: span.service });
+    getMetricsCollector().histogram('trace_duration_ms', span.duration_ms, { service: span.service });
+  }
+
+  /** Query completed spans. */
+  query(opts?: {
+    trace_id?: string;
+    service?: string;
+    operation?: string;
+    status?: SpanStatus;
+    since?: number;
+    limit?: number;
+  }): TraceSpan[] {
+    let result = [...this.spans];
+    if (opts?.trace_id) result = result.filter(s => s.trace_id === opts.trace_id);
+    if (opts?.service) result = result.filter(s => s.service === opts.service);
+    if (opts?.operation) result = result.filter(s => s.operation.includes(opts.operation));
+    if (opts?.status) result = result.filter(s => s.status === opts.status);
+    if (opts?.since) result = result.filter(s => s.start_ms >= opts.since);
+    result.sort((a, b) => b.start_ms - a.start_ms);
+    if (opts?.limit) result = result.slice(0, opts.limit);
+    return result;
+  }
+
+  /** Get trace by trace_id (all spans in the trace). */
+  getTrace(traceId: string): TraceSpan[] {
+    return this.spans
+      .filter(s => s.trace_id === traceId)
+      .sort((a, b) => a.start_ms - b.start_ms);
+  }
+
+  /** Get statistics. */
+  getStats(windowMs = 3_600_000) {
+    const since = Date.now() - windowMs;
+    const recent = this.spans.filter(s => s.start_ms >= since);
+    const totalDuration = recent.reduce((sum, s) => sum + s.duration_ms, 0);
+
+    const byService: Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
+    for (const s of recent) {
+      byService[s.service] = (byService[s.service] ?? 0) + 1;
+      byStatus[s.status] = (byStatus[s.status] ?? 0) + 1;
+    }
+
+    return {
+      total: recent.length,
+      active: this.activeSpans.size,
+      avg_duration_ms: recent.length > 0 ? Math.round(totalDuration / recent.length) : 0,
+      by_service: byService,
+      by_status: byStatus,
+      error_rate: recent.length > 0
+        ? Math.round(((byStatus['error'] ?? 0) / recent.length) * 100)
+        : 0,
+    };
+  }
+
+  /** Export in Tempo/OTLP-compatible format. */
+  exportTempo(opts?: { since?: number; limit?: number }): TempoExportResult {
+    const spans = this.query({ since: opts?.since, limit: opts?.limit ?? 200 });
+    return {
+      resource: {
+        service_name: 'platform_observability',
+        service_version: '1.0.0',
+        environment: 'production',
+      },
+      spans,
+      total_traces: new Set(spans.map(s => s.trace_id)).size,
+      exported_at: Date.now(),
+    };
+  }
+
+  /** Clear all spans. */
+  clear() {
+    this.spans = [];
+    this.activeSpans.clear();
+  }
+}
+
+let _traceCollector: TraceCollector | null = null;
+export function getTraceCollector(): TraceCollector {
+  if (!_traceCollector) _traceCollector = new TraceCollector();
+  return _traceCollector;
+}
+
+export { TraceCollector };
+
+// ═══════════════════════════════════════════════════════════════
+// 4. GRAFANA DASHBOARD MODEL — Auto-generated panel definitions
+// ═══════════════════════════════════════════════════════════════
 
 export interface GrafanaDashboardPanel {
   title: string;
-  type: 'graph' | 'gauge' | 'stat' | 'table' | 'logs';
+  type: 'graph' | 'gauge' | 'stat' | 'table' | 'logs' | 'traces';
   metric: string;
   description: string;
+  datasource: 'prometheus' | 'loki' | 'tempo';
 }
 
 export function generateDashboardModel(): {
   title: string;
+  datasources: Array<{ name: string; type: string; url_hint: string }>;
   panels: GrafanaDashboardPanel[];
   exported_at: number;
 } {
   return {
     title: 'Platform Observability',
     exported_at: Date.now(),
+    datasources: [
+      { name: 'Prometheus', type: 'prometheus', url_hint: '/api/v1/metrics' },
+      { name: 'Loki', type: 'loki', url_hint: '/api/v1/logs' },
+      { name: 'Tempo', type: 'tempo', url_hint: '/api/v1/traces' },
+    ],
     panels: [
-      { title: 'Platform Health', type: 'gauge', metric: 'platform_health_status', description: 'Overall platform health (1=healthy, 0.5=degraded, 0=down)' },
-      { title: 'Modules Status', type: 'stat', metric: 'platform_modules_total', description: 'Total registered modules' },
-      { title: 'Healthy Modules', type: 'stat', metric: 'platform_modules_healthy', description: 'Modules in healthy state' },
-      { title: 'Error Rate', type: 'graph', metric: 'error_rate_per_min', description: 'Errors per minute (rolling)' },
-      { title: 'Errors 1h', type: 'stat', metric: 'errors_1h_total', description: 'Total errors in last hour' },
-      { title: 'Page Load Time', type: 'graph', metric: 'perf_page_load_ms', description: 'Page load time in milliseconds' },
-      { title: 'TTFB', type: 'graph', metric: 'perf_ttfb_ms', description: 'Time to first byte' },
-      { title: 'Memory Usage', type: 'gauge', metric: 'perf_memory_used_mb', description: 'JS heap memory in MB' },
-      { title: 'DOM Nodes', type: 'stat', metric: 'perf_dom_nodes', description: 'Total DOM node count' },
-      { title: 'Module Latency', type: 'graph', metric: 'module_latency_ms', description: 'Per-module latency histogram' },
-      { title: 'Security Events', type: 'graph', metric: 'security_events_total', description: 'Security events by type' },
-      { title: 'Log Stream', type: 'logs', metric: 'logs_total', description: 'Structured log stream from all sources' },
+      // ── Prometheus panels ──────────────────────────────────
+      { title: 'Platform Health', type: 'gauge', metric: 'platform_health_status', description: 'Overall platform health (1=healthy, 0.5=degraded, 0=down)', datasource: 'prometheus' },
+      { title: 'Modules Status', type: 'stat', metric: 'platform_modules_total', description: 'Total registered modules', datasource: 'prometheus' },
+      { title: 'Healthy Modules', type: 'stat', metric: 'platform_modules_healthy', description: 'Modules in healthy state', datasource: 'prometheus' },
+      { title: 'Error Rate', type: 'graph', metric: 'error_rate_per_min', description: 'Errors per minute (rolling)', datasource: 'prometheus' },
+      { title: 'Errors 1h', type: 'stat', metric: 'errors_1h_total', description: 'Total errors in last hour', datasource: 'prometheus' },
+      { title: 'Page Load Time', type: 'graph', metric: 'perf_page_load_ms', description: 'Page load time in milliseconds', datasource: 'prometheus' },
+      { title: 'TTFB', type: 'graph', metric: 'perf_ttfb_ms', description: 'Time to first byte', datasource: 'prometheus' },
+      { title: 'Memory Usage', type: 'gauge', metric: 'perf_memory_used_mb', description: 'JS heap memory in MB', datasource: 'prometheus' },
+      { title: 'DOM Nodes', type: 'stat', metric: 'perf_dom_nodes', description: 'Total DOM node count', datasource: 'prometheus' },
+      { title: 'Module Latency', type: 'graph', metric: 'module_latency_ms', description: 'Per-module latency histogram', datasource: 'prometheus' },
+      { title: 'Security Events', type: 'graph', metric: 'security_events_total', description: 'Security events by type', datasource: 'prometheus' },
+      { title: 'Traces Total', type: 'stat', metric: 'traces_total', description: 'Total completed traces in window', datasource: 'prometheus' },
+      { title: 'Trace Avg Duration', type: 'gauge', metric: 'traces_avg_duration_ms', description: 'Average trace duration', datasource: 'prometheus' },
+      // ── Loki panels ────────────────────────────────────────
+      { title: 'Log Stream', type: 'logs', metric: 'logs_total', description: 'Structured log stream from all sources', datasource: 'loki' },
+      // ── Tempo panels ───────────────────────────────────────
+      { title: 'Trace Explorer', type: 'traces', metric: 'trace_duration_ms', description: 'Distributed trace waterfall (W3C Trace Context)', datasource: 'tempo' },
     ],
   };
 }
