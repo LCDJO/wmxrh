@@ -9,6 +9,9 @@ export type {
   ReferralTracking,
   ReferralProgram,
   GamificationTier,
+  GamificationLevel,
+  GamificationPointWeight,
+  GamificationProfile,
   GamificationLeaderboardEntry,
 } from './types';
 export {

@@ -46,6 +46,7 @@ import NrComplianceDashboard from "./pages/NrComplianceDashboard";
 import IAMManagement from "./pages/IAMManagement";
 import SettingsUsers from "./pages/SettingsUsers";
 import SettingsRoles from "./pages/SettingsRoles";
+import SettingsGamification from "./pages/SettingsGamification";
 import PlatformDashboard from "./pages/platform/PlatformDashboard";
 import PlatformTenants from "./pages/platform/PlatformTenants";
 import PlatformModules from "./pages/platform/PlatformModules";
@@ -241,6 +242,9 @@ function AppRoutes() {
           } />
           <Route path="/settings/roles" element={
             <ProtectedRoute navKey="iam_roles"><SettingsRoles /></ProtectedRoute>
+          } />
+          <Route path="/settings/gamification" element={
+            <ProtectedRoute navKey="iam_roles"><SettingsGamification /></ProtectedRoute>
           } />
         </Route>
       )}

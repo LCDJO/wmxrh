@@ -14,7 +14,7 @@ import {
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
-  Zap,
+  Zap, Trophy,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -140,6 +140,7 @@ const navStructure: NavEntry[] = [
     children: [
       { to: '/settings/users', icon: Users, label: 'Usuários', key: 'iam_users' },
       { to: '/settings/roles', icon: ShieldCheck, label: 'Cargos & Permissões', key: 'iam_roles' },
+      { to: '/settings/gamification', icon: Trophy, label: 'Gamificação', key: 'iam_roles' },
       { to: '/announcements', icon: Megaphone, label: 'Avisos do Sistema', key: 'dashboard' },
     ],
   },
