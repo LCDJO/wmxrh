@@ -98,6 +98,7 @@ import PlatformVersioning from "./pages/platform/PlatformVersioning";
 import SupportNewTicket from "./pages/support/SupportNewTicket";
 import SupportTickets from "./pages/support/SupportTickets";
 import SupportWiki from "./pages/support/SupportWiki";
+import PlatformSupportAnalytics from "./pages/platform/PlatformSupportAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -188,6 +189,7 @@ function AppRoutes() {
         <Route path="landing/drafts" element={<LandingDrafts />} />
         <Route path="landing/review" element={<LandingReview />} />
         <Route path="landing/published" element={<LandingPublished />} />
+        <Route path="support/analytics" element={<PlatformSupportAnalytics />} />
       </Route>
 
       {/* ═══ LANDING PAGE RENDERER ═══ */}
