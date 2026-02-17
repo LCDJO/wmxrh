@@ -35,6 +35,7 @@ import { MarketingControlCenter } from '@/components/control-plane/MarketingCont
 import { ActivePlatformVersionWidget } from '@/components/control-plane/ActivePlatformVersionWidget';
 import { ModuleHealthByVersionWidget } from '@/components/control-plane/ModuleHealthByVersionWidget';
 import { NavigationStructureStatusWidget } from '@/components/control-plane/NavigationStructureStatusWidget';
+import { SupportHealthOverview } from '@/components/control-plane/SupportHealthOverview';
 // ── Hook ──────────────────────────────────────────────────────
 
 function useControlPlane() {
@@ -180,6 +181,9 @@ export default function PlatformControlPlane() {
 
           {/* Row 5: Identity Activity Feed */}
           <IdentityActivityFeed identity={identity} />
+
+          {/* Row 6: Support Health */}
+          <SupportHealthOverview />
         </TabsContent>
 
         <TabsContent value="website" className="space-y-4">
