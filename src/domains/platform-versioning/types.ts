@@ -58,12 +58,26 @@ export interface ModuleDependency {
 
 // ── Changelog ──
 export type ChangeCategory = 'feature' | 'fix' | 'improvement' | 'breaking' | 'deprecation' | 'security' | 'performance' | 'docs';
+export type ChangeType = 'created' | 'updated' | 'deleted' | 'published' | 'rolled_back' | 'deprecated' | 'activated' | 'deactivated';
 
+export interface PlatformChangeLog {
+  id: string;
+  module_id?: string;          // optional — null = platform-level change
+  entity_type: string;         // e.g. 'landing_page', 'module', 'release', 'feature_flag'
+  entity_id: string;
+  change_type: ChangeType;
+  version_tag: string;         // "vMAJOR.MINOR.PATCH" at time of change
+  payload_diff: Record<string, unknown>;  // { before: ..., after: ... }
+  changed_by: string;
+  changed_at: string;
+}
+
+/** @deprecated Use PlatformChangeLog instead */
 export interface ChangeLogEntry {
   id: string;
   category: ChangeCategory;
   scope: 'platform' | 'module';
-  scope_key?: string;        // module_key if scope=module
+  scope_key?: string;
   title: string;
   description: string;
   author: string;
