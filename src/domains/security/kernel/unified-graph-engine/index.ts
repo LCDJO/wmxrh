@@ -1,0 +1,120 @@
+/**
+ * Unified Graph Engine (UGE) — Public API
+ *
+ * ╔══════════════════════════════════════════════════════════════════╗
+ * ║  UnifiedGraphEngine                                              ║
+ * ║   ├── GraphRegistry          → register/unregister providers    ║
+ * ║   ├── GraphComposer          → merge all graphs into snapshot   ║
+ * ║   ├── GraphAnalyzer          → structural analysis              ║
+ * ║   ├── GraphQueryService      → BFS traversal with filters       ║
+ * ║   ├── RiskAssessmentService  → governance risk signals          ║
+ * ║   └── GraphVisualizationAdapter → React-ready render data       ║
+ * ╚══════════════════════════════════════════════════════════════════╝
+ */
+
+import { graphRegistry } from './graph-registry';
+import { composeUnifiedGraph } from './graph-composer';
+import { analyzeGraph } from './graph-analyzer';
+import { queryGraph } from './graph-query-service';
+import { assessRisk } from './risk-assessment-service';
+import { toVisualizationData } from './graph-visualization-adapter';
+
+// ── Auto-register built-in providers ──
+import { platformAccessProvider } from './providers/platform-access-provider';
+import { tenantAccessProvider } from './providers/tenant-access-provider';
+import { identityProvider } from './providers/identity-provider';
+
+graphRegistry.register(platformAccessProvider);
+graphRegistry.register(tenantAccessProvider);
+graphRegistry.register(identityProvider);
+
+// ════════════════════════════════════
+// UNIFIED GRAPH ENGINE FACADE
+// ════════════════════════════════════
+
+import type {
+  GraphDomain,
+  UnifiedGraphSnapshot,
+  GraphQuery,
+  GraphQueryResult,
+  VisualizationData,
+  RiskAssessment,
+} from './types';
+import type { AnalysisResult } from './graph-analyzer';
+import type { GraphProvider } from './graph-registry';
+
+export const unifiedGraphEngine = {
+  // ── Registry ──
+  registerProvider(provider: GraphProvider): void {
+    graphRegistry.register(provider);
+  },
+  unregisterProvider(domain: GraphDomain): void {
+    graphRegistry.unregister(domain);
+  },
+  getAvailableDomains(): GraphDomain[] {
+    return graphRegistry.getAvailableProviders().map(p => p.domain);
+  },
+  getRegisteredDomains(): GraphDomain[] {
+    return graphRegistry.getRegisteredDomains();
+  },
+
+  // ── Compose ──
+  compose(domains?: GraphDomain[]): UnifiedGraphSnapshot {
+    return composeUnifiedGraph(domains);
+  },
+
+  // ── Analyze ──
+  analyze(snapshot: UnifiedGraphSnapshot): AnalysisResult {
+    return analyzeGraph(snapshot);
+  },
+
+  // ── Query ──
+  query(snapshot: UnifiedGraphSnapshot, query: GraphQuery): GraphQueryResult {
+    return queryGraph(snapshot, query);
+  },
+
+  // ── Risk ──
+  assessRisk(snapshot: UnifiedGraphSnapshot): RiskAssessment {
+    return assessRisk(snapshot);
+  },
+
+  // ── Visualization ──
+  toVisualization(
+    snapshot: UnifiedGraphSnapshot,
+    filter?: { domains?: GraphDomain[] },
+  ): VisualizationData {
+    return toVisualizationData(snapshot, filter);
+  },
+
+  // ── Convenience: full pipeline ──
+  buildFullReport(domains?: GraphDomain[]) {
+    const snapshot = composeUnifiedGraph(domains);
+    return {
+      snapshot,
+      analysis: analyzeGraph(snapshot),
+      risk: assessRisk(snapshot),
+      visualization: toVisualizationData(snapshot),
+    };
+  },
+};
+
+// ── Re-exports ──
+export type {
+  GraphDomain,
+  UnifiedNode,
+  UnifiedEdge,
+  UnifiedNodeType,
+  UnifiedEdgeRelation,
+  UnifiedGraphSnapshot,
+  GraphQuery,
+  GraphQueryResult,
+  RiskAssessment,
+  RiskSignal,
+  RiskLevel,
+  VisualizationData,
+  VisualizationNode,
+  VisualizationEdge,
+} from './types';
+export type { AnalysisResult } from './graph-analyzer';
+export type { GraphProvider } from './graph-registry';
+export { graphRegistry } from './graph-registry';

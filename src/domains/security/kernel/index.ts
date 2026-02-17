@@ -158,3 +158,13 @@ export type {
   PlatformPermissionAssignedPayload, PlatformPermissionRevokedPayload,
   PlatformAccessGraphRebuiltPayload,
 } from '@/domains/platform/platform.events';
+
+// ── Unified Graph Engine (UGE) ──
+export { unifiedGraphEngine, graphRegistry } from './unified-graph-engine';
+export type {
+  GraphDomain, UnifiedNode, UnifiedEdge, UnifiedNodeType, UnifiedEdgeRelation,
+  UnifiedGraphSnapshot, GraphQuery, GraphQueryResult,
+  RiskAssessment as UGERiskAssessment, RiskSignal as UGERiskSignal, RiskLevel as UGERiskLevel,
+  VisualizationData, VisualizationNode, VisualizationEdge,
+  AnalysisResult, GraphProvider,
+} from './unified-graph-engine';
