@@ -24,6 +24,14 @@ export class ObservabilityBridge {
     metrics.gauge('apcp_active_modules', 0);
     metrics.gauge('apcp_error_modules', 0);
     metrics.gauge('revenue_forecast_value', 0);
+    // Marketing / A/B Testing baselines
+    metrics.gauge('landing_ab_experiment_total', 0);
+    metrics.gauge('landing_ab_experiment_running', 0);
+    metrics.gauge('landing_ab_experiment_completed', 0);
+    metrics.gauge('landing_variant_conversion_rate', 0);
+    metrics.gauge('landing_revenue_generated', 0);
+    metrics.gauge('landing_revenue_generated_total', 0);
+    metrics.gauge('fab_engagement_score', 0);
   }
 
   /** Update gauges from current state */
