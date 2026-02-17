@@ -149,3 +149,12 @@ export type {
   IILAnomalyDetectedEvent, IILDecisionIssuedEvent,
   IILUserTypeDetectedEvent, IILWorkspaceSwitchedEvent,
 } from './identity-intelligence';
+
+// ── Platform Domain Events (re-exported for kernel consumers) ──
+export { emitPlatformEvent, onPlatformEvent, onPlatformEventType, getPlatformEventLog, clearPlatformEventLog } from '@/domains/platform/platform.events';
+export type {
+  PlatformEventType, PlatformDomainEvent,
+  PlatformRoleCreatedPayload, PlatformRoleUpdatedPayload,
+  PlatformPermissionAssignedPayload, PlatformPermissionRevokedPayload,
+  PlatformAccessGraphRebuiltPayload,
+} from '@/domains/platform/platform.events';
