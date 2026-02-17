@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useCreateTenant } from '@/domains/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,22 +9,109 @@ import { useAdaptiveOnboarding } from '@/hooks/use-adaptive-onboarding';
 import { OnboardingStepper } from '@/components/onboarding/OnboardingStepper';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 import { SetupWizardModal } from '@/components/onboarding/SetupWizardModal';
+import {
+  emitTenantOnboardingStarted,
+  emitOnboardingStepCompleted,
+  emitOnboardingStepSkipped,
+  emitOnboardingFinished,
+  emitRoleBootstrapCompleted,
+} from '@/domains/adaptive-onboarding/onboarding.events';
+import { saveProgressToCache } from '@/domains/adaptive-onboarding/onboarding-progress-cache';
+import { isOnboardingAdmin, type OnboardingSecurityContext } from '@/domains/adaptive-onboarding/onboarding-security-guard';
 
 export default function TenantOnboarding() {
   const [name, setName] = useState('');
   const [document, setDocument] = useState('');
   const [tenantCreated, setTenantCreated] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+  const [startedAt] = useState(Date.now());
   const { toast } = useToast();
   const createMutation = useCreateTenant();
 
-  // Adaptive onboarding engine (activates after tenant is created)
+  const TENANT_ID = 'preview-tenant';
+  const USER_ID = 'current-user';
+
+  // Security context — in production, derived from JWT/session
+  const securityCtx: OnboardingSecurityContext = {
+    user_id: USER_ID,
+    tenant_id: TENANT_ID,
+    effective_roles: ['tenant_admin'],
+  };
+
+  // Adaptive onboarding engine
   const onboarding = useAdaptiveOnboarding({
-    tenantId: 'preview-tenant',
+    tenantId: TENANT_ID,
     planTier: 'professional',
     allowedModules: ['employees', 'companies', 'departments', 'compensation', 'benefits', 'compliance', 'health'],
     userRole: 'tenant_admin',
   });
+
+  // ── Persist progress to cache on every change ──
+  const persistProgress = useCallback(() => {
+    saveProgressToCache(onboarding.progress);
+  }, [onboarding.progress]);
+
+  // ── Guarded step completion with event emission ──
+  const handleCompleteStep = useCallback((stepId: string) => {
+    if (!isOnboardingAdmin(securityCtx)) {
+      toast({
+        title: 'Acesso negado',
+        description: 'Somente administradores podem completar etapas do onboarding.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const step = onboarding.flow.steps.find(s => s.id === stepId);
+    onboarding.completeStep(stepId);
+
+    // Emit event
+    emitOnboardingStepCompleted(TENANT_ID, USER_ID, {
+      step_id: stepId,
+      step_title: step?.title ?? stepId,
+      phase: step?.phase ?? 'unknown',
+      completion_pct: onboarding.completionPct,
+      elapsed_ms: Date.now() - startedAt,
+    });
+
+    // Persist to cache
+    persistProgress();
+
+    // Check if onboarding just finished
+    if (onboarding.completionPct >= 100) {
+      emitOnboardingFinished(TENANT_ID, USER_ID, {
+        total_steps: onboarding.flow.steps.length,
+        completed_steps: onboarding.progress.completed_steps.length,
+        skipped_steps: onboarding.progress.skipped_steps.length,
+        total_elapsed_ms: Date.now() - startedAt,
+        plan_tier: 'professional',
+      });
+    }
+  }, [onboarding, securityCtx, startedAt, persistProgress, toast]);
+
+  // ── Guarded step skip with event emission ──
+  const handleSkipStep = useCallback((stepId: string) => {
+    if (!isOnboardingAdmin(securityCtx)) {
+      toast({
+        title: 'Acesso negado',
+        description: 'Somente administradores podem pular etapas do onboarding.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const step = onboarding.flow.steps.find(s => s.id === stepId);
+    onboarding.skipStep(stepId);
+
+    emitOnboardingStepSkipped(TENANT_ID, USER_ID, {
+      step_id: stepId,
+      step_title: step?.title ?? stepId,
+      phase: step?.phase ?? 'unknown',
+      completion_pct: onboarding.completionPct,
+    });
+
+    persistProgress();
+  }, [onboarding, securityCtx, persistProgress, toast]);
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +120,35 @@ export default function TenantOnboarding() {
         toast({ title: 'Organização criada!', description: 'Sua organização foi criada com sucesso.' });
         setTenantCreated(true);
         setShowWizard(true);
+
+        // Emit onboarding started
+        emitTenantOnboardingStarted(TENANT_ID, USER_ID, {
+          plan_tier: 'professional',
+          total_steps: onboarding.flow.steps.length,
+          estimated_minutes: onboarding.flow.estimated_total_minutes,
+        });
+
+        // Persist initial progress
+        saveProgressToCache(onboarding.progress);
       },
       onError: (err) => toast({ title: 'Erro', description: err.message, variant: 'destructive' }),
     });
+  };
+
+  const handleWizardFinish = (config: { selectedModules: string[]; selectedRoles: string[] }) => {
+    // Emit role bootstrap event
+    emitRoleBootstrapCompleted(TENANT_ID, USER_ID, {
+      roles_created: config.selectedRoles,
+      plan_tier: 'professional',
+    });
+
+    toast({
+      title: 'Setup iniciado!',
+      description: `${config.selectedModules.length} módulos e ${config.selectedRoles.length} papéis serão configurados.`,
+    });
+
+    // Complete the welcome step automatically
+    handleCompleteStep('welcome');
   };
 
   // ── Creation form (pre-onboarding) ──
@@ -117,8 +230,8 @@ export default function TenantOnboarding() {
                 currentStepId={onboarding.progress.current_step_id}
                 completionPct={onboarding.completionPct}
                 hints={onboarding.hints}
-                onComplete={onboarding.completeStep}
-                onSkip={onboarding.skipStep}
+                onComplete={handleCompleteStep}
+                onSkip={handleSkipStep}
                 onStepClick={onboarding.goToStep}
                 onDismissHint={onboarding.dismissHint}
               />
@@ -136,14 +249,7 @@ export default function TenantOnboarding() {
         availableModules={onboarding.availableModules}
         recommendedModules={onboarding.recommendedModules}
         suggestedRoles={onboarding.suggestedRoles}
-        onFinish={(config) => {
-          toast({
-            title: 'Setup iniciado!',
-            description: `${config.selectedModules.length} módulos e ${config.selectedRoles.length} papéis serão configurados.`,
-          });
-          // Complete the welcome step automatically
-          onboarding.completeStep('welcome');
-        }}
+        onFinish={handleWizardFinish}
       />
     </div>
   );
