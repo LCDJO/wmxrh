@@ -13,7 +13,7 @@ import {
   Shield, Wallet, HeartPulse, AlertTriangle, Wrench, Brain,
   UserPlus, Calculator, Users, GraduationCap, Cpu, TrendingUp,
   ChevronDown, ChevronRight, Fingerprint, Network, GitMerge,
-  FileSignature, Sparkles, KeyRound, ShoppingCart,
+  FileSignature, Sparkles, KeyRound, ShoppingCart, HelpCircle, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { buildCatalog, getEventCatalog, getAllDomains, type EventCatalogEntry } from './event-catalog-data';
@@ -52,6 +52,7 @@ export default function PlatformEvents() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -129,6 +130,13 @@ export default function PlatformEvents() {
                   Eventos de domínio emitidos pelo sistema, organizados por módulo.
                 </p>
               </div>
+              <button
+                onClick={() => setShowHelp(prev => !prev)}
+                className="ml-2 p-1.5 rounded-full hover:bg-accent/40 transition-colors text-muted-foreground hover:text-foreground"
+                title="O que é este módulo?"
+              >
+                <HelpCircle className="h-5 w-5" />
+              </button>
             </div>
           </div>
           <Button
@@ -143,6 +151,51 @@ export default function PlatformEvents() {
           </Button>
         </div>
       </div>
+
+      {/* ── Help Panel ── */}
+      {showHelp && (
+        <Card className="border-[hsl(265_60%_50%/0.25)] bg-[hsl(265_60%_50%/0.04)] animate-fade-in">
+          <CardContent className="p-5 space-y-4 relative">
+            <button
+              onClick={() => setShowHelp(false)}
+              className="absolute top-3 right-3 p-1 rounded-full hover:bg-accent/40 transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <HelpCircle className="h-4.5 w-4.5 text-[hsl(265_80%_60%)]" />
+              O que é o Catálogo de Eventos?
+            </h3>
+
+            <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
+              <div className="space-y-1.5">
+                <p className="font-medium text-foreground text-xs uppercase tracking-wider">📌 Função</p>
+                <p>
+                  Este módulo é o <strong className="text-foreground">registro centralizado</strong> de todos os eventos de domínio emitidos pelo sistema.
+                  Ele cataloga automaticamente cada evento criado nos módulos (IAM, Billing, Security, etc.), servindo como documentação viva da arquitetura.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <p className="font-medium text-foreground text-xs uppercase tracking-wider">⚡ O que são eventos?</p>
+                <p>
+                  Eventos são <strong className="text-foreground">sinais emitidos quando algo acontece</strong> no sistema — ex: um usuário foi convidado, uma fatura gerada, um risco detectado.
+                  Eles seguem o padrão <em>Domain Events</em> e permitem que módulos se comuniquem de forma desacoplada.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <p className="font-medium text-foreground text-xs uppercase tracking-wider">🔗 Onde são usados?</p>
+                <p>
+                  Eventos disparam <strong className="text-foreground">automações, auditoria, notificações e integrações</strong>.
+                  Ex: o evento <code className="text-xs bg-muted px-1 py-0.5 rounded">InvoiceGenerated</code> pode acionar envio de e-mail, registro de auditoria e atualização de métricas de receita — tudo automaticamente.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Stat Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
