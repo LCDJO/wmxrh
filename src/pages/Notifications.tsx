@@ -1,5 +1,6 @@
 /**
- * Notifications — Full page with filters, search, module filter, and date grouping.
+ * NotificationListPage — Full page with filters, search, module filter, and date grouping.
+ * Composes ActionableNotificationCard for each item.
  */
 
 import { useState, useMemo } from 'react';
@@ -7,35 +8,25 @@ import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/hooks/use-notifications';
 import {
   TYPE_CONFIG,
-  timeAgo,
   getUnreadByType,
   type AppNotification,
   type NotificationType,
 } from '@/domains/notifications/notification-hub';
+import { ActionableNotificationCard } from '@/components/notifications/ActionableNotificationCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import {
-  CheckCheck, ArrowRight, Filter, Search,
-  Info, AlertTriangle, ShieldAlert, CheckCircle,
-  Inbox, Calendar,
-} from 'lucide-react';
-
-const TYPE_ICON: Record<string, React.ElementType> = {
-  info: Info, warning: AlertTriangle, critical: ShieldAlert, success: CheckCircle,
-};
+import { CheckCheck, Filter, Search, Inbox, Calendar } from 'lucide-react';
 
 const ALL_TYPES: NotificationType[] = ['critical', 'warning', 'info', 'success'];
 
-// ── Date grouping helpers ──
+// ── Date grouping ──
 
 function getDateGroup(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
-
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfYesterday = new Date(startOfToday);
   startOfYesterday.setDate(startOfYesterday.getDate() - 1);
@@ -50,7 +41,7 @@ function getDateGroup(dateStr: string): string {
 
 const GROUP_ORDER = ['Hoje', 'Ontem', 'Esta semana', 'Anteriores'];
 
-function groupByDate(items: AppNotification[]): { label: string; items: AppNotification[] }[] {
+function groupByDate(items: AppNotification[]) {
   const map = new Map<string, AppNotification[]>();
   for (const n of items) {
     const g = getDateGroup(n.created_at);
@@ -60,6 +51,8 @@ function groupByDate(items: AppNotification[]): { label: string; items: AppNotif
   return GROUP_ORDER.filter(g => map.has(g)).map(g => ({ label: g, items: map.get(g)! }));
 }
 
+// ── Page Component ──
+
 export default function Notifications() {
   const navigate = useNavigate();
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
@@ -68,7 +61,6 @@ export default function Notifications() {
   const [moduleFilter, setModuleFilter] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  // Unique modules from data
   const modules = useMemo(() => {
     const set = new Set<string>();
     notifications.forEach(n => { if (n.source_module) set.add(n.source_module); });
@@ -93,6 +85,8 @@ export default function Notifications() {
 
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
   const typeStats = useMemo(() => getUnreadByType(notifications), [notifications]);
+
+  const handleAction = (route: string) => navigate(route);
 
   return (
     <div className="space-y-6">
@@ -138,7 +132,7 @@ export default function Notifications() {
         />
       </div>
 
-      {/* Tabs + type filter + module filter */}
+      {/* Filters */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <Tabs value={tab} onValueChange={v => setTab(v as 'all' | 'unread')}>
@@ -171,7 +165,6 @@ export default function Notifications() {
           </div>
         </div>
 
-        {/* Module filter */}
         {modules.length > 0 && (
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Módulo:</span>
@@ -189,7 +182,7 @@ export default function Notifications() {
         )}
       </div>
 
-      {/* Grouped notification list */}
+      {/* Grouped list */}
       {groups.length > 0 ? (
         <div className="space-y-6">
           {groups.map(group => (
@@ -201,46 +194,14 @@ export default function Notifications() {
                 <span className="text-[10px] text-muted-foreground/60">{group.items.length}</span>
               </div>
               <div className="space-y-2">
-                {group.items.map(n => {
-                  const cfg = TYPE_CONFIG[n.type];
-                  const Icon = TYPE_ICON[n.type] || Info;
-                  return (
-                    <Card key={n.id} className={cn('group transition-all cursor-pointer border',
-                      !n.is_read ? 'border-primary/20 bg-accent/20 hover:bg-accent/40' : 'border-border hover:bg-muted/30')}
-                      onClick={() => { if (!n.is_read) markRead(n.id); if (n.action_url) navigate(n.action_url); }}>
-                      <CardContent className="p-4 flex gap-3">
-                        <div className={cn('h-9 w-9 rounded-lg flex items-center justify-center shrink-0', cfg.bgColor, cfg.color)}>
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <p className={cn('text-sm font-semibold', !n.is_read ? 'text-foreground' : 'text-muted-foreground')}>{n.title}</p>
-                            <Badge variant="outline" className={cn('text-[9px]', cfg.color)}>{cfg.label}</Badge>
-                            {n.source_module && <span className="text-[9px] text-muted-foreground/50 font-mono">{n.source_module}</span>}
-                          </div>
-                          <p className="text-xs text-muted-foreground">{n.description}</p>
-                          <div className="flex items-center gap-3 mt-2">
-                            <span className="text-[10px] text-muted-foreground/60">{timeAgo(n.created_at)}</span>
-                            {n.action_url && (
-                              <Button variant="ghost" size="sm" className="h-6 text-[11px] gap-1 text-primary px-2"
-                                onClick={(e) => { e.stopPropagation(); navigate(n.action_url!); }}>
-                                Ver <ArrowRight className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-start shrink-0">
-                          {!n.is_read && (
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => { e.stopPropagation(); markRead(n.id); }} title="Marcar como lida">
-                              <CheckCheck className="h-3.5 w-3.5 text-primary" />
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                {group.items.map(n => (
+                  <ActionableNotificationCard
+                    key={n.id}
+                    notification={n}
+                    onRead={markRead}
+                    onAction={handleAction}
+                  />
+                ))}
               </div>
             </div>
           ))}
