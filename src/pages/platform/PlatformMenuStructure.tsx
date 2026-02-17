@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useCallback, useRef, useState, useMemo, type DragEvent } from 'react';
 import { toast } from 'sonner';
 import { saveMenuOrder, getSavedMenuOrder, applyOrder, type SavedMenuOrder } from '@/lib/platform-menu-order';
+import { scanForNewItems, getNewItemIds } from '@/lib/new-items-tracker';
 
 /* ─── Types ─── */
 interface MenuChild {
@@ -125,6 +126,7 @@ export default function PlatformMenuStructure() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [newMenuIds, setNewMenuIds] = useState<Set<string>>(() => getNewItemIds('menus'));
 
   // Drag state
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -140,10 +142,22 @@ export default function PlatformMenuStructure() {
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     setTimeout(() => {
-      setMenuTree(createInitialTree());
+      const tree = createInitialTree();
+      setMenuTree(tree);
+
+      // Scan for new menus: collect all IDs (root + children)
+      const allIds = tree.flatMap(n => [n.id, ...(n.children?.map(c => c.id) ?? [])]);
+      const newFound = scanForNewItems('menus', allIds);
+      setNewMenuIds(getNewItemIds('menus'));
+
       setIsRefreshing(false);
       setHasChanges(false);
-      toast.success(`Estrutura atualizada — ${createInitialTree().length} menus raiz`);
+
+      if (newFound.length > 0) {
+        toast.success(`Varredura completa — ${newFound.length} novo(s) menu(s) encontrado(s)!`);
+      } else {
+        toast.success(`Varredura completa — ${tree.length} menus, nenhum novo detectado`);
+      }
     }, 400);
   }, []);
 
@@ -432,9 +446,14 @@ export default function PlatformMenuStructure() {
                   </div>
 
                   {/* Label */}
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 flex items-center gap-2">
                     <span className="text-sm font-semibold text-foreground">{node.label}</span>
-                    <span className="ml-2 text-[11px] text-muted-foreground font-mono">{node.path}</span>
+                    {newMenuIds.has(node.id) && (
+                      <Badge className="bg-emerald-500 text-white text-[9px] px-1.5 py-0 rounded-full font-bold animate-pulse shadow-sm shadow-emerald-500/30">
+                        NOVO
+                      </Badge>
+                    )}
+                    <span className="text-[11px] text-muted-foreground font-mono">{node.path}</span>
                   </div>
 
                   {/* Badge */}
@@ -483,6 +502,11 @@ export default function PlatformMenuStructure() {
                           <ChevronRight className="h-3 w-3 text-muted-foreground/40 shrink-0" />
 
                           <span className="text-sm text-foreground">{child.label}</span>
+                          {newMenuIds.has(child.id) && (
+                            <Badge className="bg-emerald-500 text-white text-[9px] px-1.5 py-0 rounded-full font-bold animate-pulse shadow-sm shadow-emerald-500/30">
+                              NOVO
+                            </Badge>
+                          )}
                           <span className="text-[11px] text-muted-foreground font-mono ml-auto">{child.path}</span>
                           <span className="text-[10px] font-mono text-muted-foreground/40 w-4 text-right shrink-0">{cIdx + 1}</span>
                         </div>

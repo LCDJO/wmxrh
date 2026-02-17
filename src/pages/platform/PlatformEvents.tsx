@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { buildCatalog, getEventCatalog, getAllDomains, type EventCatalogEntry } from './event-catalog-data';
+import { scanForNewItems, getNewItemIds } from '@/lib/new-items-tracker';
 
 // ── Domain visual metadata ─────────────────────────────────────
 
@@ -53,14 +54,24 @@ export default function PlatformEvents() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [newEventIds, setNewEventIds] = useState<Set<string>>(() => getNewItemIds('events'));
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     setTimeout(() => {
       buildCatalog(); // rebuild from all domain registries
+      const catalog = getEventCatalog();
+      const allEventIds = catalog.map(e => `${e.domain}::${e.eventName}`);
+      const newFound = scanForNewItems('events', allEventIds);
+      setNewEventIds(getNewItemIds('events'));
       setRefreshKey(k => k + 1);
       setIsRefreshing(false);
-      toast.success(`Catálogo atualizado — ${getEventCatalog().length} eventos carregados`);
+
+      if (newFound.length > 0) {
+        toast.success(`Varredura completa — ${newFound.length} novo(s) evento(s) encontrado(s)!`);
+      } else {
+        toast.success(`Varredura completa — ${catalog.length} eventos, nenhum novo detectado`);
+      }
     }, 400);
   }, []);
 
@@ -360,9 +371,16 @@ export default function PlatformEvents() {
                             <Zap className="h-3.5 w-3.5" style={{ color }} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <code className="text-[13px] font-semibold text-foreground tracking-tight">
-                              {ev.eventName}
-                            </code>
+                            <div className="flex items-center gap-2">
+                              <code className="text-[13px] font-semibold text-foreground tracking-tight">
+                                {ev.eventName}
+                              </code>
+                              {newEventIds.has(`${ev.domain}::${ev.eventName}`) && (
+                                <Badge className="bg-emerald-500 text-white text-[9px] px-1.5 py-0 rounded-full font-bold animate-pulse shadow-sm shadow-emerald-500/30">
+                                  NOVO
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground mt-0.5 truncate">
                               {ev.description}
                             </p>
