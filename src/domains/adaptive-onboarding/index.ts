@@ -19,6 +19,7 @@ export { createModuleSetupWizard } from './module-setup-wizard';
 export { createOnboardingProgressTracker, initializeProgress } from './onboarding-progress-tracker';
 export { createExperienceHintsService } from './experience-hints.service';
 export { createAdaptiveOnboardingEngine } from './adaptive-onboarding-engine';
+export { createOnboardingAwareExperience } from './onboarding-experience-bridge';
 
 export type {
   OnboardingPhase,
@@ -35,3 +36,8 @@ export type {
   OnboardingHint,
   AdaptiveOnboardingEngineAPI,
 } from './types';
+
+export type {
+  OnboardingAwareExperienceAPI,
+  OnboardingGateResult,
+} from './onboarding-experience-bridge';
