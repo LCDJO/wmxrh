@@ -147,13 +147,19 @@ export function exportPrometheus(): PrometheusExportResult {
   // ── Billing metrics ─────────────────────────────────────────
   try {
     const billingMetrics = getBillingMetricsSnapshot();
-    collector.gauge('billing_active_subscriptions', billingMetrics.active_subscriptions);
     collector.gauge('billing_mrr_total', billingMetrics.mrr_total);
-    collector.gauge('billing_invoice_errors', billingMetrics.invoice_errors);
+    collector.gauge('billing_active_tenants', billingMetrics.active_tenants);
+    collector.gauge('billing_active_subscriptions', billingMetrics.active_subscriptions);
     collector.gauge('billing_arr_total', billingMetrics.mrr_total * 12);
+    collector.gauge('billing_invoice_errors', billingMetrics.invoice_errors);
     collector.gauge('billing_invoices_paid', billingMetrics.invoices_paid);
     collector.gauge('billing_invoices_pending', billingMetrics.invoices_pending);
     collector.gauge('billing_invoices_overdue', billingMetrics.invoices_overdue);
+
+    // Per-plan usage: billing_plan_usage{plan="enterprise"} 12
+    for (const entry of billingMetrics.plan_usage) {
+      collector.gauge('billing_plan_usage', entry.count, { plan: entry.plan_name, tier: entry.tier });
+    }
   } catch {
     // Billing metrics unavailable — skip
   }
@@ -479,8 +485,10 @@ export function generateDashboardModel(): {
       { title: 'Active Incidents', type: 'stat', metric: 'self_healing_active_incidents', description: 'Currently active incidents', datasource: 'prometheus' },
       { title: 'Avg Recovery Time', type: 'gauge', metric: 'self_healing_avg_recovery_ms', description: 'Average time to auto-recover (ms)', datasource: 'prometheus' },
       // ── Billing panels ────────────────────────────────────────
+      { title: 'MRR Total (BRL)', type: 'stat', metric: 'billing_mrr_total', description: 'Monthly Recurring Revenue (BRL)', datasource: 'prometheus' },
+      { title: 'Active Tenants', type: 'stat', metric: 'billing_active_tenants', description: 'Unique tenants with active subscriptions', datasource: 'prometheus' },
+      { title: 'Plan Usage', type: 'graph', metric: 'billing_plan_usage', description: 'Subscriptions per plan tier (label: plan)', datasource: 'prometheus' },
       { title: 'Active Subscriptions', type: 'stat', metric: 'billing_active_subscriptions', description: 'Total active billing subscriptions', datasource: 'prometheus' },
-      { title: 'MRR Total', type: 'stat', metric: 'billing_mrr_total', description: 'Monthly Recurring Revenue (BRL)', datasource: 'prometheus' },
       { title: 'ARR Total', type: 'stat', metric: 'billing_arr_total', description: 'Annual Recurring Revenue (BRL)', datasource: 'prometheus' },
       { title: 'Invoice Errors', type: 'stat', metric: 'billing_invoice_errors', description: 'Failed/overdue invoices count', datasource: 'prometheus' },
       { title: 'Invoices Paid', type: 'stat', metric: 'billing_invoices_paid', description: 'Total paid invoices', datasource: 'prometheus' },
