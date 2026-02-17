@@ -1,12 +1,114 @@
 /**
- * ConversionAnalyzer — Statistical analysis of experiment results.
- * Calculates significance, lift, and funnels.
+ * ConversionAnalyzer — Statistical analysis + KPI calculators.
+ *
+ * Core KPIs:
+ *  - ConversionRate (signup_completed / page_view)
+ *  - RevenuePerVisitor (total revenue / unique visitors)
+ *  - CTR (cta_click / page_view)
+ *  - FAB Engagement Score (weighted composite of scroll + cta + signup_started)
  */
-import type { ABExperiment, ABVariant, ConversionFunnel, FunnelStep, ExperimentId } from './types';
+import type { ABExperiment, ABVariant, ConversionFunnel, FunnelStep, ExperimentId, ConversionDataPoint } from './types';
 import { abTestingManager } from './ab-testing-manager';
 import { conversionMetricsCollector } from './conversion-metrics-collector';
 
+// ── KPI Result Types ──
+
+export interface ConversionKPIs {
+  conversionRate: number;        // %
+  revenuePerVisitor: number;     // R$
+  ctr: number;                   // %
+  fabEngagementScore: number;    // 0-100
+  pageViews: number;
+  uniqueVisitors: number;
+  totalRevenue: number;
+  ctaClicks: number;
+  signupsStarted: number;
+  signupsCompleted: number;
+}
+
+export interface VariantKPIs extends ConversionKPIs {
+  variantId: string;
+  variantName: string;
+}
+
 class ConversionAnalyzer {
+
+  // ══════════════════════════════════════════════
+  //  KPI CALCULATORS
+  // ══════════════════════════════════════════════
+
+  /** Calculate all KPIs for a landing page */
+  calculateKPIs(landingPageId: string, since?: string): ConversionKPIs {
+    const points = conversionMetricsCollector.getByLandingPage(landingPageId, since);
+    return this.computeKPIs(points);
+  }
+
+  /** Calculate KPIs per variant for an experiment */
+  calculateVariantKPIs(experimentId: ExperimentId): VariantKPIs[] {
+    const exp = abTestingManager.getExperiment(experimentId);
+    const allPoints = conversionMetricsCollector.getByExperiment(experimentId);
+
+    return exp.variants.map(variant => {
+      const variantPoints = allPoints.filter(p => p.variantId === variant.id);
+      const kpis = this.computeKPIs(variantPoints);
+      return { ...kpis, variantId: variant.id, variantName: variant.name };
+    });
+  }
+
+  /** ConversionRate = signup_completed / page_view × 100 */
+  calcConversionRate(points: ConversionDataPoint[]): number {
+    const views = points.filter(p => p.metricType === 'page_view').length;
+    const conversions = points.filter(p => p.metricType === 'signup_completed').length;
+    return views > 0 ? Math.round((conversions / views) * 10000) / 100 : 0;
+  }
+
+  /** RevenuePerVisitor = sum(revenue_generated.value) / unique visitors */
+  calcRevenuePerVisitor(points: ConversionDataPoint[]): number {
+    const uniqueVisitors = new Set(points.map(p => p.visitorId)).size;
+    const totalRevenue = points
+      .filter(p => p.metricType === 'revenue_generated')
+      .reduce((sum, p) => sum + p.value, 0);
+    return uniqueVisitors > 0 ? Math.round((totalRevenue / uniqueVisitors) * 100) / 100 : 0;
+  }
+
+  /** CTR = cta_click / page_view × 100 */
+  calcCTR(points: ConversionDataPoint[]): number {
+    const views = points.filter(p => p.metricType === 'page_view').length;
+    const clicks = points.filter(p => p.metricType === 'cta_click').length;
+    return views > 0 ? Math.round((clicks / views) * 10000) / 100 : 0;
+  }
+
+  /**
+   * FAB Engagement Score (0-100)
+   *
+   * Weighted composite:
+   *  - scroll_depth events  → 30% (measures content consumption)
+   *  - cta_click events     → 40% (measures interest/action)
+   *  - signup_started events → 30% (measures intent)
+   *
+   * Normalized against page_view count.
+   */
+  calcFABEngagementScore(points: ConversionDataPoint[]): number {
+    const views = points.filter(p => p.metricType === 'page_view').length;
+    if (views === 0) return 0;
+
+    const scrolls = points.filter(p => p.metricType === 'scroll_depth').length;
+    const clicks = points.filter(p => p.metricType === 'cta_click').length;
+    const starts = points.filter(p => p.metricType === 'signup_started').length;
+
+    // Rates capped at 1.0 (100%)
+    const scrollRate = Math.min(1, scrolls / views);
+    const clickRate = Math.min(1, clicks / views);
+    const startRate = Math.min(1, starts / views);
+
+    const raw = scrollRate * 30 + clickRate * 40 + startRate * 30;
+    return Math.round(Math.min(100, raw) * 100) / 100;
+  }
+
+  // ══════════════════════════════════════════════
+  //  A/B STATISTICAL ANALYSIS
+  // ══════════════════════════════════════════════
+
   /** Calculate statistical significance between control and a variant */
   calculateSignificance(experimentId: ExperimentId, variantId: string): {
     zScore: number;
@@ -38,7 +140,6 @@ class ConversionAnalyzer {
     const confidence = Math.round((1 - pValue) * 10000) / 100;
     const lift = pcDec > 0 ? Math.round(((pvDec - pcDec) / pcDec) * 10000) / 100 : 0;
 
-    // Update variant confidence
     variant.metrics.confidenceVsControl = confidence;
 
     return {
@@ -53,6 +154,7 @@ class ConversionAnalyzer {
   /** Analyze all variants in an experiment */
   analyzeExperiment(experimentId: ExperimentId): {
     experiment: ABExperiment;
+    kpiComparison: VariantKPIs[];
     results: Array<{
       variant: ABVariant;
       lift: number;
@@ -63,6 +165,8 @@ class ConversionAnalyzer {
     suggestedWinner: string | null;
   } {
     const exp = abTestingManager.getExperiment(experimentId);
+    const kpiComparison = this.calculateVariantKPIs(experimentId);
+
     const results = exp.variants
       .filter(v => !v.isControl)
       .map(v => {
@@ -79,10 +183,15 @@ class ConversionAnalyzer {
 
     return {
       experiment: exp,
+      kpiComparison,
       results,
       suggestedWinner: significantWinners.length > 0 ? significantWinners[0].variant.id : null,
     };
   }
+
+  // ══════════════════════════════════════════════
+  //  FUNNEL
+  // ══════════════════════════════════════════════
 
   /** Build conversion funnel for a landing page */
   buildFunnel(landingPageId: string): ConversionFunnel {
@@ -100,8 +209,7 @@ class ConversionAnalyzer {
 
     const counts = new Map<string, number>();
     for (const dp of dataPoints) {
-      const key = dp.metadata?.type === 'impression' ? 'impression' : dp.metricType;
-      counts.set(key, (counts.get(key) || 0) + 1);
+      counts.set(dp.metricType, (counts.get(dp.metricType) || 0) + 1);
     }
 
     const steps: FunnelStep[] = [];
@@ -114,7 +222,7 @@ class ConversionAnalyzer {
       prevCount = count || prevCount;
     }
 
-    const dropOffPoints = steps.slice(1).map((s, i) => ({
+    const dropOffPoints = steps.slice(1).map((s) => ({
       step: s.name,
       dropRate: Math.round((1 - s.rate / 100) * 10000) / 100,
     })).filter(d => d.dropRate > 20);
@@ -129,7 +237,33 @@ class ConversionAnalyzer {
     };
   }
 
-  // ── Private ──
+  // ══════════════════════════════════════════════
+  //  PRIVATE
+  // ══════════════════════════════════════════════
+
+  private computeKPIs(points: ConversionDataPoint[]): ConversionKPIs {
+    const pageViews = points.filter(p => p.metricType === 'page_view').length;
+    const uniqueVisitors = new Set(points.map(p => p.visitorId)).size;
+    const ctaClicks = points.filter(p => p.metricType === 'cta_click').length;
+    const signupsStarted = points.filter(p => p.metricType === 'signup_started').length;
+    const signupsCompleted = points.filter(p => p.metricType === 'signup_completed').length;
+    const totalRevenue = points
+      .filter(p => p.metricType === 'revenue_generated')
+      .reduce((sum, p) => sum + p.value, 0);
+
+    return {
+      conversionRate: this.calcConversionRate(points),
+      revenuePerVisitor: this.calcRevenuePerVisitor(points),
+      ctr: this.calcCTR(points),
+      fabEngagementScore: this.calcFABEngagementScore(points),
+      pageViews,
+      uniqueVisitors,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      ctaClicks,
+      signupsStarted,
+      signupsCompleted,
+    };
+  }
 
   /** Approximate two-tailed p-value from z-score */
   private zToPValue(z: number): number {
@@ -140,7 +274,7 @@ class ConversionAnalyzer {
     const t = 1.0 / (1.0 + p * z);
     const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-z * z);
     const erf = sign * y;
-    return 1 - (0.5 * (1 + erf)); // two-tailed
+    return 1 - (0.5 * (1 + erf));
   }
 }
 
