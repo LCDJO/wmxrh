@@ -79,6 +79,7 @@ import PlatformReferrals from "./pages/platform/PlatformReferrals";
 import PlatformGamification from "./pages/platform/PlatformGamification";
 import PlatformGrowthAI from "./pages/platform/PlatformGrowthAI";
 import ReferralPage from "./pages/ReferralPage";
+import LandingPagePreview from "./pages/landing/LandingPagePreview";
 
 const queryClient = new QueryClient();
 
@@ -153,6 +154,9 @@ function AppRoutes() {
         <Route path="structure/modules" element={<PlatformModulesCatalog />} />
         <Route path="growth" element={<PlatformGrowthAI />} />
       </Route>
+
+      {/* ═══ LANDING PAGE RENDERER ═══ */}
+      <Route path="/lp/:slug" element={<LandingPagePreview />} />
 
       <Route path="/auth/login" element={<Navigate to="/" replace />} />
       <Route path="/reset-password" element={<ResetPassword />} />
