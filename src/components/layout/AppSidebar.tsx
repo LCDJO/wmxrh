@@ -14,7 +14,7 @@ import {
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
-  Zap, Trophy, Gift,
+  Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -129,6 +129,18 @@ const navStructure: NavEntry[] = [
     children: [
       { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' },
       { to: '/document-signature', icon: FileSignature, label: 'Assinatura de Documentos', key: 'esocial' },
+    ],
+  },
+
+  // ── Suporte ──
+  {
+    id: 'suporte',
+    icon: Headphones,
+    label: 'Suporte',
+    children: [
+      { to: '/support/new', icon: MessageSquarePlus, label: 'Abrir Chamado', key: 'support' },
+      { to: '/support/tickets', icon: Headphones, label: 'Meus Chamados', key: 'support' },
+      { to: '/support/wiki', icon: BookOpen, label: 'Base de Conhecimento', key: 'support' },
     ],
   },
 

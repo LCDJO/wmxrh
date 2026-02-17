@@ -95,6 +95,9 @@ import LandingPublished from "./pages/platform/landing/LandingPublished";
 import ReferralPage from "./pages/ReferralPage";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
 import PlatformVersioning from "./pages/platform/PlatformVersioning";
+import SupportNewTicket from "./pages/support/SupportNewTicket";
+import SupportTickets from "./pages/support/SupportTickets";
+import SupportWiki from "./pages/support/SupportWiki";
 
 const queryClient = new QueryClient();
 
@@ -295,6 +298,15 @@ function AppRoutes() {
           } />
           <Route path="/referral" element={
             <ProtectedRoute navKey="dashboard"><ReferralPage /></ProtectedRoute>
+          } />
+          <Route path="/support/new" element={
+            <ProtectedRoute navKey="support"><SupportNewTicket /></ProtectedRoute>
+          } />
+          <Route path="/support/tickets" element={
+            <ProtectedRoute navKey="support"><SupportTickets /></ProtectedRoute>
+          } />
+          <Route path="/support/wiki" element={
+            <ProtectedRoute navKey="support"><SupportWiki /></ProtectedRoute>
           } />
         </Route>
       )}
