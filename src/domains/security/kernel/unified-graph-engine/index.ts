@@ -15,7 +15,7 @@
 import { graphRegistry } from './graph-registry';
 import { composeUnifiedGraph } from './graph-composer';
 import { analyzeGraph } from './graph-analyzer';
-import { queryGraph } from './graph-query-service';
+import { queryGraph, getUserAccessMap, getTenantAccessOverview, getPermissionUsage } from './graph-query-service';
 import { assessRisk } from './risk-assessment-service';
 import { toVisualizationData } from './graph-visualization-adapter';
 
@@ -68,9 +68,20 @@ export const unifiedGraphEngine = {
     return analyzeGraph(snapshot);
   },
 
-  // ── Query ──
+  // ── Query (low-level) ──
   query(snapshot: UnifiedGraphSnapshot, query: GraphQuery): GraphQueryResult {
     return queryGraph(snapshot, query);
+  },
+
+  // ── Query (high-level) ──
+  getUserAccessMap(snapshot: UnifiedGraphSnapshot, userId: string) {
+    return getUserAccessMap(snapshot, userId);
+  },
+  getTenantAccessOverview(snapshot: UnifiedGraphSnapshot, tenantId: string) {
+    return getTenantAccessOverview(snapshot, tenantId);
+  },
+  getPermissionUsage(snapshot: UnifiedGraphSnapshot, resource: string) {
+    return getPermissionUsage(snapshot, resource);
   },
 
   // ── Risk ──
@@ -118,4 +129,5 @@ export type {
 } from './types';
 export type { AnalysisResult } from './graph-analyzer';
 export type { GraphProvider } from './graph-registry';
+export type { UserAccessMap, TenantAccessOverview, PermissionUsage } from './graph-query-service';
 export { graphRegistry } from './graph-registry';
