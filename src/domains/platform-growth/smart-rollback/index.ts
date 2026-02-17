@@ -12,7 +12,8 @@
 
 export { SmartRollbackEngine, getSmartRollbackEngine, resetSmartRollbackEngine } from './smart-rollback-engine';
 export { ConversionMonitor, conversionMonitor } from './conversion-monitor';
-export { PerformanceComparator, performanceComparator } from './performance-comparator';
+export { PerformanceComparator, performanceComparator, DEFAULT_ROLLBACK_POLICY } from './performance-comparator';
+export type { RollbackPolicy, PerformanceAlert, PerformanceAlertTrigger, PerformanceAlertSeverity } from './performance-comparator';
 export { RollbackDecisionEngine, rollbackDecisionEngine } from './rollback-decision-engine';
 export { RollbackExecutor, rollbackExecutor } from './rollback-executor';
 export { RollbackAuditService, rollbackAuditService } from './rollback-audit-service';
