@@ -29,6 +29,7 @@ import {
   Monitor,
   TrendingUp,
   Rocket,
+  Globe,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -118,6 +119,18 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/growth/fab-builder', label: 'FAB Builder' },
       { to: '/platform/growth/template-engine', label: 'Template Engine' },
       { to: '/platform/growth/version-publish', label: 'Versionamento & Publicação' },
+    ],
+  },
+  {
+    to: '/platform/website',
+    label: 'Website',
+    icon: Globe,
+    requiredPermission: 'billing.view',
+    children: [
+      { to: '/platform/website', label: 'Dashboard' },
+      { to: '/platform/website/ai-designer', label: 'AI Designer' },
+      { to: '/platform/website/templates', label: 'Templates' },
+      { to: '/platform/website/versions', label: 'Versionamento' },
     ],
   },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
