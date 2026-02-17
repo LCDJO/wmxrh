@@ -259,6 +259,20 @@ export function exportPrometheus(): PrometheusExportResult {
     // Versioning engine not initialised — skip
   }
 
+  // ── Support metrics ────────────────────────────────────────
+  try {
+    const { getSupportMetricsSnapshot } = require('./support-metrics-collector') as {
+      getSupportMetricsSnapshot: () => { ticket_total: number; ticket_closed_total: number; agent_score_avg: number; system_score_avg: number };
+    };
+    const sm = getSupportMetricsSnapshot();
+    collector.gauge('support_ticket_total', sm.ticket_total);
+    collector.gauge('support_ticket_closed_total', sm.ticket_closed_total);
+    collector.gauge('support_agent_score_avg', sm.agent_score_avg);
+    collector.gauge('support_system_score_avg', sm.system_score_avg);
+  } catch {
+    // Support metrics unavailable — skip
+  }
+
   const metrics = collector.toPrometheus();
   const text = collector.toPrometheusText();
 
@@ -613,6 +627,11 @@ export function generateDashboardModel(): {
       { title: 'Module Versions', type: 'graph', metric: 'module_version_total', description: 'Total versions per module (label: module)', datasource: 'prometheus' },
       { title: 'Breaking Changes', type: 'graph', metric: 'module_breaking_changes_total', description: 'Breaking change versions per module (label: module)', datasource: 'prometheus' },
       { title: 'Rollback Actions', type: 'stat', metric: 'rollback_actions_total', description: 'Total rollback actions executed', datasource: 'prometheus' },
+      // ── Support panels ─────────────────────────────────────────
+      { title: 'Support Tickets Total', type: 'stat', metric: 'support_ticket_total', description: 'Total support tickets created', datasource: 'prometheus' },
+      { title: 'Tickets Closed', type: 'stat', metric: 'support_ticket_closed_total', description: 'Total resolved/closed tickets', datasource: 'prometheus' },
+      { title: 'Avg Agent Score', type: 'gauge', metric: 'support_agent_score_avg', description: 'Average agent evaluation score (1-5)', datasource: 'prometheus' },
+      { title: 'Avg System Score', type: 'gauge', metric: 'support_system_score_avg', description: 'Average system rating score (1-5)', datasource: 'prometheus' },
       // ── Loki panels ────────────────────────────────────────
       { title: 'Log Stream', type: 'logs', metric: 'logs_total', description: 'Structured log stream from all sources', datasource: 'loki' },
       // ── Tempo panels ───────────────────────────────────────
