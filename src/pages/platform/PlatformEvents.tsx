@@ -42,6 +42,9 @@ const DOMAIN_META: Record<string, { icon: typeof Shield }> = {
   'Platform Cognitive':   { icon: Sparkles },
   'Revenue Intelligence': { icon: TrendingUp },
   'Menu Structure':       { icon: Layers },
+  'Growth AI':            { icon: Sparkles },
+  'Versioning':           { icon: GitMerge },
+  'Usage Metering':       { icon: Activity },
 };
 
 const DEFAULT_DOMAIN_META = { icon: Zap };
