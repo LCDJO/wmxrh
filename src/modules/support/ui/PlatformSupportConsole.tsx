@@ -137,6 +137,20 @@ function AgentDashboard({ userId, onNavigate }: { userId: string; onNavigate: (t
     { label: 'Minhas Avaliações', value: myEvalsCount, icon: Star, color: 'hsl(45 90% 55%)', tab: 'evaluations' },
   ];
 
+  // Performance metrics
+  const myTickets = tickets.filter(t => t.assigned_to === userId);
+  const resolvedByMe = myTickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
+
+  const responseTimesMs = myTickets
+    .filter(t => t.first_response_at)
+    .map(t => new Date(t.first_response_at!).getTime() - new Date(t.created_at).getTime());
+  const avgResponseMin = responseTimesMs.length > 0
+    ? Math.round(responseTimesMs.reduce((a, b) => a + b, 0) / responseTimesMs.length / 60000)
+    : null;
+  const avgResponseLabel = avgResponseMin != null
+    ? avgResponseMin < 60 ? `${avgResponseMin}min` : `${(avgResponseMin / 60).toFixed(1)}h`
+    : '—';
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -159,6 +173,41 @@ function AgentDashboard({ userId, onNavigate }: { userId: string; onNavigate: (t
           );
         })}
       </div>
+
+      {/* Agent Performance Panel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-primary" /> Meu Desempenho
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center py-3 bg-muted/50 rounded-lg">
+              <CheckCircle2 className="h-5 w-5 mx-auto mb-1" style={{ color: 'hsl(145 60% 42%)' }} />
+              <p className="text-2xl font-bold text-foreground">{resolvedByMe}</p>
+              <p className="text-[10px] text-muted-foreground">Tickets Resolvidos</p>
+            </div>
+            <div className="text-center py-3 bg-muted/50 rounded-lg">
+              <Star className="h-5 w-5 mx-auto mb-1" style={{ color: 'hsl(45 90% 55%)' }} />
+              <p className="text-2xl font-bold text-foreground">{avgScore}</p>
+              <p className="text-[10px] text-muted-foreground">Nota Média</p>
+              {myEvalsCount > 0 && (
+                <div className="flex justify-center gap-0.5 mt-1">
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <Star key={n} className="h-2.5 w-2.5" fill={parseFloat(avgScore) >= n ? 'hsl(45 90% 55%)' : 'transparent'} stroke="hsl(45 90% 55%)" />
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="text-center py-3 bg-muted/50 rounded-lg">
+              <Clock className="h-5 w-5 mx-auto mb-1" style={{ color: 'hsl(200 70% 50%)' }} />
+              <p className="text-2xl font-bold text-foreground">{avgResponseLabel}</p>
+              <p className="text-[10px] text-muted-foreground">Tempo Médio Resposta</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* My Evaluations Summary */}
       <Card>
