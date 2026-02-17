@@ -6463,6 +6463,7 @@ export type Database = {
           id: string
           is_featured: boolean
           is_published: boolean
+          module_reference: string | null
           not_helpful_count: number
           published_at: string | null
           slug: string
@@ -6481,6 +6482,7 @@ export type Database = {
           id?: string
           is_featured?: boolean
           is_published?: boolean
+          module_reference?: string | null
           not_helpful_count?: number
           published_at?: string | null
           slug: string
@@ -6499,6 +6501,7 @@ export type Database = {
           id?: string
           is_featured?: boolean
           is_published?: boolean
+          module_reference?: string | null
           not_helpful_count?: number
           published_at?: string | null
           slug?: string

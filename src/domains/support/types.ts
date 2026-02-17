@@ -57,6 +57,7 @@ export interface WikiArticle {
   content_html: string;
   content_plain: string | null;
   tags: string[];
+  module_reference: string | null;
   is_published: boolean;
   is_featured: boolean;
   view_count: number;
