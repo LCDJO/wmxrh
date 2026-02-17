@@ -11,6 +11,7 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 import { platformEvents } from '@/domains/platform/platform-events';
+import { getMetricsCollector } from '@/domains/observability/metrics-collector';
 
 // ═══════════════════════════════════
 // Types
@@ -83,6 +84,31 @@ class LandingAuditLogService {
 
     // 2. Emit platform event
     this.emitEvent(entry);
+
+    // 3. Observability: increment Prometheus-compatible counters
+    this.recordMetric(entry);
+  }
+
+  // ── Observability ──────────────────────────────
+
+  private recordMetric(entry: LandingAuditEntry): void {
+    const mc = getMetricsCollector();
+    const labels = { landing_page_id: entry.landing_page_id };
+
+    switch (entry.action_type) {
+      case 'version_created':
+        mc.increment('landing_versions_total', labels);
+        break;
+      case 'draft_deleted':
+        mc.increment('landing_draft_deleted_total', labels);
+        break;
+      case 'version_published':
+        mc.increment('landing_publish_new_version_total', labels);
+        break;
+      case 'version_superseded':
+        // No dedicated counter requested, but tracked via landing_versions_total lifecycle
+        break;
+    }
   }
 
   // ── Convenience methods ──────────────────────────
