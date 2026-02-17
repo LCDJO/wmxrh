@@ -4473,6 +4473,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          program_id: string | null
           referrer_user_id: string
           total_clicks: number
           total_conversions: number
@@ -4486,6 +4487,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          program_id?: string | null
           referrer_user_id: string
           total_clicks?: number
           total_conversions?: number
@@ -4499,6 +4501,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          program_id?: string | null
           referrer_user_id?: string
           total_clicks?: number
           total_conversions?: number
@@ -4506,6 +4509,68 @@ export type Database = {
           total_signups?: number
           updated_at?: string
           url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_links_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "referral_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_programs: {
+        Row: {
+          conditions: Json
+          created_at: string
+          created_by: string | null
+          current_redemptions: number
+          description: string | null
+          id: string
+          is_active: boolean
+          max_redemptions: number | null
+          min_plan_tier: string | null
+          name: string
+          reward_type: string
+          reward_value: number
+          updated_at: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          current_redemptions?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_redemptions?: number | null
+          min_plan_tier?: string | null
+          name: string
+          reward_type?: string
+          reward_value?: number
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          current_redemptions?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_redemptions?: number | null
+          min_plan_tier?: string | null
+          name?: string
+          reward_type?: string
+          reward_value?: number
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
         }
         Relationships: []
       }

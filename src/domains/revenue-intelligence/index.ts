@@ -7,6 +7,7 @@ export type {
   UpgradeCandidate,
   ReferralLink,
   ReferralTracking,
+  ReferralProgram,
   GamificationTier,
   GamificationLeaderboardEntry,
 } from './types';

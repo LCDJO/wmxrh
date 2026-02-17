@@ -24,6 +24,7 @@ import type {
   UpgradeCandidate,
   ReferralLink,
   ReferralTracking,
+  ReferralProgram,
   GamificationLeaderboardEntry,
   GamificationPointEntry,
   GamificationTier,
@@ -494,13 +495,50 @@ function generateReferralCode(): string {
 
 export function createReferralManager(): ReferralManagerAPI {
   return {
-    async generateLink(userId) {
+    // ── Programs ──
+    async createProgram(program) {
+      const { data, error } = await supabase
+        .from('referral_programs')
+        .insert({
+          name: program.name,
+          description: program.description,
+          reward_type: program.reward_type,
+          reward_value: program.reward_value,
+          conditions: program.conditions as any,
+          is_active: program.is_active,
+          min_plan_tier: program.min_plan_tier,
+          max_redemptions: program.max_redemptions,
+          valid_from: program.valid_from,
+          valid_until: program.valid_until,
+        })
+        .select()
+        .single();
+      if (error) throw new Error(`createProgram: ${error.message}`);
+      return data as unknown as ReferralProgram;
+    },
+
+    async getPrograms(activeOnly = true) {
+      let query = supabase.from('referral_programs').select('*').order('created_at', { ascending: false });
+      if (activeOnly) query = query.eq('is_active', true);
+      const { data } = await query;
+      return (data ?? []) as unknown as ReferralProgram[];
+    },
+
+    async updateProgram(id, updates) {
+      await supabase
+        .from('referral_programs')
+        .update({ ...updates, updated_at: new Date().toISOString() } as any)
+        .eq('id', id);
+    },
+
+    // ── Links ──
+    async generateLink(userId, programId) {
       const code = generateReferralCode();
       const url = `${window.location.origin}/signup?ref=${code}`;
 
       const { data, error } = await supabase
         .from('referral_links')
-        .insert({ referrer_user_id: userId, code, url })
+        .insert({ referrer_user_id: userId, code, url, program_id: programId ?? null } as any)
         .select()
         .single();
 
