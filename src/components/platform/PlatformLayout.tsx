@@ -97,7 +97,9 @@ const NAV_ITEMS: PlatformNavItem[] = [
     requiredPermission: 'billing.view',
     children: [
       { to: '/platform/revenue', label: 'Visão Geral' },
-      { to: '/platform/revenue/intelligence', label: 'Intelligence & Referrals' },
+      { to: '/platform/referrals', label: 'Referrals' },
+      { to: '/platform/gamification', label: 'Gamificação' },
+      { to: '/platform/revenue/intelligence', label: 'Intelligence' },
     ],
   },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
