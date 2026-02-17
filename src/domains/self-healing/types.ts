@@ -104,6 +104,7 @@ export interface HealingAuditEntry {
   incident_id: string;
   action_type: RecoveryActionType;
   target_module: string;
+  triggered_by: 'auto' | 'manual';
   result: RecoveryResult;
   executed_at: number;
   duration_ms: number;
