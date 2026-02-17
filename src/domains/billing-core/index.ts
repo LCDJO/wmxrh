@@ -10,7 +10,11 @@
  * ║   ├── SubscriptionLifecycleManager← Lifecycle de assinatura    ║
  * ║   ├── FinancialLedgerAdapter      ← Registro contábil          ║
  * ║   ├── InvoiceEngine               ← Geração de faturas         ║
- * ║   └── RevenueMetricsService       ← MRR, churn, receita        ║
+ * ║   ├── RevenueMetricsService       ← MRR, churn, receita        ║
+ * ║   ├── UsageBillingEngine          ← Cobrança por uso           ║
+ * ║   ├── CouponManager              ← CRUD cupons                 ║
+ * ║   ├── DiscountEngine              ← Aplicação de descontos     ║
+ * ║   └── BillingAdjustmentService    ← Ajustes financeiros        ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
@@ -23,6 +27,14 @@ export { createFinancialLedgerAdapter } from './financial-ledger-adapter';
 export { createInvoiceEngine } from './invoice-engine';
 export { createRevenueMetricsService } from './revenue-metrics-service';
 export { createSubscriptionLifecycleManager } from './subscription-lifecycle-manager';
+export { createUsageBillingEngine } from './usage-billing-engine';
+export {
+  createCouponManager,
+  createCouponValidationService,
+  createCouponLifecycleManager,
+  createDiscountEngine,
+  createBillingAdjustmentService,
+} from './coupon-discount-engine';
 
 // ── Domain Events ────────────────────────────────────────────
 export {
@@ -67,6 +79,32 @@ export type {
   // Revenue Metrics
   RevenueMetrics,
   RevenueMetricsServiceAPI,
+
+  // Usage-Based Billing
+  UsageRecord,
+  UsageAggregate,
+  UsagePricingTier,
+  UsageCostLineItem,
+  UsageCostBreakdown,
+  UsageCollectorAPI,
+  UsageAggregatorAPI,
+  UsagePricingCalculatorAPI,
+  UsageBillingEngineAPI,
+
+  // Coupons & Discounts
+  Coupon,
+  CouponStatus,
+  DiscountType,
+  CreateCouponDTO,
+  CouponRedemption,
+  CouponValidationResult,
+  DiscountApplication,
+  BillingAdjustment,
+  CouponManagerAPI,
+  CouponValidationServiceAPI,
+  CouponLifecycleManagerAPI,
+  DiscountEngineAPI,
+  BillingAdjustmentServiceAPI,
 
   // Aggregate
   PlatformBillingCoreAPI,
