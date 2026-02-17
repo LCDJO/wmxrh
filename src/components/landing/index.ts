@@ -17,3 +17,4 @@ export { ReferralCTA } from './ReferralCTA';
 export { TestimonialsSection } from './TestimonialsSection';
 export { FAQSection } from './FAQSection';
 export { FooterSection } from './FooterSection';
+export { LandingPageRenderer } from './LandingPageRenderer';
