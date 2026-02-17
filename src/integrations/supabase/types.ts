@@ -3754,6 +3754,53 @@ export type Database = {
           },
         ]
       }
+      landing_page_versions: {
+        Row: {
+          content_snapshot: Json
+          created_at: string
+          created_by: string | null
+          fab_snapshot: Json
+          id: string
+          landing_page_id: string
+          seo_snapshot: Json
+          status: string
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          content_snapshot?: Json
+          created_at?: string
+          created_by?: string | null
+          fab_snapshot?: Json
+          id?: string
+          landing_page_id: string
+          seo_snapshot?: Json
+          status?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          content_snapshot?: Json
+          created_at?: string
+          created_by?: string | null
+          fab_snapshot?: Json
+          id?: string
+          landing_page_id?: string
+          seo_snapshot?: Json
+          status?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_page_versions_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       landing_pages: {
         Row: {
           analytics: Json
