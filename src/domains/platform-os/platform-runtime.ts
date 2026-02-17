@@ -40,6 +40,7 @@ import { installEventBridges } from './event-bridges';
 import { PLATFORM_EVENTS } from './platform-events';
 import { createPlatformExperienceEngine } from '@/domains/platform-experience';
 import type { PlatformBootstrappedPayload } from './platform-events';
+import { getSelfHealingEngine } from '@/domains/self-healing';
 
 // ── Security Kernel imports ──────────────────────────────────────
 import {
@@ -208,6 +209,16 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
       // ── 5. Install ALL domain event bridges → GlobalEventKernel
       const teardownBridges = installEventBridges(events);
       disposers.push(teardownBridges);
+
+      // ── 6. Start Self-Healing Engine ──────────────────────────
+      const selfHealing = getSelfHealingEngine(events, modules);
+      selfHealing.start();
+      services.register('SelfHealingEngine', selfHealing, {
+        version: '1.0.0',
+        capabilities: ['self-healing:detect', 'self-healing:recover', 'self-healing:circuit-break'],
+        required_permissions: ['platform:monitoring:read'],
+      });
+      disposers.push(() => selfHealing.stop());
 
       bootedAt = Date.now();
       phase = 'ready';
