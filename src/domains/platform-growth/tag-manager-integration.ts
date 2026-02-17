@@ -22,12 +22,11 @@ export class TagManagerIntegration {
 
   private getDefaultEvents(): TagManagerEvent[] {
     return [
-      { name: 'page_view', trigger: 'on_load', category: 'engagement' },
+      { name: 'landing_page_view', trigger: 'on_load', category: 'engagement' },
       { name: 'cta_click', trigger: 'on_click', category: 'conversion', label: 'primary_cta' },
-      { name: 'pricing_view', trigger: 'on_scroll', category: 'engagement', label: 'pricing_section' },
-      { name: 'signup_start', trigger: 'on_submit', category: 'conversion' },
-      { name: 'signup_complete', trigger: 'on_redirect', category: 'conversion' },
-      { name: 'referral_click', trigger: 'on_click', category: 'referral', label: 'referral_link' },
+      { name: 'signup_started', trigger: 'on_submit', category: 'conversion' },
+      { name: 'signup_completed', trigger: 'on_redirect', category: 'conversion' },
+      { name: 'plan_selected', trigger: 'on_click', category: 'conversion', label: 'pricing_plan' },
     ];
   }
 
