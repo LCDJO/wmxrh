@@ -77,6 +77,7 @@ import PlatformModulesCatalog from "./pages/platform/PlatformModulesCatalog";
 import PlatformRevenueIntelligence from "./pages/platform/PlatformRevenueIntelligence";
 import PlatformReferrals from "./pages/platform/PlatformReferrals";
 import PlatformGamification from "./pages/platform/PlatformGamification";
+import PlatformGrowthAI from "./pages/platform/PlatformGrowthAI";
 import ReferralPage from "./pages/ReferralPage";
 
 const queryClient = new QueryClient();
@@ -150,6 +151,7 @@ function AppRoutes() {
         <Route path="structure/events" element={<PlatformEvents />} />
         <Route path="structure/menus" element={<PlatformMenuStructure />} />
         <Route path="structure/modules" element={<PlatformModulesCatalog />} />
+        <Route path="growth" element={<PlatformGrowthAI />} />
       </Route>
 
       <Route path="/auth/login" element={<Navigate to="/" replace />} />
