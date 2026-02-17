@@ -72,6 +72,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/monitoring/modules', label: 'Módulos' },
       { to: '/platform/monitoring/errors', label: 'Erros' },
       { to: '/platform/monitoring/performance', label: 'Performance' },
+      { to: '/platform/monitoring/incidents', label: 'Incidentes' },
     ],
   },
   { to: '/platform/observability', label: 'Observability', icon: Activity, requiredPermission: 'security.view' },

@@ -6,16 +6,18 @@
  *   /platform/monitoring/modules  → Monitoramento de Módulos
  *   /platform/monitoring/errors   → Erros da Aplicação
  *   /platform/monitoring/performance → Performance
+ *   /platform/monitoring/incidents   → Incidentes Self-Healing
  */
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Activity, Heart, Server, Bug, Cpu, Loader2 } from 'lucide-react';
+import { Activity, Heart, Server, Bug, Cpu, Loader2, ShieldAlert } from 'lucide-react';
 
 const PlatformStatusPanel = lazy(() => import('@/modules/observability/ui/PlatformStatusPanel'));
 const ModuleMonitoringPanel = lazy(() => import('@/modules/observability/ui/ModuleMonitoringPanel'));
 const ErrorTrackingPanel = lazy(() => import('@/modules/observability/ui/ErrorTrackingPanel'));
 const PerformancePanel = lazy(() => import('@/modules/observability/ui/PerformancePanel'));
+const IncidentsPanel = lazy(() => import('@/modules/observability/ui/IncidentsPanel'));
 
 function PanelLoader() {
   return (
@@ -26,16 +28,18 @@ function PanelLoader() {
 }
 
 const TABS = [
-  { value: '', label: 'Status da Plataforma', icon: Heart, path: '' },
+  { value: '', label: 'Status', icon: Heart, path: '' },
   { value: 'modules', label: 'Módulos', icon: Server, path: 'modules' },
   { value: 'errors', label: 'Erros', icon: Bug, path: 'errors' },
   { value: 'performance', label: 'Performance', icon: Cpu, path: 'performance' },
+  { value: 'incidents', label: 'Incidentes', icon: ShieldAlert, path: 'incidents' },
 ] as const;
 
 function resolveTab(pathname: string): string {
   if (pathname.endsWith('/modules')) return 'modules';
   if (pathname.endsWith('/errors')) return 'errors';
   if (pathname.endsWith('/performance')) return 'performance';
+  if (pathname.endsWith('/incidents')) return 'incidents';
   return '';
 }
 
@@ -64,7 +68,7 @@ export default function PlatformMonitoring() {
 
       {/* Tab Navigation synced with routes */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-4 max-w-xl">
+        <TabsList className="grid w-full grid-cols-5 max-w-2xl">
           {TABS.map(tab => {
             const Icon = tab.icon;
             return (
@@ -83,6 +87,7 @@ export default function PlatformMonitoring() {
           <Route path="modules" element={<ModuleMonitoringPanel />} />
           <Route path="errors" element={<ErrorTrackingPanel />} />
           <Route path="performance" element={<PerformancePanel />} />
+          <Route path="incidents" element={<IncidentsPanel />} />
         </Routes>
       </Suspense>
     </div>
