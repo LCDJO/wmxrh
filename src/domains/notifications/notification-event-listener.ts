@@ -14,6 +14,7 @@ import {
   type NotificationScope,
   type NotificationEventType,
 } from './notification-policy-resolver';
+import { notificationAggregator } from './notification-aggregator';
 import { onIAMEvent } from '@/domains/iam/iam.events';
 import { onIBLEvent } from '@/domains/security/kernel/ibl/domain-events';
 import { onSecurityEvent } from '@/domains/security/security-events';
@@ -45,16 +46,23 @@ async function fireToPolicy(
     });
 
     const recipients = await notificationPolicyResolver.resolve(policy);
+    const baseDto: CreateNotificationDTO = {
+      ...notification,
+      tenant_id: scope.tenantId,
+    };
 
-    await Promise.allSettled(
-      recipients.map(r =>
-        notificationDispatcher.create({
-          ...notification,
-          tenant_id: scope.tenantId,
-          user_id: r.userId,
-        }),
-      ),
-    );
+    // Try aggregation first (batches similar events in a time window)
+    const recipientIds = recipients.map(r => r.userId);
+    const aggregated = notificationAggregator.submit(eventType, baseDto, recipientIds);
+
+    if (!aggregated) {
+      // No aggregation rule — send immediately to each recipient
+      await Promise.allSettled(
+        recipients.map(r =>
+          notificationDispatcher.create({ ...baseDto, user_id: r.userId }),
+        ),
+      );
+    }
   } catch (err) {
     console.warn('[NotificationEventListener] policy dispatch failed:', err);
   }
