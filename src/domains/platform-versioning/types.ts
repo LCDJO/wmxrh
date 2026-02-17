@@ -14,18 +14,23 @@ export interface SemanticVersion {
 }
 
 // ── Platform Version ──
+export type PlatformReleaseType = 'feature' | 'fix' | 'security' | 'improvement';
+
 export interface PlatformVersion {
   id: string;
   version: SemanticVersion;
-  label: string;             // e.g. "v3.2.0 — Titan"
-  codename?: string;
+  version_tag: string;                // "vMAJOR.MINOR.PATCH"
+  title: string;
+  description: string;
+  release_type: PlatformReleaseType;
+  modules_included: string[];         // module keys included in this version
   status: ReleaseStatus;
-  release_id?: string;       // linked Release
+  release_id?: string;                // linked Release
   changelog_entries: string[];
+  released_by: string;
+  released_at: string | null;
   created_at: string;
-  created_by: string;
-  published_at?: string;
-  rollback_from?: string;    // version id it rolled back from
+  rollback_from?: string;
 }
 
 // ── Module Version ──

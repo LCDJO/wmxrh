@@ -1,7 +1,7 @@
 /**
  * PlatformVersionRegistry — Tracks the platform's own version history.
  */
-import type { PlatformVersion, SemanticVersion, ReleaseStatus } from './types';
+import type { PlatformVersion, SemanticVersion, ReleaseStatus, PlatformReleaseType } from './types';
 import { formatVersion, versionId } from './version-utils';
 
 export class PlatformVersionRegistry {
@@ -9,19 +9,30 @@ export class PlatformVersionRegistry {
 
   register(
     version: SemanticVersion,
-    createdBy: string,
-    opts?: { codename?: string; release_id?: string; changelog_entries?: string[] },
+    releasedBy: string,
+    opts: {
+      title: string;
+      description: string;
+      release_type: PlatformReleaseType;
+      modules_included?: string[];
+      release_id?: string;
+      changelog_entries?: string[];
+    },
   ): PlatformVersion {
     const pv: PlatformVersion = {
       id: versionId(),
       version,
-      label: `v${formatVersion(version)}${opts?.codename ? ` — ${opts.codename}` : ''}`,
-      codename: opts?.codename,
+      version_tag: `v${formatVersion(version)}`,
+      title: opts.title,
+      description: opts.description,
+      release_type: opts.release_type,
+      modules_included: opts.modules_included ?? [],
       status: 'draft',
-      release_id: opts?.release_id,
-      changelog_entries: opts?.changelog_entries ?? [],
+      release_id: opts.release_id,
+      changelog_entries: opts.changelog_entries ?? [],
+      released_by: releasedBy,
+      released_at: null,
       created_at: new Date().toISOString(),
-      created_by: createdBy,
     };
     this.versions.push(pv);
     return pv;
@@ -31,7 +42,7 @@ export class PlatformVersionRegistry {
     const v = this.versions.find(x => x.id === versionId);
     if (!v || v.status === 'published') return null;
     v.status = 'published';
-    v.published_at = new Date().toISOString();
+    v.released_at = new Date().toISOString();
     return v;
   }
 
