@@ -11,12 +11,25 @@ export type WebsiteBlockType =
   | 'testimonial-slider'
   | 'faq-accordion';
 
+export type Viewport = 'desktop' | 'tablet' | 'mobile';
+
+/** Per-breakpoint layout overrides */
+export interface BreakpointOverrides {
+  columns?: number;
+  layout?: 'horizontal' | 'vertical' | 'stacked';
+  padding?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  hidden?: boolean;
+}
+
 export interface WebsiteBlock {
   id: string;
   type: WebsiteBlockType;
   order: number;
   content: Record<string, unknown>;
   styling?: Record<string, string>;
+  /** Per-breakpoint overrides — keys are Viewport values */
+  responsive?: Partial<Record<Viewport, BreakpointOverrides>>;
 }
 
 export interface BlockDefinition {

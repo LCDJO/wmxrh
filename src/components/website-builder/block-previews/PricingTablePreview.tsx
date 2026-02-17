@@ -1,4 +1,6 @@
 import { Check } from 'lucide-react';
+import type { Viewport, BreakpointOverrides } from '@/domains/website-builder/types';
+import { getGridCols } from '@/domains/website-builder/responsive-layout-engine';
 
 interface Plan {
   name: string;
@@ -10,17 +12,20 @@ interface Plan {
 
 interface Props {
   content: Record<string, unknown>;
+  viewport: Viewport;
+  breakpoint: BreakpointOverrides;
 }
 
-export function PricingTablePreview({ content }: Props) {
+export function PricingTablePreview({ content, breakpoint }: Props) {
   const plans = (content.plans as Plan[]) || [];
+  const cols = breakpoint.columns ?? 3;
 
   return (
-    <div className="space-y-4 p-6">
+    <div className={`space-y-4 ${breakpoint.padding ?? 'p-6'}`}>
       <h3 className="text-lg font-bold font-display text-foreground text-center">
         {(content.title as string) || 'Planos'}
       </h3>
-      <div className="grid grid-cols-3 gap-3">
+      <div className={`grid gap-3 ${getGridCols(cols)}`}>
         {plans.map((plan, i) => (
           <div
             key={i}

@@ -1,15 +1,16 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2 } from 'lucide-react';
-import type { WebsiteBlock } from '@/domains/website-builder/types';
+import type { WebsiteBlock, Viewport } from '@/domains/website-builder/types';
 import { BlockRenderer } from './BlockRenderer';
 
 interface Props {
   block: WebsiteBlock;
+  viewport: Viewport;
   onRemove: (id: string) => void;
 }
 
-export function SortableBlock({ block, onRemove }: Props) {
+export function SortableBlock({ block, viewport, onRemove }: Props) {
   const {
     attributes,
     listeners,
@@ -53,7 +54,7 @@ export function SortableBlock({ block, onRemove }: Props) {
         </button>
       </div>
 
-      <BlockRenderer block={block} />
+      <BlockRenderer block={block} viewport={viewport} />
     </div>
   );
 }
