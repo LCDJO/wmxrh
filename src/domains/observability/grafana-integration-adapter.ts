@@ -163,12 +163,64 @@ export function exportPrometheus(): PrometheusExportResult {
     // Billing metrics unavailable — skip
   }
 
-  // ── Growth / Website metrics ──────────────────────────────────
-  // Note: collectGrowthMetrics is async, so we trigger it as fire-and-forget
-  // to populate the collector. The actual metric values come from the
-  // recordPageView/recordConversion/recordFABClick/recordAIHeadline
-  // instrument calls made throughout the app lifecycle.
-  // The collector already has accumulated values from those calls.
+  // ── Marketing / A/B Testing metrics ──────────────────────────
+  try {
+    const { abTestingManager } = require('@/domains/platform-growth/autonomous-marketing/ab-testing-manager') as {
+      abTestingManager: { listByStatus: (s: string) => Array<{
+        id: string; name: string; landingPageId: string; variants: Array<{
+          id: string; name: string; isControl: boolean;
+          metrics: { impressions: number; conversions: number; conversionRate: number; revenue: number; bounceRate: number };
+        }>;
+      }> };
+    };
+
+    const running = abTestingManager.listByStatus('running');
+    const completed = abTestingManager.listByStatus('completed');
+    const allExperiments = [...running, ...completed];
+
+    // landing_ab_experiment_total
+    collector.gauge('landing_ab_experiment_total', allExperiments.length);
+    collector.gauge('landing_ab_experiment_running', running.length);
+    collector.gauge('landing_ab_experiment_completed', completed.length);
+
+    // Per-variant metrics
+    for (const exp of allExperiments) {
+      for (const v of exp.variants) {
+        const labels = {
+          experiment: exp.name,
+          experiment_id: exp.id,
+          variant: v.name,
+          variant_id: v.id,
+          is_control: String(v.isControl),
+          page_id: exp.landingPageId,
+        };
+
+        // landing_variant_conversion_rate{variant="A"} 0.18
+        collector.gauge('landing_variant_conversion_rate', v.metrics.conversionRate / 100, labels);
+
+        // landing_revenue_generated per variant
+        collector.gauge('landing_revenue_generated', v.metrics.revenue, labels);
+
+        // Impressions & conversions as counters
+        collector.gauge('landing_variant_impressions_total', v.metrics.impressions, labels);
+        collector.gauge('landing_variant_conversions_total', v.metrics.conversions, labels);
+
+        // fab_engagement_score — composite: (1 - bounceRate) * conversionRate
+        const engagementScore = v.metrics.impressions > 0
+          ? Math.round(((1 - v.metrics.bounceRate / 100) * v.metrics.conversionRate) * 100) / 100
+          : 0;
+        collector.gauge('fab_engagement_score', engagementScore, labels);
+      }
+    }
+
+    // Aggregate landing_revenue_generated across all experiments
+    const totalExpRevenue = allExperiments.reduce(
+      (s, exp) => s + exp.variants.reduce((vs, v) => vs + v.metrics.revenue, 0), 0,
+    );
+    collector.gauge('landing_revenue_generated_total', totalExpRevenue);
+  } catch {
+    // Marketing metrics unavailable — skip
+  }
 
   const metrics = collector.toPrometheus();
   const text = collector.toPrometheusText();
@@ -510,6 +562,15 @@ export function generateDashboardModel(): {
       { title: 'LP Conversions', type: 'graph', metric: 'landing_conversion_total', description: 'Conversions by page and type (labels: page, type)', datasource: 'prometheus' },
       { title: 'FAB CTA Clicks', type: 'graph', metric: 'fab_cta_click_total', description: 'CTA clicks per page/section (labels: page, section)', datasource: 'prometheus' },
       { title: 'Revenue by LP', type: 'stat', metric: 'revenue_by_landing', description: 'Revenue attributed to each landing page (label: page)', datasource: 'prometheus' },
+      // ── Marketing / A/B Testing panels ─────────────────────────
+      { title: 'A/B Experiments Total', type: 'stat', metric: 'landing_ab_experiment_total', description: 'Total A/B experiments (running + completed)', datasource: 'prometheus' },
+      { title: 'A/B Experiments Running', type: 'stat', metric: 'landing_ab_experiment_running', description: 'Currently running A/B experiments', datasource: 'prometheus' },
+      { title: 'Variant Conversion Rate', type: 'graph', metric: 'landing_variant_conversion_rate', description: 'Conversion rate per variant (labels: experiment, variant)', datasource: 'prometheus' },
+      { title: 'Revenue per Variant', type: 'graph', metric: 'landing_revenue_generated', description: 'Revenue attributed per experiment variant (labels: experiment, variant)', datasource: 'prometheus' },
+      { title: 'Total Experiment Revenue', type: 'stat', metric: 'landing_revenue_generated_total', description: 'Aggregate revenue across all experiments', datasource: 'prometheus' },
+      { title: 'FAB Engagement Score', type: 'gauge', metric: 'fab_engagement_score', description: 'Composite engagement score per variant: (1-bounceRate) × conversionRate', datasource: 'prometheus' },
+      { title: 'Variant Impressions', type: 'graph', metric: 'landing_variant_impressions_total', description: 'Total impressions per variant (labels: experiment, variant)', datasource: 'prometheus' },
+      { title: 'Variant Conversions', type: 'graph', metric: 'landing_variant_conversions_total', description: 'Total conversions per variant (labels: experiment, variant)', datasource: 'prometheus' },
       // ── Loki panels ────────────────────────────────────────
       { title: 'Log Stream', type: 'logs', metric: 'logs_total', description: 'Structured log stream from all sources', datasource: 'loki' },
       // ── Tempo panels ───────────────────────────────────────
