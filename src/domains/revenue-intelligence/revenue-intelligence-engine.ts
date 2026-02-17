@@ -67,14 +67,24 @@ export function createRewardCalculator(): RewardCalculatorAPI {
 export function createRevenueAnalyzer(): RevenueAnalyzerAPI {
   return {
     async getMetrics(): Promise<RevenueMetrics> {
-      const [tpRes, invRes] = await Promise.all([
-        supabase.from('tenant_plans').select('*, saas_plans(price)').eq('status', 'active'),
-        supabase.from('invoices').select('total_amount, status, paid_at, created_at').eq('status', 'paid').order('created_at', { ascending: false }).limit(500),
+      // Fetch ALL real data sources in parallel
+      const [tpRes, invRes, ledgerRes, usageRes, allPlansRes, cancelledRes] = await Promise.all([
+        supabase.from('tenant_plans').select('*, saas_plans(name, price)').eq('status', 'active'),
+        supabase.from('invoices').select('total_amount, status, paid_at, created_at, plan_id').eq('status', 'paid').order('created_at', { ascending: false }).limit(1000),
+        supabase.from('platform_financial_entries').select('entry_type, amount, tenant_id, source_plan_id, created_at'),
+        supabase.from('usage_records').select('tenant_id, metric_key, quantity, module_id, metadata, created_at'),
+        supabase.from('saas_plans').select('id, name, price').eq('is_active', true),
+        supabase.from('tenant_plans').select('id').eq('status', 'cancelled'),
       ]);
 
       const activePlans = tpRes.data ?? [];
       const invoices = invRes.data ?? [];
+      const ledger = ledgerRes.data ?? [];
+      const usageRecords = usageRes.data ?? [];
+      const allPlans = allPlansRes.data ?? [];
+      const cancelledCount = cancelledRes.data?.length ?? 0;
 
+      // ── MRR from active plans ──
       const mrr = activePlans.reduce((s, tp) => {
         const price = Number((tp as any).saas_plans?.price ?? 0);
         const cycle = tp.billing_cycle;
@@ -87,11 +97,12 @@ export function createRevenueAnalyzer(): RevenueAnalyzerAPI {
       const paying = activePlans.length;
       const arpa = paying > 0 ? mrr / paying : 0;
 
-      // Simple churn calculation: cancelled plans / total plans
-      const churnRate = paying > 0 ? 0 : 0; // will be refined with real data
-      const ltv = arpa > 0 && churnRate > 0 ? arpa / churnRate : arpa * 24;
+      // ── Churn from cancelled vs total ──
+      const totalPlans = paying + cancelledCount;
+      const churnRate = totalPlans > 0 ? Math.round((cancelledCount / totalPlans) * 1000) / 10 : 0;
+      const ltv = arpa > 0 && churnRate > 0 ? arpa / (churnRate / 100) : arpa * 24;
 
-      // Growth: compare current month invoices vs previous
+      // ── Growth: current vs previous month (from invoices) ──
       const now = new Date();
       const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -101,15 +112,53 @@ export function createRevenueAnalyzer(): RevenueAnalyzerAPI {
       const prevRevenue = invoices.filter(i => i.paid_at?.startsWith(prevMonth)).reduce((s, i) => s + Number(i.total_amount), 0);
       const growthRate = prevRevenue > 0 ? ((thisRevenue - prevRevenue) / prevRevenue) * 100 : 0;
 
+      // ── Revenue by Plan (from active plans) ──
+      const planMap = new Map<string, { mrr: number; tenants: number }>();
+      for (const tp of activePlans) {
+        const planName = (tp as any).saas_plans?.name ?? 'Desconhecido';
+        const price = Number((tp as any).saas_plans?.price ?? 0);
+        const cycle = tp.billing_cycle;
+        const monthly = cycle === 'annual' || cycle === 'yearly' ? price / 12 : cycle === 'quarterly' ? price / 3 : price;
+        const entry = planMap.get(planName) ?? { mrr: 0, tenants: 0 };
+        entry.mrr += monthly;
+        entry.tenants++;
+        planMap.set(planName, entry);
+      }
+      const revenue_by_plan = [...planMap.entries()].map(([plan_name, v]) => ({
+        plan_name, mrr: Math.round(v.mrr * 100) / 100, tenants: v.tenants,
+      })).sort((a, b) => b.mrr - a.mrr);
+
+      // ── Revenue by Module (from usage_records) ──
+      const moduleMap = new Map<string, { total_brl: number; records: number }>();
+      for (const ur of usageRecords) {
+        const mod = ur.module_id ?? 'unknown';
+        const entry = moduleMap.get(mod) ?? { total_brl: 0, records: 0 };
+        entry.total_brl += Number(ur.quantity ?? 0);
+        entry.records++;
+        moduleMap.set(mod, entry);
+      }
+      const revenue_by_module = [...moduleMap.entries()].map(([module_id, v]) => ({
+        module_id, total_brl: Math.round(v.total_brl * 100) / 100, records: v.records,
+      })).sort((a, b) => b.total_brl - a.total_brl);
+
+      // ── Ledger total (from platform_financial_entries) ──
+      const ledger_total_brl = ledger.reduce((s, e) => {
+        const sign = e.entry_type === 'payment' || e.entry_type === 'subscription_payment' ? 1 : -1;
+        return s + Number(e.amount) * sign;
+      }, 0);
+
       return {
         mrr,
         arr,
         paying_tenants: paying,
         arpa,
         growth_rate_pct: Math.round(growthRate * 10) / 10,
-        net_revenue_retention_pct: 100 + growthRate,
+        net_revenue_retention_pct: Math.round((100 + growthRate) * 10) / 10,
         churn_rate_pct: churnRate,
         ltv_estimate: Math.round(ltv),
+        revenue_by_plan,
+        revenue_by_module,
+        ledger_total_brl: Math.round(ledger_total_brl * 100) / 100,
       };
     },
 
@@ -136,13 +185,14 @@ export function createRevenueAnalyzer(): RevenueAnalyzerAPI {
     },
 
     async getMonthlyTrend(months) {
-      const { data } = await supabase
-        .from('invoices')
-        .select('total_amount, paid_at, tenant_id')
-        .eq('status', 'paid')
-        .order('paid_at', { ascending: true })
-        .limit(1000);
+      // Use real ledger + invoices for trend
+      const [invData, ledgerData] = await Promise.all([
+        supabase.from('invoices').select('total_amount, paid_at, tenant_id').eq('status', 'paid').order('paid_at', { ascending: true }).limit(1000),
+        supabase.from('platform_financial_entries').select('amount, entry_type, tenant_id, created_at').order('created_at', { ascending: true }).limit(1000),
+      ]);
 
+      const invoices = invData.data ?? [];
+      const ledger = ledgerData.data ?? [];
       const now = new Date();
       const result: { month: string; mrr: number; tenants: number }[] = [];
 
@@ -150,9 +200,24 @@ export function createRevenueAnalyzer(): RevenueAnalyzerAPI {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-        const monthInvoices = (data ?? []).filter(inv => inv.paid_at?.startsWith(key));
-        const tenantSet = new Set(monthInvoices.map(i => i.tenant_id));
-        const total = monthInvoices.reduce((s, inv) => s + Number(inv.total_amount), 0);
+
+        // Combine invoice + ledger revenue for the month
+        const monthInvoices = invoices.filter(inv => inv.paid_at?.startsWith(key));
+        const monthLedger = ledger.filter(e =>
+          e.created_at?.startsWith(key) &&
+          (e.entry_type === 'payment' || e.entry_type === 'subscription_payment')
+        );
+
+        const tenantSet = new Set([
+          ...monthInvoices.map(i => i.tenant_id),
+          ...monthLedger.map(e => e.tenant_id),
+        ]);
+
+        const invTotal = monthInvoices.reduce((s, inv) => s + Number(inv.total_amount), 0);
+        const ledgerTotal = monthLedger.reduce((s, e) => s + Number(e.amount), 0);
+        // Use the higher of the two to avoid double-counting
+        const total = Math.max(invTotal, ledgerTotal) || (invTotal + ledgerTotal);
+
         result.push({ month: label, mrr: total, tenants: tenantSet.size });
       }
       return result;

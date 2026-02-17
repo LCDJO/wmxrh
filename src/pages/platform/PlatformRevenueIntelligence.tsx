@@ -172,14 +172,62 @@ export default function PlatformRevenueIntelligence() {
                 <CardTitle className="text-sm font-medium">Métricas Detalhadas</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <MetricItem label="ARR" value={formatBRL(metrics.arr)} />
                   <MetricItem label="ARPA" value={formatBRL(metrics.arpa)} />
                   <MetricItem label="NRR" value={`${metrics.net_revenue_retention_pct.toFixed(1)}%`} />
                   <MetricItem label="Churn Rate" value={`${metrics.churn_rate_pct.toFixed(1)}%`} />
+                  <MetricItem label="Ledger Total" value={formatBRL(metrics.ledger_total_brl)} />
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Revenue by Plan + by Module */}
+          {metrics && (
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Receita por Plano</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {metrics.revenue_by_plan.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">Sem dados de planos ativos.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={metrics.revenue_by_plan} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis type="number" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                        <YAxis dataKey="plan_name" type="category" tick={{ fontSize: 11 }} className="fill-muted-foreground" width={100} />
+                        <Tooltip formatter={(v: number) => formatBRL(v)} contentStyle={{ borderRadius: 8, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }} />
+                        <Bar dataKey="mrr" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="MRR" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Receita por Módulo</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {metrics.revenue_by_module.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">Sem dados de uso por módulo.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={metrics.revenue_by_module} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis type="number" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                        <YAxis dataKey="module_id" type="category" tick={{ fontSize: 11 }} className="fill-muted-foreground" width={100} />
+                        <Tooltip formatter={(v: number) => formatBRL(v)} contentStyle={{ borderRadius: 8, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }} />
+                        <Bar dataKey="total_brl" fill="hsl(142 76% 36%)" radius={[0, 4, 4, 0]} name="Total" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* Upgrade Candidates */}
