@@ -89,7 +89,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/monitoring/incidents', label: 'Incidentes' },
     ],
   },
-  { to: '/platform/observability', label: 'Observability', icon: Activity, requiredPermission: 'security.view' },
+  
   { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
   { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'audit.view' },
   {
