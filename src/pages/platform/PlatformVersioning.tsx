@@ -71,37 +71,9 @@ export default function PlatformVersioning() {
         </TabsContent>
 
         <TabsContent value="changelog" className="mt-4">
-          <ChangelogTab />
+          <ModuleVersionTimeline />
         </TabsContent>
       </Tabs>
-    </div>
-  );
-}
-
-/* ─── Changelog tab (inline) ─── */
-function ChangelogTab() {
-  const entries = [
-    { date: '2026-02-15', category: '🚀 Novas Funcionalidades', items: ['**[growth_engine]** Landing Page Builder v2 com FAB', '**[billing_core]** Suporte a múltiplas moedas'] },
-    { date: '2026-02-03', category: '✨ Melhorias', items: ['**[iam]** Custom roles por empresa', '**[core_hr]** Novo fluxo de admissão'] },
-    { date: '2026-01-20', category: '💥 Breaking Changes', items: ['**[billing_core]** Novo ledger financeiro imutável — migração obrigatória'] },
-    { date: '2026-01-05', category: '🐛 Correções', items: ['**[core_hr]** Fix cálculo de férias proporcionais', '**[growth_engine]** Fix A/B split ratio'] },
-  ];
-
-  return (
-    <div className="space-y-4">
-      {entries.map((block, i) => (
-        <div key={i} className="rounded-lg border border-border/40 bg-card/80 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-sm font-semibold text-foreground">{block.category}</span>
-            <span className="text-xs text-muted-foreground ml-auto">{new Date(block.date).toLocaleDateString('pt-BR')}</span>
-          </div>
-          <ul className="space-y-1">
-            {block.items.map((item, j) => (
-              <li key={j} className="text-sm text-foreground/80" dangerouslySetInnerHTML={{ __html: item.replace(/\*\*(.*?)\*\*/g, '<strong class="text-primary">$1</strong>') }} />
-            ))}
-          </ul>
-        </div>
-      ))}
     </div>
   );
 }
