@@ -24,6 +24,23 @@ export { createInvoiceEngine } from './invoice-engine';
 export { createRevenueMetricsService } from './revenue-metrics-service';
 export { createSubscriptionLifecycleManager } from './subscription-lifecycle-manager';
 
+// ── Domain Events ────────────────────────────────────────────
+export {
+  emitBillingEvent,
+  onBillingEvent,
+  onBillingEventType,
+  getBillingEventLog,
+  clearBillingEventLog,
+} from './billing-events';
+export type {
+  BillingEventType,
+  BillingDomainEvent,
+  TenantPlanAssignedEvent,
+  TenantPlanUpgradedEvent,
+  InvoiceGeneratedEvent,
+  RevenueUpdatedEvent,
+} from './billing-events';
+
 // ── Types ────────────────────────────────────────────────────
 export type {
   // Invoice
