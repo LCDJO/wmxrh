@@ -378,8 +378,9 @@ export interface UsageBillingEngineAPI {
 // Coupons & Discounts
 // ══════════════════════════════════════════════════════════════════
 
-export type CouponStatus = 'active' | 'paused' | 'expired' | 'exhausted' | 'archived';
+export type CouponStatus = 'active' | 'paused' | 'expired' | 'exhausted' | 'archived' | 'disabled';
 export type DiscountType = 'percentage' | 'fixed_amount' | 'free_months';
+export type CouponAppliesTo = 'plan' | 'module' | 'invoice';
 
 export interface Coupon {
   id: string;
@@ -388,6 +389,7 @@ export interface Coupon {
   description: string | null;
   discount_type: DiscountType;
   discount_value: number;
+  applies_to: CouponAppliesTo;
   max_discount_brl: number | null;
   currency: string;
   applicable_plan_ids: string[] | null;
@@ -411,6 +413,7 @@ export interface CreateCouponDTO {
   description?: string;
   discount_type: DiscountType;
   discount_value: number;
+  applies_to?: CouponAppliesTo;
   max_discount_brl?: number;
   applicable_plan_ids?: string[];
   applicable_billing_cycles?: string[];

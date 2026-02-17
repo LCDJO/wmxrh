@@ -104,6 +104,7 @@ export type {
   // Coupons & Discounts
   Coupon,
   CouponStatus,
+  CouponAppliesTo,
   DiscountType,
   CreateCouponDTO,
   CouponRedemption,

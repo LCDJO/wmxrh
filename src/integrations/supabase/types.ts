@@ -1322,6 +1322,7 @@ export type Database = {
         Row: {
           applicable_billing_cycles: string[] | null
           applicable_plan_ids: string[] | null
+          applies_to: string
           code: string
           created_at: string
           created_by: string | null
@@ -1345,6 +1346,7 @@ export type Database = {
         Insert: {
           applicable_billing_cycles?: string[] | null
           applicable_plan_ids?: string[] | null
+          applies_to?: string
           code: string
           created_at?: string
           created_by?: string | null
@@ -1368,6 +1370,7 @@ export type Database = {
         Update: {
           applicable_billing_cycles?: string[] | null
           applicable_plan_ids?: string[] | null
+          applies_to?: string
           code?: string
           created_at?: string
           created_by?: string | null
