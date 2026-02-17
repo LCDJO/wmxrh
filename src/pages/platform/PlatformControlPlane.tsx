@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import {
-  Activity, Shield, Cpu, Users, Zap, Trash2, TrendingUp, Globe,
+  Activity, Shield, Cpu, Users, Zap, Trash2, TrendingUp, Globe, Megaphone,
 } from 'lucide-react';
 import { getPlatformRuntime } from '@/domains/platform-os/platform-runtime';
 import { getControlPlaneEngine } from '@/domains/control-plane/control-plane-engine';
@@ -31,6 +31,7 @@ import { ModuleHealthGrid } from '@/components/control-plane/ModuleHealthGrid';
 import { IdentityActivityFeed } from '@/components/control-plane/IdentityActivityFeed';
 import { GrowthControlCenter } from '@/components/control-plane/GrowthControlCenter';
 import { WebsiteControlCenter } from '@/components/control-plane/WebsiteControlCenter';
+import { MarketingControlCenter } from '@/components/control-plane/MarketingControlCenter';
 
 // ── Hook ──────────────────────────────────────────────────────
 
@@ -137,12 +138,15 @@ export default function PlatformControlPlane() {
       </div>
 
       <Tabs defaultValue="dashboard" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 max-w-lg">
+        <TabsList className="grid w-full grid-cols-5 max-w-2xl">
           <TabsTrigger value="dashboard" className="gap-1.5 text-xs">
             <Activity className="h-3.5 w-3.5" /> Dashboard
           </TabsTrigger>
           <TabsTrigger value="website" className="gap-1.5 text-xs">
             <Globe className="h-3.5 w-3.5" /> Website
+          </TabsTrigger>
+          <TabsTrigger value="marketing" className="gap-1.5 text-xs">
+            <Megaphone className="h-3.5 w-3.5" /> Marketing
           </TabsTrigger>
           <TabsTrigger value="growth" className="gap-1.5 text-xs">
             <TrendingUp className="h-3.5 w-3.5" /> Growth
@@ -171,6 +175,10 @@ export default function PlatformControlPlane() {
 
         <TabsContent value="website" className="space-y-4">
           <WebsiteControlCenter />
+        </TabsContent>
+
+        <TabsContent value="marketing" className="space-y-4">
+          <MarketingControlCenter />
         </TabsContent>
 
         <TabsContent value="growth" className="space-y-4">
