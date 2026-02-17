@@ -222,6 +222,43 @@ export function exportPrometheus(): PrometheusExportResult {
     // Marketing metrics unavailable — skip
   }
 
+  // ── Platform Versioning metrics ─────────────────────────────
+  try {
+    const { createAdvancedVersioningEngine } = require('@/domains/platform-versioning') as {
+      createAdvancedVersioningEngine: () => import('@/domains/platform-versioning').AdvancedVersioningEngineAPI;
+    };
+    const vEngine = createAdvancedVersioningEngine();
+
+    // platform_release_total — by status
+    const allReleases = vEngine.releases.list();
+    collector.gauge('platform_release_total', allReleases.length);
+    for (const status of ['draft', 'candidate', 'final', 'rolled_back', 'archived'] as const) {
+      const count = allReleases.filter(r => r.status === status).length;
+      collector.gauge('platform_release_total', count, { status });
+    }
+
+    // module_version_total — per module
+    const moduleKeys = vEngine.modules.listModuleKeys();
+    let totalVersions = 0;
+    let totalBreaking = 0;
+    for (const key of moduleKeys) {
+      const versions = vEngine.modules.listForModule(key);
+      const breakingCount = versions.filter(v => v.breaking_changes).length;
+      collector.gauge('module_version_total', versions.length, { module: key });
+      collector.gauge('module_breaking_changes_total', breakingCount, { module: key });
+      totalVersions += versions.length;
+      totalBreaking += breakingCount;
+    }
+    collector.gauge('module_version_total', totalVersions);
+    collector.gauge('module_breaking_changes_total', totalBreaking);
+
+    // rollback_actions_total — count rolled_back releases
+    const rolledBack = allReleases.filter(r => r.status === 'rolled_back').length;
+    collector.gauge('rollback_actions_total', rolledBack);
+  } catch {
+    // Versioning engine not initialised — skip
+  }
+
   const metrics = collector.toPrometheus();
   const text = collector.toPrometheusText();
 
@@ -571,6 +608,11 @@ export function generateDashboardModel(): {
       { title: 'FAB Engagement Score', type: 'gauge', metric: 'fab_engagement_score', description: 'Composite engagement score per variant: (1-bounceRate) × conversionRate', datasource: 'prometheus' },
       { title: 'Variant Impressions', type: 'graph', metric: 'landing_variant_impressions_total', description: 'Total impressions per variant (labels: experiment, variant)', datasource: 'prometheus' },
       { title: 'Variant Conversions', type: 'graph', metric: 'landing_variant_conversions_total', description: 'Total conversions per variant (labels: experiment, variant)', datasource: 'prometheus' },
+      // ── Platform Versioning panels ──────────────────────────────
+      { title: 'Releases Total', type: 'stat', metric: 'platform_release_total', description: 'Total releases by status (label: status)', datasource: 'prometheus' },
+      { title: 'Module Versions', type: 'graph', metric: 'module_version_total', description: 'Total versions per module (label: module)', datasource: 'prometheus' },
+      { title: 'Breaking Changes', type: 'graph', metric: 'module_breaking_changes_total', description: 'Breaking change versions per module (label: module)', datasource: 'prometheus' },
+      { title: 'Rollback Actions', type: 'stat', metric: 'rollback_actions_total', description: 'Total rollback actions executed', datasource: 'prometheus' },
       // ── Loki panels ────────────────────────────────────────
       { title: 'Log Stream', type: 'logs', metric: 'logs_total', description: 'Structured log stream from all sources', datasource: 'loki' },
       // ── Tempo panels ───────────────────────────────────────
