@@ -6246,31 +6246,31 @@ export type Database = {
       support_evaluations: {
         Row: {
           agent_id: string | null
+          agent_score: number | null
+          comment: string | null
           created_at: string
-          evaluator_id: string
-          feedback: string | null
           id: string
-          rating: number
+          system_score: number | null
           tenant_id: string
           ticket_id: string
         }
         Insert: {
           agent_id?: string | null
+          agent_score?: number | null
+          comment?: string | null
           created_at?: string
-          evaluator_id: string
-          feedback?: string | null
           id?: string
-          rating: number
+          system_score?: number | null
           tenant_id: string
           ticket_id: string
         }
         Update: {
           agent_id?: string | null
+          agent_score?: number | null
+          comment?: string | null
           created_at?: string
-          evaluator_id?: string
-          feedback?: string | null
           id?: string
-          rating?: number
+          system_score?: number | null
           tenant_id?: string
           ticket_id?: string
         }

@@ -5,10 +5,10 @@ export const EvaluationService = {
   async createTicketEvaluation(data: {
     ticket_id: string;
     tenant_id: string;
-    evaluator_id: string;
     agent_id: string | null;
-    rating: number;
-    feedback?: string;
+    agent_score: number | null;
+    system_score: number | null;
+    comment?: string;
   }): Promise<SupportEvaluation> {
     const { data: result, error } = await supabase
       .from('support_evaluations')
