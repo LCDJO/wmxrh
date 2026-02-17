@@ -24,6 +24,7 @@ import { getErrorTracker } from '@/domains/observability/error-tracker';
 import { getGatewayPerformanceTracker } from '@/domains/observability/gateway-performance-tracker';
 import { cn } from '@/lib/utils';
 import { MRRWidget, ARRWidget, ActiveSubscriptionsWidget, RevenueByPlanChart } from '@/components/platform/financial-widgets';
+import { LandingConversionRate, RevenueByLandingPage, FABPerformanceInsights } from '@/components/platform/growth-widgets';
 
 interface PlatformMetrics {
   total_tenants: number;
@@ -188,6 +189,13 @@ export default function PlatformDashboard() {
         <ActiveSubscriptionsWidget />
       </div>
 
+
+      {/* ═══ Growth Widgets ═══ */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <LandingConversionRate />
+        <RevenueByLandingPage />
+        <FABPerformanceInsights />
+      </div>
 
       {/* ═══ Revenue by Plan Chart (Real Data) ═══ */}
       <div className="grid gap-4 lg:grid-cols-2">
