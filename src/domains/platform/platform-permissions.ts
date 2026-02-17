@@ -80,6 +80,8 @@ export const PLATFORM_PERMISSIONS = [
   'website.structure_manage',
   // ── A/B Experiments ──
   'ab_experiment.start',
+  // ── Growth Insights ──
+  'growth_insights.view',
   // ── Future: Marketplace ──
   'marketplace.view',
   'marketplace.publish',
@@ -204,6 +206,7 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing_page.delete',
     'audit.view',
     'ab_experiment.start',
+    'growth_insights.view',
     // Landing governance (granular)
     'landing.create',
     'landing.edit',
@@ -251,6 +254,7 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'growth.publish',
     'growth.delete',
     'growth.version_view',
+    'growth_insights.view',
     'landing_page.view',
     'landing_page.create',
     'landing_page.submit',
