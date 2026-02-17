@@ -9,22 +9,25 @@ interface PricingPlan {
   features: string[];
   highlighted?: boolean;
   ctaText: string;
+  isTrial?: boolean;
 }
 
 interface Props {
   plans?: PricingPlan[];
+  onPlanSelect?: (planName: string, planPrice?: string) => void;
+  onTrialStart?: (planName?: string) => void;
 }
 
 const DEFAULT_PLANS: PricingPlan[] = [
   {
     name: 'Starter', price: 'R$ 197', period: '/mês',
     features: ['Até 50 colaboradores', '3 módulos', 'Suporte por email', 'eSocial básico'],
-    ctaText: 'Começar grátis',
+    ctaText: 'Começar grátis', isTrial: true,
   },
   {
     name: 'Professional', price: 'R$ 497', period: '/mês',
     features: ['Até 200 colaboradores', 'Todos os módulos', 'Suporte prioritário', 'eSocial completo', 'API access', 'Relatórios avançados'],
-    highlighted: true, ctaText: 'Teste grátis 14 dias',
+    highlighted: true, ctaText: 'Teste grátis 14 dias', isTrial: true,
   },
   {
     name: 'Enterprise', price: 'Sob consulta', period: '',
@@ -33,7 +36,16 @@ const DEFAULT_PLANS: PricingPlan[] = [
   },
 ];
 
-export function PricingSection({ plans = DEFAULT_PLANS }: Props) {
+export function PricingSection({ plans = DEFAULT_PLANS, onPlanSelect, onTrialStart }: Props) {
+  const handleClick = (plan: PricingPlan) => {
+    // GTM: plan_selected
+    onPlanSelect?.(plan.name, plan.price);
+    // GTM: trial_start (if applicable)
+    if (plan.isTrial) {
+      onTrialStart?.(plan.name);
+    }
+  };
+
   return (
     <section className="py-16 px-6 bg-muted/20">
       <div className="max-w-5xl mx-auto">
@@ -71,6 +83,7 @@ export function PricingSection({ plans = DEFAULT_PLANS }: Props) {
               <Button
                 className="mt-6 w-full"
                 variant={plan.highlighted ? 'default' : 'outline'}
+                onClick={() => handleClick(plan)}
               >
                 {plan.ctaText}
               </Button>
