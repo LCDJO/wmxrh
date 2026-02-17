@@ -2,6 +2,12 @@
  * Unified Graph Engine (UGE) — Type Definitions
  *
  * ╔══════════════════════════════════════════════════════════════════╗
+ * ║  SECURITY CONTRACT: UGE IS STRICTLY READ-ONLY.                   ║
+ * ║                                                                  ║
+ * ║  • This layer NEVER mutates permissions, roles, or access.      ║
+ * ║  • ALL authorization decisions remain in the SecurityKernel.    ║
+ * ║  • UGE only reads, correlates, analyzes, and visualizes.        ║
+ * ║                                                                  ║
  * ║  READ-ONLY analytical layer that correlates all platform graphs  ║
  * ║  WITHOUT mixing Platform ↔ Tenant permissions.                  ║
  * ║                                                                  ║

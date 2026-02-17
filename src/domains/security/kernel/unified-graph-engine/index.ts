@@ -2,6 +2,13 @@
  * Unified Graph Engine (UGE) — Public API
  *
  * ╔══════════════════════════════════════════════════════════════════╗
+ * ║  SECURITY CONTRACT: UGE IS STRICTLY READ-ONLY.                   ║
+ * ║                                                                  ║
+ * ║  • UGE NEVER creates, updates, or deletes permissions.          ║
+ * ║  • UGE NEVER modifies roles, assignments, or access rules.      ║
+ * ║  • ALL authorization decisions remain in the SecurityKernel.    ║
+ * ║  • UGE only READS, COMPOSES, ANALYZES, and VISUALIZES graphs.  ║
+ * ║                                                                  ║
  * ║  UnifiedGraphEngine                                              ║
  * ║   ├── GraphRegistry          → register/unregister providers    ║
  * ║   ├── GraphComposer          → merge all graphs into snapshot   ║

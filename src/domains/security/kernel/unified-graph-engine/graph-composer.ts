@@ -47,11 +47,14 @@ export function composeUnifiedGraph(
 
   snapshotVersion++;
 
-  return {
+  const snapshot: UnifiedGraphSnapshot = {
     nodes,
     edges: dedupedEdges,
     domains: providers.map(p => p.domain),
     builtAt: Date.now(),
     version: snapshotVersion,
   };
+
+  // SECURITY: Freeze the snapshot — UGE is strictly read-only.
+  return Object.freeze(snapshot);
 }
