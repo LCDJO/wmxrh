@@ -28,11 +28,13 @@ import { ModuleAutoRecoveryService } from './module-auto-recovery-service';
 import type { GlobalEventKernelAPI, ModuleOrchestratorAPI } from '@/domains/platform-os/types';
 import { assertAllowedAction } from './security-boundary';
 import { emitSelfHealingTriggered } from './self-healing-events';
+import { ActionCooldownManager } from './action-cooldown-manager';
 
 let _actionCounter = 0;
 
 export class RecoveryOrchestrator {
   private autoRecovery: ModuleAutoRecoveryService;
+  readonly cooldowns = new ActionCooldownManager();
 
   constructor(
     private circuitBreakers: CircuitBreakerManager,
@@ -97,6 +99,18 @@ export class RecoveryOrchestrator {
     // ── SECURITY BOUNDARY — throws if action is forbidden ──
     assertAllowedAction(type, moduleId);
 
+    // ── COOLDOWN CHECK — skip if in cooldown ──
+    if (!this.cooldowns.isAllowed(type, moduleId)) {
+      return {
+        id: `ra_${++_actionCounter}_${Date.now()}`,
+        type,
+        target_module: moduleId,
+        description: `Ação ${type} em cooldown para ${moduleId} (${this.cooldowns.remainingMs(type, moduleId)}ms restantes)`,
+        executed_at: Date.now(),
+        duration_ms: 0,
+        result: 'skipped',
+      };
+    }
     const start = performance.now();
     const action: RecoveryAction = {
       id: `ra_${++_actionCounter}_${Date.now()}`,
@@ -181,6 +195,12 @@ export class RecoveryOrchestrator {
     }
 
     action.duration_ms = Math.round(performance.now() - start);
+
+    // Record cooldown after execution
+    if (action.result === 'success') {
+      this.cooldowns.record(type, moduleId);
+    }
+
     return action;
   }
 }
