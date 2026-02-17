@@ -143,7 +143,7 @@ serve(async (req) => {
                         type: "object",
                         properties: {
                           id: { type: "string" },
-                          type: { type: "string", enum: ["permission", "dashboard", "shortcut", "pattern", "setup"] },
+                          type: { type: "string", enum: ["permission", "dashboard", "shortcut", "pattern", "setup", "role-simplification", "redundant-permission"] },
                           title: { type: "string" },
                           description: { type: "string" },
                           confidence: { type: "number" },
@@ -258,6 +258,54 @@ function buildFallbackUser(intent: string, context?: Record<string, unknown>) {
     "suggest-shortcuts": "Suggest time-saving navigation shortcuts.",
     "detect-patterns": "Detect operational patterns and anomalies.",
     "quick-setup": "Guide through optimal platform configuration.",
+    "uge-simplify-roles": buildUGESimplifyPrompt(context),
+    "uge-remove-redundant-permissions": buildUGERedundantPrompt(context),
   };
   return map[intent] ?? "Provide general platform optimization suggestions.";
+}
+
+// ══════════════════════════════════════════════════════════════════
+// UGE-SPECIFIC PROMPTS
+// ══════════════════════════════════════════════════════════════════
+
+function buildUGESimplifyPrompt(context?: Record<string, unknown>): string {
+  const graphData = context?.uge_graph_data ?? {};
+  return `Analyse the following Unified Graph Engine data and suggest role simplification:
+
+ROLE OVERLAPS (roles sharing permissions):
+${JSON.stringify((graphData as any).roleOverlaps ?? [], null, 2)}
+
+ROLE LIST:
+${JSON.stringify((graphData as any).roles ?? [], null, 2)}
+
+ANALYSIS STATS:
+${JSON.stringify((graphData as any).analysisStats ?? {}, null, 2)}
+
+For each suggestion:
+- type MUST be "role-simplification"
+- Explain which roles can be merged or eliminated
+- Estimate impact (users affected)
+- Confidence 0–1 based on overlap ratio
+- In metadata include: { merge_candidates: string[], overlap_pct: number }`;
+}
+
+function buildUGERedundantPrompt(context?: Record<string, unknown>): string {
+  const graphData = context?.uge_graph_data ?? {};
+  return `Analyse the following Unified Graph Engine data and identify redundant permissions:
+
+PERMISSION USAGE (permissions granted by multiple roles or unused):
+${JSON.stringify((graphData as any).permissionUsage ?? [], null, 2)}
+
+EXCESSIVE PERMISSIONS:
+${JSON.stringify((graphData as any).excessivePermissions ?? [], null, 2)}
+
+ORPHAN NODES:
+${JSON.stringify((graphData as any).orphanNodes ?? [], null, 2)}
+
+For each suggestion:
+- type MUST be "redundant-permission"
+- Explain why the permission is redundant or unused
+- Recommend removal or consolidation
+- Confidence 0–1 based on evidence strength
+- In metadata include: { permission_code: string, granted_by_roles: string[], reason: "duplicate"|"unused"|"overly_broad" }`;
 }

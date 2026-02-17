@@ -17,10 +17,13 @@ export type CognitiveIntent =
   | 'suggest-shortcuts'
   | 'detect-patterns'
   | 'quick-setup'
-  | 'suggest-plan-upgrade';
+  | 'suggest-plan-upgrade'
+  // UGE-powered intents
+  | 'uge-simplify-roles'
+  | 'uge-remove-redundant-permissions';
 
 // ── Suggestion ─────────────────────────────────────────────────────
-export type SuggestionType = 'permission' | 'dashboard' | 'shortcut' | 'pattern' | 'setup' | 'plan-upgrade';
+export type SuggestionType = 'permission' | 'dashboard' | 'shortcut' | 'pattern' | 'setup' | 'plan-upgrade' | 'role-simplification' | 'redundant-permission';
 
 export interface CognitiveSuggestion {
   id: string;
