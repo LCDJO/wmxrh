@@ -105,7 +105,19 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/revenue/intelligence', label: 'Intelligence' },
     ],
   },
-  { to: '/platform/growth', label: 'Growth AI', icon: Rocket, requiredPermission: 'billing.view' },
+  {
+    to: '/platform/growth',
+    label: 'Growth AI',
+    icon: Rocket,
+    requiredPermission: 'billing.view',
+    children: [
+      { to: '/platform/growth', label: 'Visão Geral' },
+      { to: '/platform/growth/insights', label: 'Insights' },
+      { to: '/platform/growth/landing-pages', label: 'Landing Pages' },
+      { to: '/platform/growth/conversions', label: 'Conversões' },
+      { to: '/platform/growth/fab-builder', label: 'FAB Builder' },
+    ],
+  },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
   {
     to: '/platform/structure',

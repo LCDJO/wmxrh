@@ -78,6 +78,10 @@ import PlatformRevenueIntelligence from "./pages/platform/PlatformRevenueIntelli
 import PlatformReferrals from "./pages/platform/PlatformReferrals";
 import PlatformGamification from "./pages/platform/PlatformGamification";
 import PlatformGrowthAI from "./pages/platform/PlatformGrowthAI";
+import GrowthInsights from "./pages/platform/growth/GrowthInsights";
+import GrowthLandingPages from "./pages/platform/growth/GrowthLandingPages";
+import GrowthConversions from "./pages/platform/growth/GrowthConversions";
+import GrowthFABBuilder from "./pages/platform/growth/GrowthFABBuilder";
 import ReferralPage from "./pages/ReferralPage";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
 
@@ -153,6 +157,10 @@ function AppRoutes() {
         <Route path="structure/menus" element={<PlatformMenuStructure />} />
         <Route path="structure/modules" element={<PlatformModulesCatalog />} />
         <Route path="growth" element={<PlatformGrowthAI />} />
+        <Route path="growth/insights" element={<GrowthInsights />} />
+        <Route path="growth/landing-pages" element={<GrowthLandingPages />} />
+        <Route path="growth/conversions" element={<GrowthConversions />} />
+        <Route path="growth/fab-builder" element={<GrowthFABBuilder />} />
       </Route>
 
       {/* ═══ LANDING PAGE RENDERER ═══ */}
