@@ -1,12 +1,16 @@
 /**
  * GrowthMetricsCollector — Prometheus-compatible metrics for landing pages,
- * conversions, FAB clicks, AI headlines, and revenue attribution.
+ * conversions, FAB clicks, AI headlines, revenue attribution, and smart rollback.
  *
  * Metrics exported:
  *   website_page_views_total          (counter, labels: page)
  *   landing_conversion_rate           (gauge,   labels: page)
  *   ai_generated_headlines_total      (counter, labels: page, tone)
  *   fab_section_click_rate            (gauge,   labels: page, section)
+ *
+ *   landing_rollback_triggered_total  (counter, labels: landing, mode)
+ *   landing_performance_drop_score    (gauge,   labels: landing)
+ *   rollback_success_rate             (gauge,   global)
  *
  * Legacy metrics (kept for backward compat):
  *   landing_page_views_total          (counter, labels: page)
@@ -46,6 +50,26 @@ export function recordAIHeadline(page: string, tone: string) {
 
 export function recordLandingRevenue(page: string, amount: number) {
   getMetricsCollector().gauge('revenue_by_landing', amount, { page });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Smart Rollback metrics
+// ═══════════════════════════════════════════════════════════════
+
+/** Record a rollback trigger event */
+export function recordRollbackTriggered(landing: string, mode: 'automatic' | 'manual' | 'suggested') {
+  getMetricsCollector().increment('landing_rollback_triggered_total', { landing, mode });
+}
+
+/** Record performance drop score for a landing page (0-100, higher = worse) */
+export function recordPerformanceDropScore(landing: string, score: number) {
+  getMetricsCollector().gauge('landing_performance_drop_score', score, { landing });
+}
+
+/** Update global rollback success rate (completed / total triggered * 100) */
+export function updateRollbackSuccessRate(completed: number, total: number) {
+  const rate = total > 0 ? Math.round((completed / total) * 10000) / 100 : 100;
+  getMetricsCollector().gauge('rollback_success_rate', rate);
 }
 
 // ═══════════════════════════════════════════════════════════════

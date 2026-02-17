@@ -7,6 +7,7 @@
 import { landingAuditLog } from '../landing-audit-log';
 import { emitGrowthEvent } from '../growth.events';
 import { getMetricsCollector } from '@/domains/observability/metrics-collector';
+import { recordRollbackTriggered, recordPerformanceDropScore, updateRollbackSuccessRate } from '@/domains/observability/growth-metrics-collector';
 import type { RollbackAuditEntry, RollbackDecision, RollbackExecution } from './types';
 
 class RollbackAuditService {
@@ -43,6 +44,10 @@ class RollbackAuditService {
       mode: execution.mode,
       reason: execution.reason,
     });
+
+    // Prometheus-compatible rollback metrics
+    recordRollbackTriggered(execution.landingPageId, execution.mode as 'automatic' | 'manual');
+    recordPerformanceDropScore(execution.landingPageId, 0); // Will be updated by comparator
   }
 
   /**
@@ -69,6 +74,12 @@ class RollbackAuditService {
       landing_page_id: execution.landingPageId,
       reason: execution.reason,
     });
+
+    // Update success rate
+    const all = this.entries;
+    const triggered = all.filter(e => e.action === 'rollback_initiated').length;
+    const completed = all.filter(e => e.action === 'rollback_completed').length + 1;
+    updateRollbackSuccessRate(completed, triggered);
   }
 
   /**
