@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import {
-  Activity, Shield, Cpu, Users, Zap, Trash2,
+  Activity, Shield, Cpu, Users, Zap, Trash2, TrendingUp,
 } from 'lucide-react';
 import { getPlatformRuntime } from '@/domains/platform-os/platform-runtime';
 import { getControlPlaneEngine } from '@/domains/control-plane/control-plane-engine';
@@ -29,6 +29,7 @@ import { ActiveIncidentsPanel } from '@/components/control-plane/ActiveIncidents
 import { RiskHeatmap } from '@/components/control-plane/RiskHeatmap';
 import { ModuleHealthGrid } from '@/components/control-plane/ModuleHealthGrid';
 import { IdentityActivityFeed } from '@/components/control-plane/IdentityActivityFeed';
+import { GrowthControlCenter } from '@/components/control-plane/GrowthControlCenter';
 
 // ── Hook ──────────────────────────────────────────────────────
 
@@ -135,9 +136,12 @@ export default function PlatformControlPlane() {
       </div>
 
       <Tabs defaultValue="dashboard" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 max-w-sm">
+        <TabsList className="grid w-full grid-cols-3 max-w-md">
           <TabsTrigger value="dashboard" className="gap-1.5 text-xs">
             <Activity className="h-3.5 w-3.5" /> Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="growth" className="gap-1.5 text-xs">
+            <TrendingUp className="h-3.5 w-3.5" /> Growth
           </TabsTrigger>
           <TabsTrigger value="automation" className="gap-1.5 text-xs">
             <Zap className="h-3.5 w-3.5" /> Automação
@@ -159,6 +163,10 @@ export default function PlatformControlPlane() {
 
           {/* Row 4: Identity Activity Feed */}
           <IdentityActivityFeed identity={identity} />
+        </TabsContent>
+
+        <TabsContent value="growth" className="space-y-4">
+          <GrowthControlCenter />
         </TabsContent>
 
         <TabsContent value="automation">
