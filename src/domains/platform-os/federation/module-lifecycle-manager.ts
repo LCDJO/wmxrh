@@ -6,6 +6,8 @@
  */
 
 import type { ModuleDescriptor, GlobalEventKernelAPI } from '../types';
+import { PLATFORM_EVENTS } from '../platform-events';
+import type { ModuleEnabledPayload, ModuleDisabledPayload } from '../platform-events';
 import type { ModuleRegistryAPI, InternalModule } from './module-registry';
 
 export interface ModuleLifecycleManagerAPI {
@@ -46,6 +48,9 @@ export function createModuleLifecycleManager(
       mod.activated_at = Date.now();
       mod.error = undefined;
       events.emit('module:activated', 'LifecycleManager', { key });
+      events.emit<ModuleEnabledPayload>(PLATFORM_EVENTS.ModuleEnabled, 'LifecycleManager', {
+        key, scope: 'global',
+      });
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       mod.status = 'error';
@@ -77,6 +82,9 @@ export function createModuleLifecycleManager(
       mod.status = 'suspended';
       mod.deactivated_at = Date.now();
       events.emit('module:deactivated', 'LifecycleManager', { key });
+      events.emit<ModuleDisabledPayload>(PLATFORM_EVENTS.ModuleDisabled, 'LifecycleManager', {
+        key, scope: 'global',
+      });
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       mod.status = 'error';

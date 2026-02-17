@@ -4,7 +4,7 @@
 
 export { createModuleRegistry, type ModuleRegistryAPI, type InternalModule } from './module-registry';
 export { createModuleLoader, type ModuleLoaderAPI, type ModuleManifest, type ModuleWidget, type ModuleNavigationEntry, type ModuleLoadContext } from './module-loader';
-export { createModuleSandbox, type ModuleSandboxAPI, type SandboxContext, type SandboxStateAPI } from './module-sandbox';
+export { createModuleSandbox, type ModuleSandboxAPI, type SandboxContext, type SandboxStateAPI, type DomainGateway, type DomainGatewayFactory } from './module-sandbox';
 export { createModuleLifecycleManager, type ModuleLifecycleManagerAPI } from './module-lifecycle-manager';
 export { createModulePermissionAdapter, type ModulePermissionAdapterAPI, type PermissionContext } from './module-permission-adapter';
 export { createPlatformCore, type PlatformCoreAPI } from './platform-core';

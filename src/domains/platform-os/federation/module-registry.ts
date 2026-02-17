@@ -12,7 +12,7 @@ import type {
   GlobalEventKernelAPI,
 } from '../types';
 import { PLATFORM_EVENTS } from '../platform-events';
-import type { ModuleRegisteredPayload } from '../platform-events';
+import type { ModuleRegisteredPayload, ModuleInstalledPayload } from '../platform-events';
 
 // ── Internal extension with hooks ──────────────────────────────
 
@@ -78,6 +78,18 @@ export function createModuleRegistry(events: GlobalEventKernelAPI): ModuleRegist
       PLATFORM_EVENTS.ModuleRegistered,
       'ModuleRegistry',
       { key: mod.key, label: mod.label, enabled: false },
+    );
+
+    events.emit<ModuleInstalledPayload>(
+      PLATFORM_EVENTS.ModuleInstalled,
+      'ModuleRegistry',
+      {
+        key: mod.key as string,
+        label: mod.label,
+        version: mod.version ?? '1.0.0',
+        is_core: mod.is_core ?? false,
+        has_manifest: false, // manifest registration happens separately in PlatformCore
+      },
     );
   }
 
