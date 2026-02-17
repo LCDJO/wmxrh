@@ -3,17 +3,30 @@
  *
  * Severity categories: info | warning | error | critical
  * Error types: runtime | network | validation | authorization | integration | timeout | unhandled | unknown
+ *
+ * Emits canonical events through GlobalEventKernel:
+ *  - ApplicationErrorDetected (every error)
+ *  - ErrorRateSpike (when rate exceeds threshold)
  */
 
 import type { TrackedError, ErrorSummary, ErrorSeverity, ErrorType } from './types';
 import { getMetricsCollector } from './metrics-collector';
+import { OBSERVABILITY_KERNEL_EVENTS, type ApplicationErrorDetectedPayload, type ErrorRateSpikePayload } from './observability-events';
+import type { GlobalEventKernelAPI } from '@/domains/platform-os/types';
 
 const MAX_ERRORS = 200;
 const DEDUP_WINDOW_MS = 60_000;
+const ERROR_RATE_SPIKE_THRESHOLD = 5; // errors/min
 
 class ErrorTracker {
   private errors: TrackedError[] = [];
   private listeners = new Set<() => void>();
+  private eventKernel: GlobalEventKernelAPI | null = null;
+
+  /** Bind to GlobalEventKernel for emitting canonical events */
+  setEventKernel(kernel: GlobalEventKernelAPI) {
+    this.eventKernel = kernel;
+  }
 
   /**
    * Capture an ApplicationError.
@@ -87,6 +100,44 @@ class ErrorTracker {
       severity,
       error_type,
     });
+
+    // Emit canonical ApplicationErrorDetected
+    if (this.eventKernel) {
+      const tracked = existing ?? this.errors[this.errors.length - 1];
+      this.eventKernel.emit<ApplicationErrorDetectedPayload>(
+        OBSERVABILITY_KERNEL_EVENTS.ApplicationErrorDetected,
+        'ErrorTracker',
+        {
+          error_id: tracked.id,
+          message: tracked.message,
+          severity: tracked.severity,
+          error_type: tracked.error_type,
+          source: tracked.source,
+          module_id: tracked.module_id,
+          count: tracked.count,
+        },
+        { priority: severity === 'critical' ? 'critical' : 'normal' },
+      );
+
+      // Check for ErrorRateSpike
+      const summary = this.getSummary();
+      if (summary.error_rate_per_min > ERROR_RATE_SPIKE_THRESHOLD) {
+        const topModule = Object.entries(summary.by_module)
+          .sort(([, a], [, b]) => b - a)[0];
+        this.eventKernel.emit<ErrorRateSpikePayload>(
+          OBSERVABILITY_KERNEL_EVENTS.ErrorRateSpike,
+          'ErrorTracker',
+          {
+            rate_per_min: summary.error_rate_per_min,
+            threshold_per_min: ERROR_RATE_SPIKE_THRESHOLD,
+            top_module: topModule?.[0],
+            total_errors_1h: summary.total_errors_1h,
+          },
+          { priority: 'high' },
+        );
+      }
+    }
+
     this.notify();
   }
 

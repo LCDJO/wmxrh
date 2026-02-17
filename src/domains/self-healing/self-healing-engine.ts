@@ -17,6 +17,9 @@ import { CircuitBreakerManager } from './circuit-breaker-manager';
 import { HealingAuditLogger } from './healing-audit-logger';
 import { getHealthMonitor } from '@/domains/observability/health-monitor';
 import { getErrorTracker } from '@/domains/observability/error-tracker';
+import { getGatewayPerformanceTracker } from '@/domains/observability/gateway-performance-tracker';
+import { OBSERVABILITY_KERNEL_EVENTS } from '@/domains/observability/observability-events';
+import type { ModuleHealthChangedPayload, ApplicationErrorDetectedPayload, LatencyThresholdExceededPayload, ErrorRateSpikePayload } from '@/domains/observability/observability-events';
 
 const MAX_RESOLVED = 100;
 let _signalCounter = 0;
@@ -43,42 +46,86 @@ export class SelfHealingEngine {
     );
   }
 
-  /** Start listening to platform events. */
+  /** Start listening to platform events via GlobalEventKernel. */
   start(): void {
     if (this.disposers.length > 0) return; // already started
 
-    // Listen to HealthMonitor changes
+    // Wire observability singletons to emit via GlobalEventKernel
+    getHealthMonitor().setEventKernel(this.events);
+    getErrorTracker().setEventKernel(this.events);
+    getGatewayPerformanceTracker().setEventKernel(this.events);
+
+    // ── 1. ModuleHealthChanged ──────────────────────────────────
     this.disposers.push(
-      getHealthMonitor().onUpdate(() => {
-        if (!this.enabled) return;
-        const summary = getHealthMonitor().getSummary();
-        for (const mod of summary.modules) {
-          if (mod.status === 'down') {
-            this.ingestSignal('module_down', mod.module_id, { error_count: mod.error_count_1h });
-          } else if (mod.status === 'degraded') {
-            this.ingestSignal('module_degraded', mod.module_id, { error_count: mod.error_count_1h });
+      this.events.on<ModuleHealthChangedPayload>(
+        OBSERVABILITY_KERNEL_EVENTS.ModuleHealthChanged,
+        (evt) => {
+          if (!this.enabled) return;
+          const p = evt.payload;
+          if (p.current_status === 'down') {
+            this.ingestSignal('module_down', p.module_id, {
+              previous: p.previous_status, error_count: p.error_count_1h,
+            });
+          } else if (p.current_status === 'degraded') {
+            this.ingestSignal('module_degraded', p.module_id, {
+              previous: p.previous_status, error_count: p.error_count_1h,
+            });
           }
-        }
-      }),
+        },
+        { priority: 'critical' },
+      ),
     );
 
-    // Listen to ErrorTracker for spikes
+    // ── 2. ApplicationErrorDetected ─────────────────────────────
     this.disposers.push(
-      getErrorTracker().onUpdate(() => {
-        if (!this.enabled) return;
-        const summary = getErrorTracker().getSummary();
-        if (summary.error_rate_per_min > 5) {
-          // Find top module
-          const topModule = Object.entries(summary.by_module)
-            .sort(([,a], [,b]) => b - a)[0];
-          if (topModule) {
-            this.ingestSignal('error_spike', topModule[0], { rate: summary.error_rate_per_min });
+      this.events.on<ApplicationErrorDetectedPayload>(
+        OBSERVABILITY_KERNEL_EVENTS.ApplicationErrorDetected,
+        (evt) => {
+          if (!this.enabled) return;
+          const p = evt.payload;
+          if (p.severity === 'critical' && p.module_id) {
+            this.ingestSignal('error_spike', p.module_id, {
+              message: p.message, count: p.count,
+            });
           }
-        }
-      }),
+        },
+        { priority: 'high' },
+      ),
     );
 
-    // Listen to relevant kernel events
+    // ── 3. LatencyThresholdExceeded ─────────────────────────────
+    this.disposers.push(
+      this.events.on<LatencyThresholdExceededPayload>(
+        OBSERVABILITY_KERNEL_EVENTS.LatencyThresholdExceeded,
+        (evt) => {
+          if (!this.enabled) return;
+          const p = evt.payload;
+          this.ingestSignal('latency_spike', p.source, {
+            p95_ms: p.p95_ms, threshold_ms: p.threshold_ms, category: p.category,
+          });
+        },
+        { priority: 'high' },
+      ),
+    );
+
+    // ── 4. ErrorRateSpike ───────────────────────────────────────
+    this.disposers.push(
+      this.events.on<ErrorRateSpikePayload>(
+        OBSERVABILITY_KERNEL_EVENTS.ErrorRateSpike,
+        (evt) => {
+          if (!this.enabled) return;
+          const p = evt.payload;
+          if (p.top_module) {
+            this.ingestSignal('error_spike', p.top_module, {
+              rate: p.rate_per_min, total_1h: p.total_errors_1h,
+            });
+          }
+        },
+        { priority: 'high' },
+      ),
+    );
+
+    // ── Legacy: platform:module_error ───────────────────────────
     this.disposers.push(
       this.events.on('platform:module_error', (evt) => {
         const p = evt.payload as any;
