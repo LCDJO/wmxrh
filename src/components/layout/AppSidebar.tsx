@@ -7,13 +7,14 @@
  *   - Visual indicator for scope level (tenant/group/company)
  */
 
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Briefcase, TrendingUp, Building2,
   ChevronLeft, ChevronRight, ChevronDown, LogOut, FileText, Heart,
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
+  Zap,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -24,6 +25,7 @@ import { useIdentityIntelligence } from '@/domains/security/kernel/identity-inte
 import { useNavigationPins } from '@/hooks/use-navigation-pins';
 import { useExperienceProfile } from '@/hooks/use-experience-profile';
 import { NavigationSuggestionsPanel } from './NavigationSuggestionsPanel';
+import { Progress } from '@/components/ui/progress';
 import { ContextSelector } from './ContextSelector';
 import { PlanBadge } from '@/components/shared/PlanBadge';
 import type { NavKey } from '@/domains/security/permissions';
@@ -150,6 +152,7 @@ export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const location = useLocation();
+  const navigate = useNavigate();
   const { signOut } = useAuth();
   const { canNav, isFeatureEnabled, effectiveRoles, loading } = useSecurityKernel();
   const { activeContext, isImpersonating, session } = useIdentityIntelligence();
@@ -157,6 +160,10 @@ export function AppSidebar() {
   const { announcements } = useAnnouncements();
   const hasCriticalAnnouncement = announcements.some(a => a.severity === 'critical');
   const { isPathVisible, isPathLocked, profile: expProfile } = useExperienceProfile();
+
+  // ── Onboarding progress (mock-safe: reads from PXE profile or defaults) ──
+  const onboardingComplete = (expProfile as any)?.onboarding_complete ?? true;
+  const onboardingPct = (expProfile as any)?.onboarding_pct ?? 100;
 
   const isVisible = (item: NavChild) => {
     if (loading) return true;
@@ -423,6 +430,37 @@ export function AppSidebar() {
 
       {/* ── Navigation Suggestions ── */}
       <NavigationSuggestionsPanel collapsed={collapsed} />
+
+      {/* ── Onboarding CTA — visible until onboarding is complete ── */}
+      {!onboardingComplete && (
+        <div className={cn("mx-3 mb-2", collapsed && "mx-2")}>
+          <button
+            onClick={() => navigate('/onboarding')}
+            className={cn(
+              "w-full rounded-lg border transition-all duration-200 group",
+              "bg-primary/10 border-primary/20 hover:bg-primary/15 hover:border-primary/30",
+              collapsed ? "p-2 flex items-center justify-center" : "p-3 text-left"
+            )}
+          >
+            {collapsed ? (
+              <Zap className="h-4 w-4 text-primary animate-pulse" />
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="text-xs font-semibold text-primary">
+                    Concluir Configuração
+                  </span>
+                </div>
+                <Progress value={onboardingPct} className="h-1.5 mb-1.5" />
+                <p className="text-[10px] text-sidebar-foreground/50 leading-relaxed">
+                  {onboardingPct}% concluído — clique para continuar
+                </p>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* ── Plan Badge + Upgrade Banner ── */}
       {!collapsed && expProfile.plan_tier && (
