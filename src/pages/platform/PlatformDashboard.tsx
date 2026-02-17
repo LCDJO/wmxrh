@@ -1,21 +1,28 @@
 /**
  * Platform Dashboard — SaaS metrics overview
  * MRR, churn, tenant growth, plan distribution, top tenants, recent activity
+ * + Platform Health widgets (modules, errors, performance)
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 import {
   Building2, Users, Activity, DollarSign, TrendingUp, TrendingDown,
   AlertTriangle, Crown, BarChart3, PieChart, ArrowUpRight,
+  HeartPulse, Bug, Gauge, CheckCircle2, AlertCircle, XCircle,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart as RechartsPie, Pie, Cell, Legend,
 } from 'recharts';
 import { format } from 'date-fns';
+import { getHealthMonitor } from '@/domains/observability/health-monitor';
+import { getErrorTracker } from '@/domains/observability/error-tracker';
+import { getGatewayPerformanceTracker } from '@/domains/observability/gateway-performance-tracker';
+import { cn } from '@/lib/utils';
 
 interface PlatformMetrics {
   total_tenants: number;
@@ -170,7 +177,10 @@ export default function PlatformDashboard() {
         />
       </div>
 
-      {/* ═══ Charts Row ═══ */}
+      {/* ═══ Platform Health Widgets ═══ */}
+      <PlatformHealthWidgets />
+
+
       <div className="grid gap-4 lg:grid-cols-5">
         {/* MRR by Tenant (bar) */}
         <Card className="lg:col-span-3">
@@ -356,6 +366,103 @@ function DashboardSkeleton() {
         <Card className="lg:col-span-3"><CardContent className="pt-5"><Skeleton className="h-64 w-full" /></CardContent></Card>
         <Card className="lg:col-span-2"><CardContent className="pt-5"><Skeleton className="h-64 w-full" /></CardContent></Card>
       </div>
+    </div>
+  );
+}
+
+/* ── Platform Health Widgets ── */
+function PlatformHealthWidgets() {
+  const health = getHealthMonitor().getSummary();
+  const errors = getErrorTracker().getSummary();
+  const perf = getGatewayPerformanceTracker().getSummary();
+
+  const healthPct = health.total_modules > 0
+    ? Math.round((health.healthy_count / health.total_modules) * 100)
+    : 100;
+
+  const statusIcon = health.overall === 'healthy'
+    ? CheckCircle2
+    : health.overall === 'degraded'
+    ? AlertCircle
+    : XCircle;
+
+  const statusColor = health.overall === 'healthy'
+    ? 'text-emerald-500'
+    : health.overall === 'degraded'
+    ? 'text-amber-500'
+    : 'text-destructive';
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Module Health */}
+      <Card>
+        <CardContent className="pt-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Saúde dos Módulos</p>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
+              <HeartPulse className="h-4 w-4 text-emerald-500" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            {(() => { const Icon = statusIcon; return <Icon className={cn('h-5 w-5', statusColor)} />; })()}
+            <p className="text-2xl font-bold font-display text-foreground">{healthPct}%</p>
+          </div>
+          <Progress value={healthPct} className="h-1.5 mb-2" />
+          <p className="text-xs text-muted-foreground">
+            {health.healthy_count} saudáveis · {health.degraded_count} degradados · {health.down_count} offline
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Error Rate */}
+      <Card>
+        <CardContent className="pt-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Erros (1h)</p>
+            <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg',
+              errors.total_errors_1h > 10 ? 'bg-destructive/10' : 'bg-amber-500/10'
+            )}>
+              <Bug className={cn('h-4 w-4', errors.total_errors_1h > 10 ? 'text-destructive' : 'text-amber-500')} />
+            </div>
+          </div>
+          <p className="text-2xl font-bold font-display text-foreground">{errors.total_errors_1h}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {errors.error_rate_per_min.toFixed(1)}/min · {errors.total_errors_24h} nas últimas 24h
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Gateway Latency */}
+      <Card>
+        <CardContent className="pt-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Gateway p95</p>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/10">
+              <Gauge className="h-4 w-4 text-sky-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold font-display text-foreground">{perf.gateway.p95}ms</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            avg {perf.gateway.avg}ms · p99 {perf.gateway.p99}ms
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* AccessGraph Recomp */}
+      <Card>
+        <CardContent className="pt-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">AccessGraph</p>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
+              <Activity className="h-4 w-4 text-violet-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold font-display text-foreground">{perf.access_graph.p95}ms</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            recomposição p95 · avg {perf.access_graph.avg}ms
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
