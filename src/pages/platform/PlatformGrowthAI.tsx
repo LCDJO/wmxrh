@@ -1,7 +1,7 @@
 /**
  * PlatformGrowthAI — Dashboard for Growth AI + Landing Page Builder.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Rocket, Brain, TrendingUp, Layout, Tag, Target, BarChart3,
   ChevronRight, Zap, Globe, Eye, Users, DollarSign, Percent,
@@ -13,12 +13,12 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
-import { growthInsightEngine } from '@/domains/platform-growth';
 import { planOptimizationAdvisor } from '@/domains/platform-growth';
 import { conversionPredictionService } from '@/domains/platform-growth';
 import { landingPageBuilder } from '@/domains/platform-growth';
 import { tagManagerIntegration } from '@/domains/platform-growth';
 import { conversionTrackingService } from '@/domains/platform-growth';
+import { useGrowthInsights } from '@/hooks/use-growth-insights';
 
 const IMPACT_COLORS: Record<string, string> = {
   low: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -37,11 +37,11 @@ const TYPE_ICONS: Record<string, typeof Brain> = {
 export default function PlatformGrowthAI() {
   const [showHelp, setShowHelp] = useState(false);
 
-  const insights = growthInsightEngine.generateInsights();
-  const planSuggestions = planOptimizationAdvisor.getSuggestions();
-  const predictions = conversionPredictionService.getBatchPredictions();
-  const pages = landingPageBuilder.getAll();
-  const funnel = conversionTrackingService.getConversionFunnel('lp-1');
+  const { insights, metrics: growthMetrics, loading, error, refresh } = useGrowthInsights();
+  const planSuggestions = useMemo(() => planOptimizationAdvisor.getSuggestions(), []);
+  const predictions = useMemo(() => conversionPredictionService.getBatchPredictions(), []);
+  const pages = useMemo(() => landingPageBuilder.getAll(), []);
+  const funnel = useMemo(() => conversionTrackingService.getConversionFunnel('lp-1'), []);
 
   const architectureNodes = [
     { id: 'GrowthInsightEngine', icon: Brain, color: 'hsl(265 80% 55%)', desc: 'Estratégias de crescimento com IA' },
@@ -138,6 +138,43 @@ export default function PlatformGrowthAI() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ── KPI Cards (real data) ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'MRR Total', value: `R$ ${growthMetrics.totalMRR.toLocaleString()}`, icon: DollarSign, color: 'hsl(145 60% 42%)' },
+          { label: 'Tenants Pagantes', value: growthMetrics.payingTenants, icon: Users, color: 'hsl(265 80% 55%)' },
+          { label: 'Churn Rate', value: `${growthMetrics.churnRate}%`, icon: TrendingUp, color: 'hsl(0 70% 55%)' },
+          { label: 'MRR em Risco', value: `R$ ${growthMetrics.mrrAtRisk.toLocaleString()}`, icon: Target, color: 'hsl(30 90% 55%)' },
+          { label: 'Upgrade Candidates', value: growthMetrics.upgradeCandidates, icon: ArrowUpRight, color: 'hsl(200 70% 50%)' },
+          { label: 'Referral Conv.', value: `${growthMetrics.referralConversionRate}%`, icon: Zap, color: 'hsl(50 80% 50%)' },
+          { label: 'Melhor Plano', value: growthMetrics.bestPlan, icon: Sparkles, color: 'hsl(320 70% 55%)' },
+          { label: 'Melhor Módulo', value: growthMetrics.bestModule, icon: Brain, color: 'hsl(265 60% 50%)' },
+        ].map(kpi => {
+          const Icon = kpi.icon;
+          return (
+            <Card key={kpi.label} className="border-border/60 bg-card/60 backdrop-blur-sm">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${kpi.color}18` }}>
+                  <Icon className="h-4 w-4" style={{ color: kpi.color }} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-foreground truncate">{loading ? '...' : kpi.value}</p>
+                  <p className="text-[10px] text-muted-foreground">{kpi.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {error && (
+        <Card className="border-red-500/30 bg-red-500/5">
+          <CardContent className="p-3 text-xs text-red-400">
+            Erro ao carregar insights: {error}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Tabs ── */}
       <Tabs defaultValue="insights" className="space-y-4">
