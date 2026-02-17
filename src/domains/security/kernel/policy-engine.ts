@@ -347,6 +347,21 @@ export const BUILTIN_RULES: PolicyRule[] = [
     priority: 0,
   },
 
+  // RULE: Only PlatformMarketingDirector + PlatformSuperAdmin can enable auto-rollback
+  {
+    id: 'platform_deny_non_authorized_auto_rollback',
+    effect: 'deny',
+    roles: [],
+    platform_roles: ['platform_operations', 'platform_support', 'platform_finance', 'platform_fiscal', 'platform_read_only', 'platform_delegated_support', 'platform_marketplace_admin', 'platform_compliance'],
+    actions: ['create', 'update'],
+    resources: ['platform_auto_rollback'],
+    condition: {
+      custom: (ctx) => ctx.securityContext.user_type === 'platform',
+    },
+    description: 'Apenas PlatformMarketingDirector e PlatformSuperAdmin podem habilitar auto-rollback. Demais roles de plataforma são bloqueados.',
+    priority: 0,
+  },
+
   // ── IAM-Specific Rules ──
   {
     id: 'iam_admin_manage_roles',

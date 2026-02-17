@@ -24,19 +24,41 @@ import { experimentSafetyGuard } from './experiment-safety-guard';
 import type { RollbackDecision, RollbackExecution, RollbackThresholds } from './types';
 import { DEFAULT_ROLLBACK_THRESHOLDS } from './types';
 
+/** Roles authorized to enable auto-rollback monitoring */
+const AUTO_ROLLBACK_AUTHORIZED_ROLES = ['PlatformMarketingDirector', 'PlatformSuperAdmin'] as const;
+type AutoRollbackRole = (typeof AUTO_ROLLBACK_AUTHORIZED_ROLES)[number];
+
 class SmartRollbackEngine {
   private monitoringIntervals = new Map<string, ReturnType<typeof setInterval>>();
 
   /**
+   * Validate that the caller has an authorized role to enable auto-rollback.
+   * Only PlatformMarketingDirector and PlatformSuperAdmin are allowed.
+   */
+  private assertAutoRollbackAuthorization(callerRole: string, action: string): void {
+    if (!(AUTO_ROLLBACK_AUTHORIZED_ROLES as readonly string[]).includes(callerRole)) {
+      throw new Error(
+        `[SmartRollbackEngine] SECURITY: ${action} blocked. ` +
+        `Role "${callerRole}" is not authorized. ` +
+        `Required: ${AUTO_ROLLBACK_AUTHORIZED_ROLES.join(' or ')}.`,
+      );
+    }
+  }
+
+  /**
    * Start monitoring a landing page after a new version is published.
    * Waits for the observation window, then begins periodic checks.
+   *
+   * SECURITY: Only PlatformMarketingDirector and PlatformSuperAdmin can enable auto-rollback.
    */
   startMonitoring(
     landingPageId: string,
     currentVersionId: string,
     currentVersionNumber: number,
     thresholds: RollbackThresholds = DEFAULT_ROLLBACK_THRESHOLDS,
+    callerRole: string = '',
   ): void {
+    this.assertAutoRollbackAuthorization(callerRole, 'Enable auto-rollback');
     // Clear any existing monitoring for this page
     this.stopMonitoring(landingPageId);
 
@@ -253,4 +275,4 @@ export function resetSmartRollbackEngine(): void {
   _engine = null;
 }
 
-export { SmartRollbackEngine };
+export { SmartRollbackEngine, AUTO_ROLLBACK_AUTHORIZED_ROLES };
