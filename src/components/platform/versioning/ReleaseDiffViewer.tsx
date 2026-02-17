@@ -2,12 +2,14 @@
  * ReleaseDiffViewer — Shows grouped releases with platform + module versions.
  */
 import { useState } from 'react';
-import { Rocket, ChevronDown, ChevronRight, Tag, Layers, Calendar, User } from 'lucide-react';
+import { Rocket, ChevronDown, ChevronRight, Tag, Layers, Calendar, User, ArrowUpCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface ReleaseEntry {
   id: string;
@@ -117,6 +119,26 @@ export function ReleaseDiffViewer({ canPublish = true }: { canPublish?: boolean 
                         <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
                           <User className="h-2.5 w-2.5" /> Finalizado por {r.created_by} em {new Date(r.finalized_at).toLocaleDateString('pt-BR')}
                         </p>
+                      )}
+                      {/* Promote action for non-final releases */}
+                      {r.status !== 'final' && r.status !== 'rolled_back' && (
+                        <div className="mt-2 pt-2 border-t border-border/20">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!canPublish}
+                            title={!canPublish ? 'Permissão necessária: versioning.publish' : undefined}
+                            className="h-7 text-xs gap-1.5"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const next = r.status === 'draft' ? 'candidate' : 'final';
+                              toast.success(`Release promovida para ${next}`, { description: r.name });
+                            }}
+                          >
+                            <ArrowUpCircle className="h-3.5 w-3.5" />
+                            {r.status === 'draft' ? 'Promover a Candidate' : 'Publicar Release'}
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </CollapsibleContent>
