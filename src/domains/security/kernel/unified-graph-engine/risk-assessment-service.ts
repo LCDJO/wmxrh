@@ -1,12 +1,13 @@
 /**
  * RiskAssessmentService — Evaluates governance risks from the unified graph.
  *
- * Risk signals:
- *   - Privilege concentration (one user with too many permissions)
- *   - Orphan roles (roles assigned to nobody)
- *   - Cross-domain identity without MFA
- *   - Super admin count exceeding threshold
- *   - Unused permissions
+ * Consumes GraphAnalyzer results and produces risk signals:
+ *   - Permissões excessivas
+ *   - Conflitos de acesso (separation of duty)
+ *   - Sobreposição de cargos
+ *   - Risco operacional (orphans, depth, unused)
+ *   - Super admin count
+ *   - Cross-domain users
  */
 
 import type {
@@ -18,13 +19,60 @@ import type {
 import { analyzeGraph } from './graph-analyzer';
 
 const MAX_SUPER_ADMINS = 3;
-const MAX_PERMISSIONS_PER_USER = 30;
 
 export function assessRisk(snapshot: UnifiedGraphSnapshot): RiskAssessment {
   const analysis = analyzeGraph(snapshot);
   const signals: RiskSignal[] = [];
 
-  // ── 1. Orphan nodes ──
+  // ── 1. Permissões excessivas ──
+  for (const ep of analysis.excessivePermissions) {
+    signals.push({
+      id: `excessive_perms_${ep.user.uid}`,
+      level: 'high',
+      domain: ep.user.domain,
+      title: 'Permissões excessivas',
+      detail: `Usuário "${ep.user.label}" possui ${ep.permissionCount} permissões resolvidas — avaliar princípio do menor privilégio.`,
+      affectedNodeUids: [ep.user.uid, ...ep.permissions.map(p => p.uid)],
+    });
+  }
+
+  // ── 2. Conflitos de acesso ──
+  for (const conflict of analysis.accessConflicts) {
+    signals.push({
+      id: `access_conflict_${conflict.user.uid}_${conflict.rule}`,
+      level: conflict.severity === 'critical' ? 'critical' : 'high',
+      domain: conflict.user.domain,
+      title: `Conflito: ${conflict.rule}`,
+      detail: `${conflict.detail}. Usuário: "${conflict.user.label}", Cargos: ${conflict.roles.map(r => r.label).join(' + ')}.`,
+      affectedNodeUids: [conflict.user.uid, ...conflict.roles.map(r => r.uid)],
+    });
+  }
+
+  // ── 3. Sobreposição entre cargos ──
+  for (const overlap of analysis.roleOverlaps) {
+    signals.push({
+      id: `role_overlap_${overlap.roleA.uid}_${overlap.roleB.uid}`,
+      level: overlap.overlapRatio >= 0.95 ? 'high' : 'medium',
+      domain: overlap.roleA.domain,
+      title: 'Sobreposição de cargos',
+      detail: `"${overlap.roleA.label}" e "${overlap.roleB.label}" compartilham ${(overlap.overlapRatio * 100).toFixed(0)}% das permissões (${overlap.sharedPermissions.length} em comum). Considerar consolidação.`,
+      affectedNodeUids: [overlap.roleA.uid, overlap.roleB.uid],
+    });
+  }
+
+  // ── 4. Riscos operacionais ──
+  for (const risk of analysis.operationalRisks) {
+    signals.push({
+      id: risk.id,
+      level: risk.level,
+      domain: 'platform_access',
+      title: risk.title,
+      detail: risk.detail,
+      affectedNodeUids: risk.affectedUids,
+    });
+  }
+
+  // ── 5. Orphan nodes ──
   if (analysis.orphanNodes.length > 0) {
     signals.push({
       id: 'orphan_nodes',
@@ -36,27 +84,12 @@ export function assessRisk(snapshot: UnifiedGraphSnapshot): RiskAssessment {
     });
   }
 
-  // ── 2. Privilege concentration ──
-  for (const { node, edgeCount } of analysis.highFanOutNodes) {
-    if ((node.type === 'platform_user' || node.type === 'tenant_user') && edgeCount > MAX_PERMISSIONS_PER_USER) {
-      signals.push({
-        id: `privilege_concentration_${node.uid}`,
-        level: 'high',
-        domain: node.domain,
-        title: 'Concentração de privilégios',
-        detail: `Usuário "${node.label}" possui ${edgeCount} conexões diretas — avaliar princípio do menor privilégio.`,
-        affectedNodeUids: [node.uid],
-      });
-    }
-  }
-
-  // ── 3. Super admin count ──
+  // ── 6. Super admin count ──
   const superAdmins = Array.from(snapshot.nodes.values()).filter(
     n => n.type === 'role' && n.meta?.slug === 'platform_super_admin',
   );
-  // Count users linked to super admin role
   const superAdminUserCount = snapshot.edges.filter(
-    e => e.relation === 'HAS_PLATFORM_ROLE' && superAdmins.some(sa => sa.uid === e.to),
+    e => (e.relation === 'HAS_ROLE' || e.relation === 'HAS_PLATFORM_ROLE') && superAdmins.some(sa => sa.uid === e.to),
   ).length;
 
   if (superAdminUserCount > MAX_SUPER_ADMINS) {
@@ -70,7 +103,7 @@ export function assessRisk(snapshot: UnifiedGraphSnapshot): RiskAssessment {
     });
   }
 
-  // ── 4. Cross-domain users without explicit governance ──
+  // ── 7. Cross-domain users ──
   if (analysis.crossDomainUsers.length > 0) {
     signals.push({
       id: 'cross_domain_users',
