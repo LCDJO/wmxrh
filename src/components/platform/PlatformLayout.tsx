@@ -87,6 +87,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
     children: [
       { to: '/platform/billing', label: 'Visão Geral' },
       { to: '/platform/billing/coupons', label: 'Cupons' },
+      { to: '/platform/billing/control-center', label: 'Control Center' },
     ],
   },
   { to: '/platform/revenue', label: 'Revenue', icon: TrendingUp, requiredPermission: 'billing.view' },
