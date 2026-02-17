@@ -17,4 +17,5 @@ export { ModuleAutoRecoveryService } from './module-auto-recovery-service';
 export { CircuitBreakerManager } from './circuit-breaker-manager';
 export { AccessSafetyGuard, type SafetyBlockRule } from './access-safety-guard';
 export { HealingAuditLogger, type TriggerSource } from './healing-audit-logger';
+export { GovernanceHealingBridge, type GovernanceHealingSuggestion } from './governance-healing-bridge';
 export type * from './types';

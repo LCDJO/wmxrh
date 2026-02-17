@@ -16,6 +16,7 @@ import { RecoveryOrchestrator } from './recovery-orchestrator';
 import { CircuitBreakerManager } from './circuit-breaker-manager';
 import { HealingAuditLogger } from './healing-audit-logger';
 import { AccessSafetyGuard } from './access-safety-guard';
+import { GovernanceHealingBridge } from './governance-healing-bridge';
 import { getHealthMonitor } from '@/domains/observability/health-monitor';
 import { getErrorTracker } from '@/domains/observability/error-tracker';
 import { getGatewayPerformanceTracker } from '@/domains/observability/gateway-performance-tracker';
@@ -36,6 +37,7 @@ export class SelfHealingEngine {
   readonly incidentDetector = new IncidentDetector();
   readonly recoveryOrchestrator: RecoveryOrchestrator;
   readonly accessSafetyGuard: AccessSafetyGuard;
+  readonly governanceBridge = new GovernanceHealingBridge();
 
   private listeners = new Set<() => void>();
 
@@ -187,6 +189,10 @@ export class SelfHealingEngine {
       this.events.emit('self_healing:incident_detected', 'SelfHealingEngine', {
         id: incident.id, title: incident.title, severity: incident.severity,
       }, { priority: 'critical' });
+
+      // GovernanceAI: suggest permission review for high-risk modules
+      this.governanceBridge.evaluate(incident);
+
       this.notify();
 
       // Auto-recover async
