@@ -76,6 +76,10 @@ export const PLATFORM_PERMISSIONS = [
   'compliance.audit',
   'compliance.enforce',
   'compliance.report',
+  // ── Versioning ──
+  'versioning.view',
+  'versioning.publish',
+  'versioning.rollback',
 ] as const;
 
 export type PlatformPermission = typeof PLATFORM_PERMISSIONS[number];
@@ -110,6 +114,10 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing_page.publish',
     'landing_page.delete',
     'ab_experiment.start',
+    // ── Versioning ──
+    'versioning.view',
+    'versioning.publish',
+    'versioning.rollback',
   ],
 
   platform_support: [
