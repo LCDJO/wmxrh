@@ -65,6 +65,22 @@ export interface UpgradeCandidate {
 // Referral System
 // ══════════════════════════════════════════════════════════════
 
+export interface ReferralProgram {
+  id: string;
+  name: string;
+  description: string | null;
+  reward_type: 'credit' | 'discount' | 'points';
+  reward_value: number;
+  conditions: Record<string, unknown>;
+  is_active: boolean;
+  min_plan_tier: string | null;
+  max_redemptions: number | null;
+  current_redemptions: number;
+  valid_from: string;
+  valid_until: string | null;
+  created_at: string;
+}
+
 export interface ReferralLink {
   id: string;
   referrer_user_id: string;
@@ -75,6 +91,7 @@ export interface ReferralLink {
   total_signups: number;
   total_conversions: number;
   total_reward_brl: number;
+  program_id: string | null;
   created_at: string;
 }
 
@@ -146,7 +163,12 @@ export interface UpgradeRecommendationServiceAPI {
 }
 
 export interface ReferralManagerAPI {
-  generateLink(userId: string): Promise<ReferralLink>;
+  // Programs
+  createProgram(program: Omit<ReferralProgram, 'id' | 'current_redemptions' | 'created_at'>): Promise<ReferralProgram>;
+  getPrograms(activeOnly?: boolean): Promise<ReferralProgram[]>;
+  updateProgram(id: string, updates: Partial<ReferralProgram>): Promise<void>;
+  // Links
+  generateLink(userId: string, programId?: string): Promise<ReferralLink>;
   getLinks(userId?: string): Promise<ReferralLink[]>;
   getTracking(linkId?: string): Promise<ReferralTracking[]>;
   recordConversion(trackingId: string, planId: string, paymentBrl: number): Promise<void>;
