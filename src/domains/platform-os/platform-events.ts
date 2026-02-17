@@ -37,6 +37,16 @@ export const PLATFORM_EVENTS = {
 
   /** A feature flag was toggled or transitioned phase */
   FeatureLifecycleChanged: 'platform:feature_lifecycle_changed',
+
+  // ── Module Lifecycle Events ─────────────────────────────────
+  /** Module was installed (first-time registration with manifest) */
+  ModuleInstalled: 'platform:module_installed',
+  /** Module was enabled for a tenant / globally activated */
+  ModuleEnabled: 'platform:module_enabled',
+  /** Module was disabled for a tenant / globally deactivated */
+  ModuleDisabled: 'platform:module_disabled',
+  /** Module was upgraded to a new version */
+  ModuleUpgraded: 'platform:module_upgraded',
 } as const;
 
 export type PlatformEventType = typeof PLATFORM_EVENTS[keyof typeof PLATFORM_EVENTS];
@@ -80,4 +90,35 @@ export interface FeatureLifecycleChangedPayload {
   enabled?: boolean;
   phase?: string;
   previous_phase?: string | null;
+}
+
+// ── Module Lifecycle Payloads ──────────────────────────────────
+
+export interface ModuleInstalledPayload {
+  key: string;
+  label: string;
+  version: string;
+  is_core: boolean;
+  has_manifest: boolean;
+}
+
+export interface ModuleEnabledPayload {
+  key: string;
+  tenant_id?: string;
+  /** 'global' when activated platform-wide, 'tenant' when scoped */
+  scope: 'global' | 'tenant';
+}
+
+export interface ModuleDisabledPayload {
+  key: string;
+  tenant_id?: string;
+  scope: 'global' | 'tenant';
+  reason?: string;
+}
+
+export interface ModuleUpgradedPayload {
+  key: string;
+  previous_version: string;
+  new_version: string;
+  breaking: boolean;
 }

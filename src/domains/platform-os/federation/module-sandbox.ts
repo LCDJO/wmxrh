@@ -1,16 +1,59 @@
 /**
  * ModuleSandbox — Isolated execution context per module.
  *
+ * SECURITY CONTRACT:
+ *   ✅ Modules access data ONLY through DomainGateway
+ *   ✅ Modules emit events ONLY under their own namespace
+ *   ❌ Modules CANNOT access SecurityKernel directly
+ *   ❌ Modules CANNOT access the database directly
+ *
  * Provides:
- *   - Scoped event namespace (modules can only emit under their own prefix)
- *   - Scoped state container (isolated per module)
- *   - Error boundary integration metadata
+ *   - DomainGateway proxy (safe data access layer)
+ *   - Scoped event namespace
+ *   - Scoped state container
+ *   - Error boundary integration
  *   - Resource tracking (cleanup on deactivation)
  */
 
 import type { GlobalEventKernelAPI } from '../types';
 
-// ── Types ──────────────────────────────────────────────────────
+// ── DomainGateway — Safe data access proxy ─────────────────────
+
+/**
+ * DomainGateway is the ONLY way a module can access data.
+ * It proxies requests through the platform, enforcing:
+ *   - Tenant isolation (auto-injects tenant_id)
+ *   - Permission checks (validates caller has required access)
+ *   - Audit logging (all mutations are recorded)
+ */
+export interface DomainGateway {
+  /**
+   * Query data from a domain.
+   * @param domain - Target domain (e.g. 'employees', 'compensation', 'benefits')
+   * @param operation - Operation name (e.g. 'list', 'getById', 'search')
+   * @param params - Operation-specific parameters
+   */
+  query<T = unknown>(domain: string, operation: string, params?: Record<string, unknown>): Promise<T>;
+
+  /**
+   * Mutate data through a domain.
+   * @param domain - Target domain
+   * @param operation - Mutation name (e.g. 'create', 'update', 'delete')
+   * @param payload - Mutation payload
+   */
+  mutate<T = unknown>(domain: string, operation: string, payload?: Record<string, unknown>): Promise<T>;
+
+  /**
+   * Subscribe to domain data changes.
+   * Returns an unsubscribe function.
+   */
+  subscribe(domain: string, event: string, handler: (data: unknown) => void): () => void;
+}
+
+/** Factory that creates a tenant-scoped DomainGateway for a module */
+export type DomainGatewayFactory = (moduleKey: string) => DomainGateway;
+
+// ── Sandbox Types ──────────────────────────────────────────────
 
 export interface SandboxContext {
   /** Module key owning this sandbox */
@@ -23,6 +66,11 @@ export interface SandboxContext {
   state: SandboxStateAPI;
   /** Register a cleanup function to run on deactivation */
   addCleanup(fn: () => void): void;
+  /**
+   * DomainGateway — the ONLY approved data access channel.
+   * Modules MUST use this instead of direct DB or SecurityKernel access.
+   */
+  gateway: DomainGateway;
 }
 
 export interface SandboxStateAPI {
@@ -42,6 +90,44 @@ export interface ModuleSandboxAPI {
   has(moduleKey: string): boolean;
   /** Get sandbox for inspection */
   get(moduleKey: string): SandboxContext | null;
+  /** Set the gateway factory (called during platform boot) */
+  setGatewayFactory(factory: DomainGatewayFactory): void;
+}
+
+// ── Blocked access guards ──────────────────────────────────────
+
+const BLOCKED_DOMAINS = ['_security_kernel', '_auth_internal', '_raw_db', '_supabase'];
+
+function assertNotBlocked(domain: string, moduleKey: string): void {
+  if (BLOCKED_DOMAINS.some(b => domain.startsWith(b))) {
+    throw new Error(
+      `[ModuleSandbox] Module "${moduleKey}" attempted to access blocked domain "${domain}". ` +
+      `Modules must use DomainGateway operations, not direct kernel/DB access.`,
+    );
+  }
+}
+
+// ── Default gateway (no-op until platform wires the real one) ──
+
+function createDefaultGateway(moduleKey: string, events: GlobalEventKernelAPI): DomainGateway {
+  return {
+    async query(domain, operation, params) {
+      assertNotBlocked(domain, moduleKey);
+      events.emit(`gateway:query`, `Sandbox[${moduleKey}]`, { domain, operation, params });
+      console.warn(`[DomainGateway] No gateway factory configured. query(${domain}.${operation}) from "${moduleKey}" will return empty.`);
+      return undefined as any;
+    },
+    async mutate(domain, operation, payload) {
+      assertNotBlocked(domain, moduleKey);
+      events.emit(`gateway:mutate`, `Sandbox[${moduleKey}]`, { domain, operation, payload });
+      console.warn(`[DomainGateway] No gateway factory configured. mutate(${domain}.${operation}) from "${moduleKey}" will no-op.`);
+      return undefined as any;
+    },
+    subscribe(domain, event, handler) {
+      assertNotBlocked(domain, moduleKey);
+      return events.on(`domain:${domain}:${event}`, handler);
+    },
+  };
 }
 
 // ── Implementation ─────────────────────────────────────────────
@@ -53,6 +139,17 @@ export function createModuleSandbox(events: GlobalEventKernelAPI): ModuleSandbox
     state: Map<string, unknown>;
     unsubscribers: Array<() => void>;
   }>();
+
+  let gatewayFactory: DomainGatewayFactory | null = null;
+
+  function setGatewayFactory(factory: DomainGatewayFactory): void {
+    gatewayFactory = factory;
+    // Re-wire existing sandboxes with the real gateway
+    for (const [key, sandbox] of sandboxes) {
+      (sandbox.context as any).gateway = factory(key);
+    }
+    events.emit('module:gateway_factory_set', 'ModuleSandbox', { count: sandboxes.size });
+  }
 
   function create(moduleKey: string): SandboxContext {
     if (sandboxes.has(moduleKey)) return sandboxes.get(moduleKey)!.context;
@@ -69,10 +166,13 @@ export function createModuleSandbox(events: GlobalEventKernelAPI): ModuleSandbox
       keys: () => [...stateStore.keys()],
     };
 
+    const gateway = gatewayFactory
+      ? gatewayFactory(moduleKey)
+      : createDefaultGateway(moduleKey, events);
+
     const context: SandboxContext = {
       moduleKey,
       emit(event: string, payload?: unknown) {
-        // Scope events under module namespace
         events.emit(`module:${moduleKey}:${event}`, `Sandbox[${moduleKey}]`, payload);
       },
       on(event: string, handler: (...args: any[]) => void) {
@@ -84,6 +184,7 @@ export function createModuleSandbox(events: GlobalEventKernelAPI): ModuleSandbox
       addCleanup(fn: () => void) {
         cleanups.push(fn);
       },
+      gateway,
     };
 
     sandboxes.set(moduleKey, { context, cleanups, state: stateStore, unsubscribers });
@@ -95,14 +196,11 @@ export function createModuleSandbox(events: GlobalEventKernelAPI): ModuleSandbox
     const sandbox = sandboxes.get(moduleKey);
     if (!sandbox) return;
 
-    // Run registered cleanups
     for (const fn of sandbox.cleanups) {
       try { fn(); } catch (e) {
         console.error(`[ModuleSandbox] cleanup error in "${moduleKey}":`, e);
       }
     }
-
-    // Unsubscribe all event listeners
     for (const unsub of sandbox.unsubscribers) {
       try { unsub(); } catch { /* ignore */ }
     }
@@ -120,5 +218,5 @@ export function createModuleSandbox(events: GlobalEventKernelAPI): ModuleSandbox
     return sandboxes.get(moduleKey)?.context ?? null;
   }
 
-  return { create, destroy, has, get };
+  return { create, destroy, has, get, setGatewayFactory };
 }
