@@ -178,3 +178,18 @@ onIBLEvent((event) => {
   eventLog.unshift(event);
   if (eventLog.length > MAX_EVENT_LOG) eventLog.pop();
 });
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Identity Boundary',
+  color: 'hsl(350 65% 50%)',
+  events: [
+    { name: 'ContextSwitched', description: 'Contexto de identidade alterado' },
+    { name: 'IdentitySessionStarted', description: 'Sessão de identidade iniciada' },
+    { name: 'IdentitySessionRefreshed', description: 'Sessão de identidade renovada' },
+    { name: 'UnauthorizedContextSwitch', description: 'Troca de contexto não autorizada' },
+    { name: 'ImpersonationStarted', description: 'Impersonação iniciada' },
+    { name: 'ImpersonationExpired', description: 'Impersonação expirada' },
+    { name: 'ImpersonationEnded', description: 'Impersonação encerrada' },
+    { name: 'ImpersonationDenied', description: 'Impersonação negada' },
+  ],
+};

@@ -185,3 +185,15 @@ export function emitConflictDetected(insight: GovernanceInsight): void {
     rule: insight.title,
   });
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Governance AI',
+  color: 'hsl(320 60% 50%)',
+  events: [
+    { name: 'GovernanceRiskDetected', description: 'Risco de governança detectado por IA' },
+    { name: 'RoleOptimizationSuggested', description: 'Sugestão de otimização de role' },
+    { name: 'PermissionConflictDetected', description: 'Conflito de permissão detectado' },
+    { name: 'ComplianceViolation', description: 'Violação de compliance detectada' },
+    { name: 'PolicyRecommendation', description: 'Recomendação de política gerada' },
+  ],
+};

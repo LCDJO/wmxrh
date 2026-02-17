@@ -122,3 +122,15 @@ export function emitRateLimitTriggered(opts: {
     metadata: { ...opts.metadata, retryAfterMs: opts.retryAfterMs },
   });
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Security',
+  color: 'hsl(0 70% 55%)',
+  events: [
+    { name: 'UnauthorizedAccessAttempt', description: 'Tentativa de acesso não autorizado' },
+    { name: 'ScopeViolationDetected', description: 'Violação de escopo detectada' },
+    { name: 'RateLimitTriggered', description: 'Rate limit acionado' },
+    { name: 'PermissionDenied', description: 'Permissão negada' },
+    { name: 'SuspiciousActivityFlagged', description: 'Atividade suspeita sinalizada' },
+  ],
+};

@@ -169,3 +169,19 @@ export function getBillingEventLog(): ReadonlyArray<BillingDomainEvent> {
 export function clearBillingEventLog(): void {
   eventLog.length = 0;
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Billing',
+  color: 'hsl(145 60% 42%)',
+  events: [
+    { name: 'TenantPlanAssigned', description: 'Plano atribuído ao tenant' },
+    { name: 'TenantPlanUpgraded', description: 'Upgrade de plano realizado' },
+    { name: 'InvoiceGenerated', description: 'Fatura gerada para o tenant' },
+    { name: 'RevenueUpdated', description: 'Receita atualizada (MRR/ARR)' },
+    { name: 'UsageRecorded', description: 'Uso registrado (métrica + quantidade)' },
+    { name: 'CouponCreated', description: 'Cupom criado na plataforma' },
+    { name: 'CouponRedeemed', description: 'Cupom resgatado por um tenant' },
+    { name: 'InvoiceDiscountApplied', description: 'Desconto aplicado em fatura' },
+    { name: 'UsageOverageCalculated', description: 'Excedente de uso calculado' },
+  ],
+};

@@ -53,3 +53,14 @@ export interface ErrorRateSpikePayload {
   top_module?: string;
   total_errors_1h: number;
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Observability',
+  color: 'hsl(35 90% 55%)',
+  events: [
+    { name: 'ModuleHealthChanged', description: 'Status de saúde do módulo alterado' },
+    { name: 'ApplicationErrorDetected', description: 'Erro de aplicação capturado' },
+    { name: 'LatencyThresholdExceeded', description: 'Latência p95 acima do threshold' },
+    { name: 'ErrorRateSpike', description: 'Pico na taxa de erros' },
+  ],
+};

@@ -52,3 +52,18 @@ export function emitAgreementEvent(event: AgreementDomainEvent): void {
 export function resetAgreementHandlers(): void {
   handlers.clear();
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Agreements',
+  color: 'hsl(40 65% 48%)',
+  events: [
+    { name: 'agreement.template.created', description: 'Template de acordo criado' },
+    { name: 'agreement.template.updated', description: 'Template de acordo atualizado' },
+    { name: 'agreement.template.version_published', description: 'Versão de template publicada' },
+    { name: 'agreement.sent_for_signature', description: 'Acordo enviado para assinatura' },
+    { name: 'agreement.signed', description: 'Acordo assinado' },
+    { name: 'agreement.rejected', description: 'Acordo rejeitado' },
+    { name: 'agreement.expired', description: 'Acordo expirado' },
+    { name: 'agreement.auto_dispatch_triggered', description: 'Envio automático de acordo acionado' },
+  ],
+};

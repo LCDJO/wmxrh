@@ -404,3 +404,28 @@ export const platformEvents = {
     });
   },
 };
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Platform Cognitive',
+  color: 'hsl(270 50% 50%)',
+  events: [
+    { name: 'PlatformUserLoggedIn', description: 'Login de usuário na plataforma' },
+    { name: 'TenantReactivated', description: 'Tenant reativado' },
+    { name: 'PlatformPermissionChanged', description: 'Permissão de plataforma alterada' },
+    { name: 'UserBehaviorTracked', description: 'Comportamento do usuário rastreado' },
+    { name: 'RoleSuggestionGenerated', description: 'Sugestão de role gerada por IA' },
+    { name: 'PermissionRiskDetected', description: 'Risco de permissão detectado' },
+    { name: 'NavigationHintCreated', description: 'Dica de navegação criada' },
+    { name: 'PlanAssignedToTenant', description: 'Plano atribuído ao tenant' },
+    { name: 'PlanUpgraded', description: 'Plano atualizado (upgrade)' },
+    { name: 'PlanDowngraded', description: 'Plano rebaixado (downgrade)' },
+    { name: 'PaymentMethodRestricted', description: 'Método de pagamento restrito' },
+    { name: 'ABExperimentStarted', description: 'Experimento A/B iniciado' },
+    { name: 'ABVariantAssigned', description: 'Variante A/B atribuída ao visitante' },
+    { name: 'LandingRankUpdated', description: 'Ranking de landing page atualizado' },
+    { name: 'AIExperimentSuggestionGenerated', description: 'Sugestão de experimento gerada por IA' },
+    { name: 'LandingPageSubmitted', description: 'Landing page submetida para aprovação' },
+    { name: 'LandingPageApproved', description: 'Landing page aprovada pela governança' },
+    { name: 'LandingPageRejected', description: 'Landing page rejeitada pela governança' },
+  ],
+};

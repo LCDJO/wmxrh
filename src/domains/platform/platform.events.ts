@@ -145,3 +145,15 @@ export function getPlatformEventLog(): ReadonlyArray<PlatformDomainEvent> {
 export function clearPlatformEventLog(): void {
   eventLog.length = 0;
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Platform IAM',
+  color: 'hsl(260 55% 52%)',
+  events: [
+    { name: 'PlatformRoleCreated', description: 'Role de plataforma criada' },
+    { name: 'PlatformRoleUpdated', description: 'Role de plataforma atualizada' },
+    { name: 'PlatformPermissionAssigned', description: 'Permissão de plataforma atribuída' },
+    { name: 'PlatformPermissionRevoked', description: 'Permissão de plataforma revogada' },
+    { name: 'PlatformAccessGraphRebuilt', description: 'Grafo de acesso da plataforma reconstruído' },
+  ],
+};

@@ -208,3 +208,37 @@ export function getGrowthEventLog(): ReadonlyArray<GrowthDomainEvent> {
 export function clearGrowthEventLog(): void {
   eventLog.length = 0;
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Growth AI',
+  color: 'hsl(340 75% 55%)',
+  events: [
+    { name: 'LandingPageCreated', description: 'Nova landing page criada no builder' },
+    { name: 'LandingPagePublished', description: 'Landing page publicada (permission-gated)' },
+    { name: 'FABContentUpdated', description: 'Conteúdo FAB de um bloco atualizado' },
+    { name: 'ConversionTracked', description: 'Evento de conversão registrado no funil' },
+    { name: 'GrowthInsightGenerated', description: 'Insight de crescimento gerado por IA' },
+    { name: 'WebsitePublished', description: 'Website publicado em produção' },
+    { name: 'LandingVersionCreated', description: 'Snapshot versionado de landing page criado' },
+    { name: 'AIConversionSuggested', description: 'Sugestão de conversão por IA' },
+    { name: 'FABSectionGenerated', description: 'Seção FAB gerada pelo Content Engine' },
+    { name: 'GTMInjected', description: 'Container GTM injetado na página' },
+    { name: 'TemplateApplied', description: 'Template de landing page aplicado' },
+    { name: 'GTMContainerInjected', description: 'Container GTM injetado na página' },
+    { name: 'GTMPageView', description: 'Evento page_view enviado ao GTM dataLayer' },
+    { name: 'GTMCTAClick', description: 'Evento cta_click enviado ao GTM dataLayer' },
+    { name: 'GTMTrialStart', description: 'Evento trial_start enviado ao GTM dataLayer' },
+    { name: 'GTMPlanSelected', description: 'Evento plan_selected enviado ao GTM dataLayer' },
+    { name: 'GTMReferralSignup', description: 'Evento referral_signup enviado ao GTM dataLayer' },
+    { name: 'AIHeadlineSuggested', description: 'Headline sugerida pelo AI Conversion Designer' },
+    { name: 'AIFABGenerated', description: 'Conteúdo FAB gerado pelo AI Content Generator' },
+    { name: 'AICTAOptimized', description: 'CTA otimizado pelo AI Conversion Designer' },
+    { name: 'AILayoutSuggested', description: 'Layout sugerido pelo AI Conversion Designer' },
+    { name: 'PublicAPIRequest', description: 'Requisição processada pelo PublicAPI Gateway' },
+    { name: 'PublicAPIRateLimited', description: 'Requisição bloqueada por rate limiting' },
+    { name: 'PublicAPITokenIssued', description: 'Token público limitado emitido' },
+    { name: 'VersionSnapshotCreated', description: 'Snapshot de versão criado para landing page' },
+    { name: 'SecurePublishExecuted', description: 'Publicação segura executada via pipeline' },
+    { name: 'RollbackApplied', description: 'Rollback de versão aplicado em landing page' },
+  ],
+};

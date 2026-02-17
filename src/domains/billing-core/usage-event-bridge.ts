@@ -203,3 +203,14 @@ export function createUsageEventBridge(
     },
   };
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Usage Metering',
+  color: 'hsl(25 65% 50%)',
+  events: [
+    { name: 'UserCreated', description: 'Usuário criado (contagem de seats)' },
+    { name: 'APICallExecuted', description: 'Chamada de API executada' },
+    { name: 'WorkflowRun', description: 'Workflow/automação executado' },
+    { name: 'StorageUpdated', description: 'Consumo de storage atualizado' },
+  ],
+};

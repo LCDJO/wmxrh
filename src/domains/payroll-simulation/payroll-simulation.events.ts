@@ -216,3 +216,14 @@ export function detectSimulationRisks(
 
   return risks;
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Payroll',
+  color: 'hsl(55 70% 45%)',
+  events: [
+    { name: 'PayrollSimulationCreated', description: 'Simulação de folha criada' },
+    { name: 'EncargoEstimateUpdated', description: 'Estimativa de encargos atualizada' },
+    { name: 'SimulationRiskDetected', description: 'Risco detectado na simulação' },
+    { name: 'SimulationApproved', description: 'Simulação aprovada' },
+  ],
+};
