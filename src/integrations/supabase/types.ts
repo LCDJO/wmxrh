@@ -7011,6 +7011,56 @@ export type Database = {
           },
         ]
       }
+      website_versions: {
+        Row: {
+          created_at: string
+          id: string
+          is_current: boolean
+          notes: string | null
+          published_by: string | null
+          published_by_email: string | null
+          snapshot_content: Json
+          snapshot_layout: Json
+          snapshot_seo: Json
+          version_number: number
+          website_page_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_current?: boolean
+          notes?: string | null
+          published_by?: string | null
+          published_by_email?: string | null
+          snapshot_content?: Json
+          snapshot_layout?: Json
+          snapshot_seo?: Json
+          version_number?: number
+          website_page_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_current?: boolean
+          notes?: string | null
+          published_by?: string | null
+          published_by_email?: string | null
+          snapshot_content?: Json
+          snapshot_layout?: Json
+          snapshot_seo?: Json
+          version_number?: number
+          website_page_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_versions_website_page_id_fkey"
+            columns: ["website_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       websites: {
         Row: {
           created_at: string
