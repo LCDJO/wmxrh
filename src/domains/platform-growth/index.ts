@@ -40,4 +40,8 @@ export type { PublishResult, PublishError } from './secure-publish-service';
 export { seoOptimizationService, SEOOptimizationService } from './seo-optimization-service';
 export type { SEOReport, SEOIssue, MetaTags } from './seo-optimization-service';
 
+// ── Landing Template Engine ──
+export { landingTemplateEngine, LandingTemplateEngine } from './landing-template-engine';
+export type { LandingTemplate, TemplateSection, TemplateSectionType } from './landing-template-engine';
+
 export type * from './types';

@@ -82,6 +82,7 @@ import GrowthInsights from "./pages/platform/growth/GrowthInsights";
 import GrowthLandingPages from "./pages/platform/growth/GrowthLandingPages";
 import GrowthConversions from "./pages/platform/growth/GrowthConversions";
 import GrowthFABBuilder from "./pages/platform/growth/GrowthFABBuilder";
+import GrowthTemplateEngine from "./pages/platform/growth/GrowthTemplateEngine";
 import ReferralPage from "./pages/ReferralPage";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
 
@@ -161,6 +162,7 @@ function AppRoutes() {
         <Route path="growth/landing-pages" element={<GrowthLandingPages />} />
         <Route path="growth/conversions" element={<GrowthConversions />} />
         <Route path="growth/fab-builder" element={<GrowthFABBuilder />} />
+        <Route path="growth/template-engine" element={<GrowthTemplateEngine />} />
       </Route>
 
       {/* ═══ LANDING PAGE RENDERER ═══ */}
