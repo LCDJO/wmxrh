@@ -6,7 +6,7 @@
  */
 
 import type { PlatformExperienceEngineAPI } from '@/domains/platform-experience/types';
-import type { ModuleOrchestratorAPI } from '@/domains/platform-os/types';
+import type { ModuleOrchestratorAPI, GlobalEventKernelAPI } from '@/domains/platform-os/types';
 import type { PlatformBillingCoreAPI } from './types';
 import { createBillingCalculator } from './billing-calculator';
 import { createFinancialLedgerAdapter } from './financial-ledger-adapter';
@@ -15,6 +15,7 @@ import { createRevenueMetricsService } from './revenue-metrics-service';
 import { createSubscriptionLifecycleManager } from './subscription-lifecycle-manager';
 import { createModulePlanSyncService } from './module-plan-sync-service';
 import { createUsageBillingEngine } from './usage-billing-engine';
+import { createUsageEventBridge } from './usage-event-bridge';
 import {
   createCouponManager,
   createCouponValidationService,
@@ -29,7 +30,8 @@ import {
  */
 export function createPlatformBillingCore(
   pxe: PlatformExperienceEngineAPI,
-  modules?: ModuleOrchestratorAPI
+  modules?: ModuleOrchestratorAPI,
+  events?: GlobalEventKernelAPI,
 ): PlatformBillingCoreAPI {
   const calculator = createBillingCalculator(pxe.plans, pxe.tenantPlan);
   const ledger = createFinancialLedgerAdapter();
@@ -38,6 +40,12 @@ export function createPlatformBillingCore(
 
   // Usage-based billing
   const usage = createUsageBillingEngine();
+
+  // Event bridge: auto-record usage from GlobalEventKernel
+  if (events) {
+    const bridge = createUsageEventBridge(events, usage.collector);
+    bridge.start();
+  }
 
   // Coupon & discount engine
   const coupons = createCouponManager();

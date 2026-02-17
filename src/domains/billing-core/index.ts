@@ -35,6 +35,14 @@ export {
   createDiscountEngine,
   createBillingAdjustmentService,
 } from './coupon-discount-engine';
+export { createUsageEventBridge, USAGE_EVENTS } from './usage-event-bridge';
+export type {
+  UsageEventBridgeAPI,
+  UserCreatedPayload,
+  APICallExecutedPayload,
+  WorkflowRunPayload,
+  StorageUpdatedPayload,
+} from './usage-event-bridge';
 
 // ── Domain Events ────────────────────────────────────────────
 export {
