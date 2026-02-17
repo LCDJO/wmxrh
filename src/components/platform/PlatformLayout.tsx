@@ -31,6 +31,7 @@ import {
   Rocket,
   Globe,
   GitBranch,
+  Settings,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -139,19 +140,15 @@ const NAV_ITEMS: PlatformNavItem[] = [
   },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
   {
-    to: '/platform/structure',
-    label: 'Estrutura',
-    icon: Puzzle,
+    to: '/platform/settings',
+    label: 'Settings',
+    icon: Settings,
     children: [
+      { to: '/platform/settings/versioning', label: 'Versionamento' },
       { to: '/platform/structure/events', label: 'Eventos' },
       { to: '/platform/structure/menus', label: 'Menus' },
       { to: '/platform/structure/modules', label: 'Módulos' },
     ],
-  },
-  {
-    to: '/platform/settings/versioning',
-    label: 'Versionamento',
-    icon: GitBranch,
   },
 ];
 
