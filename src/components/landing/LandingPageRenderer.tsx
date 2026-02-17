@@ -22,6 +22,8 @@ import { fabContentEngine } from '@/domains/platform-growth/landing-page-builder
 import { conversionTrackingService } from '@/domains/platform-growth/conversion-tracking-service';
 import { tagManagerIntegration } from '@/domains/platform-growth/tag-manager-integration';
 import { referralTrackingService } from '@/domains/platform-growth/referral-tracking-service';
+import { siteStructureManager } from '@/domains/platform-growth/site-structure-manager';
+import { useAuth } from '@/contexts/AuthContext';
 import { HeroSection } from './HeroSection';
 import { FABSection } from './FABSection';
 import { PricingSection } from './PricingSection';
@@ -29,6 +31,7 @@ import { ReferralCTA } from './ReferralCTA';
 import { TestimonialsSection } from './TestimonialsSection';
 import { FAQSection } from './FAQSection';
 import { FooterSection } from './FooterSection';
+import { SiteNavbar } from './SiteNavbar';
 
 interface LandingPageRendererProps {
   /** Pre-built blueprint (takes precedence) */
@@ -49,6 +52,7 @@ export function LandingPageRenderer({
   page,
   referralCode,
 }: LandingPageRendererProps) {
+  const { user } = useAuth();
   const viewTracked = useRef(false);
 
   // ── Generate or use provided blueprint ──
@@ -101,6 +105,9 @@ export function LandingPageRenderer({
 
   return (
     <div className="min-h-screen bg-background text-foreground" onClick={captureCtaClicks(handleCTAClick)}>
+      {/* Navigation — Identity-aware + Navigation Intelligence */}
+      <SiteNavbar domain={page?.slug ?? 'default'} />
+
       {/* 1. Hero */}
       <HeroSection data={blueprint.hero} />
 
@@ -123,7 +130,7 @@ export function LandingPageRenderer({
       {/* 6. FAQ */}
       <FAQSection />
 
-      {/* 7. Footer (with final CTA) */}
+      {/* 7. Footer (with final CTA) — identity-aware */}
       <FooterSection cta={blueprint.cta} />
     </div>
   );
