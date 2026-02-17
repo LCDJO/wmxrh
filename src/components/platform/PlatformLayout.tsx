@@ -116,6 +116,8 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/landing', label: 'Landing Pages', requiredPermission: 'landing_page.view' },
       { to: '/platform/marketing/insights', label: 'Insights de Crescimento' },
       { to: '/platform/marketing/funnels', label: 'Funis' },
+      { to: '/platform/marketing/pipeline', label: 'Pipeline de Conversão' },
+      { to: '/platform/marketing/campaigns', label: 'Campanhas' },
       { to: '/platform/marketing/campaigns', label: 'Campanhas' },
     ],
   },
