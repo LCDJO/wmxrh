@@ -10,9 +10,10 @@ import {
   type TenantAnnouncement,
 } from '@/domains/announcements/announcement-hub';
 import { cn } from '@/lib/utils';
-import { Megaphone, X } from 'lucide-react';
+import { Megaphone, X, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useNavigate } from 'react-router-dom';
 
 function AnnouncementFlyoutItem({
   announcement: a,
@@ -57,6 +58,7 @@ function AnnouncementFlyoutItem({
 
 export function AnnouncementFlyoutSection() {
   const { flyoutAnnouncements, dismiss } = useAnnouncements();
+  const navigate = useNavigate();
 
   if (flyoutAnnouncements.length === 0) return null;
 
@@ -65,7 +67,7 @@ export function AnnouncementFlyoutSection() {
       <div className="flex items-center gap-1.5 px-4 py-2 bg-muted/30">
         <Megaphone className="h-3 w-3 text-muted-foreground" />
         <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-          Avisos da Plataforma
+          Comunicados da Plataforma
         </span>
         {flyoutAnnouncements.length > 0 && (
           <Badge variant="secondary" className="text-[9px] ml-auto">
@@ -76,6 +78,16 @@ export function AnnouncementFlyoutSection() {
       {flyoutAnnouncements.slice(0, 3).map(a => (
         <AnnouncementFlyoutItem key={a.id} announcement={a} onDismiss={dismiss} />
       ))}
+      {flyoutAnnouncements.length > 3 && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full h-7 text-xs text-muted-foreground gap-1"
+          onClick={() => navigate('/announcements')}
+        >
+          Ver todos ({flyoutAnnouncements.length}) <ArrowRight className="h-3 w-3" />
+        </Button>
+      )}
     </div>
   );
 }
