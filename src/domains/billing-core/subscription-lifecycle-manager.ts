@@ -12,6 +12,7 @@ import type {
 } from './types';
 import type { BillingCycle } from '@/domains/platform-experience/types';
 import type { ModulePlanSyncAPI } from './module-plan-sync-service';
+import { emitBillingEvent } from './billing-events';
 
 export function createSubscriptionLifecycleManager(
   planLifecycle: PlanLifecycleManagerAPI,
@@ -44,6 +45,32 @@ export function createSubscriptionLifecycleManager(
 
       ledger.recordCharge(tenantId, invoice.id, calc.total_brl, `Fatura #${invoice.id.slice(0, 8)}`);
 
+      // Emit domain events
+      emitBillingEvent({
+        type: 'TenantPlanAssigned',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        plan_id: planId,
+        billing_cycle: cycle,
+      });
+      emitBillingEvent({
+        type: 'InvoiceGenerated',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        invoice_id: invoice.id,
+        total_amount: calc.total_brl,
+        due_date: calc.period_start,
+        notes: `Ativação do plano — ${cycle}`,
+      });
+      emitBillingEvent({
+        type: 'RevenueUpdated',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        invoice_id: invoice.id,
+        amount: calc.total_brl,
+        entry_type: 'charge',
+      });
+
       // Sync modules to match new plan
       modulePlanSync?.syncModulesForPlan(tenantId, planId);
     },
@@ -72,7 +99,35 @@ export function createSubscriptionLifecycleManager(
           notes: `Upgrade proration`,
         });
         ledger.recordCharge(tenantId, invoice.id, proration.total_brl, 'Proration charge');
+
+        emitBillingEvent({
+          type: 'InvoiceGenerated',
+          timestamp: Date.now(),
+          tenant_id: tenantId,
+          invoice_id: invoice.id,
+          total_amount: proration.total_brl,
+          due_date: proration.period_start,
+          notes: 'Upgrade proration',
+        });
+        emitBillingEvent({
+          type: 'RevenueUpdated',
+          timestamp: Date.now(),
+          tenant_id: tenantId,
+          invoice_id: invoice.id,
+          amount: proration.total_brl,
+          entry_type: 'charge',
+        });
       }
+
+      // Emit upgrade event
+      emitBillingEvent({
+        type: 'TenantPlanUpgraded',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        from_plan_id: snap.plan_id,
+        to_plan_id: toPlanId,
+        proration_amount: proration.total_brl,
+      });
 
       // Sync modules to match new plan
       modulePlanSync?.syncModulesForPlan(tenantId, toPlanId);
@@ -113,6 +168,25 @@ export function createSubscriptionLifecycleManager(
       });
 
       ledger.recordCharge(tenantId, invoice.id, calc.total_brl, `Renovação #${invoice.id.slice(0, 8)}`);
+
+      emitBillingEvent({
+        type: 'InvoiceGenerated',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        invoice_id: invoice.id,
+        total_amount: calc.total_brl,
+        due_date: calc.period_start,
+        notes: `Renovação — ${calc.billing_cycle}`,
+      });
+      emitBillingEvent({
+        type: 'RevenueUpdated',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        invoice_id: invoice.id,
+        amount: calc.total_brl,
+        entry_type: 'charge',
+      });
+
       return invoice;
     },
   };
