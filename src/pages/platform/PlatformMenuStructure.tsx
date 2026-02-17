@@ -5,7 +5,7 @@
  */
 import {
   Puzzle, RefreshCw, GripVertical, Save, ArrowRight, ArrowLeft,
-  AlertTriangle, CheckCircle2, History, GitBranch, Shield, FileDiff,
+  AlertTriangle, CheckCircle2, History, GitBranch, Shield, FileDiff, Monitor,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,7 @@ import {
 import type { MenuTreeNode, MenuValidationResult, MenuDiff } from '@/domains/menu-structure/types';
 import { MenuTreeBuilder } from '@/components/platform/MenuTreeBuilder';
 import { MenuDiffViewer } from '@/components/platform/MenuDiffViewer';
+import { MenuMobilePreview } from '@/components/platform/MenuMobilePreview';
 
 /* ─── Helper ─── */
 const mn = (
@@ -285,6 +286,9 @@ export default function PlatformMenuStructure() {
           <TabsTrigger value="diff" className="gap-1.5 text-xs data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
             <FileDiff className="h-3.5 w-3.5" />Diff Visual
           </TabsTrigger>
+          <TabsTrigger value="preview" className="gap-1.5 text-xs data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <Monitor className="h-3.5 w-3.5" />Preview
+          </TabsTrigger>
         </TabsList>
 
         {/* Tree — uses <MenuTreeBuilder /> */}
@@ -478,6 +482,20 @@ export default function PlatformMenuStructure() {
                   )}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Preview — Desktop / Mobile */}
+        <TabsContent value="preview" className="mt-4">
+          <Card className="border-border/50 bg-card/80 backdrop-blur">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+                <Monitor className="h-4 w-4" />Preview Responsivo
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MenuMobilePreview tree={tree} />
             </CardContent>
           </Card>
         </TabsContent>
