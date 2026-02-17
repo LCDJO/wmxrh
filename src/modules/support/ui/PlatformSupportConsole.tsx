@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -209,8 +211,22 @@ function AgentDashboard({ userId, onNavigate }: { userId: string; onNavigate: (t
 
 // ── Ticket Queue ──
 
+interface TicketWithTenant extends SupportTicket {
+  tenant_name?: string;
+}
+
+function getTimeOpen(createdAt: string): string {
+  const diff = Date.now() - new Date(createdAt).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
 function TicketQueue({ userId }: { userId: string }) {
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [tickets, setTickets] = useState<TicketWithTenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const [selected, setSelected] = useState<SupportTicket | null>(null);
@@ -220,7 +236,16 @@ function TicketQueue({ userId }: { userId: string }) {
       setLoading(true);
       const statusFilter = filter !== 'all' ? filter as TicketStatus : undefined;
       const data = await TicketService.listAll(statusFilter ? { status: statusFilter } : undefined);
-      setTickets(data);
+
+      // Fetch tenant names
+      const tenantIds = [...new Set(data.map(t => t.tenant_id))];
+      const { data: tenants } = await supabase
+        .from('tenants')
+        .select('id, name')
+        .in('id', tenantIds);
+      const tenantMap = new Map((tenants ?? []).map(t => [t.id, t.name]));
+
+      setTickets(data.map(t => ({ ...t, tenant_name: (tenantMap.get(t.tenant_id) as string) ?? t.tenant_id.slice(0, 8) })));
     } catch { toast.error('Erro ao carregar tickets'); }
     finally { setLoading(false); }
   }, [filter]);
@@ -276,33 +301,60 @@ function TicketQueue({ userId }: { userId: string }) {
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
       ) : (
-        <div className="space-y-2">
-          {tickets.map(ticket => {
-            const st = STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.open;
-            const pr = PRIORITY_CONFIG[ticket.priority] ?? PRIORITY_CONFIG.medium;
-            const StatusIcon = st.icon;
-            return (
-              <Card key={ticket.id} className="cursor-pointer hover:shadow-sm transition-shadow" onClick={() => setSelected(ticket)}>
-                <CardContent className="py-3 px-4 flex items-center gap-4">
-                  <StatusIcon className="h-5 w-5 shrink-0" style={{ color: st.color }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{ticket.subject}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {CATEGORY_LABELS[ticket.category]} · {new Date(ticket.created_at).toLocaleDateString('pt-BR')}
-                      {ticket.assigned_to ? ' · Atribuído' : ' · Não atribuído'}
-                    </p>
-                  </div>
-                  <Badge variant="secondary" className="text-[10px]" style={{ backgroundColor: `${pr.color}15`, color: pr.color }}>
-                    {pr.label}
-                  </Badge>
-                  <Badge variant="secondary" className="text-[10px]" style={{ backgroundColor: `${st.color}15`, color: st.color }}>
-                    {st.label}
-                  </Badge>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Status</TableHead>
+              <TableHead>Tenant</TableHead>
+              <TableHead>Assunto</TableHead>
+              <TableHead>Prioridade</TableHead>
+              <TableHead>Módulo</TableHead>
+              <TableHead className="text-right">Tempo Aberto</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tickets.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  Nenhum ticket encontrado.
+                </TableCell>
+              </TableRow>
+            ) : (
+              tickets.map(ticket => {
+                const st = STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.open;
+                const pr = PRIORITY_CONFIG[ticket.priority] ?? PRIORITY_CONFIG.medium;
+                const StatusIcon = st.icon;
+                return (
+                  <TableRow key={ticket.id} className="cursor-pointer" onClick={() => setSelected(ticket)}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <StatusIcon className="h-4 w-4 shrink-0" style={{ color: st.color }} />
+                        <Badge variant="secondary" className="text-[10px]" style={{ backgroundColor: `${st.color}15`, color: st.color }}>
+                          {st.label}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium text-sm">{ticket.tenant_name}</TableCell>
+                    <TableCell>
+                      <p className="text-sm text-foreground truncate max-w-[220px]">{ticket.subject}</p>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-[10px]" style={{ backgroundColor: `${pr.color}15`, color: pr.color }}>
+                        {pr.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-xs text-muted-foreground">{CATEGORY_LABELS[ticket.category]}</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className="text-xs font-mono text-muted-foreground">{getTimeOpen(ticket.created_at)}</span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
       )}
     </div>
   );
