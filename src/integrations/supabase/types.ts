@@ -5849,6 +5849,8 @@ export type Database = {
           id: string
           metadata: Json | null
           metric_key: string
+          metric_type: string
+          module_id: string | null
           quantity: number
           recorded_at: string
           source: string
@@ -5862,6 +5864,8 @@ export type Database = {
           id?: string
           metadata?: Json | null
           metric_key: string
+          metric_type?: string
+          module_id?: string | null
           quantity?: number
           recorded_at?: string
           source?: string
@@ -5875,6 +5879,8 @@ export type Database = {
           id?: string
           metadata?: Json | null
           metric_key?: string
+          metric_type?: string
+          module_id?: string | null
           quantity?: number
           recorded_at?: string
           source?: string

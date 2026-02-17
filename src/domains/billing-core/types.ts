@@ -239,10 +239,14 @@ export interface RevenueMetricsServiceAPI {
 // Usage-Based Billing
 // ══════════════════════════════════════════════════════════════════
 
+export type UsageMetricType = 'users' | 'api_calls' | 'storage' | 'executions';
+
 export interface UsageRecord {
   id: string;
   tenant_id: string;
+  module_id: string | null;
   metric_key: string;
+  metric_type: UsageMetricType;
   quantity: number;
   unit: string;
   recorded_at: string;
@@ -295,6 +299,8 @@ export interface UsageCostBreakdown {
 
 export interface UsageCollectorAPI {
   record(tenantId: string, metricKey: string, quantity: number, opts?: {
+    module_id?: string;
+    metric_type?: UsageMetricType;
     unit?: string;
     billing_period_start?: string;
     billing_period_end?: string;
@@ -304,6 +310,8 @@ export interface UsageCollectorAPI {
   recordBatch(tenantId: string, records: Array<{
     metric_key: string;
     quantity: number;
+    module_id?: string;
+    metric_type?: UsageMetricType;
     unit?: string;
     billing_period_start: string;
     billing_period_end: string;
@@ -312,6 +320,8 @@ export interface UsageCollectorAPI {
   }>): Promise<UsageRecord[]>;
   getByTenant(tenantId: string, opts?: {
     metric_key?: string;
+    metric_type?: UsageMetricType;
+    module_id?: string;
     period_start?: string;
     period_end?: string;
     limit?: number;
