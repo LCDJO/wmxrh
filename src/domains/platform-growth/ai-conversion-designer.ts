@@ -11,6 +11,7 @@
 import type { LandingPage, FABContent, LPCopyBlueprint } from './types';
 import { fabContentEngine } from './landing-page-builder';
 import { conversionTrackingService } from './conversion-tracking-service';
+import { emitGrowthEvent } from './growth.events';
 
 // ── Conversion Score Breakdown ─────────────────────
 
@@ -77,14 +78,31 @@ export class AIConversionDesigner {
     const total = heroClarity + fabCompleteness + ctaStrength + socialProof + urgency + seo;
     const grade = total >= 90 ? 'A' : total >= 75 ? 'B' : total >= 60 ? 'C' : total >= 40 ? 'D' : 'F';
 
+    const sorted = suggestions.sort((a, b) => {
+      const p = { high: 0, medium: 1, low: 2 };
+      return p[a.priority] - p[b.priority];
+    });
+
+    // Emit AIConversionSuggested for top suggestion
+    if (sorted.length > 0) {
+      const top = sorted[0];
+      emitGrowthEvent({
+        type: 'AIConversionSuggested',
+        timestamp: Date.now(),
+        pageId: page.id,
+        pageTitle: page.name,
+        suggestionId: top.id,
+        category: top.area,
+        predictedLiftPct: parseFloat(top.expectedImpact.replace(/[^0-9.]/g, '')) || 10,
+        confidence: total / 100,
+      });
+    }
+
     return {
       total,
       breakdown: { heroClarity, fabCompleteness, ctaStrength, socialProof, urgency, seo },
       grade,
-      suggestions: suggestions.sort((a, b) => {
-        const p = { high: 0, medium: 1, low: 2 };
-        return p[a.priority] - p[b.priority];
-      }),
+      suggestions: sorted,
     };
   }
 

@@ -16,6 +16,7 @@
  *   gtmInjectionService.pushEvent('cta_click', { section: 'hero' });
  */
 import type { TagManagerConfig, TagManagerEvent } from './types';
+import { emitGrowthEvent } from './growth.events';
 
 // ── DataLayer global declaration ─────────────────────────────
 declare global {
@@ -101,6 +102,17 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
     this.injectedContainers.add(containerId);
     console.info(`[GTM] Injected container: ${containerId}`);
+
+    // Emit GTMInjected event
+    emitGrowthEvent({
+      type: 'GTMInjected',
+      timestamp: Date.now(),
+      pageId: '',
+      pageSlug: '',
+      containerId,
+      eventsCount: AUTO_EVENTS.length,
+      injectedBy: 'system',
+    });
   }
 
   // ── Event Pushing ─────────────────────────────────────────

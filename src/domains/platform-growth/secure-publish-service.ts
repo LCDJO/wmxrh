@@ -95,7 +95,7 @@ export class SecurePublishService {
       };
     }
 
-    // 7. Emit domain event
+    // 7. Emit domain events
     emitGrowthEvent({
       type: 'LandingPagePublished',
       timestamp: Date.now(),
@@ -104,6 +104,28 @@ export class SecurePublishService {
       slug: updated.slug,
       publishedBy: userId,
       publisherRole: userRole,
+    });
+
+    emitGrowthEvent({
+      type: 'WebsitePublished',
+      timestamp: Date.now(),
+      pageId: updated.id,
+      pageSlug: updated.slug,
+      pageTitle: updated.name,
+      version: version.version,
+      publishedBy: userId,
+      publisherRole: userRole,
+      url: `/lp/${updated.slug}`,
+    });
+
+    emitGrowthEvent({
+      type: 'LandingVersionCreated',
+      timestamp: Date.now(),
+      pageId: updated.id,
+      pageTitle: updated.name,
+      versionNumber: version.version,
+      changeSummary: config.changeNotes ?? 'Publicação',
+      createdBy: userId,
     });
 
     return {
