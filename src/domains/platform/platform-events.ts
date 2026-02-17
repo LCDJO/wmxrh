@@ -43,13 +43,7 @@ export type PlatformEventType =
   | 'LandingPageSubmitted'
   | 'LandingPageApproved'
   | 'LandingPageRejected'
-  | 'LandingPagePublished'
-  // Landing Audit events
-  | 'LandingDraftDeleted'
-  | 'LandingVersionCreated'
-  | 'LandingVersionApproved'
-  | 'LandingVersionPublished'
-  | 'LandingVersionSuperseded';
+  | 'LandingPagePublished';
 
 export interface PlatformEventPayload {
   type: PlatformEventType;
@@ -406,65 +400,6 @@ export const platformEvents = {
       actorId,
       targetType: 'governance',
       targetId: opts.requestId,
-      metadata: opts,
-    });
-  },
-
-  // ═══════════════════════════════════
-  // Landing Audit Events
-  // ═══════════════════════════════════
-
-  landingDraftDeleted(actorId: string, opts: { landingPageId: string; pageName: string }) {
-    emit({
-      type: 'LandingDraftDeleted',
-      timestamp: new Date().toISOString(),
-      actorId,
-      targetType: 'governance',
-      targetId: opts.landingPageId,
-      metadata: opts,
-    });
-  },
-
-  landingVersionCreated(actorId: string, opts: { landingPageId: string; versionId: string; versionNumber: number }) {
-    emit({
-      type: 'LandingVersionCreated',
-      timestamp: new Date().toISOString(),
-      actorId,
-      targetType: 'governance',
-      targetId: opts.versionId,
-      metadata: opts,
-    });
-  },
-
-  landingVersionApproved(actorId: string, opts: { landingPageId: string; versionId: string; versionNumber: number; approvedBy: string }) {
-    emit({
-      type: 'LandingVersionApproved',
-      timestamp: new Date().toISOString(),
-      actorId,
-      targetType: 'governance',
-      targetId: opts.versionId,
-      metadata: opts,
-    });
-  },
-
-  landingVersionPublished(actorId: string, opts: { landingPageId: string; versionId: string; versionNumber: number }) {
-    emit({
-      type: 'LandingVersionPublished',
-      timestamp: new Date().toISOString(),
-      actorId,
-      targetType: 'governance',
-      targetId: opts.versionId,
-      metadata: opts,
-    });
-  },
-
-  landingVersionSuperseded(actorId: string, opts: { landingPageId: string; versionId: string; versionNumber: number; supersededBy: string }) {
-    emit({
-      type: 'LandingVersionSuperseded',
-      timestamp: new Date().toISOString(),
-      actorId,
-      targetType: 'governance',
-      targetId: opts.versionId,
       metadata: opts,
     });
   },

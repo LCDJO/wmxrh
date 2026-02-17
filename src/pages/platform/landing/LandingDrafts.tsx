@@ -1,46 +1,17 @@
 /**
  * /platform/landing/drafts — Landing pages em rascunho e rejeitadas.
- * 
- * Features:
- *  - Save draft
- *  - Submit for approval
- *  - Safe delete (only draft — governed by status machine)
- *    - PlatformMarketing: own drafts only
- *    - Director/SuperAdmin: any draft
- *    - Soft delete: sets deleted_at + deleted_by, preserves ID
- *    - Audit log entry on deletion
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import { landingPageGovernance } from '@/domains/platform-growth/landing-page-governance';
-import { landingAuditLog } from '@/domains/platform-growth/landing-audit-log';
-import {
-  getStatusLabel,
-  getStatusVariant,
-  getAvailableTransitions,
-  canDeletePage,
-  hasRunningExperiments,
-  type LandingPageStatus,
-} from '@/domains/platform-growth/landing-page-status-machine';
+import { getStatusLabel, getStatusVariant, getAvailableTransitions, type LandingPageStatus } from '@/domains/platform-growth/landing-page-status-machine';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Loader2, FileEdit, Send, Trash2, ShieldAlert } from 'lucide-react';
+import { Loader2, FileEdit, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { LandingPreSubmitAlert } from '@/components/platform/landing/LandingPreSubmitAlert';
-import type { LandingPage as LandingPageType } from '@/domains/platform-growth/types';
 
 interface LandingPage {
   id: string;
@@ -59,9 +30,6 @@ export default function LandingDrafts() {
   const [pages, setPages] = useState<LandingPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<LandingPage | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [preSubmitPage, setPreSubmitPage] = useState<LandingPage | null>(null);
 
   const fetchDrafts = async () => {
     setLoading(true);
@@ -69,7 +37,6 @@ export default function LandingDrafts() {
       .from('landing_pages')
       .select('id, name, slug, status, created_at, updated_at, created_by')
       .in('status', ['draft', 'rejected'])
-      .is('deleted_at', null)
       .order('updated_at', { ascending: false });
     setPages((data as LandingPage[]) ?? []);
     setLoading(false);
@@ -93,6 +60,7 @@ export default function LandingDrafts() {
     }
   };
 
+
   const handleSubmit = async (pageId: string) => {
     if (!identity) return;
     setSubmitting(pageId);
@@ -108,73 +76,6 @@ export default function LandingDrafts() {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     } finally {
       setSubmitting(null);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget || !identity) return;
-    const status = deleteTarget.status as LandingPageStatus;
-
-    // Double-check governance rules (ownership + role)
-    if (!canDeletePage(status, identity.role, deleteTarget.created_by, identity.id)) {
-      toast({
-        title: 'Exclusão bloqueada',
-        description: status !== 'draft'
-          ? `Landing pages com status "${getStatusLabel(status)}" não podem ser excluídas. Somente rascunhos.`
-          : 'Você não tem permissão para excluir este rascunho.',
-        variant: 'destructive',
-      });
-      setDeleteTarget(null);
-      return;
-    }
-
-    // Block deletion if there are running A/B experiments
-    if (hasRunningExperiments(deleteTarget.id)) {
-      toast({
-        title: 'Exclusão bloqueada',
-        description: 'Landing page com experimentos A/B em execução não pode ser excluída. Finalize ou cancele os experimentos.',
-        variant: 'destructive',
-      });
-      setDeleteTarget(null);
-      return;
-    }
-
-    setDeleting(true);
-    try {
-      // Soft delete: preserve ID, set deleted_at + deleted_by, clear content
-      const { error } = await supabase
-        .from('landing_pages')
-        .update({
-          deleted_at: new Date().toISOString(),
-          deleted_by: identity.id,
-          blocks: [],
-          analytics: {},
-          status: 'draft', // keep status for audit trail
-        })
-        .eq('id', deleteTarget.id);
-
-      if (error) throw new Error(error.message);
-
-      // Write audit log (standardized)
-      await landingAuditLog.draftDeleted({
-        landingPageId: deleteTarget.id,
-        pageName: deleteTarget.name,
-        pageSlug: deleteTarget.slug,
-        actorId: identity.id,
-        actorEmail: identity.email,
-        actorRole: identity.role,
-      });
-
-      toast({
-        title: 'Excluída',
-        description: `"${deleteTarget.name}" foi removida. O ID permanece reservado no histórico.`,
-      });
-      fetchDrafts();
-    } catch (err: any) {
-      toast({ title: 'Erro ao excluir', description: err.message, variant: 'destructive' });
-    } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
     }
   };
 
@@ -195,7 +96,7 @@ export default function LandingDrafts() {
         <div>
           <h1 className="text-2xl font-bold font-display text-foreground">Rascunhos</h1>
           <p className="text-sm text-muted-foreground">
-            Landing pages em rascunho — edite, submeta para aprovação ou exclua com segurança.
+            Landing pages em rascunho — edite e submeta para aprovação.
           </p>
         </div>
       </div>
@@ -209,18 +110,15 @@ export default function LandingDrafts() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {pages.map(page => {
-            const status = page.status as LandingPageStatus;
-            const transitions = getAvailableTransitions(status, identity?.role);
+            const transitions = getAvailableTransitions(page.status as LandingPageStatus, identity?.role);
             const canSubmit = transitions.some(t => t.to === 'submitted');
-            const isDeletable = canDeletePage(status, identity?.role, page.created_by, identity?.id ?? null);
-
             return (
               <Card key={page.id} className="flex flex-col">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base truncate">{page.name}</CardTitle>
-                    <Badge variant={getStatusVariant(status)}>
-                      {getStatusLabel(status)}
+                    <Badge variant={getStatusVariant(page.status as LandingPageStatus)}>
+                      {getStatusLabel(page.status as LandingPageStatus)}
                     </Badge>
                   </div>
                   <CardDescription className="text-xs">/{page.slug}</CardDescription>
@@ -249,7 +147,7 @@ export default function LandingDrafts() {
                         size="sm"
                         className="gap-1.5"
                         disabled={submitting === page.id}
-                        onClick={() => setPreSubmitPage(page)}
+                        onClick={() => handleSubmit(page.id)}
                       >
                         {submitting === page.id ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
@@ -259,17 +157,6 @@ export default function LandingDrafts() {
                         Submeter para Aprovação
                       </Button>
                     )}
-                    {isDeletable && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => setDeleteTarget(page)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        Excluir Rascunho
-                      </Button>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -277,81 +164,6 @@ export default function LandingDrafts() {
           })}
         </div>
       )}
-
-      {/* Pre-Submit Governance AI Alert */}
-      <AlertDialog open={!!preSubmitPage} onOpenChange={(open) => !open && setPreSubmitPage(null)}>
-        <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-primary" />
-              Submeter "{preSubmitPage?.name}" para Aprovação
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              A Governance AI analisou esta página antes da submissão.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          {preSubmitPage && (
-            <LandingPreSubmitAlert
-              page={preSubmitPage as unknown as LandingPageType}
-              onDismiss={() => setPreSubmitPage(null)}
-              onProceed={() => {
-                const pageId = preSubmitPage.id;
-                setPreSubmitPage(null);
-                handleSubmit(pageId);
-              }}
-            />
-          )}
-
-          {/* If no alerts are found, show a simple proceed button */}
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (preSubmitPage) {
-                const pageId = preSubmitPage.id;
-                setPreSubmitPage(null);
-                handleSubmit(pageId);
-              }
-            }}>
-              Submeter
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Safe Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-destructive" />
-              Excluir Landing Page
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <span className="block">
-                Tem certeza que deseja excluir <strong>"{deleteTarget?.name}"</strong>?
-              </span>
-              <span className="block text-xs">
-                O conteúdo será removido permanentemente, mas o ID será preservado no histórico de governança (soft delete).
-              </span>
-              <span className="block text-[11px] text-muted-foreground border-t border-border/40 pt-2 mt-2">
-                Nota: Somente rascunhos podem ser excluídos. Após submissão, a exclusão é bloqueada para preservar a trilha de auditoria.
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Trash2 className="h-4 w-4 mr-1" />}
-              Excluir Permanentemente
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
