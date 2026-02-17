@@ -140,14 +140,10 @@ export interface TagManagerEvent {
 }
 
 // ── Conversion Tracking ──
-export type ConversionEventOrigin = 'landing_page' | 'website';
-
 export interface ConversionEvent {
   id: string;
   landingPageId: string;
-  /** Origin of the event — landing page (conversion-focused) or website (branding/SEO) */
-  origin?: ConversionEventOrigin;
-  type: 'page_view' | 'cta_click' | 'signup' | 'trial_start' | 'purchase' | 'referral_click' | 'tenant_created' | 'plan_selected' | 'revenue_generated';
+  type: 'signup' | 'trial_start' | 'purchase' | 'referral_click' | 'tenant_created' | 'plan_selected' | 'revenue_generated';
   source: string;
   referralCode?: string;
   tenantId?: string;

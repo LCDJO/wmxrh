@@ -68,8 +68,6 @@ export class ConversionTrackingService {
     const pageEvents = this.getByPage(pageId);
     return {
       views: 4820,
-      pageViews: pageEvents.filter(e => e.type === 'page_view').length,
-      ctaClicks: pageEvents.filter(e => e.type === 'cta_click').length,
       signups: pageEvents.filter(e => e.type === 'signup').length,
       trials: pageEvents.filter(e => e.type === 'trial_start').length,
       tenantsCreated: pageEvents.filter(e => e.type === 'tenant_created').length,
@@ -77,8 +75,6 @@ export class ConversionTrackingService {
       revenueEvents: pageEvents.filter(e => e.type === 'revenue_generated').length,
       referralClicks: pageEvents.filter(e => e.type === 'referral_click').length,
       totalRevenue: pageEvents.reduce((sum, e) => sum + (e.revenue ?? 0), 0),
-      websiteEvents: pageEvents.filter(e => e.origin === 'website').length,
-      landingPageEvents: pageEvents.filter(e => e.origin === 'landing_page' || !e.origin).length,
     };
   }
 }
