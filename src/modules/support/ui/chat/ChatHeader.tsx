@@ -1,6 +1,10 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Wifi, WifiOff, X, Building2, IdCard } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ArrowLeft, X, Building2, IdCard, Download, FileText, FileJson } from 'lucide-react';
+import { toast } from 'sonner';
+import { ChatTranscriptArchive } from '@/domains/support/chat-transcript-archive';
 import type { ChatSession, ChatSenderType } from '@/domains/support/types';
 import type { ChatIdentity } from '../LiveChatWindow';
 
@@ -117,6 +121,60 @@ export default function ChatHeader({
       </div>
 
       <div className="flex items-center gap-1.5">
+        {/* Export transcript */}
+        {session && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-primary-foreground hover:bg-primary-foreground/10 h-8 w-8"
+                title="Exportar histórico"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    const text = await ChatTranscriptArchive.exportAsText(session.id);
+                    ChatTranscriptArchive.downloadFile(
+                      text,
+                      `transcript-${session.protocol_number}.txt`,
+                      'text/plain',
+                    );
+                    toast.success('Transcrição exportada');
+                  } catch {
+                    toast.error('Erro ao exportar');
+                  }
+                }}
+                className="gap-2"
+              >
+                <FileText className="h-4 w-4" /> Exportar TXT
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    const json = await ChatTranscriptArchive.exportAsJSON(session.id);
+                    ChatTranscriptArchive.downloadFile(
+                      json,
+                      `transcript-${session.protocol_number}.json`,
+                      'application/json',
+                    );
+                    toast.success('Transcrição exportada');
+                  } catch {
+                    toast.error('Erro ao exportar');
+                  }
+                }}
+                className="gap-2"
+              >
+                <FileJson className="h-4 w-4" /> Exportar JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
         {session && (
           <Badge
             variant="secondary"
