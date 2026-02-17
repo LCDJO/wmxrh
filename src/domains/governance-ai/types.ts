@@ -16,7 +16,8 @@ export type InsightCategory =
   | 'privilege_escalation'
   | 'dormant_access'
   | 'compliance_gap'
-  | 'anomalous_pattern';
+  | 'anomalous_pattern'
+  | 'plan_waste';
 
 export interface GovernanceInsight {
   id: string;

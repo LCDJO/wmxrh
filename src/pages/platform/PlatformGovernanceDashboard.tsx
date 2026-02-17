@@ -54,8 +54,8 @@ export default function PlatformGovernanceDashboard() {
     return unsub;
   }, [service]);
 
-  const handleScan = useCallback(() => {
-    const results = service.scan();
+  const handleScan = useCallback(async () => {
+    const results = await service.scan();
 
     // Build risk profiles and optimization hints
     try {

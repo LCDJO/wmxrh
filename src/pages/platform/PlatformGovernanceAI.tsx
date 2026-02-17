@@ -43,8 +43,8 @@ export default function PlatformGovernanceAI() {
     return unsub;
   }, [service]);
 
-  const handleScan = useCallback(() => {
-    const results = service.scan();
+  const handleScan = useCallback(async () => {
+    const results = await service.scan();
     toast({
       title: 'Scan concluído',
       description: `${results.length} insight(s) detectado(s).`,
