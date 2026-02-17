@@ -4,7 +4,11 @@
  * Features:
  *  - Save draft
  *  - Submit for approval
- *  - Safe delete (only draft/submitted — governed by status machine)
+ *  - Safe delete (only draft — governed by status machine)
+ *    - PlatformMarketing: own drafts only
+ *    - Director/SuperAdmin: any draft
+ *    - Soft delete: sets deleted_at + deleted_by, preserves ID
+ *    - Audit log entry on deletion
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +19,7 @@ import {
   getStatusLabel,
   getStatusVariant,
   getAvailableTransitions,
-  canDelete,
+  canDeletePage,
   type LandingPageStatus,
 } from '@/domains/platform-growth/landing-page-status-machine';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,6 +64,7 @@ export default function LandingDrafts() {
       .from('landing_pages')
       .select('id, name, slug, status, created_at, updated_at, created_by')
       .in('status', ['draft', 'rejected'])
+      .is('deleted_at', null)
       .order('updated_at', { ascending: false });
     setPages((data as LandingPage[]) ?? []);
     setLoading(false);
@@ -102,14 +107,16 @@ export default function LandingDrafts() {
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || !identity) return;
     const status = deleteTarget.status as LandingPageStatus;
 
-    // Double-check governance rules
-    if (!canDelete(status)) {
+    // Double-check governance rules (ownership + role)
+    if (!canDeletePage(status, identity.role, deleteTarget.created_by, identity.id)) {
       toast({
         title: 'Exclusão bloqueada',
-        description: `Landing pages com status "${getStatusLabel(status)}" não podem ser excluídas. Somente rascunhos e submetidas.`,
+        description: status !== 'draft'
+          ? `Landing pages com status "${getStatusLabel(status)}" não podem ser excluídas. Somente rascunhos.`
+          : 'Você não tem permissão para excluir este rascunho.',
         variant: 'destructive',
       });
       setDeleteTarget(null);
@@ -118,33 +125,40 @@ export default function LandingDrafts() {
 
     setDeleting(true);
     try {
-      // If submitted, cancel pending approval requests first
-      if (status === 'submitted' || status === 'draft') {
-        const requests = await landingPageGovernance.listByPage(deleteTarget.id);
-        const pendingRequests = requests.filter(r => r.status === 'pending_review' || r.status === 'approved');
-        for (const req of pendingRequests) {
-          if (identity) {
-            await landingPageGovernance.cancel(req.id, {
-              userId: identity.id,
-              email: identity.email,
-              role: identity.role,
-            }, 'Cancelado automaticamente: landing page excluída');
-          }
-        }
-      }
-
-      // Soft delete: set status to a terminal state and mark deleted_at
-      // Since the table doesn't have deleted_at, we'll actually delete the row
+      // Soft delete: preserve ID, set deleted_at + deleted_by, clear content
       const { error } = await supabase
         .from('landing_pages')
-        .delete()
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: identity.id,
+          blocks: [],
+          analytics: {},
+          status: 'draft', // keep status for audit trail
+        })
         .eq('id', deleteTarget.id);
 
       if (error) throw new Error(error.message);
 
+      // Write audit log
+      await supabase.from('audit_logs').insert({
+        tenant_id: '00000000-0000-0000-0000-000000000000', // platform-level
+        entity_type: 'landing_page',
+        entity_id: deleteTarget.id,
+        action: 'LandingDraftDeleted',
+        user_id: identity.id,
+        metadata: {
+          page_name: deleteTarget.name,
+          page_slug: deleteTarget.slug,
+          deleted_by_role: identity.role,
+          deleted_by_email: identity.email,
+        },
+        old_value: { status: deleteTarget.status, name: deleteTarget.name },
+        new_value: { deleted_at: new Date().toISOString() },
+      });
+
       toast({
         title: 'Excluída',
-        description: `"${deleteTarget.name}" foi removida permanentemente.`,
+        description: `"${deleteTarget.name}" foi removida. O ID permanece reservado no histórico.`,
       });
       fetchDrafts();
     } catch (err: any) {
@@ -189,7 +203,7 @@ export default function LandingDrafts() {
             const status = page.status as LandingPageStatus;
             const transitions = getAvailableTransitions(status, identity?.role);
             const canSubmit = transitions.some(t => t.to === 'submitted');
-            const isDeletable = canDelete(status);
+            const isDeletable = canDeletePage(status, identity?.role, page.created_by, identity?.id ?? null);
 
             return (
               <Card key={page.id} className="flex flex-col">
@@ -268,15 +282,10 @@ export default function LandingDrafts() {
                 Tem certeza que deseja excluir <strong>"{deleteTarget?.name}"</strong>?
               </span>
               <span className="block text-xs">
-                Esta ação é permanente. Todos os dados do rascunho serão removidos.
-                {deleteTarget?.status === 'submitted' && (
-                  <span className="block mt-1 text-warning">
-                    ⚠️ Esta página possui uma submissão pendente que será cancelada automaticamente.
-                  </span>
-                )}
+                O conteúdo será removido permanentemente, mas o ID será preservado no histórico de governança (soft delete).
               </span>
               <span className="block text-[11px] text-muted-foreground border-t border-border/40 pt-2 mt-2">
-                Nota: Páginas aprovadas, publicadas ou arquivadas não podem ser excluídas para preservar o histórico de governança.
+                Nota: Somente rascunhos podem ser excluídos. Após submissão, a exclusão é bloqueada para preservar a trilha de auditoria.
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>

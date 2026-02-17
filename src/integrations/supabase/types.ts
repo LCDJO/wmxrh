@@ -3760,6 +3760,8 @@ export type Database = {
           blocks: Json
           created_at: string
           created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           gtm_container_id: string | null
           id: string
           name: string
@@ -3775,6 +3777,8 @@ export type Database = {
           blocks?: Json
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           gtm_container_id?: string | null
           id?: string
           name: string
@@ -3790,6 +3794,8 @@ export type Database = {
           blocks?: Json
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           gtm_container_id?: string | null
           id?: string
           name?: string
