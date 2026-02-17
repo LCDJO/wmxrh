@@ -94,6 +94,7 @@ import MarketingRollbackDashboard from "./pages/platform/marketing/MarketingRoll
 import MarketingFunnels from "./pages/platform/marketing/MarketingFunnels";
 import MarketingCampaigns from "./pages/platform/marketing/MarketingCampaigns";
 import MarketingPipeline from "./pages/platform/marketing/MarketingPipeline";
+import MarketingDashboard from "./pages/platform/marketing/MarketingDashboard";
 import LandingDrafts from "./pages/platform/landing/LandingDrafts";
 import LandingReview from "./pages/platform/landing/LandingReview";
 import LandingPublished from "./pages/platform/landing/LandingPublished";
@@ -194,6 +195,7 @@ function AppRoutes() {
         <Route path="website/approvals" element={<WebsiteApprovals />} />
         <Route path="marketing/analytics" element={<MarketingAnalytics />} />
         <Route path="marketing/insights" element={<MarketingInsights />} />
+        <Route path="marketing/dashboard" element={<MarketingDashboard />} />
                 <Route path="marketing/rollback" element={<MarketingRollbackDashboard />} />
                 <Route path="marketing/funnels" element={<MarketingFunnels />} />
                 <Route path="marketing/campaigns" element={<MarketingCampaigns />} />
