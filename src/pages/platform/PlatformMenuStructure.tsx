@@ -86,6 +86,7 @@ const createInitialTree = (): MenuNode[] => [
     children: [
       { id: 'str-events', label: 'Eventos', path: '/platform/structure/events' },
       { id: 'str-menus', label: 'Menus', path: '/platform/structure/menus' },
+      { id: 'str-modules', label: 'Módulos', path: '/platform/structure/modules' },
     ],
   },
 ];
