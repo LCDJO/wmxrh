@@ -3534,6 +3534,45 @@ export type Database = {
           },
         ]
       }
+      landing_experiments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_date: string | null
+          id: string
+          landing_page_id: string
+          name: string
+          start_date: string | null
+          status: string
+          traffic_split_strategy: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          landing_page_id: string
+          name: string
+          start_date?: string | null
+          status?: string
+          traffic_split_strategy?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          landing_page_id?: string
+          name?: string
+          start_date?: string | null
+          status?: string
+          traffic_split_strategy?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       landing_pages: {
         Row: {
           analytics: Json
