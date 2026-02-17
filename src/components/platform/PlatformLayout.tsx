@@ -5,6 +5,8 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
+import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
+import type { PlatformPermission } from '@/domains/platform/platform-permissions';
 import {
   LayoutDashboard,
   Building2,
@@ -26,39 +28,61 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
-const NAV_ITEMS: Array<{
+interface PlatformNavItem {
   to: string;
   label: string;
   icon: typeof LayoutDashboard;
-  children?: Array<{ to: string; label: string }>;
-}> = [
+  /** Permission required to see this item. Omit = always visible. */
+  requiredPermission?: PlatformPermission;
+  children?: Array<{ to: string; label: string; requiredPermission?: PlatformPermission }>;
+}
+
+const NAV_ITEMS: PlatformNavItem[] = [
   { to: '/platform/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/platform/tenants', label: 'Tenants', icon: Building2 },
-  { to: '/platform/modules', label: 'Módulos', icon: Puzzle },
-  { to: '/platform/plans', label: 'Planos', icon: Package },
-  { to: '/platform/users', label: 'Usuários', icon: Users },
+  { to: '/platform/tenants', label: 'Tenants', icon: Building2, requiredPermission: 'tenant.view' },
+  { to: '/platform/modules', label: 'Módulos', icon: Puzzle, requiredPermission: 'module.view' },
+  { to: '/platform/plans', label: 'Planos', icon: Package, requiredPermission: 'plan.manage' },
+  { to: '/platform/users', label: 'Usuários', icon: Users, requiredPermission: 'platform_user.view' },
   {
     to: '/platform/security',
     label: 'Segurança',
     icon: ShieldCheck,
+    requiredPermission: 'security.view',
     children: [
       { to: '/platform/security/roles', label: 'Cargos' },
       { to: '/platform/security/permissions', label: 'Permissões' },
       { to: '/platform/security/access-graph', label: 'Access Graph' },
     ],
   },
-  { to: '/platform/iam', label: 'IAM', icon: KeyRound },
+  { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
   { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
-  { to: '/platform/audit', label: 'Auditoria', icon: ScrollText },
+  { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'audit.view' },
+  { to: '/platform/billing', label: 'Financeiro', icon: Package, requiredPermission: 'billing.view' },
+  { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
 ];
 
 export default function PlatformLayout() {
   const { signOut } = useAuth();
   const { identity } = usePlatformIdentity();
+  const { can } = usePlatformPermissions();
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedNav, setExpandedNav] = useState<string | null>(null);
+
+  // Filter nav items based on PlatformAccessGraph permissions
+  const visibleNavItems = NAV_ITEMS.filter(item => {
+    if (!item.requiredPermission) return true;
+    return can(item.requiredPermission);
+  }).map(item => {
+    if (!item.children) return item;
+    return {
+      ...item,
+      children: item.children.filter(child =>
+        !child.requiredPermission || can(child.requiredPermission)
+      ),
+    };
+  });
 
   const handleLogout = async () => {
     await signOut();
@@ -116,7 +140,7 @@ export default function PlatformLayout() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {NAV_ITEMS.map(({ to, label, icon: Icon, children }) => {
+          {visibleNavItems.map(({ to, label, icon: Icon, children }) => {
             const isParentActive = location.pathname.startsWith(to);
             const hasChildren = children && children.length > 0;
             const isExpanded = expandedNav === to || (hasChildren && isParentActive);
