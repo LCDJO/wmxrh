@@ -30,7 +30,7 @@ const MODULE_ICONS: Record<string, typeof Shield> = {
 
 const MODULE_LABELS: Record<string, string> = {
   tenants: 'Tenants', modulos: 'Módulos', auditoria: 'Auditoria',
-  financeiro: 'Financeiro', fiscal: 'Fiscal', usuarios: 'Usuários', seguranca: 'Segurança',
+  financeiro: 'Financeiro', fiscal: 'Fiscal', suporte: 'Suporte', usuarios: 'Usuários', seguranca: 'Segurança',
 };
 
 interface PermissionGraphViewProps {
