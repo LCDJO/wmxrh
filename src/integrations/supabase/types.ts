@@ -7940,6 +7940,10 @@ export type Database = {
       get_platform_metrics: { Args: never; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_type_from_jwt: { Args: never; Returns: string }
+      has_platform_financial_read_access: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       has_platform_permission: {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
