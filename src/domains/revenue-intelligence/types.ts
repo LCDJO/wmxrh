@@ -27,6 +27,9 @@ export interface RevenueMetrics {
   net_revenue_retention_pct: number;
   churn_rate_pct: number;
   ltv_estimate: number;
+  revenue_by_plan: { plan_name: string; mrr: number; tenants: number }[];
+  revenue_by_module: { module_id: string; total_brl: number; records: number }[];
+  ledger_total_brl: number;
 }
 
 export interface RevenueForecast {
