@@ -1,11 +1,11 @@
 /**
  * RollbackExecutor — Executes safe rollbacks between published landing page versions.
  *
- * Operates at the PLATFORM level:
- *  - Restores the previous version's content_snapshot to the parent landing page
- *  - Marks the current version as "superseded"
- *  - Re-publishes the target version
- *  - DOES NOT modify content — only swaps versions
+ * Platform-level engine that:
+ *  - Marks current version as "rolled_back" (NEVER deletes versions)
+ *  - Reactivates the previous version (status → "published")
+ *  - Updates the active slug on the parent landing page
+ *  - Restores the target version's content_snapshot
  */
 import { supabase } from '@/integrations/supabase/client';
 import type { RollbackDecision, RollbackExecution } from './types';
@@ -15,6 +15,12 @@ class RollbackExecutor {
 
   /**
    * Execute a rollback based on an approved decision.
+   *
+   * Steps:
+   *  1. Fetch target version content + slug
+   *  2. Mark current version as "rolled_back" (immutable — never deleted)
+   *  3. Reactivate target version as "published"
+   *  4. Update parent landing page: restore content + active slug
    */
   async execute(decision: RollbackDecision, executedBy: string): Promise<RollbackExecution> {
     if (decision.approved !== true) {
@@ -39,7 +45,7 @@ class RollbackExecutor {
     this.executions.push(execution);
 
     try {
-      // 1. Fetch target version's content snapshot
+      // 1. Fetch target version's content snapshot + slug
       const { data: targetVersion, error: tvErr } = await supabase
         .from('landing_page_versions')
         .select('content_snapshot')
@@ -47,23 +53,31 @@ class RollbackExecutor {
         .single();
 
       if (tvErr || !targetVersion) {
-        throw new Error(`Versão alvo ${decision.targetVersionNumber} não encontrada.`);
+        throw new Error(`Versão alvo v${decision.targetVersionNumber} não encontrada.`);
       }
 
-      // 2. Supersede current version
-      await supabase
+      // 2. Mark current version as "rolled_back" (NEVER delete)
+      const { error: rollbackErr } = await supabase
         .from('landing_page_versions')
-        .update({ status: 'superseded' })
+        .update({ status: 'rolled_back' })
         .eq('id', decision.currentVersionId);
 
-      // 3. Re-publish target version
-      await supabase
+      if (rollbackErr) {
+        throw new Error(`Falha ao marcar versão atual como rolled_back: ${rollbackErr.message}`);
+      }
+
+      // 3. Reactivate target version → "published"
+      const { error: publishErr } = await supabase
         .from('landing_page_versions')
         .update({ status: 'published' })
         .eq('id', decision.targetVersionId);
 
-      // 4. Update parent landing page with target version content
-      await supabase
+      if (publishErr) {
+        throw new Error(`Falha ao reativar versão alvo: ${publishErr.message}`);
+      }
+
+      // 4. Update parent landing page: restore content + active slug
+      const { error: lpErr } = await supabase
         .from('landing_pages')
         .update({
           blocks: targetVersion.content_snapshot,
@@ -71,12 +85,19 @@ class RollbackExecutor {
         })
         .eq('id', decision.landingPageId);
 
+      if (lpErr) {
+        throw new Error(`Falha ao atualizar landing page: ${lpErr.message}`);
+      }
+
       // 5. Mark execution as completed
       execution.status = 'completed';
       execution.completedAt = new Date().toISOString();
-
-      // Record execution time on decision
       decision.executedAt = execution.completedAt;
+
+      console.info(
+        `[RollbackExecutor] OK: LP ${decision.landingPageId} ` +
+        `v${decision.currentVersionNumber} → rolled_back | v${decision.targetVersionNumber} → published`,
+      );
 
       return execution;
     } catch (err) {
