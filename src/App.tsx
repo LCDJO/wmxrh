@@ -69,6 +69,7 @@ import PlatformControlPlane from "./pages/platform/PlatformControlPlane";
 import PlatformBilling from "./pages/platform/PlatformBilling";
 import PlatformRevenue from "./pages/platform/PlatformRevenue";
 import PlatformCoupons from "./pages/platform/PlatformCoupons";
+import BillingControlCenter from "./pages/platform/BillingControlCenter";
 
 const queryClient = new QueryClient();
 
@@ -132,6 +133,7 @@ function AppRoutes() {
         <Route path="communications" element={<PlatformCommunications />} />
         <Route path="billing" element={<PlatformBilling />} />
         <Route path="billing/coupons" element={<PlatformCoupons />} />
+        <Route path="billing/control-center" element={<BillingControlCenter />} />
         <Route path="revenue" element={<PlatformRevenue />} />
         <Route path="iam" element={<PlatformIAM />} />
       </Route>
