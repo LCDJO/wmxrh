@@ -566,6 +566,17 @@ export default function AdaptiveOnboardingWizard({ planTier = 'free', onComplete
         <div className="flex items-center gap-3">
           <PlanBadge tier={planTier} size="sm" />
           <span className="text-xs text-muted-foreground">{completionPct}% concluído</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              toast({ title: 'Configuração pulada', description: 'Você pode completar a configuração a qualquer momento.' });
+              onComplete();
+            }}
+          >
+            Pular tudo
+          </Button>
         </div>
       </header>
 
@@ -634,11 +645,9 @@ export default function AdaptiveOnboardingWizard({ planTier = 'free', onComplete
               Voltar
             </Button>
           )}
-          {currentStep.id === 'convites' && invitedEmails.length === 0 && (
-            <Button variant="ghost" size="sm" onClick={goNext} className="gap-1 text-muted-foreground">
-              Pular
-            </Button>
-          )}
+          <Button variant="ghost" size="sm" onClick={goNext} className="gap-1 text-muted-foreground">
+            Pular etapa
+          </Button>
           <Button size="sm" onClick={goNext} className="gap-1">
             {isLastStep ? (
               <>
