@@ -16,6 +16,7 @@ interface QuickReplyBoxProps {
   isClosed?: boolean;
   sessionId?: string;
   userId: string;
+  onTyping?: () => void;
 }
 
 export default function QuickReplyBox({
@@ -24,6 +25,7 @@ export default function QuickReplyBox({
   isClosed,
   sessionId,
   userId,
+  onTyping,
 }: QuickReplyBoxProps) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -168,7 +170,10 @@ export default function QuickReplyBox({
           ref={inputRef}
           placeholder="Digite uma mensagem..."
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value);
+            onTyping?.();
+          }}
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
           className="flex-1 rounded-full bg-muted/50 border-0 focus-visible:ring-1"
           disabled={disabled || sending}
