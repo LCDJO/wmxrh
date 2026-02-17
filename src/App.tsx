@@ -89,6 +89,7 @@ import GrowthApprovals from "./pages/platform/growth/GrowthApprovals";
 import GrowthWebsiteDashboard from "./pages/platform/growth/GrowthWebsiteDashboard";
 import GrowthAIDesigner from "./pages/platform/growth/GrowthAIDesigner";
 import MarketingAnalytics from "./pages/platform/marketing/MarketingAnalytics";
+import MarketingInsights from "./pages/platform/marketing/MarketingInsights";
 import MarketingRollbackDashboard from "./pages/platform/marketing/MarketingRollbackDashboard";
 import LandingDrafts from "./pages/platform/landing/LandingDrafts";
 import LandingReview from "./pages/platform/landing/LandingReview";
@@ -189,6 +190,7 @@ function AppRoutes() {
         <Route path="website/versions" element={<GrowthVersionPublish />} />
         <Route path="website/approvals" element={<WebsiteApprovals />} />
         <Route path="marketing/analytics" element={<MarketingAnalytics />} />
+        <Route path="marketing/insights" element={<MarketingInsights />} />
         <Route path="marketing/rollback" element={<MarketingRollbackDashboard />} />
         <Route path="landing/drafts" element={<LandingDrafts />} />
         <Route path="landing/review" element={<LandingReview />} />
