@@ -8,6 +8,8 @@ export { createModuleSandbox, type ModuleSandboxAPI, type SandboxContext, type S
 export { createModuleLifecycleManager, type ModuleLifecycleManagerAPI } from './module-lifecycle-manager';
 export { createModulePermissionAdapter, type ModulePermissionAdapterAPI, type PermissionContext, type PermissionDefinition } from './module-permission-adapter';
 export { createModuleNavigationBridge, type ModuleNavigationBridgeAPI } from './module-navigation-bridge';
+export { createModuleFeatureFlagBridge, type ModuleFeatureFlagBridgeAPI, type ModuleFeatureFlagDeclaration } from './module-feature-flag-bridge';
+export { createWidgetRegistry, type WidgetRegistryAPI, type WidgetRegistration, type WidgetRenderContext, type WidgetContext, type ResolvedWidget } from './widget-registry';
 export { createPlatformCore, type PlatformCoreAPI } from './platform-core';
 export {
   CORE_HR_MANIFEST, COMPENSATION_ENGINE_MANIFEST, TENANT_ADMIN_MANIFEST, REPORTING_MANIFEST,
