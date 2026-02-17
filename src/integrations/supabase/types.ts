@@ -3806,6 +3806,7 @@ export type Database = {
           created_at: string
           id: string
           module_key: string
+          module_price_override: number | null
           plan_id: string
           tenant_id: string
         }
@@ -3813,6 +3814,7 @@ export type Database = {
           created_at?: string
           id?: string
           module_key: string
+          module_price_override?: number | null
           plan_id: string
           tenant_id: string
         }
@@ -3820,6 +3822,7 @@ export type Database = {
           created_at?: string
           id?: string
           module_key?: string
+          module_price_override?: number | null
           plan_id?: string
           tenant_id?: string
         }

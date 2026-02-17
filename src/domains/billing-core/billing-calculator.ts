@@ -1,7 +1,10 @@
 /**
  * BillingCalculator — Calcula valores de cobrança por tenant/plano
+ *
+ * tenant_total = base_price + soma(modules adicionais com price_override)
  */
 
+import { supabase } from '@/integrations/supabase/client';
 import type { PlanRegistryAPI, TenantPlanResolverAPI, BillingCycle } from '@/domains/platform-experience/types';
 import type { BillingCalculatorAPI, BillingCalculation, BillingLineItem } from './types';
 
@@ -20,14 +23,30 @@ function cycleMonths(cycle: BillingCycle): number {
   }
 }
 
+interface PlanModuleRow {
+  module_key: string;
+  module_price_override: number | null;
+}
+
+/** Fetch addon modules (those with a price override) for a plan */
+async function fetchPlanModules(planId: string): Promise<PlanModuleRow[]> {
+  const { data } = await supabase
+    .from('plan_modules')
+    .select('module_key, module_price_override')
+    .eq('plan_id', planId);
+  return (data ?? []) as PlanModuleRow[];
+}
+
 export function createBillingCalculator(
   planRegistry: PlanRegistryAPI,
   tenantPlan: TenantPlanResolverAPI
 ): BillingCalculatorAPI {
-  function buildCalculation(
+
+  function buildCalculationSync(
     tenantId: string,
     planId: string,
     cycle: BillingCycle,
+    planModules: PlanModuleRow[],
     usage?: { users: number; employees: number }
   ): BillingCalculation {
     const plan = planRegistry.get(planId);
@@ -52,7 +71,7 @@ export function createBillingCalculator(
     const isAnnual = cycle === 'annual';
     const monthlyRate = isAnnual ? plan.pricing.annual_brl / 12 : baseMonthly;
 
-    // Base plan
+    // 1. Base plan price
     items.push({
       description: `${plan.name} — ${cycle}`,
       quantity: months,
@@ -61,7 +80,20 @@ export function createBillingCalculator(
       type: 'plan_base',
     });
 
-    // Per-user pricing
+    // 2. Addon modules (those with module_price_override > 0)
+    for (const mod of planModules) {
+      if (mod.module_price_override != null && mod.module_price_override > 0) {
+        items.push({
+          description: `Módulo: ${mod.module_key}`,
+          quantity: months,
+          unit_price_brl: mod.module_price_override,
+          total_brl: mod.module_price_override * months,
+          type: 'addon',
+        });
+      }
+    }
+
+    // 3. Per-user pricing
     const currentUsers = usage?.users ?? 0;
     if (plan.pricing.per_user_brl && currentUsers > 0) {
       items.push({
@@ -73,7 +105,7 @@ export function createBillingCalculator(
       });
     }
 
-    // Per-employee pricing
+    // 4. Per-employee pricing
     const currentEmployees = usage?.employees ?? 0;
     if (plan.pricing.per_employee_brl && currentEmployees > 0) {
       items.push({
@@ -85,7 +117,7 @@ export function createBillingCalculator(
       });
     }
 
-    // Setup fee (first invoice only)
+    // 5. Setup fee
     if (plan.pricing.setup_fee_brl && plan.pricing.setup_fee_brl > 0) {
       items.push({
         description: 'Taxa de implantação',
@@ -98,7 +130,7 @@ export function createBillingCalculator(
 
     const subtotal = items.reduce((sum, i) => sum + i.total_brl, 0);
 
-    // Annual discount
+    // 6. Annual discount
     let discount = 0;
     if (isAnnual && plan.pricing.discount_annual_pct) {
       discount = subtotal * (plan.pricing.discount_annual_pct / 100);
@@ -132,7 +164,8 @@ export function createBillingCalculator(
   return {
     calculate(tenantId) {
       const snap = tenantPlan.resolve(tenantId);
-      return buildCalculation(tenantId, snap.plan_id, snap.billing_cycle, {
+      // Sync fallback (no modules fetched — use for quick local calc)
+      return buildCalculationSync(tenantId, snap.plan_id, snap.billing_cycle, [], {
         users: snap.usage.current_users,
         employees: snap.usage.current_employees,
       });
@@ -140,7 +173,7 @@ export function createBillingCalculator(
 
     calculateForPlan(tenantId, planId, cycle) {
       const snap = tenantPlan.resolve(tenantId);
-      return buildCalculation(tenantId, planId, cycle, {
+      return buildCalculationSync(tenantId, planId, cycle, [], {
         users: snap.usage.current_users,
         employees: snap.usage.current_employees,
       });
@@ -148,8 +181,8 @@ export function createBillingCalculator(
 
     calculateProration(tenantId, fromPlanId, toPlanId) {
       const snap = tenantPlan.resolve(tenantId);
-      const fromCalc = buildCalculation(tenantId, fromPlanId, snap.billing_cycle);
-      const toCalc = buildCalculation(tenantId, toPlanId, snap.billing_cycle);
+      const fromCalc = buildCalculationSync(tenantId, fromPlanId, snap.billing_cycle, []);
+      const toCalc = buildCalculationSync(tenantId, toPlanId, snap.billing_cycle, []);
       const diff = toCalc.total_brl - fromCalc.total_brl;
 
       return {
@@ -160,7 +193,7 @@ export function createBillingCalculator(
             quantity: 1,
             unit_price_brl: diff,
             total_brl: diff,
-            type: 'proration',
+            type: 'proration' as const,
           },
         ],
         subtotal_brl: Math.max(0, diff),
@@ -168,5 +201,72 @@ export function createBillingCalculator(
         total_brl: Math.max(0, diff),
       };
     },
+  };
+}
+
+/**
+ * Async version — fetches plan_modules from DB for accurate calculation
+ * Use this for invoice generation where accuracy matters.
+ *
+ * tenant_total = base_price + soma(modules adicionais com price_override)
+ */
+export async function calculateTenantTotal(
+  planRegistry: PlanRegistryAPI,
+  tenantPlan: TenantPlanResolverAPI,
+  tenantId: string
+): Promise<BillingCalculation> {
+  const snap = tenantPlan.resolve(tenantId);
+  const modules = await fetchPlanModules(snap.plan_id);
+
+  const calc = createBillingCalculator(planRegistry, tenantPlan);
+  // We need to rebuild with modules — use the internal builder via a fresh instance
+  const plan = planRegistry.get(snap.plan_id);
+  if (!plan) return calc.calculate(tenantId);
+
+  const items: BillingLineItem[] = [];
+  const months = cycleMonths(snap.billing_cycle);
+  const isAnnual = snap.billing_cycle === 'annual';
+  const monthlyRate = isAnnual ? plan.pricing.annual_brl / 12 : plan.pricing.monthly_brl;
+
+  // Base
+  items.push({
+    description: `${plan.name} — ${snap.billing_cycle}`,
+    quantity: months,
+    unit_price_brl: monthlyRate,
+    total_brl: monthlyRate * months,
+    type: 'plan_base',
+  });
+
+  // Addon modules
+  for (const mod of modules) {
+    if (mod.module_price_override != null && mod.module_price_override > 0) {
+      items.push({
+        description: `Módulo: ${mod.module_key}`,
+        quantity: months,
+        unit_price_brl: mod.module_price_override,
+        total_brl: mod.module_price_override * months,
+        type: 'addon',
+      });
+    }
+  }
+
+  const subtotal = items.reduce((sum, i) => sum + i.total_brl, 0);
+  let discount = 0;
+  if (isAnnual && plan.pricing.discount_annual_pct) {
+    discount = subtotal * (plan.pricing.discount_annual_pct / 100);
+  }
+
+  const now = new Date();
+  return {
+    tenant_id: tenantId,
+    plan_id: snap.plan_id,
+    billing_cycle: snap.billing_cycle,
+    line_items: items,
+    subtotal_brl: Math.round(subtotal * 100) / 100,
+    discount_brl: Math.round(discount * 100) / 100,
+    total_brl: Math.round((subtotal - discount) * 100) / 100,
+    period_start: now.toISOString().slice(0, 10),
+    period_end: addMonths(now, months).toISOString().slice(0, 10),
+    calculated_at: Date.now(),
   };
 }
