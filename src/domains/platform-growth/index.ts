@@ -49,4 +49,8 @@ export type { LandingTemplate, TemplateSection, TemplateSectionType } from './la
 export { publicAPIGateway, PublicAPIGateway, RateLimiter, createPublicToken, isPublicTokenValid } from './public-api-gateway';
 export type { PublicEndpoint, PublicToken, PublicAPIRequest, PublicAPIResponse } from './public-api-gateway';
 
+// ── Landing Conversion Orchestrator (Billing + Referral integration) ──
+export { landingConversionOrchestrator, LandingConversionOrchestrator } from './landing-conversion-orchestrator';
+export type { LandingConversionInput, LandingConversionResult } from './landing-conversion-orchestrator';
+
 export type * from './types';
