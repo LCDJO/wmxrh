@@ -10,17 +10,22 @@
 import type { Incident, RecoveryAction, RecoveryActionType } from './types';
 import { CircuitBreakerManager } from './circuit-breaker-manager';
 import { HealingAuditLogger } from './healing-audit-logger';
+import { ModuleAutoRecoveryService } from './module-auto-recovery-service';
 import type { GlobalEventKernelAPI, ModuleOrchestratorAPI } from '@/domains/platform-os/types';
 
 let _actionCounter = 0;
 
 export class RecoveryOrchestrator {
+  private autoRecovery: ModuleAutoRecoveryService;
+
   constructor(
     private circuitBreakers: CircuitBreakerManager,
     private auditLogger: HealingAuditLogger,
     private events: GlobalEventKernelAPI,
     private modules: ModuleOrchestratorAPI,
-  ) {}
+  ) {
+    this.autoRecovery = new ModuleAutoRecoveryService(modules, events);
+  }
 
   async recover(incident: Incident): Promise<void> {
     incident.status = 'recovering';
@@ -82,16 +87,19 @@ export class RecoveryOrchestrator {
 
     try {
       switch (type) {
-        case 'module_restart':
+        case 'module_restart': {
           action.description = `Reiniciando módulo ${moduleId}`;
-          await this.modules.deactivate(moduleId).catch(() => {});
-          await this.modules.activate(moduleId);
+          const res = await this.autoRecovery.restartModule(moduleId);
+          if (!res.success) throw new Error(res.error);
           break;
+        }
 
-        case 'module_deactivate':
-          action.description = `Desativando módulo ${moduleId}`;
-          await this.modules.deactivate(moduleId);
+        case 'module_deactivate': {
+          action.description = `Desativando módulo temporariamente ${moduleId}`;
+          const res = await this.autoRecovery.disableModuleTemporarily(moduleId);
+          if (!res.success) throw new Error(res.error);
           break;
+        }
 
         case 'circuit_break':
           action.description = `Circuit breaker aberto para ${moduleId}`;
