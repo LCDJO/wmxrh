@@ -39,6 +39,7 @@ import { CognitiveInsightsService } from '@/domains/platform-cognitive/cognitive
 import { installEventBridges } from './event-bridges';
 import { PLATFORM_EVENTS } from './platform-events';
 import { createPlatformExperienceEngine } from '@/domains/platform-experience';
+import { createPlatformBillingCore } from '@/domains/billing-core';
 import type { PlatformBootstrappedPayload } from './platform-events';
 import { getSelfHealingEngine } from '@/domains/self-healing';
 import { getControlPlaneEngine } from '@/domains/control-plane/control-plane-engine';
@@ -81,6 +82,9 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
 
   // ── Platform Experience Engine (PXE) ────────────────────────
   const experience = createPlatformExperienceEngine();
+
+  // ── Platform Billing Core ──────────────────────────────────
+  const billing = createPlatformBillingCore(experience, modules);
 
   // ── Lifecycle ────────────────────────────────────────────────
 
@@ -205,6 +209,28 @@ export function createPlatformRuntime(): PlatformRuntimeAPI {
       services.register('PXE.ExperienceOrchestrator', experience.experience, {
         version: '1.0.0',
         capabilities: ['pxe:experience-profile', 'pxe:navigation-gate'],
+      });
+
+      // ── 4b. Register BillingCore sub-systems ─────────────────
+      services.register('BillingCore.Calculator', billing.calculator, {
+        version: '1.0.0',
+        capabilities: ['billing:calculate', 'billing:proration', 'billing:plan-change'],
+      });
+      services.register('BillingCore.InvoiceEngine', billing.invoices, {
+        version: '1.0.0',
+        capabilities: ['billing:invoice-generate', 'billing:invoice-manage'],
+      });
+      services.register('BillingCore.Ledger', billing.ledger, {
+        version: '1.0.0',
+        capabilities: ['billing:ledger-record', 'billing:ledger-query'],
+      });
+      services.register('BillingCore.Revenue', billing.revenue, {
+        version: '1.0.0',
+        capabilities: ['billing:revenue-metrics', 'billing:mrr', 'billing:forecast'],
+      });
+      services.register('BillingCore.SubscriptionLifecycle', billing.subscriptionLifecycle, {
+        version: '1.0.0',
+        capabilities: ['billing:activate', 'billing:upgrade', 'billing:downgrade', 'billing:cancel'],
       });
 
       // ── 5. Install ALL domain event bridges → GlobalEventKernel
