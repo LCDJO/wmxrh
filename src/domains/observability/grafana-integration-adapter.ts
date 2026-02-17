@@ -494,6 +494,11 @@ export function generateDashboardModel(): {
       { title: 'Invoices Paid', type: 'stat', metric: 'billing_invoices_paid', description: 'Total paid invoices', datasource: 'prometheus' },
       { title: 'Invoices Pending', type: 'stat', metric: 'billing_invoices_pending', description: 'Pending invoices awaiting payment', datasource: 'prometheus' },
       { title: 'Invoices Overdue', type: 'stat', metric: 'billing_invoices_overdue', description: 'Overdue invoices', datasource: 'prometheus' },
+      // ── Growth / Landing Page panels ──────────────────────────
+      { title: 'LP Views Total', type: 'graph', metric: 'landing_page_views_total', description: 'Total landing page views by page (label: page)', datasource: 'prometheus' },
+      { title: 'LP Conversions', type: 'graph', metric: 'landing_conversion_total', description: 'Conversions by page and type (labels: page, type)', datasource: 'prometheus' },
+      { title: 'FAB CTA Clicks', type: 'graph', metric: 'fab_cta_click_total', description: 'CTA clicks per page/section (labels: page, section)', datasource: 'prometheus' },
+      { title: 'Revenue by LP', type: 'stat', metric: 'revenue_by_landing', description: 'Revenue attributed to each landing page (label: page)', datasource: 'prometheus' },
       // ── Loki panels ────────────────────────────────────────
       { title: 'Log Stream', type: 'logs', metric: 'logs_total', description: 'Structured log stream from all sources', datasource: 'loki' },
       // ── Tempo panels ───────────────────────────────────────
