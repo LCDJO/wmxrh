@@ -34,6 +34,7 @@ export {
   recordPageView, recordConversion, recordFABClick, recordLandingRevenue,
   recordAIHeadline, recordFABImpression, recordFABClickForRate, recordAIHeadlineForAccumulator,
   recordRollbackTriggered, recordPerformanceDropScore, updateRollbackSuccessRate,
+  recordAISuggestion, recordAISuggestionAccepted, recordAIConversionGainEstimate, getAISuggestionStats,
   collectGrowthMetrics,
 } from './growth-metrics-collector';
 export type { GrowthMetricsSnapshot } from './growth-metrics-collector';
