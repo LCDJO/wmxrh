@@ -43,7 +43,7 @@ export type {
 
 // ── MarketingComplianceBridge ──
 export { marketingComplianceBridge, MarketingComplianceBridge } from './marketing-compliance-bridge';
-export type { MDOSComplianceResult } from './marketing-compliance-bridge';
+export type { MDOSComplianceResult, PillarResult, CompliancePillar } from './marketing-compliance-bridge';
 
 // ── ConversionPipeline ──
 export { conversionPipeline, ConversionPipeline } from './conversion-pipeline';
