@@ -23,6 +23,9 @@ const ROLE_META: Record<string, { icon: typeof Shield; color: string; bg: string
   platform_finance: { icon: Wallet, color: 'text-warning', bg: 'bg-warning/10' },
   platform_fiscal: { icon: Shield, color: 'text-accent-foreground', bg: 'bg-accent' },
   platform_read_only: { icon: Eye, color: 'text-muted-foreground', bg: 'bg-muted' },
+  platform_delegated_support: { icon: Headphones, color: 'text-info', bg: 'bg-info/10' },
+  platform_marketplace_admin: { icon: Zap, color: 'text-[hsl(265_80%_55%)]', bg: 'bg-[hsl(265_60%_50%/0.08)]' },
+  platform_compliance: { icon: Shield, color: 'text-warning', bg: 'bg-warning/10' },
 };
 
 const DEFAULT_META = { icon: Shield, color: 'text-muted-foreground', bg: 'bg-muted' };
@@ -31,6 +34,7 @@ const MODULE_LABELS: Record<string, string> = {
   tenants: 'Tenants', modulos: 'Módulos', auditoria: 'Auditoria',
   financeiro: 'Financeiro', fiscal: 'Fiscal', suporte: 'Suporte',
   usuarios: 'Usuários', seguranca: 'Segurança',
+  marketplace: 'Marketplace', compliance: 'Compliance',
 };
 
 interface Props {

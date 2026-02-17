@@ -20,17 +20,22 @@ const ROLE_STYLE: Record<string, { icon: typeof Shield; color: string }> = {
   platform_finance: { icon: Wallet, color: 'bg-warning/15 text-warning border-warning/30' },
   platform_fiscal: { icon: Shield, color: 'bg-accent text-accent-foreground border-accent' },
   platform_read_only: { icon: Eye, color: 'bg-muted text-muted-foreground border-border' },
+  platform_delegated_support: { icon: Headphones, color: 'bg-info/15 text-info border-info/30' },
+  platform_marketplace_admin: { icon: Zap, color: 'bg-primary/15 text-primary border-primary/30' },
+  platform_compliance: { icon: Shield, color: 'bg-warning/15 text-warning border-warning/30' },
 };
 
 const DEFAULT_STYLE = { icon: Shield, color: 'bg-muted text-muted-foreground border-border' };
 
 const MODULE_ICONS: Record<string, typeof Shield> = {
   tenants: Shield, modulos: Zap, auditoria: Eye, financeiro: Wallet, usuarios: Settings, seguranca: Lock,
+  marketplace: Zap, compliance: Shield, suporte: Headphones,
 };
 
 const MODULE_LABELS: Record<string, string> = {
   tenants: 'Tenants', modulos: 'Módulos', auditoria: 'Auditoria',
   financeiro: 'Financeiro', fiscal: 'Fiscal', suporte: 'Suporte', usuarios: 'Usuários', seguranca: 'Segurança',
+  marketplace: 'Marketplace', compliance: 'Compliance',
 };
 
 interface PermissionGraphViewProps {

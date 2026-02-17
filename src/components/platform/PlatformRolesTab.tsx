@@ -20,6 +20,8 @@ const MODULE_LABELS: Record<string, string> = {
   suporte: 'Suporte',
   usuarios: 'Usuários',
   seguranca: 'Segurança',
+  marketplace: 'Marketplace',
+  compliance: 'Compliance',
 };
 
 interface Props {
