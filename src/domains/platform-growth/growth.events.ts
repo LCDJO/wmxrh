@@ -23,7 +23,12 @@ export type GrowthEventType =
   | 'LandingPagePublished'
   | 'FABContentUpdated'
   | 'ConversionTracked'
-  | 'GrowthInsightGenerated';
+  | 'GrowthInsightGenerated'
+  | 'WebsitePublished'
+  | 'LandingVersionCreated'
+  | 'AIConversionSuggested'
+  | 'FABSectionGenerated'
+  | 'GTMInjected';
 
 // ── Payloads ──
 
@@ -80,6 +85,61 @@ export interface GrowthInsightGeneratedPayload {
   title: string;
 }
 
+// ── New Website / Growth Payloads ──
+
+export interface WebsitePublishedEventPayload {
+  type: 'WebsitePublished';
+  timestamp: number;
+  pageId: string;
+  pageSlug: string;
+  pageTitle: string;
+  version: number;
+  publishedBy: string;
+  publisherRole: string;
+  url: string;
+}
+
+export interface LandingVersionCreatedEventPayload {
+  type: 'LandingVersionCreated';
+  timestamp: number;
+  pageId: string;
+  pageTitle: string;
+  versionNumber: number;
+  changeSummary: string;
+  createdBy: string;
+}
+
+export interface AIConversionSuggestedEventPayload {
+  type: 'AIConversionSuggested';
+  timestamp: number;
+  pageId: string;
+  pageTitle: string;
+  suggestionId: string;
+  category: string;
+  predictedLiftPct: number;
+  confidence: number;
+}
+
+export interface FABSectionGeneratedEventPayload {
+  type: 'FABSectionGenerated';
+  timestamp: number;
+  pageId: string;
+  blockId: string;
+  blockType: string;
+  fieldsGenerated: ('feature' | 'advantage' | 'benefit')[];
+  generatedBy: 'ai' | 'manual';
+}
+
+export interface GTMInjectedEventPayload {
+  type: 'GTMInjected';
+  timestamp: number;
+  pageId: string;
+  pageSlug: string;
+  containerId: string;
+  eventsCount: number;
+  injectedBy: string;
+}
+
 // ── Union ──
 
 export type GrowthDomainEvent =
@@ -87,7 +147,12 @@ export type GrowthDomainEvent =
   | LandingPagePublishedPayload
   | FABContentUpdatedPayload
   | ConversionTrackedPayload
-  | GrowthInsightGeneratedPayload;
+  | GrowthInsightGeneratedPayload
+  | WebsitePublishedEventPayload
+  | LandingVersionCreatedEventPayload
+  | AIConversionSuggestedEventPayload
+  | FABSectionGeneratedEventPayload
+  | GTMInjectedEventPayload;
 
 // ════════════════════════════════════
 // EVENT BUS (synchronous, in-memory)
