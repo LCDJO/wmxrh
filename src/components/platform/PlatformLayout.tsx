@@ -109,6 +109,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
     icon: Puzzle,
     children: [
       { to: '/platform/structure/events', label: 'Eventos' },
+      { to: '/platform/structure/menus', label: 'Menus' },
     ],
   },
 ];
