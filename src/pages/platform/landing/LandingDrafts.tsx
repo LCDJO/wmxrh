@@ -10,7 +10,7 @@ import { getStatusLabel, getStatusVariant, getAvailableTransitions, type Landing
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, FileEdit, Send, Eye } from 'lucide-react';
+import { Loader2, FileEdit, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface LandingPage {
@@ -43,6 +43,23 @@ export default function LandingDrafts() {
   };
 
   useEffect(() => { fetchDrafts(); }, []);
+
+  const handleSaveDraft = async (pageId: string) => {
+    setSubmitting(pageId);
+    try {
+      await supabase
+        .from('landing_pages')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', pageId);
+      toast({ title: 'Salvo!', description: 'Rascunho salvo com sucesso.' });
+      fetchDrafts();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
 
   const handleSubmit = async (pageId: string) => {
     if (!identity) return;
@@ -110,7 +127,21 @@ export default function LandingDrafts() {
                   <p className="text-xs text-muted-foreground">
                     Atualizado: {new Date(page.updated_at).toLocaleDateString('pt-BR')}
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      disabled={submitting === page.id}
+                      onClick={() => handleSaveDraft(page.id)}
+                    >
+                      {submitting === page.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <FileEdit className="h-3 w-3" />
+                      )}
+                      Salvar Rascunho
+                    </Button>
                     {canSubmit && (
                       <Button
                         size="sm"
@@ -123,12 +154,9 @@ export default function LandingDrafts() {
                         ) : (
                           <Send className="h-3 w-3" />
                         )}
-                        Submeter
+                        Submeter para Aprovação
                       </Button>
                     )}
-                    <Button variant="outline" size="sm" className="gap-1.5">
-                      <Eye className="h-3 w-3" /> Visualizar
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
