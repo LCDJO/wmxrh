@@ -1,11 +1,12 @@
 /**
  * NotificationBell — Bell icon trigger + Flyout popover.
- * Enterprise UX: bell-ring animation on new notifications.
+ * Enterprise UX: bell-ring animation, context-aware navigation.
  */
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useNotificationNavigator } from '@/hooks/use-notification-navigator';
 import { NotificationFlyout } from './NotificationFlyout';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Bell } from 'lucide-react';
@@ -14,11 +15,11 @@ import { cn } from '@/lib/utils';
 export function NotificationBell() {
   const navigate = useNavigate();
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const { navigateToNotification } = useNotificationNavigator();
   const [open, setOpen] = useState(false);
   const [ringing, setRinging] = useState(false);
   const prevCount = useRef(unreadCount);
 
-  // Animate bell when unread count increases
   useEffect(() => {
     if (unreadCount > prevCount.current) {
       setRinging(true);
@@ -30,7 +31,12 @@ export function NotificationBell() {
 
   const handleAction = (route: string) => {
     setOpen(false);
-    navigate(route);
+    const n = notifications.find(n => n.action_url === route);
+    if (n) {
+      navigateToNotification(n);
+    } else {
+      navigate(route);
+    }
   };
 
   const handleViewAll = () => {

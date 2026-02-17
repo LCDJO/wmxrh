@@ -4,8 +4,8 @@
  */
 
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useNotificationNavigator } from '@/hooks/use-notification-navigator';
 import {
   TYPE_CONFIG,
   getUnreadByType,
@@ -54,7 +54,7 @@ function groupByDate(items: AppNotification[]) {
 // ── Page Component ──
 
 export default function Notifications() {
-  const navigate = useNavigate();
+  const { navigateToAction } = useNotificationNavigator();
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
   const [tab, setTab] = useState<'all' | 'unread'>('all');
   const [typeFilter, setTypeFilter] = useState<NotificationType | null>(null);
@@ -86,7 +86,7 @@ export default function Notifications() {
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
   const typeStats = useMemo(() => getUnreadByType(notifications), [notifications]);
 
-  const handleAction = (route: string) => navigate(route);
+  const handleAction = (route: string, notification?: import('@/domains/notifications/notification-hub').AppNotification) => navigateToAction(route, notification);
 
   return (
     <div className="space-y-6">
