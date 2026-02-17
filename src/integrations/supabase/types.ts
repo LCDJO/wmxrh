@@ -3573,6 +3573,62 @@ export type Database = {
         }
         Relationships: []
       }
+      landing_metric_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          landing_page_id: string
+          medium: string | null
+          metadata: Json | null
+          referral_code: string | null
+          revenue_generated: number
+          session_id: string | null
+          source: string | null
+          tenant_created: boolean
+          variant_id: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          landing_page_id: string
+          medium?: string | null
+          metadata?: Json | null
+          referral_code?: string | null
+          revenue_generated?: number
+          session_id?: string | null
+          source?: string | null
+          tenant_created?: boolean
+          variant_id?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          landing_page_id?: string
+          medium?: string | null
+          metadata?: Json | null
+          referral_code?: string | null
+          revenue_generated?: number
+          session_id?: string | null
+          source?: string | null
+          tenant_created?: boolean
+          variant_id?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_metric_events_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "landing_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       landing_pages: {
         Row: {
           analytics: Json
