@@ -63,6 +63,30 @@ export interface LayoutSuggestion {
   expected_improvement: string;
 }
 
+export interface GeneratedFABSection {
+  module: string;
+  feature: string;
+  advantage: string;
+  benefit: string;
+  impact_score: number;
+  suggested_icon: string;
+  cta_text: string;
+}
+
+export interface GeneratedHeroFAB {
+  feature: string;
+  advantage: string;
+  benefit: string;
+  headline: string;
+  subheadline: string;
+}
+
+export interface FABGenerationResult {
+  sections: GeneratedFABSection[];
+  hero_fab: GeneratedHeroFAB;
+  strategy_summary: string;
+}
+
 // ── Context types ───────────────────────────
 
 export interface ConversionDesignerContext {
@@ -103,6 +127,23 @@ class AIConversionService {
   async suggestLayout(ctx: ConversionDesignerContext = {}): Promise<LayoutSuggestion> {
     const enriched = await this.enrichContext(ctx);
     return this.call('suggest_layout', enriched);
+  }
+
+  /** Generate complete FAB content sections using AI */
+  async generateFABContent(ctx: ConversionDesignerContext & {
+    rawFeatures?: string[];
+  } = {}): Promise<FABGenerationResult> {
+    const enriched = await this.enrichContext(ctx);
+    if (ctx.rawFeatures) enriched.rawFeatures = ctx.rawFeatures;
+    
+    // Include existing catalog content for reference
+    const existingContent = fabContentEngine.getAvailableModules().map(m => ({
+      module: m,
+      items: fabContentEngine.getByModule(m),
+    }));
+    enriched.currentContent = existingContent;
+
+    return this.call('generate_fab', enriched);
   }
 
   // ── Gather AI Inputs ──────────────────────
