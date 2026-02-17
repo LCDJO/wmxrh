@@ -48,6 +48,43 @@ export interface FABContent {
   benefit: string;    // Resultado para o cliente (ex: "Redução de custos operacionais")
 }
 
+/** Full LP copy blueprint — structure required by FABContentEngine */
+export interface LPCopyBlueprint {
+  hero: {
+    headline: string;
+    subheadline: string;
+    ctaText: string;
+    ctaLink: string;
+    fab: FABContent;
+  };
+  features: FABContent[];
+  advantages: Array<{
+    title: string;
+    description: string;
+    icon?: string;
+    fab: FABContent;
+  }>;
+  benefits: Array<{
+    title: string;
+    metric: string;
+    description: string;
+    fab: FABContent;
+  }>;
+  cta: {
+    headline: string;
+    subheadline: string;
+    ctaText: string;
+    ctaLink: string;
+    urgency?: string;
+  };
+  proof: {
+    testimonials: Array<{ name: string; role: string; company: string; quote: string; avatar?: string }>;
+    stats: Array<{ label: string; value: string }>;
+    logos: string[];
+    certifications: string[];
+  };
+}
+
 export interface FABBlock {
   id: string;
   type: FABBlockType;
