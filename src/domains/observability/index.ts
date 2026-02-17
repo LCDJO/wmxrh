@@ -30,5 +30,10 @@ export {
   TraceCollector,
 } from './grafana-integration-adapter';
 export type * from './types';
+export {
+  recordPageView, recordConversion, recordFABClick, recordLandingRevenue,
+  collectGrowthMetrics,
+} from './growth-metrics-collector';
+export type { GrowthMetricsSnapshot } from './growth-metrics-collector';
 export { OBSERVABILITY_KERNEL_EVENTS } from './observability-events';
 export type * from './observability-events';
