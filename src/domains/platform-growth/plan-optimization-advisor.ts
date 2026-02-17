@@ -57,7 +57,7 @@ function buildPlanConversionSuggestions(
       id: `po-lp-conv-${Date.now()}`,
       currentPlan: worst.plan_name,
       suggestedPlan: best.plan_name,
-      reason: `Plano "${best.plan_name}" está convertendo mais via landing page "${bestLP.title}" (${bestLP.analytics.conversionRate}% conv. rate, ${bestLP.analytics.conversions} conversões). ARPA de R$ ${Math.round(best.arpa)}/tenant vs R$ ${Math.round(worst.arpa)} no "${worst.plan_name}".`,
+      reason: `Plano "${best.plan_name}" está convertendo mais via landing page "${bestLP.name}" (${bestLP.analytics.conversionRate}% conv. rate, ${bestLP.analytics.conversions} conversões). ARPA de R$ ${Math.round(best.arpa)}/tenant vs R$ ${Math.round(worst.arpa)} no "${worst.plan_name}".`,
       expectedRevenueImpact: Math.round((best.arpa - worst.arpa) * worst.tenants * 0.15),
       tenantId: '*',
       tenantName: `${worst.tenants} tenants em "${worst.plan_name}"`,
@@ -76,7 +76,7 @@ function buildPlanConversionSuggestions(
       id: `po-source-${Date.now()}`,
       currentPlan: worst.plan_name,
       suggestedPlan: best.plan_name,
-      reason: `Canal "${topSource.source}" trouxe ${topSource.visits} visitas para LP "${bestLP.title}" com ${purchases.length} compras (R$ ${revenue.toLocaleString()}). Direcionar tráfego deste canal para upgrade do "${worst.plan_name}" → "${best.plan_name}".`,
+      reason: `Canal "${topSource.source}" trouxe ${topSource.visits} visitas para LP "${bestLP.name}" com ${purchases.length} compras (R$ ${revenue.toLocaleString()}). Direcionar tráfego deste canal para upgrade do "${worst.plan_name}" → "${best.plan_name}".`,
       expectedRevenueImpact: Math.round(revenue * 0.3),
       tenantId: '*',
       tenantName: `Tenants via ${topSource.source}`,
@@ -102,7 +102,7 @@ export class PlanOptimizationAdvisor {
         engine.upgrade.getCandidates(),
       ]);
 
-      const pages = landingPageBuilder.getAll();
+      const pages = await landingPageBuilder.getAll();
 
       const suggestions: PlanOptimizationSuggestion[] = [
         ...buildPlanConversionSuggestions(metrics, pages),

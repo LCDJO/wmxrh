@@ -1,38 +1,165 @@
 /**
  * LandingPageBuilder — CRUD + orchestrator for landing pages.
+ * Persists to the `landing_pages` table via Supabase.
  * FABContentEngine generates high-conversion block content.
  */
-import type { LandingPage, FABBlock, FABBlockType } from './types';
+import { supabase } from '@/integrations/supabase/client';
+import type { LandingPage, FABBlock, FABBlockType, LandingPageAnalytics } from './types';
 
-const DEMO_BLOCKS: FABBlock[] = [
-  { id: 'b1', type: 'hero', order: 0, content: { headline: 'Simplifique seu RH', subheadline: 'Plataforma completa de gestão de pessoas', ctaText: 'Comece Grátis' } },
-  { id: 'b2', type: 'features', order: 1, content: { items: ['Admissão digital', 'Folha automatizada', 'Compliance em tempo real', 'eSocial integrado'] } },
-  { id: 'b3', type: 'stats', order: 2, content: { metrics: [{ label: 'Tenants ativos', value: '340+' }, { label: 'Colaboradores gerenciados', value: '12.000+' }, { label: 'Economia média', value: '40%' }] } },
-  { id: 'b4', type: 'pricing', order: 3, content: { plans: ['Starter', 'Professional', 'Enterprise'] } },
-  { id: 'b5', type: 'testimonials', order: 4, content: { quotes: [{ name: 'Maria S.', role: 'Head de RH', text: 'Reduziu nosso tempo de admissão em 70%.' }] } },
-  { id: 'b6', type: 'cta', order: 5, content: { headline: 'Pronto para transformar seu RH?', ctaText: 'Criar conta gratuita', ctaLink: '/auth/signup' } },
-];
+// ── Default analytics for new pages ────────────────────────────
+const DEFAULT_ANALYTICS: LandingPageAnalytics = {
+  views: 0, uniqueVisitors: 0, conversions: 0, conversionRate: 0,
+  avgTimeOnPage: 0, bounceRate: 0, topSources: [],
+};
+
+// ── Row → Domain mapper ───────────────────────────────────────
+function rowToLandingPage(row: Record<string, unknown>): LandingPage {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    slug: row.slug as string,
+    status: row.status as 'draft' | 'published',
+    target_plan_id: (row.target_plan_id as string) ?? null,
+    referral_program_id: (row.referral_program_id as string) ?? null,
+    gtm_container_id: (row.gtm_container_id as string) ?? null,
+    blocks: (row.blocks ?? []) as FABBlock[],
+    analytics: (row.analytics ?? DEFAULT_ANALYTICS) as LandingPageAnalytics,
+    created_by: (row.created_by as string) ?? null,
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string,
+    published_at: (row.published_at as string) ?? null,
+  };
+}
+
+// ── Public API ─────────────────────────────────────────────────
 
 export class LandingPageBuilder {
-  private pages: LandingPage[] = [
-    {
-      id: 'lp-1', slug: 'rh-gestao', title: 'RH Gestão — Plataforma de RH',
-      status: 'published', blocks: DEMO_BLOCKS, gtmContainerId: 'GTM-XXXXXX',
-      conversionGoal: 'signup', createdAt: '2025-12-01T00:00:00Z',
-      updatedAt: '2026-02-15T00:00:00Z', publishedAt: '2026-01-10T00:00:00Z',
-      analytics: { views: 4820, uniqueVisitors: 3210, conversions: 186, conversionRate: 5.79, avgTimeOnPage: 142, bounceRate: 34.2, topSources: [{ source: 'Google', visits: 1840 }, { source: 'Referral', visits: 920 }, { source: 'Direct', visits: 450 }] },
-    },
-  ];
+  /** List all landing pages */
+  async getAll(): Promise<LandingPage[]> {
+    const { data, error } = await supabase
+      .from('landing_pages')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  getAll(): LandingPage[] { return this.pages; }
-  getById(id: string): LandingPage | undefined { return this.pages.find(p => p.id === id); }
+    if (error) {
+      console.error('[LandingPageBuilder] getAll error:', error);
+      return [];
+    }
+    return (data ?? []).map(rowToLandingPage);
+  }
 
-  addBlock(pageId: string, type: FABBlockType): FABBlock | null {
-    const page = this.getById(pageId);
+  /** Get a single landing page by id */
+  async getById(id: string): Promise<LandingPage | null> {
+    const { data, error } = await supabase
+      .from('landing_pages')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return rowToLandingPage(data);
+  }
+
+  /** Create a new landing page */
+  async create(input: {
+    name: string;
+    slug: string;
+    target_plan_id?: string;
+    referral_program_id?: string;
+    gtm_container_id?: string;
+    blocks?: FABBlock[];
+  }): Promise<LandingPage | null> {
+    const { data: userData } = await supabase.auth.getUser();
+
+    const row = {
+      name: input.name,
+      slug: input.slug,
+      status: 'draft' as const,
+      target_plan_id: input.target_plan_id ?? null,
+      referral_program_id: input.referral_program_id ?? null,
+      gtm_container_id: input.gtm_container_id ?? null,
+      blocks: JSON.parse(JSON.stringify(input.blocks ?? [])),
+      analytics: JSON.parse(JSON.stringify(DEFAULT_ANALYTICS)),
+      created_by: userData?.user?.id ?? null,
+    };
+
+    const { data, error } = await supabase
+      .from('landing_pages')
+      .insert(row)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[LandingPageBuilder] create error:', error);
+      return null;
+    }
+    return rowToLandingPage(data);
+  }
+
+  /** Update an existing landing page */
+  async update(id: string, fields: Partial<{
+    name: string;
+    slug: string;
+    status: 'draft' | 'published';
+    target_plan_id: string | null;
+    referral_program_id: string | null;
+    gtm_container_id: string | null;
+    blocks: FABBlock[];
+    published_at: string | null;
+  }>): Promise<LandingPage | null> {
+    const payload: Record<string, unknown> = { ...fields };
+    if (fields.blocks) {
+      payload.blocks = fields.blocks as unknown as Record<string, unknown>;
+    }
+    // Auto-set published_at when publishing
+    if (fields.status === 'published' && !fields.published_at) {
+      payload.published_at = new Date().toISOString();
+    }
+
+    const { data, error } = await supabase
+      .from('landing_pages')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[LandingPageBuilder] update error:', error);
+      return null;
+    }
+    return rowToLandingPage(data);
+  }
+
+  /** Delete a landing page */
+  async delete(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('landing_pages')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('[LandingPageBuilder] delete error:', error);
+      return false;
+    }
+    return true;
+  }
+
+  /** Add a block to a page */
+  async addBlock(pageId: string, type: FABBlockType): Promise<FABBlock | null> {
+    const page = await this.getById(pageId);
     if (!page) return null;
-    const block: FABBlock = { id: `b-${Date.now()}`, type, order: page.blocks.length, content: {} };
-    page.blocks.push(block);
-    return block;
+
+    const block: FABBlock = {
+      id: `b-${Date.now()}`,
+      type,
+      order: page.blocks.length,
+      content: {},
+    };
+
+    const updated = await this.update(pageId, {
+      blocks: [...page.blocks, block],
+    });
+    return updated ? block : null;
   }
 }
 
