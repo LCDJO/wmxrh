@@ -53,6 +53,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/security/permissions', label: 'Permissões' },
       { to: '/platform/security/access-graph', label: 'Access Graph' },
       { to: '/platform/security/unified-graph', label: 'Unified Graph' },
+      { to: '/platform/security/governance', label: 'Governança' },
     ],
   },
   { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
