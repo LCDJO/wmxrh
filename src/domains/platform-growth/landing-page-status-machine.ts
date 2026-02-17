@@ -14,11 +14,14 @@
  *  - Approved pages CANNOT be deleted.
  *  - Published pages CANNOT revert to draft.
  *  - Changes after approval create a NEW VERSION (handled by governance engine).
+ *  - Pages with running experiments CANNOT be deleted.
+ *  - New versions CANNOT be created while experiments are running.
  */
 
 import { hasPlatformPermission } from '@/domains/platform/platform-permissions';
 import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import type { PlatformPermission } from '@/domains/platform/platform-permissions';
+import { abTestingManager } from './autonomous-marketing/ab-testing-manager';
 
 // ═══════════════════════════════════
 // Status Definitions
@@ -259,4 +262,44 @@ export function getVersionTransitions(
  */
 export function requiresNewVersion(parentStatus: LandingPageStatus): boolean {
   return !canEditInPlace(parentStatus);
+}
+
+// ═══════════════════════════════════
+// A/B Experiment Guards
+// ═══════════════════════════════════
+
+/**
+ * Checks if a landing page has any running experiments.
+ */
+export function hasRunningExperiments(landingPageId: string): boolean {
+  const experiments = abTestingManager.listByLandingPage(landingPageId);
+  return experiments.some(e => e.status === 'running');
+}
+
+/**
+ * Validates that a landing page can be deleted considering active experiments.
+ * Throws if there are running experiments.
+ */
+export function validateDeletionWithExperiments(landingPageId: string, status: LandingPageStatus): void {
+  validateDeletion(status);
+
+  if (hasRunningExperiments(landingPageId)) {
+    throw new Error(
+      'Landing page com experimentos A/B em execução não pode ser excluída. ' +
+      'Finalize ou cancele os experimentos antes de excluir.'
+    );
+  }
+}
+
+/**
+ * Validates that a new version can be created considering active experiments.
+ * Blocks versioning while experiments are running to prevent traffic conflicts.
+ */
+export function validateVersionCreation(landingPageId: string): void {
+  if (hasRunningExperiments(landingPageId)) {
+    throw new Error(
+      'Não é possível criar nova versão enquanto há experimentos A/B em execução. ' +
+      'Finalize ou cancele os experimentos antes de criar uma nova versão.'
+    );
+  }
 }

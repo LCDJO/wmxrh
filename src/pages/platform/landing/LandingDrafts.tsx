@@ -20,6 +20,7 @@ import {
   getStatusVariant,
   getAvailableTransitions,
   canDeletePage,
+  hasRunningExperiments,
   type LandingPageStatus,
 } from '@/domains/platform-growth/landing-page-status-machine';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -117,6 +118,17 @@ export default function LandingDrafts() {
         description: status !== 'draft'
           ? `Landing pages com status "${getStatusLabel(status)}" não podem ser excluídas. Somente rascunhos.`
           : 'Você não tem permissão para excluir este rascunho.',
+        variant: 'destructive',
+      });
+      setDeleteTarget(null);
+      return;
+    }
+
+    // Block deletion if there are running A/B experiments
+    if (hasRunningExperiments(deleteTarget.id)) {
+      toast({
+        title: 'Exclusão bloqueada',
+        description: 'Landing page com experimentos A/B em execução não pode ser excluída. Finalize ou cancele os experimentos.',
         variant: 'destructive',
       });
       setDeleteTarget(null);
