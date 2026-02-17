@@ -21,6 +21,7 @@ import { conversionTrackingService } from '@/domains/platform-growth/conversion-
 import { gtmInjectionService } from '@/domains/platform-growth/tag-manager-integration';
 import { referralTrackingService } from '@/domains/platform-growth/referral-tracking-service';
 import { seoOptimizationService } from '@/domains/platform-growth/seo-optimization-service';
+import { emitGrowthEvent } from '@/domains/platform-growth/growth.events';
 import { useAuth } from '@/contexts/AuthContext';
 import { HeroSection } from './HeroSection';
 import { FABSection } from './FABSection';
@@ -68,6 +69,15 @@ export function LandingPageRenderer({
     // 1. Inject GTM script if container ID configured
     if (page?.gtm_container_id) {
       gtmInjectionService.inject(page.gtm_container_id);
+      emitGrowthEvent({
+        type: 'GTMInjected',
+        timestamp: Date.now(),
+        pageId: page.id,
+        pageSlug: page.slug,
+        containerId: page.gtm_container_id,
+        eventsCount: 5,
+        injectedBy: 'renderer',
+      });
     }
 
     // 2. GTM: page_view

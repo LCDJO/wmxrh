@@ -270,6 +270,19 @@ export class FABContentEngine {
     const cta = this.buildCTA(industry);
     const proof = this.buildProof();
 
+    // Emit FABSectionGenerated for each feature block
+    features.forEach((_, i) => {
+      emitGrowthEvent({
+        type: 'FABSectionGenerated',
+        timestamp: Date.now(),
+        pageId: `blueprint-${industry}`,
+        blockId: `block-${i}`,
+        blockType: 'feature',
+        fieldsGenerated: ['feature', 'advantage', 'benefit'],
+        generatedBy: 'ai',
+      });
+    });
+
     return { hero, features, advantages, benefits, cta, proof };
   }
 
