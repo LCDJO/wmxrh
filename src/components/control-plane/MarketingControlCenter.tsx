@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import {
   FlaskConical, TrendingUp, DollarSign, BarChart3, RefreshCw,
   CheckCircle2, Clock, AlertTriangle, ArrowUpRight, Trophy, Eye,
+  ShieldCheck, FileText, User,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -61,6 +62,100 @@ interface MarketingData {
 
 function formatBRL(v: number) {
   return `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+// ── Pending Marketing Approvals Widget ────────────────────────
+
+function PendingMarketingApprovals() {
+  const [requests, setRequests] = useState<Array<{
+    id: string;
+    landing_page_id: string;
+    submitted_by: string;
+    submitted_at: string;
+    version_number: number;
+    page_snapshot: Record<string, unknown>;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const { data } = await (supabase
+          .from('landing_page_approval_requests') as any)
+          .select('id, landing_page_id, submitted_by, submitted_at, version_number, page_snapshot, status')
+          .eq('status', 'pending_review')
+          .order('submitted_at', { ascending: false })
+          .limit(20);
+        setRequests(data ?? []);
+      } catch {
+        setRequests([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            Aprovações Pendentes
+          </CardTitle>
+          <Badge variant={requests.length > 0 ? 'destructive' : 'outline'} className="text-[10px]">
+            {requests.length}
+          </Badge>
+        </div>
+        <CardDescription className="text-xs">
+          Landing pages aguardando revisão e aprovação
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="animate-pulse space-y-2">
+            {[1, 2].map(i => <div key={i} className="h-12 rounded-lg bg-muted/50" />)}
+          </div>
+        ) : requests.length === 0 ? (
+          <div className="flex items-center gap-2 p-4 rounded-lg bg-muted/30 border border-border/50">
+            <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground">
+              Nenhuma aprovação pendente. Todas as submissões foram processadas.
+            </span>
+          </div>
+        ) : (
+          <ScrollArea className="h-[220px]">
+            <div className="space-y-2">
+              {requests.map(req => {
+                const pageName = (req.page_snapshot as any)?.name ?? 'Sem nome';
+                return (
+                  <div key={req.id} className="flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
+                    <FileText className="h-4 w-4 text-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium truncate">{pageName}</div>
+                      <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                        <User className="h-2.5 w-2.5" />
+                        {req.submitted_by}
+                        <span>·</span>
+                        v{req.version_number}
+                        <span>·</span>
+                        {format(new Date(req.submitted_at), 'dd/MM HH:mm')}
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="text-[9px] shrink-0">
+                      <Clock className="h-2.5 w-2.5 mr-1" />
+                      Pendente
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export function MarketingControlCenter() {
@@ -226,6 +321,9 @@ export function MarketingControlCenter() {
           isText
         />
       </div>
+
+      {/* Pending Marketing Approvals */}
+      <PendingMarketingApprovals />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Top Landing Pages */}
