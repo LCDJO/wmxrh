@@ -59,6 +59,18 @@ export const PLATFORM_EVENTS = {
   FABSectionGenerated: 'platform:fab_section_generated',
   /** Google Tag Manager container was injected into a published page */
   GTMInjected: 'platform:gtm_injected',
+
+  // ── Versioning Events ─────────────────────────────────────
+  /** A new module version was created (draft) */
+  ModuleVersionCreated: 'platform:module_version_created',
+  /** A module version was promoted to released */
+  ModuleVersionReleased: 'platform:module_version_released',
+  /** A platform release was finalized and published */
+  PlatformReleasePublished: 'platform:release_published',
+  /** A dependency conflict was detected between modules */
+  DependencyConflictDetected: 'platform:dependency_conflict_detected',
+  /** A rollback was executed on a release or module */
+  RollbackExecuted: 'platform:rollback_executed',
 } as const;
 
 export type PlatformEventType = typeof PLATFORM_EVENTS[keyof typeof PLATFORM_EVENTS];
@@ -179,4 +191,50 @@ export interface GTMInjectedPayload {
   container_id: string;
   events_count: number;
   injected_by: string;
+}
+
+// ── Versioning Payloads ───────────────────────────────────
+
+export interface ModuleVersionCreatedPayload {
+  module_id: string;
+  module_label: string;
+  version_tag: string;
+  breaking_changes: boolean;
+  created_by: string;
+}
+
+export interface ModuleVersionReleasedPayload {
+  module_id: string;
+  module_label: string;
+  version_tag: string;
+  breaking_changes: boolean;
+  released_by: string;
+}
+
+export interface PlatformReleasePublishedPayload {
+  release_id: string;
+  release_name: string;
+  version_tag: string;
+  modules_count: number;
+  published_by: string;
+  publisher_role: string;
+}
+
+export interface DependencyConflictDetectedPayload {
+  module_key: string;
+  required_by: string;
+  required_version: string;
+  actual_version: string;
+  severity: 'warning' | 'error';
+  release_id?: string;
+}
+
+export interface RollbackExecutedPayload {
+  release_id: string;
+  release_name: string;
+  target_release_id: string;
+  modules_affected: string[];
+  modules_skipped: string[];
+  executed_by: string;
+  reason?: string;
 }
