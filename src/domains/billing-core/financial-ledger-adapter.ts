@@ -18,6 +18,9 @@ function mapEntryType(type: LedgerEntryType): string {
     coupon_discount: 'coupon_discount',
     usage_overage: 'usage_overage',
     plan_charge: 'plan_charge',
+    referral_reward: 'referral_reward',
+    referral_bonus: 'referral_bonus',
+    referral_discount: 'referral_discount',
   };
   return map[type] ?? 'adjustment';
 }
@@ -91,6 +94,18 @@ export function createFinancialLedgerAdapter(): FinancialLedgerAdapterAPI {
 
     recordPlanCharge(tenantId: string, invoiceId: string, amount: number, planName: string) {
       return insert(tenantId, 'plan_charge', amount, `Cobrança plano: ${planName}`, invoiceId) as any;
+    },
+
+    recordReferralReward(tenantId: string, amount: number, description: string) {
+      return insert(tenantId, 'referral_reward', amount, description) as any;
+    },
+
+    recordReferralBonus(tenantId: string, amount: number, description: string) {
+      return insert(tenantId, 'referral_bonus', amount, description) as any;
+    },
+
+    recordReferralDiscount(tenantId: string, invoiceId: string, amount: number, description: string) {
+      return insert(tenantId, 'referral_discount', amount, description, invoiceId) as any;
     },
 
     getBalance(tenantId) {

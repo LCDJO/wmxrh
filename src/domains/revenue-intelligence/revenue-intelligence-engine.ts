@@ -76,11 +76,11 @@ export function createRewardCalculator(): RewardCalculatorAPI {
       };
 
       if (mode === 'credit') {
-        // ── Crédito financeiro no ledger ──
+        // ── Crédito financeiro no ledger (referral_reward) ──
         const { createFinancialLedgerAdapter } = await import('@/domains/billing-core/financial-ledger-adapter');
         const ledger = createFinancialLedgerAdapter();
         const desc = `Comissão referral (${(COMMISSION_RATES[tier] * 100).toFixed(0)}%) — R$${commission.toFixed(2)}`;
-        const entry = ledger.recordCredit(tenantId, commission, desc);
+        const entry = ledger.recordReferralReward(tenantId, commission, desc);
         result.ledger_entry_id = entry.id;
         result.description = desc;
 

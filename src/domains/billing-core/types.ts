@@ -133,7 +133,7 @@ export interface BillingCalculatorAPI {
 // Financial Ledger
 // ══════════════════════════════════════════════════════════════════
 
-export type LedgerEntryType = 'charge' | 'payment' | 'refund' | 'credit' | 'adjustment' | 'coupon_discount' | 'usage_overage' | 'plan_charge';
+export type LedgerEntryType = 'charge' | 'payment' | 'refund' | 'credit' | 'adjustment' | 'coupon_discount' | 'usage_overage' | 'plan_charge' | 'referral_reward' | 'referral_bonus' | 'referral_discount';
 
 export interface LedgerEntry {
   id: string;
@@ -162,6 +162,12 @@ export interface FinancialLedgerAdapterAPI {
   recordUsageOverage(tenantId: string, amount: number, description: string): LedgerEntry;
   /** Record a plan charge */
   recordPlanCharge(tenantId: string, invoiceId: string, amount: number, planName: string): LedgerEntry;
+  /** Record a referral reward credit */
+  recordReferralReward(tenantId: string, amount: number, description: string): LedgerEntry;
+  /** Record a referral bonus */
+  recordReferralBonus(tenantId: string, amount: number, description: string): LedgerEntry;
+  /** Record a referral discount */
+  recordReferralDiscount(tenantId: string, invoiceId: string, amount: number, description: string): LedgerEntry;
   /** Get tenant balance */
   getBalance(tenantId: string): number;
   /** Get ledger history */
