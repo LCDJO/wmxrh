@@ -19,4 +19,13 @@ export { AccessSafetyGuard, type SafetyBlockRule } from './access-safety-guard';
 export { HealingAuditLogger, type TriggerSource } from './healing-audit-logger';
 export { GovernanceHealingBridge, type GovernanceHealingSuggestion } from './governance-healing-bridge';
 export { assertAllowedAction, isAllowedAction, SelfHealingSecurityViolation } from './security-boundary';
+export {
+  emitIncidentDetected, emitSelfHealingTriggered,
+  emitCircuitOpened, emitCircuitClosed, emitModuleRecovered,
+  onSelfHealingEvent, onSelfHealingEventType,
+  getSelfHealingEventLog, clearSelfHealingEventLog,
+  type SelfHealingDomainEvent, type SelfHealingEventType,
+  type IncidentDetectedPayload, type SelfHealingTriggeredPayload,
+  type CircuitOpenedPayload, type CircuitClosedPayload, type ModuleRecoveredPayload,
+} from './self-healing-events';
 export type * from './types';

@@ -184,5 +184,17 @@ export class CircuitBreakerManager {
     this.eventKernel?.emit('self_healing:circuit_transition', 'CircuitBreakerManager', {
       module_id: moduleId, from, to,
     }, { priority: to === 'open' ? 'critical' : 'high' });
+
+    // Domain events: CircuitOpened / CircuitClosed
+    try {
+      const { emitCircuitOpened, emitCircuitClosed } = require('./self-healing-events') as typeof import('./self-healing-events');
+      if (to === 'open') {
+        const cb = this.breakers.get(moduleId);
+        emitCircuitOpened(moduleId, cb?.failure_count ?? 0, from);
+      } else if (to === 'closed') {
+        const openedAt = this.breakers.get(moduleId)?.opened_at ?? Date.now();
+        emitCircuitClosed(moduleId, from, Date.now() - openedAt);
+      }
+    } catch { /* events module not loaded yet */ }
   }
 }
