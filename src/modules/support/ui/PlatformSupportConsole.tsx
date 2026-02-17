@@ -278,6 +278,8 @@ function TicketQueue({ userId }: { userId: string }) {
   const [tickets, setTickets] = useState<TicketWithTenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selected, setSelected] = useState<SupportTicket | null>(null);
 
   const loadTickets = useCallback(async () => {
@@ -300,6 +302,19 @@ function TicketQueue({ userId }: { userId: string }) {
   }, [filter]);
 
   useEffect(() => { loadTickets(); }, [loadTickets]);
+
+  // Apply local filters (category + search)
+  const filteredTickets = tickets.filter(t => {
+    if (categoryFilter !== 'all' && t.category !== categoryFilter) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (
+        !t.subject.toLowerCase().includes(q) &&
+        !(t.tenant_name ?? '').toLowerCase().includes(q)
+      ) return false;
+    }
+    return true;
+  });
 
   if (selected) {
     return (
@@ -335,16 +350,38 @@ function TicketQueue({ userId }: { userId: string }) {
         ))}
       </div>
 
-      <div className="flex gap-3 items-center">
+      {/* Filters row */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por assunto ou tenant..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Select value={filter} onValueChange={setFilter}>
           <SelectTrigger className="w-48"><SelectValue placeholder="Filtrar status" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="all">Todos os Status</SelectItem>
             {Object.entries(STATUS_CONFIG).map(([k, v]) => (
               <SelectItem key={k} value={k}>{v.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="Módulo/Categoria" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas Categorias</SelectItem>
+            {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
+              <SelectItem key={k} value={k}>{v}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Badge variant="secondary" className="text-xs py-1.5 px-3">
+          {filteredTickets.length} resultado(s)
+        </Badge>
       </div>
 
       {loading ? (
@@ -357,19 +394,19 @@ function TicketQueue({ userId }: { userId: string }) {
               <TableHead>Tenant</TableHead>
               <TableHead>Assunto</TableHead>
               <TableHead>Prioridade</TableHead>
-              <TableHead>Módulo</TableHead>
+              <TableHead>Categoria</TableHead>
               <TableHead className="text-right">Tempo Aberto</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tickets.length === 0 ? (
+            {filteredTickets.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   Nenhum ticket encontrado.
                 </TableCell>
               </TableRow>
             ) : (
-              tickets.map(ticket => {
+              filteredTickets.map(ticket => {
                 const st = STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.open;
                 const pr = PRIORITY_CONFIG[ticket.priority] ?? PRIORITY_CONFIG.medium;
                 const StatusIcon = st.icon;
@@ -393,7 +430,7 @@ function TicketQueue({ userId }: { userId: string }) {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <span className="text-xs text-muted-foreground">{CATEGORY_LABELS[ticket.category]}</span>
+                      <Badge variant="outline" className="text-[10px]">{CATEGORY_LABELS[ticket.category]}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <span className="text-xs font-mono text-muted-foreground">{getTimeOpen(ticket.created_at)}</span>
