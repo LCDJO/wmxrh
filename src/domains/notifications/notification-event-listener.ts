@@ -2,8 +2,6 @@
  * NotificationEventListener
  *
  * Wires domain event buses → NotificationHub.
- * Each handler maps a domain event to a CreateNotificationDTO and dispatches it.
- *
  * Call `registerNotificationListeners()` once at app boot.
  */
 
@@ -13,24 +11,15 @@ import { onIBLEvent } from '@/domains/security/kernel/ibl/domain-events';
 import { onSecurityEvent } from '@/domains/security/security-events';
 import { onPlatformEvent } from '@/domains/platform/platform-events';
 
-// ══════════════════════════════════════════════════════════════
-// Helpers
-// ══════════════════════════════════════════════════════════════
-
 function fire(dto: CreateNotificationDTO) {
   notificationDispatcher.create(dto).catch((err) => {
     console.warn('[NotificationEventListener] Failed to dispatch:', err);
   });
 }
 
-// ══════════════════════════════════════════════════════════════
-// Listener registration
-// ══════════════════════════════════════════════════════════════
-
 const teardowns: (() => void)[] = [];
 
 export function registerNotificationListeners() {
-  // Prevent double-registration
   if (teardowns.length > 0) return;
 
   // ── IAM Events ──
@@ -42,15 +31,11 @@ export function registerNotificationListeners() {
           fire({
             tenant_id: e.tenant_id,
             user_id: e.invited_by ?? e.user_id,
-            category: 'hr',
-            priority: 'medium',
             title: 'Novo membro convidado',
-            message: `O usuário ${e.email} foi convidado para a organização.`,
-            icon: 'UserPlus',
+            description: `O usuário ${e.email} foi convidado para a organização.`,
+            type: 'info',
             source_module: 'iam',
-            source_event: 'UserInvited',
-            action_route: '/settings/users',
-            action_label: 'Ver equipe',
+            action_url: '/settings/users',
           });
           break;
         }
@@ -59,15 +44,11 @@ export function registerNotificationListeners() {
           fire({
             tenant_id: e.tenant_id,
             user_id: e.granted_by ?? e.role_id,
-            category: 'security',
-            priority: 'high',
             title: 'Permissões de papel alteradas',
-            message: `O papel teve ${e.permission_count} permissão(ões) atualizada(s).`,
-            icon: 'ShieldAlert',
+            description: `O papel teve ${e.permission_count} permissão(ões) atualizada(s).`,
+            type: 'warning',
             source_module: 'iam',
-            source_event: 'RolePermissionsUpdated',
-            action_route: '/settings/roles',
-            action_label: 'Ver papéis',
+            action_url: '/settings/roles',
           });
           break;
         }
@@ -78,22 +59,16 @@ export function registerNotificationListeners() {
   // ── IBL / Identity Boundary Events ──
   teardowns.push(
     onIBLEvent((event) => {
-      switch (event.type) {
-        case 'ContextSwitched': {
-          const e = event as Extract<typeof event, { type: 'ContextSwitched' }>;
-          fire({
-            tenant_id: e.current.tenantId,
-            user_id: e.userId,
-            category: 'system',
-            priority: 'low',
-            title: 'Contexto alterado',
-            message: `Troca de ${e.switchType} realizada para ${e.current.tenantName}.`,
-            icon: 'Settings',
-            source_module: 'ibl',
-            source_event: 'ContextSwitched',
-          });
-          break;
-        }
+      if (event.type === 'ContextSwitched') {
+        const e = event as Extract<typeof event, { type: 'ContextSwitched' }>;
+        fire({
+          tenant_id: e.current.tenantId,
+          user_id: e.userId,
+          title: 'Contexto alterado',
+          description: `Troca de ${e.switchType} para ${e.current.tenantName}.`,
+          type: 'info',
+          source_module: 'ibl',
+        });
       }
     }),
   );
@@ -101,23 +76,16 @@ export function registerNotificationListeners() {
   // ── Security Events ──
   teardowns.push(
     onSecurityEvent((event) => {
-      switch (event.type) {
-        case 'UnauthorizedAccessAttempt': {
-          fire({
-            tenant_id: event.tenantId ?? '',
-            user_id: event.userId ?? '',
-            category: 'security',
-            priority: 'critical',
-            title: 'Tentativa de acesso não autorizado',
-            message: `Bloqueado: ${event.reason} no recurso ${event.resource}.`,
-            icon: 'ShieldAlert',
-            source_module: 'security',
-            source_event: 'UnauthorizedAccessAttempt',
-            action_route: '/audit',
-            action_label: 'Ver auditoria',
-          });
-          break;
-        }
+      if (event.type === 'UnauthorizedAccessAttempt') {
+        fire({
+          tenant_id: event.tenantId ?? '',
+          user_id: event.userId ?? '',
+          title: 'Tentativa de acesso não autorizado',
+          description: `Bloqueado: ${event.reason} no recurso ${event.resource}.`,
+          type: 'critical',
+          source_module: 'security',
+          action_url: '/audit',
+        });
       }
     }),
   );
@@ -125,100 +93,70 @@ export function registerNotificationListeners() {
   // ── Platform Events ──
   teardowns.push(
     onPlatformEvent((event) => {
+      const meta = event.metadata as Record<string, any> | undefined;
       switch (event.type) {
-        // ── HR Core ──
-        case 'TenantCreated': {
+        case 'TenantCreated':
           fire({
             tenant_id: event.targetId,
             user_id: event.actorId,
-            category: 'hr',
-            priority: 'medium',
             title: 'Nova organização criada',
-            message: `Tenant "${(event.metadata as any)?.tenantName ?? event.targetId}" provisionado.`,
-            icon: 'Rocket',
+            description: `Tenant "${meta?.tenantName ?? event.targetId}" provisionado.`,
+            type: 'success',
             source_module: 'platform',
-            source_event: 'TenantCreated',
           });
           break;
-        }
 
-        // ── Permission / Security ──
-        case 'PlatformPermissionChanged': {
+        case 'PlatformPermissionChanged':
           fire({
             tenant_id: '',
             user_id: event.actorId,
-            category: 'security',
-            priority: 'high',
             title: 'Permissão de plataforma alterada',
-            message: `Ação "${(event.metadata as any)?.action}" aplicada ao usuário ${event.targetId}.`,
-            icon: 'ShieldAlert',
+            description: `Ação "${meta?.action}" aplicada ao usuário ${event.targetId}.`,
+            type: 'warning',
             source_module: 'platform',
-            source_event: 'PlatformPermissionChanged',
-            action_route: '/platform/users',
-            action_label: 'Ver usuários',
+            action_url: '/platform/users',
           });
           break;
-        }
 
-        // ── Cognitive / Risk ──
-        case 'PermissionRiskDetected': {
-          const meta = event.metadata as any;
+        case 'PermissionRiskDetected':
           fire({
             tenant_id: '',
             user_id: event.actorId,
-            category: 'compliance',
-            priority: meta?.severity === 'high' ? 'critical' : 'high',
             title: 'Risco de permissão detectado',
-            message: `${meta?.riskType}: ${meta?.details ?? 'Verifique as permissões.'}`,
-            icon: 'AlertTriangle',
+            description: `${meta?.riskType}: ${meta?.details ?? 'Verifique as permissões.'}`,
+            type: 'critical',
             source_module: 'cognitive',
-            source_event: 'PermissionRiskDetected',
-            action_route: '/iam',
-            action_label: 'Revisar',
+            action_url: '/iam',
           });
           break;
-        }
 
-        // ── Billing ──
-        case 'PlanUpgraded': {
-          const meta = event.metadata as any;
+        case 'PlanUpgraded':
           fire({
             tenant_id: event.targetId,
             user_id: event.actorId,
-            category: 'system',
-            priority: 'medium',
             title: 'Plano atualizado',
-            message: `Upgrade de ${meta?.fromPlan} para ${meta?.toPlan} realizado.`,
-            icon: 'Rocket',
+            description: `Upgrade de ${meta?.fromPlan} para ${meta?.toPlan} realizado.`,
+            type: 'success',
             source_module: 'billing',
-            source_event: 'PlanUpgraded',
           });
           break;
-        }
 
-        case 'PlanDowngraded': {
-          const meta = event.metadata as any;
+        case 'PlanDowngraded':
           fire({
             tenant_id: event.targetId,
             user_id: event.actorId,
-            category: 'system',
-            priority: 'high',
             title: 'Plano reduzido',
-            message: `Downgrade de ${meta?.fromPlan} para ${meta?.toPlan}. Verifique módulos ativos.`,
-            icon: 'AlertTriangle',
+            description: `Downgrade de ${meta?.fromPlan} para ${meta?.toPlan}. Verifique módulos.`,
+            type: 'warning',
             source_module: 'billing',
-            source_event: 'PlanDowngraded',
-            action_route: '/platform/plans',
-            action_label: 'Ver planos',
+            action_url: '/platform/plans',
           });
           break;
-        }
       }
     }),
   );
 }
 
-/** Unsubscribe all listeners (useful in tests). */
 export function unregisterNotificationListeners() {
   teardowns.forEach((fn) => fn());
   teardowns.length = 0;
