@@ -1,20 +1,24 @@
 /**
  * PlatformCommunications — SuperAdmin panel for TenantCommunicationCenter.
- * CRUD for TenantAnnouncements with alert_type/severity/blocking_level.
+ * CRUD for TenantAnnouncements with targeting: global | tenant | plan | feature_flag.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import {
   announcementDispatcher,
   ALERT_TYPE_CONFIG,
   SEVERITY_CONFIG,
   BLOCKING_LEVEL_CONFIG,
+  getTargetingLabel,
   type TenantAnnouncement,
   type CreateAnnouncementInput,
   type AlertType,
   type Severity,
   type BlockingLevel,
 } from '@/domains/announcements/announcement-hub';
+import { BUSINESS_FEATURES } from '@/domains/security/feature-flags';
+import { emitAnnouncementNotification } from '@/domains/announcements/announcement-notification-bridge';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -38,12 +42,15 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+type TargetingMode = 'global' | 'tenant' | 'plan' | 'feature_flag';
+
 export default function PlatformCommunications() {
   const qc = useQueryClient();
   const [filterType, setFilterType] = useState<string>('all');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [targetingMode, setTargetingMode] = useState<TargetingMode>('global');
 
   const emptyForm: CreateAnnouncementInput = {
     title: '',
@@ -56,8 +63,12 @@ export default function PlatformCommunications() {
     is_dismissible: true,
     start_at: new Date().toISOString().slice(0, 16),
     end_at: null,
+    target_plan_id: null,
+    target_feature_flag: null,
   };
   const [form, setForm] = useState<CreateAnnouncementInput>(emptyForm);
+
+  // ── Data queries ──
 
   const { data: announcements = [], isLoading } = useQuery({
     queryKey: ['tenant_announcements', filterType, filterSeverity],
@@ -67,6 +78,33 @@ export default function PlatformCommunications() {
         severity: filterSeverity === 'all' ? undefined : filterSeverity,
       }),
   });
+
+  const { data: tenants = [] } = useQuery({
+    queryKey: ['tenants_list'],
+    queryFn: async () => {
+      const { data } = await supabase.from('tenants').select('id, name').order('name');
+      return (data || []) as { id: string; name: string }[];
+    },
+  });
+
+  const { data: plans = [] } = useQuery({
+    queryKey: ['tenant_plans_list'],
+    queryFn: async () => {
+      const { data } = await (supabase
+        .from('tenant_plans' as any)
+        .select('plan_id')
+        .order('plan_id') as any);
+      // Deduplicate plan_ids
+      const ids = new Set<string>();
+      return ((data || []) as { plan_id: string }[]).filter(p => {
+        if (ids.has(p.plan_id)) return false;
+        ids.add(p.plan_id);
+        return true;
+      });
+    },
+  });
+
+  // ── Mutations ──
 
   const createMut = useMutation({
     mutationFn: (input: CreateAnnouncementInput) => announcementDispatcher.create(input),
@@ -98,14 +136,22 @@ export default function PlatformCommunications() {
     },
   });
 
+  // ── Handlers ──
+
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setTargetingMode('global');
     setDialogOpen(true);
   };
 
   const openEdit = (a: TenantAnnouncement) => {
     setEditingId(a.id);
+    const mode: TargetingMode = a.target_feature_flag ? 'feature_flag'
+      : a.target_plan_id ? 'plan'
+      : a.tenant_id ? 'tenant'
+      : 'global';
+    setTargetingMode(mode);
     setForm({
       title: a.title,
       message: a.message,
@@ -117,9 +163,24 @@ export default function PlatformCommunications() {
       is_dismissible: a.is_dismissible,
       start_at: a.start_at?.slice(0, 16),
       end_at: a.end_at?.slice(0, 16) ?? null,
+      target_plan_id: a.target_plan_id,
+      target_feature_flag: a.target_feature_flag,
     });
     setDialogOpen(true);
   };
+
+  // Reset targeting fields when mode changes
+  useEffect(() => {
+    if (targetingMode === 'global') {
+      setForm(f => ({ ...f, tenant_id: null, target_plan_id: null, target_feature_flag: null }));
+    } else if (targetingMode === 'tenant') {
+      setForm(f => ({ ...f, target_plan_id: null, target_feature_flag: null }));
+    } else if (targetingMode === 'plan') {
+      setForm(f => ({ ...f, tenant_id: null, target_feature_flag: null }));
+    } else if (targetingMode === 'feature_flag') {
+      setForm(f => ({ ...f, tenant_id: null, target_plan_id: null }));
+    }
+  }, [targetingMode]);
 
   const handleSave = () => {
     if (!form.title || !form.message) {
@@ -239,9 +300,7 @@ export default function PlatformCommunications() {
                     <span className="text-xs text-muted-foreground">{block.label}</span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-xs">
-                      {a.tenant_id ? 'Específico' : '🌐 Global'}
-                    </span>
+                    <span className="text-xs">{getTargetingLabel(a)}</span>
                   </TableCell>
                   <TableCell>
                     <div className="text-xs text-muted-foreground">
@@ -343,28 +402,72 @@ export default function PlatformCommunications() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Targeting</Label>
+            {/* ── Targeting Section ── */}
+            <div className="space-y-3 border rounded-lg p-3 bg-muted/20">
+              <Label className="text-sm font-semibold">Targeting</Label>
+
+              <Select value={targetingMode} onValueChange={(v) => setTargetingMode(v as TargetingMode)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="global">🌐 Global (todos os tenants)</SelectItem>
+                  <SelectItem value="tenant">🏢 Tenant específico</SelectItem>
+                  <SelectItem value="plan">📋 Por plano</SelectItem>
+                  <SelectItem value="feature_flag">🚩 Por feature flag</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {targetingMode === 'tenant' && (
                 <Select
-                  value={form.tenant_id ?? 'global'}
-                  onValueChange={(v) => setForm({ ...form, tenant_id: v === 'global' ? null : v })}
+                  value={form.tenant_id ?? ''}
+                  onValueChange={(v) => setForm({ ...form, tenant_id: v })}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Selecione o tenant" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="global">🌐 Global (todos os tenants)</SelectItem>
+                    {tenants.map(t => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-              </div>
+              )}
 
-              <div className="space-y-1.5">
-                <Label>URL de Ação (opcional)</Label>
-                <Input
-                  value={form.action_url ?? ''}
-                  onChange={(e) => setForm({ ...form, action_url: e.target.value || null })}
-                  placeholder="https://..."
-                />
-              </div>
+              {targetingMode === 'plan' && (
+                <Select
+                  value={form.target_plan_id ?? ''}
+                  onValueChange={(v) => setForm({ ...form, target_plan_id: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione o plano" /></SelectTrigger>
+                  <SelectContent>
+                    {plans.map(p => (
+                      <SelectItem key={p.plan_id} value={p.plan_id}>
+                        {p.plan_id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {targetingMode === 'feature_flag' && (
+                <Select
+                  value={form.target_feature_flag ?? ''}
+                  onValueChange={(v) => setForm({ ...form, target_feature_flag: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione a feature flag" /></SelectTrigger>
+                  <SelectContent>
+                    {BUSINESS_FEATURES.map(f => (
+                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>URL de Ação (opcional)</Label>
+              <Input
+                value={form.action_url ?? ''}
+                onChange={(e) => setForm({ ...form, action_url: e.target.value || null })}
+                placeholder="https://..."
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">

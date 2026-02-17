@@ -4491,6 +4491,8 @@ export type Database = {
           severity: string
           source: string
           start_at: string
+          target_feature_flag: string | null
+          target_plan_id: string | null
           tenant_id: string | null
           title: string
           updated_at: string
@@ -4508,6 +4510,8 @@ export type Database = {
           severity?: string
           source?: string
           start_at?: string
+          target_feature_flag?: string | null
+          target_plan_id?: string | null
           tenant_id?: string | null
           title: string
           updated_at?: string
@@ -4525,6 +4529,8 @@ export type Database = {
           severity?: string
           source?: string
           start_at?: string
+          target_feature_flag?: string | null
+          target_plan_id?: string | null
           tenant_id?: string | null
           title?: string
           updated_at?: string
