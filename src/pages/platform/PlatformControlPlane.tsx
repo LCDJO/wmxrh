@@ -32,7 +32,8 @@ import { IdentityActivityFeed } from '@/components/control-plane/IdentityActivit
 import { GrowthControlCenter } from '@/components/control-plane/GrowthControlCenter';
 import { WebsiteControlCenter } from '@/components/control-plane/WebsiteControlCenter';
 import { MarketingControlCenter } from '@/components/control-plane/MarketingControlCenter';
-
+import { ActivePlatformVersionWidget } from '@/components/control-plane/ActivePlatformVersionWidget';
+import { ModuleHealthByVersionWidget } from '@/components/control-plane/ModuleHealthByVersionWidget';
 // ── Hook ──────────────────────────────────────────────────────
 
 function useControlPlane() {
@@ -160,16 +161,22 @@ export default function PlatformControlPlane() {
           {/* Row 1: System Status (full width) */}
           <SystemStatusOverview state={state} onRefresh={refresh} />
 
-          {/* Row 2: Incidents + Risk Heatmap */}
+          {/* Row 2: Active Version + Module Health by Version */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <ActivePlatformVersionWidget />
+            <ModuleHealthByVersionWidget />
+          </div>
+
+          {/* Row 3: Incidents + Risk Heatmap */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <ActiveIncidentsPanel state={state} onAction={executeAction} />
             <RiskHeatmap state={state} risk={risk} />
           </div>
 
-          {/* Row 3: Module Health Grid (full width) */}
+          {/* Row 4: Module Health Grid (full width) */}
           <ModuleHealthGrid modules={modules} onAction={executeAction} />
 
-          {/* Row 4: Identity Activity Feed */}
+          {/* Row 5: Identity Activity Feed */}
           <IdentityActivityFeed identity={identity} />
         </TabsContent>
 
