@@ -12,6 +12,7 @@ import {
   announcementDispatcher,
   type TenantAnnouncement,
 } from '@/domains/announcements/announcement-hub';
+import { applyRestrictions, clearRestrictions } from '@/domains/announcements/restriction-bridge';
 
 export function useAnnouncements() {
   const { user } = useAuth();
@@ -68,6 +69,16 @@ export function useAnnouncements() {
     () => announcements.filter(a => !dismissedIds.has(a.id)),
     [announcements, dismissedIds],
   );
+
+  // Apply restriction overrides via FeatureFlagEngine
+  useEffect(() => {
+    if (activeAnnouncements.length > 0 && tenantId) {
+      applyRestrictions(activeAnnouncements, tenantId);
+    } else {
+      clearRestrictions();
+    }
+    return () => clearRestrictions();
+  }, [activeAnnouncements, tenantId]);
 
   // Banner announcements = active + blocking_level is 'banner' or 'restricted_access'
   const bannerAnnouncements = useMemo(
