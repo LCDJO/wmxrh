@@ -173,20 +173,50 @@ export const landingVersionService = {
     // 3. Apply transition
     const updatePayload: Record<string, unknown> = { status: targetStatus };
 
-    // 4. If publishing: archive previous published versions of same LP
+    // 4. If publishing: mark previous published versions as "superseded" (preserving metrics)
+    //    and update the parent LP's active content + slug
     if (targetStatus === 'published') {
-      await supabase
+      // Find and supersede previous published versions
+      const { data: oldPublished } = await supabase
         .from('landing_page_versions')
-        .update({ status: 'draft' }) // demote old published versions
+        .select('id, version_number')
         .eq('landing_page_id', version.landing_page_id)
         .eq('status', 'published')
         .neq('id', versionId);
 
-      // Also update the parent LP's blocks with the version content
+      if (oldPublished && oldPublished.length > 0) {
+        const oldIds = oldPublished.map(v => v.id);
+        await supabase
+          .from('landing_page_versions')
+          .update({ status: 'superseded' })
+          .in('id', oldIds);
+
+        // Audit: record supersession for each old version
+        for (const old of oldPublished) {
+          await supabase.from('audit_logs').insert({
+            tenant_id: '00000000-0000-0000-0000-000000000000',
+            entity_type: 'landing_page_version',
+            entity_id: old.id,
+            action: 'VersionSuperseded',
+            user_id: actor.userId,
+            old_value: { status: 'published' },
+            new_value: { status: 'superseded', superseded_by: versionId },
+            metadata: {
+              landing_page_id: version.landing_page_id,
+              superseded_version: old.version_number,
+              new_active_version: version.version_number,
+            },
+          });
+        }
+      }
+
+      // Update the parent LP's blocks with the new version content and refresh slug
       await supabase
         .from('landing_pages')
         .update({
           blocks: version.content_snapshot,
+          status: 'published',
+          published_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq('id', version.landing_page_id);

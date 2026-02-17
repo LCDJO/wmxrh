@@ -27,8 +27,8 @@ import type { PlatformPermission } from '@/domains/platform/platform-permissions
 export const LANDING_PAGE_STATUSES = ['draft', 'submitted', 'approved', 'published', 'archived'] as const;
 export type LandingPageStatus = typeof LANDING_PAGE_STATUSES[number];
 
-/** Version-level statuses (subset — versions don't archive) */
-export const LANDING_VERSION_STATUSES = ['draft', 'submitted', 'approved', 'published'] as const;
+/** Version-level statuses (versions can be superseded but never archived) */
+export const LANDING_VERSION_STATUSES = ['draft', 'submitted', 'approved', 'published', 'superseded'] as const;
 export type LandingVersionStatus = typeof LANDING_VERSION_STATUSES[number];
 
 // ═══════════════════════════════════
@@ -203,8 +203,23 @@ export function getStatusVariant(status: LandingPageStatus | LandingVersionStatu
     approved: 'default',
     published: 'default',
     archived: 'destructive',
+    superseded: 'secondary',
   };
   return variants[status] ?? 'outline';
+}
+
+/**
+ * Get human-readable label for version statuses (includes superseded).
+ */
+export function getVersionStatusLabel(status: LandingVersionStatus): string {
+  const labels: Record<LandingVersionStatus, string> = {
+    draft: 'Rascunho',
+    submitted: 'Aguardando Aprovação',
+    approved: 'Aprovada',
+    published: 'Publicada (Ativa)',
+    superseded: 'Substituída',
+  };
+  return labels[status] ?? status;
 }
 
 // ═══════════════════════════════════
@@ -223,6 +238,7 @@ const VERSION_TRANSITION_MAP: Record<LandingVersionStatus, TransitionRule[]> = {
     { to: 'published', requiredPermission: 'landing.publish', label: 'Publicar versão' },
   ],
   published: [],
+  superseded: [], // terminal state — no transitions out
 };
 
 /**
