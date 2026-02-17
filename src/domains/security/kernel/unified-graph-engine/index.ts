@@ -111,6 +111,7 @@ export type {
   RiskAssessment,
   RiskSignal,
   RiskLevel,
+  UserRiskScore,
   VisualizationData,
   VisualizationNode,
   VisualizationEdge,

@@ -116,9 +116,39 @@ export interface RiskSignal {
   affectedNodeUids: string[];
 }
 
+// ════════════════════════════════════
+// USER RISK SCORE
+// ════════════════════════════════════
+
+export interface UserRiskScore {
+  userUid: string;
+  userLabel: string;
+  domain: GraphDomain;
+  /** Overall 0–100 score (higher = more risk) */
+  score: number;
+  level: RiskLevel;
+  /** Breakdown */
+  factors: {
+    /** Number of critical permissions resolved for this user */
+    criticalPermissionCount: number;
+    /** Weight: 0–40 */
+    criticalPermissionScore: number;
+    /** Number of tenants this user has access to */
+    multiTenantCount: number;
+    /** Weight: 0–30 */
+    multiTenantScore: number;
+    /** Whether the user currently has an active impersonation session */
+    hasActiveImpersonation: boolean;
+    /** Weight: 0–30 */
+    impersonationScore: number;
+  };
+}
+
 export interface RiskAssessment {
   overallLevel: RiskLevel;
   signals: RiskSignal[];
+  /** Per-user risk scores */
+  userScores: UserRiskScore[];
   assessedAt: number;
 }
 

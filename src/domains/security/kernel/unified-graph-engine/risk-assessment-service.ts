@@ -12,9 +12,13 @@
 
 import type {
   UnifiedGraphSnapshot,
+  UnifiedNode,
+  UnifiedEdge,
   RiskAssessment,
   RiskSignal,
   RiskLevel,
+  UserRiskScore,
+  UnifiedEdgeRelation,
 } from './types';
 import { analyzeGraph } from './graph-analyzer';
 
@@ -115,6 +119,11 @@ export function assessRisk(snapshot: UnifiedGraphSnapshot): RiskAssessment {
     });
   }
 
+  // ════════════════════════════════════
+  // USER RISK SCORES
+  // ════════════════════════════════════
+  const userScores = computeUserRiskScores(snapshot);
+
   // ── Determine overall level ──
   const overallLevel: RiskLevel = signals.some(s => s.level === 'critical')
     ? 'critical'
@@ -127,6 +136,173 @@ export function assessRisk(snapshot: UnifiedGraphSnapshot): RiskAssessment {
   return {
     overallLevel,
     signals,
+    userScores,
     assessedAt: Date.now(),
   };
+}
+
+// ════════════════════════════════════
+// CRITICAL PERMISSION SLUGS
+// ════════════════════════════════════
+
+/** Permissions considered "critical" for risk scoring */
+const CRITICAL_PERMISSION_SLUGS = new Set([
+  // Platform-level
+  'platform.manage', 'tenant.manage', 'tenant.delete',
+  'users.impersonate', 'billing.manage', 'finance.manage',
+  'system.configure', 'audit.manage',
+  // Tenant-level
+  'employees.delete', 'payroll.approve', 'payroll.manage',
+  'agreements.manage', 'compliance.enforce',
+]);
+
+// ════════════════════════════════════
+// SCORE COMPUTATION
+// ════════════════════════════════════
+
+const ROLE_RELATIONS: UnifiedEdgeRelation[] = ['HAS_ROLE', 'HAS_PLATFORM_ROLE', 'HAS_TENANT_ROLE'];
+const GRANT_RELATIONS: UnifiedEdgeRelation[] = ['GRANTS_PERMISSION', 'PLATFORM_GRANTS', 'TENANT_GRANTS'];
+const INHERIT_RELATIONS: UnifiedEdgeRelation[] = ['INHERITS_ROLE', 'PLATFORM_INHERITS'];
+
+function computeUserRiskScores(snapshot: UnifiedGraphSnapshot): UserRiskScore[] {
+  const { nodes, edges } = snapshot;
+  const scores: UserRiskScore[] = [];
+
+  // Pre-index: impersonation targets
+  const impersonatingUsers = new Set<string>();
+  for (const e of edges) {
+    if (e.relation === 'IMPERSONATES') impersonatingUsers.add(e.from);
+  }
+
+  // Pre-index: user → tenant connections
+  const userTenants = new Map<string, Set<string>>();
+  for (const e of edges) {
+    if (e.relation === 'BELONGS_TO' || e.relation === 'BELONGS_TO_TENANT') {
+      const targetNode = nodes.get(e.to);
+      if (targetNode?.type === 'tenant') {
+        if (!userTenants.has(e.from)) userTenants.set(e.from, new Set());
+        userTenants.get(e.from)!.add(e.to);
+      }
+    }
+  }
+
+  // Also check indirect: user → role (scoped to tenant)
+  for (const e of edges) {
+    if (ROLE_RELATIONS.includes(e.relation)) {
+      const roleNode = nodes.get(e.to);
+      if (roleNode?.meta?.tenantId) {
+        if (!userTenants.has(e.from)) userTenants.set(e.from, new Set());
+        userTenants.get(e.from)!.add(roleNode.meta.tenantId as string);
+      }
+    }
+  }
+
+  const userNodes = Array.from(nodes.values()).filter(
+    n => n.type === 'platform_user' || n.type === 'tenant_user',
+  );
+
+  for (const user of userNodes) {
+    // ── 1. Critical permissions (0–40) ──
+    const permNodes = resolvePermissions(user.uid, nodes, edges);
+    const criticalCount = permNodes.filter(p => {
+      const slug = (p.meta?.slug as string) ?? (p.meta?.code as string) ?? p.originalId;
+      return CRITICAL_PERMISSION_SLUGS.has(slug);
+    }).length;
+    // 0 → 0, 1 → 10, 2 → 18, 5 → 34, 6+ → 40
+    const criticalPermissionScore = Math.min(40, Math.round(criticalCount * (40 / 6)));
+
+    // ── 2. Multi-tenant access (0–30) ──
+    const tenantCount = userTenants.get(user.uid)?.size ?? 0;
+    // Also check identity links
+    const identityLinkedTenants = new Set<string>();
+    for (const e of edges) {
+      if (e.from === user.uid && e.relation === 'IDENTITY_LINK') {
+        // Follow to tenant_access user, then check their tenants
+        const linkedTenants = userTenants.get(e.to);
+        if (linkedTenants) linkedTenants.forEach(t => identityLinkedTenants.add(t));
+      }
+    }
+    const totalTenants = Math.max(tenantCount, identityLinkedTenants.size);
+    // 0–1 → 0, 2 → 10, 3 → 18, 4+ → 30
+    const multiTenantScore = totalTenants <= 1 ? 0 : Math.min(30, Math.round((totalTenants - 1) * 10));
+
+    // ── 3. Active impersonation (0–30) ──
+    // Check if this user's identity node has IMPERSONATES edge
+    const hasImpersonation = impersonatingUsers.has(user.uid) ||
+      Array.from(edges).some(
+        e => e.relation === 'IMPERSONATES' &&
+          nodes.get(e.from)?.originalId === user.originalId,
+      );
+    const impersonationScore = hasImpersonation ? 30 : 0;
+
+    // ── Total ──
+    const score = criticalPermissionScore + multiTenantScore + impersonationScore;
+    const level: RiskLevel = score >= 70 ? 'critical'
+      : score >= 45 ? 'high'
+      : score >= 20 ? 'medium'
+      : 'low';
+
+    scores.push({
+      userUid: user.uid,
+      userLabel: user.label,
+      domain: user.domain,
+      score,
+      level,
+      factors: {
+        criticalPermissionCount: criticalCount,
+        criticalPermissionScore,
+        multiTenantCount: totalTenants,
+        multiTenantScore,
+        hasActiveImpersonation: hasImpersonation,
+        impersonationScore,
+      },
+    });
+  }
+
+  scores.sort((a, b) => b.score - a.score);
+  return scores;
+}
+
+// ════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════
+
+function resolvePermissions(
+  userUid: string,
+  nodes: ReadonlyMap<string, UnifiedNode>,
+  edges: readonly UnifiedEdge[],
+): UnifiedNode[] {
+  const roleUids = new Set<string>();
+  const queue: string[] = [];
+
+  for (const e of edges) {
+    if (e.from === userUid && ROLE_RELATIONS.includes(e.relation)) {
+      roleUids.add(e.to);
+      queue.push(e.to);
+    }
+  }
+
+  const visited = new Set<string>();
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    for (const e of edges) {
+      if (e.from === current && INHERIT_RELATIONS.includes(e.relation) && !roleUids.has(e.to)) {
+        roleUids.add(e.to);
+        queue.push(e.to);
+      }
+    }
+  }
+
+  const permSet = new Set<string>();
+  for (const e of edges) {
+    if (roleUids.has(e.from) && GRANT_RELATIONS.includes(e.relation)) {
+      permSet.add(e.to);
+    }
+  }
+
+  return Array.from(permSet)
+    .map(uid => nodes.get(uid))
+    .filter((n): n is UnifiedNode => n !== undefined && n.type === 'permission');
 }
