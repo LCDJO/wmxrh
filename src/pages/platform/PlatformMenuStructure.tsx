@@ -5,7 +5,7 @@
  */
 import {
   Puzzle, RefreshCw, GripVertical, Save, ArrowRight, ArrowLeft,
-  AlertTriangle, CheckCircle2, History, GitBranch, Shield,
+  AlertTriangle, CheckCircle2, History, GitBranch, Shield, FileDiff,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,8 +22,9 @@ import {
   type MenuStructureEngineAPI,
   type MenuEditorRole,
 } from '@/domains/menu-structure/menu-structure-engine';
-import type { MenuTreeNode, MenuValidationResult } from '@/domains/menu-structure/types';
+import type { MenuTreeNode, MenuValidationResult, MenuDiff } from '@/domains/menu-structure/types';
 import { MenuTreeBuilder } from '@/components/platform/MenuTreeBuilder';
+import { MenuDiffViewer } from '@/components/platform/MenuDiffViewer';
 
 /* ─── Helper ─── */
 const mn = (
@@ -140,6 +141,9 @@ export default function PlatformMenuStructure() {
   const [tab, setTab] = useState('tree');
   const [validation, setValidation] = useState<MenuValidationResult | null>(null);
   const [editorRole, setEditorRole] = useState<MenuEditorRole>('PlatformSuperAdmin');
+  const [diffResult, setDiffResult] = useState<{ diffs: MenuDiff[]; beforeTree: MenuTreeNode[]; afterTree: MenuTreeNode[]; beforeLabel: string; afterLabel: string } | null>(null);
+  const [diffVersionA, setDiffVersionA] = useState<string>('');
+  const [diffVersionB, setDiffVersionB] = useState<string>('current');
 
   const flatNodes = useMemo(() => engine.tree.flattenAll(tree), [tree]);
   const totalRoots = tree.length;
@@ -186,6 +190,18 @@ export default function PlatformMenuStructure() {
   };
 
   const canSave = engine.permissions.canEditTree(editorRole);
+
+  const handleCompareDiff = () => {
+    const vList = engine.versions.getVersions();
+    const beforeTree = diffVersionA ? vList.find(v => v.id === diffVersionA)?.tree : vList[vList.length - 1]?.tree;
+    const afterTree = diffVersionB === 'current' ? tree : vList.find(v => v.id === diffVersionB)?.tree;
+    if (!beforeTree || !afterTree) { toast.error('Selecione versões válidas'); return; }
+    const diffs = engine.diff.diff(beforeTree, afterTree);
+    const beforeLabel = diffVersionA ? `v${vList.find(v => v.id === diffVersionA)?.version}` : `v${vList[vList.length - 1]?.version ?? '?'}`;
+    const afterLabel = diffVersionB === 'current' ? 'Atual' : `v${vList.find(v => v.id === diffVersionB)?.version}`;
+    setDiffResult({ diffs, beforeTree, afterTree, beforeLabel, afterLabel });
+    setTab('diff');
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -265,6 +281,9 @@ export default function PlatformMenuStructure() {
           </TabsTrigger>
           <TabsTrigger value="validation" className="gap-1.5 text-xs data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
             <CheckCircle2 className="h-3.5 w-3.5" />Validação
+          </TabsTrigger>
+          <TabsTrigger value="diff" className="gap-1.5 text-xs data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <FileDiff className="h-3.5 w-3.5" />Diff Visual
           </TabsTrigger>
         </TabsList>
 
@@ -384,6 +403,78 @@ export default function PlatformMenuStructure() {
                         ))}
                       </ScrollArea>
                     </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Diff Visual */}
+        <TabsContent value="diff" className="mt-4">
+          <Card className="border-border/50 bg-card/80 backdrop-blur">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+                  <FileDiff className="h-4 w-4" />Diff Visual — Antes vs Depois
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {versions.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-12">Salve pelo menos uma versão para comparar.</p>
+              ) : (
+                <div className="space-y-4">
+                  {/* Version selectors */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase mb-1 block">Antes</label>
+                      <Select value={diffVersionA} onValueChange={setDiffVersionA}>
+                        <SelectTrigger className="h-8 text-xs border-border/50">
+                          <SelectValue placeholder="Selecione versão..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {versions.map(v => (
+                            <SelectItem key={v.id} value={v.id} className="text-xs">
+                              v{v.version} — {v.label ?? new Date(v.createdAt).toLocaleString('pt-BR')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <span className="text-muted-foreground text-xs mt-4">vs</span>
+                    <div className="flex-1">
+                      <label className="text-[10px] font-semibold text-muted-foreground uppercase mb-1 block">Depois</label>
+                      <Select value={diffVersionB} onValueChange={setDiffVersionB}>
+                        <SelectTrigger className="h-8 text-xs border-border/50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="current" className="text-xs">Estado atual (não salvo)</SelectItem>
+                          {versions.map(v => (
+                            <SelectItem key={v.id} value={v.id} className="text-xs">
+                              v{v.version} — {v.label ?? new Date(v.createdAt).toLocaleString('pt-BR')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleCompareDiff} className="mt-4 gap-1.5 border-primary/30 text-primary hover:bg-primary/10">
+                      <FileDiff className="h-3.5 w-3.5" />Comparar
+                    </Button>
+                  </div>
+
+                  {/* Diff result */}
+                  {diffResult && (
+                    <ScrollArea className="h-[450px] pr-2">
+                      <MenuDiffViewer
+                        diffs={diffResult.diffs}
+                        beforeTree={diffResult.beforeTree}
+                        afterTree={diffResult.afterTree}
+                        beforeLabel={diffResult.beforeLabel}
+                        afterLabel={diffResult.afterLabel}
+                      />
+                    </ScrollArea>
                   )}
                 </div>
               )}
