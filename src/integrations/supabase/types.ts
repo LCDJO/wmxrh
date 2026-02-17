@@ -175,6 +175,35 @@ export type Database = {
           },
         ]
       }
+      announcement_dismissals: {
+        Row: {
+          announcement_id: string
+          dismissed_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          dismissed_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          dismissed_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_dismissals_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "platform_announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -3426,6 +3455,71 @@ export type Database = {
           },
         ]
       }
+      platform_announcements: {
+        Row: {
+          action_label: string | null
+          action_url: string | null
+          category: Database["public"]["Enums"]["announcement_category"]
+          created_at: string
+          created_by: string | null
+          description: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          is_dismissible: boolean
+          priority: Database["public"]["Enums"]["announcement_priority"]
+          show_banner: boolean
+          starts_at: string
+          tenant_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          action_label?: string | null
+          action_url?: string | null
+          category?: Database["public"]["Enums"]["announcement_category"]
+          created_at?: string
+          created_by?: string | null
+          description: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_dismissible?: boolean
+          priority?: Database["public"]["Enums"]["announcement_priority"]
+          show_banner?: boolean
+          starts_at?: string
+          tenant_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          action_label?: string | null
+          action_url?: string | null
+          category?: Database["public"]["Enums"]["announcement_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_dismissible?: boolean
+          priority?: Database["public"]["Enums"]["announcement_priority"]
+          show_banner?: boolean
+          starts_at?: string
+          tenant_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_announcements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_cognitive_events: {
         Row: {
           created_at: string
@@ -5225,6 +5319,14 @@ export type Database = {
       }
     }
     Enums: {
+      announcement_category:
+        | "maintenance"
+        | "update"
+        | "billing"
+        | "security"
+        | "compliance"
+        | "general"
+      announcement_priority: "low" | "medium" | "high" | "critical"
       benefit_type: "va" | "vr" | "vt" | "health" | "dental" | "cesta" | "flex"
       employee_event_type:
         | "company_transfer"
@@ -5474,6 +5576,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      announcement_category: [
+        "maintenance",
+        "update",
+        "billing",
+        "security",
+        "compliance",
+        "general",
+      ],
+      announcement_priority: ["low", "medium", "high", "critical"],
       benefit_type: ["va", "vr", "vt", "health", "dental", "cesta", "flex"],
       employee_event_type: [
         "company_transfer",

@@ -5,6 +5,7 @@
 
 import { type AppNotification } from '@/domains/notifications/notification-hub';
 import { NotificationItem } from './NotificationItem';
+import { AnnouncementFlyoutSection } from '@/components/announcements/AnnouncementFlyoutSection';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -56,6 +57,9 @@ export function NotificationFlyout({
 
       {/* List */}
       <ScrollArea className="max-h-[400px]">
+        {/* Institutional announcements section */}
+        <AnnouncementFlyoutSection />
+
         {notifications.length > 0 ? (
           <div className="divide-y divide-border/50">
             {notifications.slice(0, maxItems).map(n => (
