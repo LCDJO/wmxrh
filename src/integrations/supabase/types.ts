@@ -3754,12 +3754,61 @@ export type Database = {
           },
         ]
       }
+      landing_page_versions: {
+        Row: {
+          content_snapshot: Json
+          created_at: string
+          created_by: string | null
+          fab_snapshot: Json
+          id: string
+          landing_page_id: string
+          seo_snapshot: Json
+          status: string
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          content_snapshot?: Json
+          created_at?: string
+          created_by?: string | null
+          fab_snapshot?: Json
+          id?: string
+          landing_page_id: string
+          seo_snapshot?: Json
+          status?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          content_snapshot?: Json
+          created_at?: string
+          created_by?: string | null
+          fab_snapshot?: Json
+          id?: string
+          landing_page_id?: string
+          seo_snapshot?: Json
+          status?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_page_versions_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       landing_pages: {
         Row: {
           analytics: Json
           blocks: Json
           created_at: string
           created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           gtm_container_id: string | null
           id: string
           name: string
@@ -3775,6 +3824,8 @@ export type Database = {
           blocks?: Json
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           gtm_container_id?: string | null
           id?: string
           name: string
@@ -3790,6 +3841,8 @@ export type Database = {
           blocks?: Json
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           gtm_container_id?: string | null
           id?: string
           name?: string
@@ -6935,6 +6988,128 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_pages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          is_visible: boolean
+          layout_schema: Json
+          name: string
+          parent_id: string | null
+          published_at: string | null
+          seo_config: Json
+          slug: string
+          sort_order: number
+          status: string
+          tenant_id: string
+          updated_at: string
+          version_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_visible?: boolean
+          layout_schema?: Json
+          name: string
+          parent_id?: string | null
+          published_at?: string | null
+          seo_config?: Json
+          slug: string
+          sort_order?: number
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          version_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_visible?: boolean
+          layout_schema?: Json
+          name?: string
+          parent_id?: string | null
+          published_at?: string | null
+          seo_config?: Json
+          slug?: string
+          sort_order?: number
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_pages_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "website_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_pages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_versions: {
+        Row: {
+          created_at: string
+          id: string
+          is_current: boolean
+          notes: string | null
+          published_by: string | null
+          published_by_email: string | null
+          snapshot_content: Json
+          snapshot_layout: Json
+          snapshot_seo: Json
+          version_number: number
+          website_page_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_current?: boolean
+          notes?: string | null
+          published_by?: string | null
+          published_by_email?: string | null
+          snapshot_content?: Json
+          snapshot_layout?: Json
+          snapshot_seo?: Json
+          version_number?: number
+          website_page_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_current?: boolean
+          notes?: string | null
+          published_by?: string | null
+          published_by_email?: string | null
+          snapshot_content?: Json
+          snapshot_layout?: Json
+          snapshot_seo?: Json
+          version_number?: number
+          website_page_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_versions_website_page_id_fkey"
+            columns: ["website_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
             referencedColumns: ["id"]
           },
         ]
