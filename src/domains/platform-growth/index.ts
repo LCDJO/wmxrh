@@ -24,4 +24,6 @@ export { conversionTrackingService, ConversionTrackingService } from './conversi
 export { referralTrackingService, ReferralTrackingService } from './referral-tracking-service';
 export { growthGovernanceAnalyzer, GrowthGovernanceAnalyzer } from './growth-governance-analyzer';
 export type { GrowthGovernanceFinding } from './growth-governance-analyzer';
+export { emitGrowthEvent, onGrowthEvent, onGrowthEventType, getGrowthEventLog, clearGrowthEventLog } from './growth.events';
+export type { GrowthDomainEvent, GrowthEventType, LandingPageCreatedPayload, LandingPagePublishedPayload, FABContentUpdatedPayload, ConversionTrackedPayload, GrowthInsightGeneratedPayload } from './growth.events';
 export type * from './types';
