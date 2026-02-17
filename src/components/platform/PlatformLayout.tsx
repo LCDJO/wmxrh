@@ -114,12 +114,19 @@ const NAV_ITEMS: PlatformNavItem[] = [
     children: [
       { to: '/platform/growth', label: 'Visão Geral' },
       { to: '/platform/growth/insights', label: 'Insights', requiredPermission: 'growth.view' },
-      { to: '/platform/growth/landing-pages', label: 'Landing Pages', requiredPermission: 'landing_page.view' },
       { to: '/platform/growth/conversions', label: 'Conversões', requiredPermission: 'growth.view' },
+      { to: '/platform/marketing/analytics', label: 'Marketing Analytics', requiredPermission: 'growth.view' },
+    ],
+  },
+  {
+    to: '/platform/landing',
+    label: 'Landing Pages',
+    icon: Megaphone,
+    requiredPermission: 'landing_page.view',
+    children: [
+      { to: '/platform/growth/landing-pages', label: 'Todas as Páginas', requiredPermission: 'landing_page.view' },
       { to: '/platform/growth/fab-builder', label: 'FAB Builder', requiredPermission: 'landing.create' },
-      // Marketing team: drafts & submissions
       { to: '/platform/growth/submissions', label: 'Meus Rascunhos', requiredPermission: 'landing.view_drafts' },
-      // Director: approvals & published
       { to: '/platform/growth/approvals', label: 'Aprovações Pendentes', requiredPermission: 'landing.approve' },
       { to: '/platform/growth/version-publish', label: 'Publicadas', requiredPermission: 'landing.publish' },
     ],
@@ -128,12 +135,14 @@ const NAV_ITEMS: PlatformNavItem[] = [
     to: '/platform/website',
     label: 'Website',
     icon: Globe,
-    requiredPermission: 'billing.view',
+    requiredPermission: 'website.view',
     children: [
       { to: '/platform/website', label: 'Dashboard' },
-      { to: '/platform/website/ai-designer', label: 'AI Designer' },
-      { to: '/platform/website/templates', label: 'Templates' },
-      { to: '/platform/website/versions', label: 'Versionamento' },
+      { to: '/platform/website/pages', label: 'Páginas', requiredPermission: 'website.edit' },
+      { to: '/platform/website/structure', label: 'Estrutura', requiredPermission: 'website.structure_manage' },
+      { to: '/platform/website/seo', label: 'SEO', requiredPermission: 'website.seo_manage' },
+      { to: '/platform/website/ai-designer', label: 'AI Designer', requiredPermission: 'website.edit' },
+      { to: '/platform/website/versions', label: 'Versionamento', requiredPermission: 'website.publish' },
     ],
   },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },

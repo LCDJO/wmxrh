@@ -94,6 +94,9 @@ import LandingReview from "./pages/platform/landing/LandingReview";
 import LandingPublished from "./pages/platform/landing/LandingPublished";
 import ReferralPage from "./pages/ReferralPage";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
+import WebsitePages from "./pages/platform/website/WebsitePages";
+import WebsiteStructure from "./pages/platform/website/WebsiteStructure";
+import WebsiteSEO from "./pages/platform/website/WebsiteSEO";
 
 const queryClient = new QueryClient();
 
@@ -176,6 +179,9 @@ function AppRoutes() {
         <Route path="growth/submissions" element={<GrowthSubmissions />} />
         <Route path="growth/approvals" element={<GrowthApprovals />} />
         <Route path="website" element={<GrowthWebsiteDashboard />} />
+        <Route path="website/pages" element={<WebsitePages />} />
+        <Route path="website/structure" element={<WebsiteStructure />} />
+        <Route path="website/seo" element={<WebsiteSEO />} />
         <Route path="website/ai-designer" element={<GrowthAIDesigner />} />
         <Route path="website/templates" element={<GrowthTemplateEngine />} />
         <Route path="website/versions" element={<GrowthVersionPublish />} />
