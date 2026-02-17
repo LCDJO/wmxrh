@@ -21,6 +21,7 @@ import type { LPCopyBlueprint, LandingPage } from '@/domains/platform-growth/typ
 import { fabContentEngine } from '@/domains/platform-growth/landing-page-builder';
 import { conversionTrackingService } from '@/domains/platform-growth/conversion-tracking-service';
 import { tagManagerIntegration } from '@/domains/platform-growth/tag-manager-integration';
+import { referralTrackingService } from '@/domains/platform-growth/referral-tracking-service';
 import { HeroSection } from './HeroSection';
 import { FABSection } from './FABSection';
 import { PricingSection } from './PricingSection';
@@ -56,7 +57,10 @@ export function LandingPageRenderer({
     return fabContentEngine.generateBlueprint(industry, modules);
   }, [externalBlueprint, industry, modules]);
 
-  // ── Inject GTM snippet + track page view on mount ──
+  // ── Resolve referral code from URL or prop ──
+  const resolvedRef = referralCode ?? referralTrackingService.extractCodeFromURL() ?? undefined;
+
+  // ── Inject GTM snippet + track page view + referral attribution on mount ──
   useEffect(() => {
     if (page && !viewTracked.current) {
       viewTracked.current = true;
@@ -67,15 +71,20 @@ export function LandingPageRenderer({
         pushDataLayer('landing_page_view', { page_id: page.id, slug: page.slug });
       }
 
+      // If referral code present, attribute this visit to the referrer
+      if (resolvedRef) {
+        referralTrackingService.trackReferralEvent(page.id, resolvedRef, 'referral_click');
+      }
+
       conversionTrackingService.track({
         landingPageId: page.id,
         type: 'signup',
         source: detectSource(),
-        referralCode: referralCode ?? page.referral_program_id ?? undefined,
+        referralCode: resolvedRef ?? page.referral_program_id ?? undefined,
         metadata: { event: 'page_view', url: window.location.href },
       });
     }
-  }, [page, referralCode]);
+  }, [page, resolvedRef]);
 
   // ── Track CTA clicks (conversion tracking + GTM dataLayer) ──
   const handleCTAClick = (section: string) => {
@@ -85,7 +94,7 @@ export function LandingPageRenderer({
       landingPageId: page.id,
       type: 'signup',
       source: detectSource(),
-      referralCode: referralCode ?? undefined,
+      referralCode: resolvedRef,
       metadata: { event: 'cta_click', section },
     });
   };
@@ -106,7 +115,7 @@ export function LandingPageRenderer({
       <PricingSection />
 
       {/* 4. Referral CTA */}
-      <ReferralCTA referralCode={referralCode} />
+      <ReferralCTA referralCode={resolvedRef} />
 
       {/* 5. Testimonials + Proof */}
       <TestimonialsSection data={blueprint.proof} />
