@@ -75,3 +75,18 @@ export type {
 // ── Landing Page Governance ──
 export { landingPageGovernance, LandingPageGovernanceEngine } from './landing-page-governance';
 export type { ApprovalRequest, GovernanceLog, GovernanceStatus } from './landing-page-governance';
+
+// ── Landing Page Status Machine ──
+export {
+  LANDING_PAGE_STATUSES,
+  getAvailableTransitions,
+  canTransition,
+  validateTransition,
+  canDelete,
+  validateDeletion,
+  canEditInPlace,
+  validateEdit,
+  getStatusLabel,
+  getStatusVariant,
+} from './landing-page-status-machine';
+export type { LandingPageStatus } from './landing-page-status-machine';
