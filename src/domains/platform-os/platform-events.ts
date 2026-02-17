@@ -270,3 +270,48 @@ export interface MenuVersionCreatedPayload {
   created_by: string;
   node_count: number;
 }
+
+export const __DOMAIN_CATALOG = [
+  {
+    domain: 'Platform OS',
+    color: 'hsl(265 60% 55%)',
+    events: [
+      { name: 'PlatformBootstrapped', description: 'Runtime da plataforma inicializado' },
+      { name: 'ModuleRegistered', description: 'Módulo registrado na plataforma' },
+      { name: 'IdentitySnapshotUpdated', description: 'Snapshot de identidade atualizado' },
+      { name: 'NavigationTreeUpdated', description: 'Árvore de navegação recomputada' },
+      { name: 'FeatureLifecycleChanged', description: 'Feature flag alterada' },
+      { name: 'ModuleInstalled', description: 'Módulo instalado (primeiro registro)' },
+      { name: 'ModuleEnabled', description: 'Módulo habilitado para tenant' },
+      { name: 'ModuleDisabled', description: 'Módulo desabilitado para tenant' },
+      { name: 'ModuleUpgraded', description: 'Módulo atualizado para nova versão' },
+      { name: 'TenantCreated', description: 'Tenant criado na plataforma' },
+      { name: 'TenantSuspended', description: 'Tenant suspenso' },
+      { name: 'WebsitePublished', description: 'Website/landing page publicado em produção' },
+      { name: 'LandingVersionCreated', description: 'Snapshot versionado de landing page criado' },
+      { name: 'AIConversionSuggested', description: 'Sugestão de otimização de conversão por IA' },
+      { name: 'FABSectionGenerated', description: 'Seção FAB gerada pelo Content Engine' },
+      { name: 'GTMInjected', description: 'Container GTM injetado em página publicada' },
+    ],
+  },
+  {
+    domain: 'Versioning',
+    color: 'hsl(45 70% 50%)',
+    events: [
+      { name: 'ModuleVersionCreated', description: 'Nova versão de módulo criada (draft)' },
+      { name: 'ModuleVersionReleased', description: 'Versão de módulo promovida a released' },
+      { name: 'PlatformReleasePublished', description: 'Release da plataforma finalizado e publicado' },
+      { name: 'DependencyConflictDetected', description: 'Conflito de dependência detectado entre módulos' },
+      { name: 'RollbackExecuted', description: 'Rollback executado em release ou módulo' },
+    ],
+  },
+  {
+    domain: 'Menu Structure',
+    color: 'hsl(190 60% 45%)',
+    events: [
+      { name: 'MenuStructureUpdated', description: 'Estrutura completa do menu salva/atualizada' },
+      { name: 'MenuItemMoved', description: 'Item de menu movido (reordenado ou reparentado)' },
+      { name: 'MenuVersionCreated', description: 'Snapshot versionado da estrutura de menu criado' },
+    ],
+  },
+];

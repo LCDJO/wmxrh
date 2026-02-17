@@ -137,3 +137,13 @@ export function getUGEEventLog(): ReadonlyArray<UGEDomainEvent> {
 export function clearUGEEventLog(): void {
   eventLog.length = 0;
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Unified Graph',
+  color: 'hsl(330 55% 48%)',
+  events: [
+    { name: 'GraphComposed', description: 'Grafo unificado composto' },
+    { name: 'RiskScoreUpdated', description: 'Score de risco atualizado (UGE)' },
+    { name: 'AccessAnomalyDetected', description: 'Anomalia de acesso detectada' },
+  ],
+};

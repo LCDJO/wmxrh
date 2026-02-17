@@ -128,3 +128,16 @@ export const trainingLifecycleEvents = {
     }
   },
 };
+
+export const __DOMAIN_CATALOG = {
+  domain: 'NR Training',
+  color: 'hsl(15 70% 50%)',
+  events: [
+    { name: 'TrainingAssigned', description: 'Treinamento atribuído ao colaborador' },
+    { name: 'TrainingCompleted', description: 'Treinamento concluído' },
+    { name: 'TrainingExpired', description: 'Treinamento expirado' },
+    { name: 'TrainingBlocked', description: 'Treinamento bloqueado (blocking level)' },
+    { name: 'TrainingRenewalDue', description: 'Renovação de treinamento próxima' },
+    { name: 'TrainingStatusChanged', description: 'Status do treinamento alterado' },
+  ],
+};

@@ -216,3 +216,15 @@ export function emitRoleBootstrapCompleted(
     metadata: meta,
   });
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Onboarding',
+  color: 'hsl(175 60% 45%)',
+  events: [
+    { name: 'TenantOnboardingStarted', description: 'Onboarding do tenant iniciado' },
+    { name: 'OnboardingStepCompleted', description: 'Etapa de onboarding concluída' },
+    { name: 'OnboardingStepSkipped', description: 'Etapa de onboarding ignorada' },
+    { name: 'OnboardingFinished', description: 'Onboarding finalizado' },
+    { name: 'RoleBootstrapCompleted', description: 'Bootstrap de roles concluído' },
+  ],
+};

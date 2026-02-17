@@ -188,3 +188,15 @@ export function emitModuleRecovered(
     timestamp: Date.now(),
   });
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Self-Healing',
+  color: 'hsl(280 60% 55%)',
+  events: [
+    { name: 'IncidentDetected', description: 'Incidente detectado automaticamente' },
+    { name: 'SelfHealingTriggered', description: 'Auto-recuperação acionada' },
+    { name: 'CircuitOpened', description: 'Circuit breaker aberto' },
+    { name: 'CircuitClosed', description: 'Circuit breaker fechado' },
+    { name: 'ModuleRecovered', description: 'Módulo recuperado com sucesso' },
+  ],
+};

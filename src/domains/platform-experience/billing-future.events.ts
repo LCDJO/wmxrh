@@ -68,3 +68,26 @@ export function createBillingEventBus() {
     },
   };
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Billing Marketplace',
+  color: 'hsl(150 55% 40%)',
+  events: [
+    { name: 'SubscriptionCreated', description: 'Assinatura criada' },
+    { name: 'SubscriptionUpdated', description: 'Assinatura atualizada' },
+    { name: 'SubscriptionCancelled', description: 'Assinatura cancelada' },
+    { name: 'SubscriptionPastDue', description: 'Assinatura em atraso' },
+    { name: 'PaymentSucceeded', description: 'Pagamento bem-sucedido' },
+    { name: 'PaymentFailed', description: 'Falha no pagamento' },
+    { name: 'RefundIssued', description: 'Reembolso emitido' },
+    { name: 'ModuleInstalled', description: 'Módulo instalado via marketplace' },
+    { name: 'ModuleUninstalled', description: 'Módulo desinstalado' },
+    { name: 'ModuleLicenseExpired', description: 'Licença de módulo expirada' },
+    { name: 'AddonSubscribed', description: 'Add-on contratado' },
+    { name: 'AddonCancelled', description: 'Add-on cancelado' },
+    { name: 'AddonExpired', description: 'Add-on expirado' },
+    { name: 'UsageThresholdReached', description: 'Limite de uso atingido' },
+    { name: 'UsageOverageDetected', description: 'Excedente de uso detectado' },
+    { name: 'UsageReportGenerated', description: 'Relatório de uso gerado' },
+  ],
+};

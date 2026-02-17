@@ -136,3 +136,19 @@ export function getIAMEventLog(): ReadonlyArray<IAMDomainEvent> {
 export function clearIAMEventLog(): void {
   eventLog.length = 0;
 }
+
+// ════════════════════════════════════
+// AUTO-CATALOG (consumed by import.meta.glob)
+// ════════════════════════════════════
+
+export const __DOMAIN_CATALOG = {
+  domain: 'IAM',
+  color: 'hsl(200 70% 50%)',
+  events: [
+    { name: 'UserInvited', description: 'Novo membro convidado para o tenant' },
+    { name: 'UserRoleAssigned', description: 'Role vinculada a um usuário + escopo' },
+    { name: 'UserRoleRemoved', description: 'Role desvinculada do usuário' },
+    { name: 'RolePermissionsUpdated', description: 'Conjunto de permissões alterado' },
+    { name: 'AccessGraphRebuilt', description: 'Cache do grafo de acesso invalidado' },
+  ],
+};

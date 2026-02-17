@@ -52,3 +52,12 @@ export function emitWorkforceEvent(event: WorkforceIntelligenceEvent): void {
     try { h(event); } catch (e) { console.error('[WorkforceEvent] handler error:', e); }
   }
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Workforce',
+  color: 'hsl(220 60% 55%)',
+  events: [
+    { name: 'WorkforceInsightCreated', description: 'Insight de workforce criado' },
+    { name: 'RiskScoreUpdated', description: 'Score de risco atualizado' },
+  ],
+};

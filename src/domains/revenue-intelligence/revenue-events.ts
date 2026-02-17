@@ -160,3 +160,20 @@ export function getRevenueIntelligenceEventLog(): ReadonlyArray<RevenueIntellige
 export function clearRevenueIntelligenceEventLog(): void {
   eventLog.length = 0;
 }
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Revenue Intelligence',
+  color: 'hsl(160 60% 45%)',
+  events: [
+    { name: 'ReferralLinkCreated', description: 'Link de referral criado' },
+    { name: 'ReferralSignup', description: 'Signup via referral registrado' },
+    { name: 'ReferralConverted', description: 'Referral convertido em pagante' },
+    { name: 'RewardGranted', description: 'Recompensa concedida (crédito, cupom ou pontos)' },
+    { name: 'RewardAwarded', description: '[legacy] Recompensa concedida ao referrer' },
+    { name: 'GamificationLevelUp', description: 'Usuário subiu de tier na gamificação' },
+    { name: 'TierUpgraded', description: '[legacy] Tier de gamificação elevado' },
+    { name: 'RevenueForecastUpdated', description: 'Projeção de receita (MRR) recalculada' },
+    { name: 'ChurnRiskDetected', description: 'Risco de churn detectado' },
+    { name: 'UpgradeRecommended', description: 'Upgrade recomendado para tenant' },
+  ],
+};

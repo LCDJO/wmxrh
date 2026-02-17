@@ -243,3 +243,18 @@ export const graphEvents = {
     });
   },
 };
+
+export const __DOMAIN_CATALOG = {
+  domain: 'Access Graph',
+  color: 'hsl(340 60% 52%)',
+  events: [
+    { name: 'UserRoleChanged', description: 'Role do usuário alterada no grafo' },
+    { name: 'ScopeAssigned', description: 'Escopo atribuído' },
+    { name: 'ScopeRevoked', description: 'Escopo revogado' },
+    { name: 'CompanyCreated', description: 'Empresa criada no grafo' },
+    { name: 'CompanyRemoved', description: 'Empresa removida do grafo' },
+    { name: 'GroupCreated', description: 'Grupo criado no grafo' },
+    { name: 'GroupUpdated', description: 'Grupo atualizado no grafo' },
+    { name: 'GroupRemoved', description: 'Grupo removido do grafo' },
+  ],
+};
