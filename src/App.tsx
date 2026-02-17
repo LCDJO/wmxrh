@@ -99,6 +99,7 @@ import PlatformVersioning from "./pages/platform/PlatformVersioning";
 import SupportNewTicket from "./pages/support/SupportNewTicket";
 import SupportTickets from "./pages/support/SupportTickets";
 import SupportWiki from "./pages/support/SupportWiki";
+import SupportLiveChat from "./pages/support/SupportLiveChat";
 import PlatformSupportAnalytics from "./pages/platform/PlatformSupportAnalytics";
 const PlatformSupportConsole = lazy(() => import("./modules/support/ui/PlatformSupportConsole"));
 
@@ -300,6 +301,9 @@ function AppRoutes() {
           } />
           <Route path="/referral" element={
             <ProtectedRoute navKey="dashboard"><ReferralPage /></ProtectedRoute>
+          } />
+          <Route path="/support/chat" element={
+            <ProtectedRoute navKey="support"><SupportLiveChat /></ProtectedRoute>
           } />
           <Route path="/support/new" element={
             <ProtectedRoute navKey="support"><SupportNewTicket /></ProtectedRoute>
