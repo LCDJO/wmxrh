@@ -1,7 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Wifi, WifiOff, X } from 'lucide-react';
+import { ArrowLeft, Wifi, WifiOff, X, Building2, IdCard } from 'lucide-react';
 import type { ChatSession, ChatSenderType } from '@/domains/support/types';
+import type { ChatIdentity } from '../LiveChatWindow';
 
 interface ChatHeaderProps {
   session: ChatSession | null;
@@ -11,6 +12,7 @@ interface ChatHeaderProps {
   ticketId: string;
   onBack?: () => void;
   onClose?: () => void;
+  counterpartIdentity?: ChatIdentity | null;
 }
 
 function PresenceDot({ online }: { online: boolean }) {
@@ -30,10 +32,15 @@ export default function ChatHeader({
   ticketId,
   onBack,
   onClose,
+  counterpartIdentity,
 }: ChatHeaderProps) {
   const isClosed = session?.status === 'closed';
-  const headerLabel = senderType === 'agent' ? 'Cliente' : 'Suporte';
-  const roleLabel = senderType === 'agent' ? 'Atendimento' : 'Agente de Suporte';
+
+  // Derive display info from identity or fallback
+  const headerName = counterpartIdentity?.name
+    ?? (senderType === 'agent' ? 'Cliente' : 'Suporte');
+  const headerRole = counterpartIdentity?.role
+    ?? (senderType === 'agent' ? 'Colaborador' : 'Agente de Suporte');
 
   return (
     <div className="flex items-center gap-3 px-4 py-3 bg-primary text-primary-foreground shrink-0">
@@ -50,19 +57,49 @@ export default function ChatHeader({
 
       <div className="relative">
         <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-          <span className="text-sm font-bold">{headerLabel[0]}</span>
+          <span className="text-sm font-bold">{headerName[0]?.toUpperCase()}</span>
         </div>
         <PresenceDot online={connected} />
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate">{headerLabel}</p>
-        <p className="text-[10px] opacity-80 truncate">{roleLabel}</p>
-        <p className="text-[10px] opacity-60 truncate">
-          {session?.protocol_number
-            ? `Protocolo: ${session.protocol_number}`
-            : ticketSubject ?? `Ticket #${ticketId.slice(0, 8)}`}
-        </p>
+        <p className="text-sm font-semibold truncate">{headerName}</p>
+        <p className="text-[10px] opacity-80 truncate">{headerRole}</p>
+
+        {/* Contextual info line */}
+        <div className="flex items-center gap-2 mt-0.5">
+          {/* Agent view: show company + tenant_id */}
+          {senderType === 'agent' && counterpartIdentity?.company && (
+            <span className="text-[10px] opacity-60 flex items-center gap-0.5 truncate">
+              <Building2 className="h-2.5 w-2.5" />
+              {counterpartIdentity.company}
+            </span>
+          )}
+          {senderType === 'agent' && counterpartIdentity?.tenantId && (
+            <span className="text-[10px] opacity-50 flex items-center gap-0.5">
+              <IdCard className="h-2.5 w-2.5" />
+              {counterpartIdentity.tenantId}
+            </span>
+          )}
+
+          {/* Client view: show protocol number */}
+          {senderType === 'tenant' && (
+            <span className="text-[10px] opacity-60 truncate">
+              {session?.protocol_number
+                ? `Protocolo: ${session.protocol_number}`
+                : ticketSubject ?? `Ticket #${ticketId.slice(0, 8)}`}
+            </span>
+          )}
+
+          {/* Agent view fallback: show protocol if no company */}
+          {senderType === 'agent' && !counterpartIdentity?.company && (
+            <span className="text-[10px] opacity-60 truncate">
+              {session?.protocol_number
+                ? `Protocolo: ${session.protocol_number}`
+                : ticketSubject ?? `Ticket #${ticketId.slice(0, 8)}`}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-1.5">

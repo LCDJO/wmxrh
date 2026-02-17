@@ -1,10 +1,19 @@
 import { forwardRef } from 'react';
 import { CheckCheck, Check, Send, Loader2, FileText, Image as ImageIcon } from 'lucide-react';
 import type { ChatMessage, ChatSenderType } from '@/domains/support/types';
+import type { ChatIdentity } from '../LiveChatWindow';
 
 // ── Chat Bubble ──
 
-function ChatBubble({ message, isOwn }: { message: ChatMessage; isOwn: boolean }) {
+function ChatBubble({
+  message,
+  isOwn,
+  senderIdentity,
+}: {
+  message: ChatMessage;
+  isOwn: boolean;
+  senderIdentity?: ChatIdentity;
+}) {
   const time = new Date(message.created_at).toLocaleTimeString('pt-BR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -23,6 +32,10 @@ function ChatBubble({ message, isOwn }: { message: ChatMessage; isOwn: boolean }
 
   const attachments = (message.attachments ?? []) as Array<{ name?: string; url?: string; type?: string }>;
 
+  // Determine sender label
+  const senderLabel = senderIdentity?.name
+    ?? (message.sender_type === 'agent' ? 'Suporte' : 'Cliente');
+
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-1`}>
       <div
@@ -33,9 +46,14 @@ function ChatBubble({ message, isOwn }: { message: ChatMessage; isOwn: boolean }
         }`}
       >
         {!isOwn && (
-          <p className="text-[10px] font-semibold mb-0.5" style={{ color: 'hsl(200 70% 50%)' }}>
-            {message.sender_type === 'agent' ? 'Suporte' : 'Cliente'}
-          </p>
+          <div className="mb-0.5">
+            <p className="text-[10px] font-semibold" style={{ color: 'hsl(200 70% 50%)' }}>
+              {senderLabel}
+            </p>
+            {senderIdentity?.role && (
+              <p className="text-[9px] opacity-60">{senderIdentity.role}</p>
+            )}
+          </div>
         )}
 
         {/* Attachments */}
@@ -98,10 +116,11 @@ interface MessageTimelineProps {
   messages: ChatMessage[];
   senderType: ChatSenderType;
   loading: boolean;
+  senderIdentities?: Record<string, ChatIdentity>;
 }
 
 const MessageTimeline = forwardRef<HTMLDivElement, MessageTimelineProps>(
-  ({ messages, senderType, loading }, ref) => {
+  ({ messages, senderType, loading, senderIdentities = {} }, ref) => {
     const groupedMessages = messages.reduce<Array<{ date: string; msgs: ChatMessage[] }>>(
       (acc, msg) => {
         const d = new Date(msg.created_at).toLocaleDateString('pt-BR', {
@@ -147,7 +166,12 @@ const MessageTimeline = forwardRef<HTMLDivElement, MessageTimelineProps>(
             <div key={gi}>
               <DateSeparator date={group.date} />
               {group.msgs.map((msg) => (
-                <ChatBubble key={msg.id} message={msg} isOwn={msg.sender_type === senderType} />
+                <ChatBubble
+                  key={msg.id}
+                  message={msg}
+                  isOwn={msg.sender_type === senderType}
+                  senderIdentity={msg.sender_id ? senderIdentities[msg.sender_id] : undefined}
+                />
               ))}
             </div>
           ))

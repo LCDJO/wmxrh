@@ -1,10 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { ChatService } from '@/domains/support/chat-service';
 import ChatHeader from './chat/ChatHeader';
 import MessageTimeline from './chat/MessageTimeline';
 import QuickReplyBox from './chat/QuickReplyBox';
 import type { ChatSession, ChatMessage, ChatSenderType } from '@/domains/support/types';
+
+export interface ChatIdentity {
+  name: string;
+  role: string;
+  company?: string;
+  tenantId?: string;
+}
 
 interface LiveChatWindowProps {
   ticketId: string;
@@ -31,7 +39,88 @@ export default function LiveChatWindow({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
+  const [counterpartIdentity, setCounterpartIdentity] = useState<ChatIdentity | null>(null);
+  const [senderIdentities, setSenderIdentities] = useState<Record<string, ChatIdentity>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Fetch identity information for header & bubbles
+  useEffect(() => {
+    async function fetchIdentities() {
+      try {
+        if (senderType === 'tenant') {
+          // Client view: fetch agent info
+          if (assignedAgentId) {
+            const { data: agent } = await supabase
+              .from('platform_users')
+              .select('display_name, role')
+              .eq('user_id', assignedAgentId)
+              .maybeSingle();
+            if (agent) {
+              setCounterpartIdentity({
+                name: agent.display_name ?? 'Agente',
+                role: agent.role ?? 'Suporte',
+              });
+              setSenderIdentities(prev => ({
+                ...prev,
+                [assignedAgentId]: {
+                  name: agent.display_name ?? 'Agente',
+                  role: agent.role ?? 'Suporte',
+                },
+              }));
+            }
+          }
+        } else {
+          // Agent view: fetch tenant user info (ticket creator)
+          const { data: ticket } = await supabase
+            .from('support_tickets')
+            .select('created_by')
+            .eq('id', ticketId)
+            .maybeSingle();
+
+          if (ticket?.created_by) {
+            const [empRes, tenantRes] = await Promise.all([
+              supabase
+                .from('employees')
+                .select('name, company_id, position_id')
+                .eq('user_id', ticket.created_by)
+                .eq('tenant_id', tenantId)
+                .maybeSingle(),
+              supabase
+                .from('tenants')
+                .select('name')
+                .eq('id', tenantId)
+                .maybeSingle(),
+            ]);
+
+            let positionTitle: string | null = null;
+            if (empRes.data?.position_id) {
+              const { data: pos } = await supabase
+                .from('positions')
+                .select('title')
+                .eq('id', empRes.data.position_id)
+                .maybeSingle();
+              positionTitle = pos?.title ?? null;
+            }
+
+            const identity: ChatIdentity = {
+              name: empRes.data?.name ?? 'Cliente',
+              role: positionTitle ?? 'Colaborador',
+              company: tenantRes.data?.name ?? undefined,
+              tenantId: tenantId.slice(0, 8),
+            };
+            setCounterpartIdentity(identity);
+            setSenderIdentities(prev => ({
+              ...prev,
+              [ticket.created_by]: identity,
+            }));
+          }
+        }
+      } catch {
+        // silent — identity is supplementary
+      }
+    }
+    fetchIdentities();
+  }, [senderType, assignedAgentId, ticketId, tenantId]);
 
   // Initialize session
   useEffect(() => {
@@ -132,6 +221,7 @@ export default function LiveChatWindow({
         ticketId={ticketId}
         onBack={onBack}
         onClose={handleCloseChat}
+        counterpartIdentity={counterpartIdentity}
       />
 
       <MessageTimeline
@@ -139,6 +229,7 @@ export default function LiveChatWindow({
         messages={messages}
         senderType={senderType}
         loading={loading}
+        senderIdentities={senderIdentities}
       />
 
       <QuickReplyBox
