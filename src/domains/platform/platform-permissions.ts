@@ -39,6 +39,11 @@ export const PLATFORM_PERMISSIONS = [
   // ── Future: Delegated Support ──
   'support.delegate',
   'support.escalate',
+  // ── Growth / Landing Pages ──
+  'landing_page.view',
+  'landing_page.create',
+  'landing_page.publish',
+  'landing_page.delete',
   // ── Future: Marketplace ──
   'marketplace.view',
   'marketplace.publish',
@@ -75,6 +80,10 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'audit.view',
     'platform_user.view',
     'security.view',
+    'landing_page.view',
+    'landing_page.create',
+    'landing_page.publish',
+    'landing_page.delete',
   ],
 
   platform_support: [
@@ -145,6 +154,15 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'compliance.report',
     'audit.view',
     'security.view',
+  ],
+
+  platform_marketing: [
+    'tenant.view',
+    'landing_page.view',
+    'landing_page.create',
+    'landing_page.publish',
+    'landing_page.delete',
+    'audit.view',
   ],
 };
 

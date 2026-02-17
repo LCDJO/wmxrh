@@ -14,6 +14,7 @@ export type PlatformRoleType =
   | 'platform_finance'
   | 'platform_fiscal'
   | 'platform_read_only'
+  | 'platform_marketing'
   // ── Future roles (prepared, not yet active) ──
   | 'platform_delegated_support'
   | 'platform_marketplace_admin'
