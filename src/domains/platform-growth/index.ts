@@ -100,3 +100,7 @@ export type {
   ConversionRiskAnalysis,
   RevenueImpactPrediction,
 } from './growth-ai-support-layer';
+
+// ── Pre-Publish Compliance Gate ──
+export { runPrePublishGate } from './pre-publish-compliance-gate';
+export type { PrePublishReport, PrePublishIssue } from './pre-publish-compliance-gate';
