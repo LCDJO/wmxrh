@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.manage-platform-user]
 verify_jwt = false
+
+[functions.governance-ai-analyze]
+verify_jwt = false
+
+[functions.metrics-export]
+verify_jwt = false

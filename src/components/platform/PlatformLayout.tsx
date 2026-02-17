@@ -22,6 +22,8 @@ import {
   Package,
   Megaphone,
   KeyRound,
+  Brain,
+  Activity,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -54,10 +56,12 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/security/access-graph', label: 'Access Graph' },
       { to: '/platform/security/unified-graph', label: 'Unified Graph' },
       { to: '/platform/security/governance', label: 'Governança' },
+      { to: '/platform/security/governance-ai', label: 'Governance AI' },
     ],
   },
   { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
   { to: '/platform/automation', label: 'Automação', icon: Zap, requiredPermission: 'security.manage' },
+  { to: '/platform/observability', label: 'Observability', icon: Activity, requiredPermission: 'security.view' },
   { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
   { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'audit.view' },
   { to: '/platform/billing', label: 'Financeiro', icon: Package, requiredPermission: 'billing.view' },
