@@ -1,9 +1,9 @@
 /**
- * /platform/security/access-graph — Preview de acesso efetivo: Usuário → Cargo → Permissões.
+ * /platform/security/access-graph — Preview de acesso efetivo.
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AccessGraphView } from '@/components/platform/AccessGraphView';
+import { PlatformAccessPreview } from '@/components/platform/PlatformAccessPreview';
 import { Loader2, GitBranch } from 'lucide-react';
 import type { PlatformUser, PlatformRole, PlatformPermissionDef, PlatformRolePermission } from './PlatformSecurity';
 
@@ -43,8 +43,8 @@ export default function PlatformSecurityAccessGraph() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-          <GitBranch className="h-5 w-5 text-primary" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-platform-accent">
+          <GitBranch className="h-5 w-5 text-white" />
         </div>
         <div>
           <h1 className="text-2xl font-bold font-display text-foreground">Access Graph</h1>
@@ -54,7 +54,7 @@ export default function PlatformSecurityAccessGraph() {
         </div>
       </div>
 
-      <AccessGraphView
+      <PlatformAccessPreview
         users={users}
         roles={roles}
         permissions={permissions}

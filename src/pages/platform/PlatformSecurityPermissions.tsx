@@ -1,13 +1,12 @@
 /**
  * /platform/security/permissions — Visualizar herança e grafo de permissões.
- * Inclui o Permission Graph e o Graph Builder visual.
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Network, Workflow, Loader2, Key } from 'lucide-react';
-import { PermissionGraphView } from '@/components/platform/PermissionGraphView';
+import { PlatformRoleGraphCanvas } from '@/components/platform/PlatformRoleGraphCanvas';
 import { PlatformPermissionGraphBuilder } from '@/components/platform/graph-builder/PlatformPermissionGraphBuilder';
 import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission, PlatformAccessScope } from './PlatformSecurity';
 
@@ -49,8 +48,8 @@ export default function PlatformSecurityPermissions() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-          <Key className="h-5 w-5 text-primary" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-platform-accent">
+          <Key className="h-5 w-5 text-white" />
         </div>
         <div>
           <h1 className="text-2xl font-bold font-display text-foreground">Permissões & Herança</h1>
@@ -60,15 +59,23 @@ export default function PlatformSecurityPermissions() {
         </div>
       </div>
 
-      <Tabs defaultValue="graph-builder" className="space-y-4">
+      <Tabs defaultValue="role-graph" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="role-graph" className="gap-1.5">
+            <Network className="h-4 w-4" /> Role Graph
+          </TabsTrigger>
           <TabsTrigger value="graph-builder" className="gap-1.5">
             <Workflow className="h-4 w-4" /> Graph Builder
           </TabsTrigger>
-          <TabsTrigger value="permission-graph" className="gap-1.5">
-            <Network className="h-4 w-4" /> Permission Graph
-          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="role-graph">
+          <PlatformRoleGraphCanvas
+            roles={roles}
+            permissions={permissions}
+            rolePerms={rolePerms}
+          />
+        </TabsContent>
 
         <TabsContent value="graph-builder">
           <PlatformPermissionGraphBuilder
@@ -77,14 +84,6 @@ export default function PlatformSecurityPermissions() {
             rolePerms={rolePerms}
             scopes={scopes}
             isSuperAdmin={isSuperAdmin}
-          />
-        </TabsContent>
-
-        <TabsContent value="permission-graph">
-          <PermissionGraphView
-            roles={roles}
-            permissions={permissions}
-            rolePerms={rolePerms}
           />
         </TabsContent>
       </Tabs>
