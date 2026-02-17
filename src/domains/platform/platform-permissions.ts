@@ -32,6 +32,19 @@ export const PLATFORM_PERMISSIONS = [
   'platform_user.delete',
   'security.view',
   'security.manage',
+  // ── Future: Delegated Support ──
+  'support.delegate',
+  'support.escalate',
+  // ── Future: Marketplace ──
+  'marketplace.view',
+  'marketplace.publish',
+  'marketplace.approve',
+  'marketplace.manage',
+  // ── Future: Compliance ──
+  'compliance.view',
+  'compliance.audit',
+  'compliance.enforce',
+  'compliance.report',
 ] as const;
 
 export type PlatformPermission = typeof PLATFORM_PERMISSIONS[number];
@@ -93,6 +106,34 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'billing.view',
     'fiscal.view',
     'platform_user.view',
+    'security.view',
+  ],
+
+  // ── Future roles: permissions prepared but minimal until activation ──
+  platform_delegated_support: [
+    'tenant.view',
+    'support.impersonate',
+    'support.delegate',
+    'support.escalate',
+    'audit.view',
+  ],
+
+  platform_marketplace_admin: [
+    'marketplace.view',
+    'marketplace.publish',
+    'marketplace.approve',
+    'marketplace.manage',
+    'module.view',
+    'audit.view',
+  ],
+
+  platform_compliance: [
+    'tenant.view',
+    'compliance.view',
+    'compliance.audit',
+    'compliance.enforce',
+    'compliance.report',
+    'audit.view',
     'security.view',
   ],
 };

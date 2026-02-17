@@ -95,6 +95,9 @@ export default function PlatformLayout() {
     platform_support: 'Suporte',
     platform_finance: 'Financeiro',
     platform_read_only: 'Somente Leitura',
+    platform_delegated_support: 'Suporte Delegado',
+    platform_marketplace_admin: 'Marketplace Admin',
+    platform_compliance: 'Compliance',
   };
 
   return (
