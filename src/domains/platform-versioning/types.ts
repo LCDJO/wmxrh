@@ -151,11 +151,27 @@ export interface FeatureChange {
 }
 
 // ── Rollback ──
+
+/** Modules whose data is immutable and MUST NOT be rolled back */
+export const ROLLBACK_PROTECTED_MODULES: readonly string[] = [
+  'billing',
+  'billing_core',
+  'invoicing',
+  'financial_ledger',
+  'payment_gateway',
+  'coupon_engine',
+  'revenue_intelligence',
+] as const;
+
+export type RollbackScope = 'module' | 'release';
+
 export interface RollbackPlan {
   id: string;
+  scope: RollbackScope;
   release_id: string;
   target_release_id: string;  // rollback TO
   modules_affected: string[];
+  modules_skipped: string[];  // protected modules excluded
   dependency_safe: boolean;
   breaking_rollback: boolean;
   steps: RollbackStep[];
@@ -165,9 +181,10 @@ export interface RollbackPlan {
 
 export interface RollbackStep {
   order: number;
-  action: 'deactivate_module' | 'downgrade_module' | 'restore_platform_version' | 'run_migration' | 'notify';
+  action: 'deactivate_module' | 'downgrade_module' | 'restore_platform_version' | 'run_migration' | 'notify' | 'skip_protected';
   target: string;
   from_version?: SemanticVersion;
   to_version?: SemanticVersion;
-  status: 'pending' | 'in_progress' | 'done' | 'failed';
+  reason?: string;
+  status: 'pending' | 'in_progress' | 'done' | 'failed' | 'skipped';
 }
