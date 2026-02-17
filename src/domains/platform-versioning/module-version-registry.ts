@@ -1,70 +1,74 @@
 /**
  * ModuleVersionRegistry — Tracks individual module version history.
  */
-import type { ModuleVersion, SemanticVersion, ModuleDependency, ReleaseStatus } from './types';
-import { compareVersions, versionId } from './version-utils';
+import type { ModuleVersion, SemanticVersion, ModuleDependency, ModuleVersionStatus } from './types';
+import { compareVersions, formatVersion, versionId } from './version-utils';
 
 export class ModuleVersionRegistry {
   private versions: Map<string, ModuleVersion[]> = new Map();
 
   register(
-    moduleKey: string,
+    moduleId: string,
     version: SemanticVersion,
     createdBy: string,
     opts?: {
       dependencies?: ModuleDependency[];
-      min_platform_version?: SemanticVersion;
-      changelog_entries?: string[];
-      breaking_changes?: string[];
-      migration_notes?: string;
+      breaking_changes?: boolean;
+      changelog_summary?: string;
     },
   ): ModuleVersion {
     const mv: ModuleVersion = {
       id: versionId(),
-      module_key: moduleKey,
+      module_id: moduleId,
       version,
+      version_tag: `v${formatVersion(version)}`,
       status: 'draft',
-      min_platform_version: opts?.min_platform_version,
+      breaking_changes: opts?.breaking_changes ?? false,
       dependencies: opts?.dependencies ?? [],
-      changelog_entries: opts?.changelog_entries ?? [],
-      breaking_changes: opts?.breaking_changes ?? [],
-      migration_notes: opts?.migration_notes,
+      changelog_summary: opts?.changelog_summary ?? '',
+      released_at: null,
       created_at: new Date().toISOString(),
       created_by: createdBy,
     };
-    const list = this.versions.get(moduleKey) ?? [];
+    const list = this.versions.get(moduleId) ?? [];
     list.push(mv);
-    this.versions.set(moduleKey, list);
+    this.versions.set(moduleId, list);
     return mv;
   }
 
-  publish(moduleKey: string, versionId: string): ModuleVersion | null {
-    const list = this.versions.get(moduleKey) ?? [];
-    const v = list.find(x => x.id === versionId);
+  release(moduleId: string, versionId: string): ModuleVersion | null {
+    const v = (this.versions.get(moduleId) ?? []).find(x => x.id === versionId);
     if (!v) return null;
-    v.status = 'published';
-    v.published_at = new Date().toISOString();
+    v.status = 'released';
+    v.released_at = new Date().toISOString();
     return v;
   }
 
-  transition(moduleKey: string, versionId: string, status: ReleaseStatus): ModuleVersion | null {
-    const v = (this.versions.get(moduleKey) ?? []).find(x => x.id === versionId);
+  deprecate(moduleId: string, versionId: string): ModuleVersion | null {
+    const v = (this.versions.get(moduleId) ?? []).find(x => x.id === versionId);
+    if (!v) return null;
+    v.status = 'deprecated';
+    return v;
+  }
+
+  transition(moduleId: string, versionId: string, status: ModuleVersionStatus): ModuleVersion | null {
+    const v = (this.versions.get(moduleId) ?? []).find(x => x.id === versionId);
     if (!v) return null;
     v.status = status;
     return v;
   }
 
-  getCurrent(moduleKey: string): ModuleVersion | null {
-    const list = this.versions.get(moduleKey) ?? [];
-    return [...list].reverse().find(v => v.status === 'published') ?? null;
+  getCurrent(moduleId: string): ModuleVersion | null {
+    const list = this.versions.get(moduleId) ?? [];
+    return [...list].reverse().find(v => v.status === 'released') ?? null;
   }
 
-  getById(moduleKey: string, id: string): ModuleVersion | null {
-    return (this.versions.get(moduleKey) ?? []).find(v => v.id === id) ?? null;
+  getById(moduleId: string, id: string): ModuleVersion | null {
+    return (this.versions.get(moduleId) ?? []).find(v => v.id === id) ?? null;
   }
 
-  listForModule(moduleKey: string): ModuleVersion[] {
-    return [...(this.versions.get(moduleKey) ?? [])];
+  listForModule(moduleId: string): ModuleVersion[] {
+    return [...(this.versions.get(moduleId) ?? [])];
   }
 
   listAllCurrent(): ModuleVersion[] {
@@ -76,14 +80,12 @@ export class ModuleVersionRegistry {
     return result;
   }
 
-  /** All modules that have any version registered */
   listModuleKeys(): string[] {
     return [...this.versions.keys()];
   }
 
-  /** Get latest version (any status) */
-  getLatest(moduleKey: string): ModuleVersion | null {
-    const list = this.versions.get(moduleKey) ?? [];
+  getLatest(moduleId: string): ModuleVersion | null {
+    const list = this.versions.get(moduleId) ?? [];
     if (!list.length) return null;
     return list.reduce((a, b) => (compareVersions(a.version, b.version) >= 0 ? a : b));
   }

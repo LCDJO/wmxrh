@@ -5,7 +5,7 @@ import type { RollbackPlan, RollbackStep, Release } from './types';
 import type { ReleaseManager } from './release-manager';
 import type { DependencyResolver } from './dependency-resolver';
 import type { ModuleVersionRegistry } from './module-version-registry';
-import { versionId, formatVersion } from './version-utils';
+import { versionId } from './version-utils';
 
 export class RollbackOrchestrator {
   constructor(
@@ -24,14 +24,11 @@ export class RollbackOrchestrator {
     const modulesAffected: string[] = [];
     let hasBreaking = false;
 
-    // Determine which modules changed between releases
     const currentModules = new Set(current.module_versions);
     const targetModules = new Set(target.module_versions);
 
-    // Modules to downgrade (in current but version differs in target)
     for (const mvId of currentModules) {
       if (!targetModules.has(mvId)) {
-        // Find the module key for this version
         for (const key of this.moduleRegistry.listModuleKeys()) {
           const mv = this.moduleRegistry.getById(key, mvId);
           if (mv) {
@@ -46,7 +43,7 @@ export class RollbackOrchestrator {
                 to_version: targetMv.version,
                 status: 'pending',
               });
-              if (mv.breaking_changes.length > 0) hasBreaking = true;
+              if (mv.breaking_changes) hasBreaking = true;
             } else {
               steps.push({
                 order: steps.length + 1,
@@ -62,7 +59,6 @@ export class RollbackOrchestrator {
       }
     }
 
-    // Restore platform version if different
     if (current.platform_version_id !== target.platform_version_id && target.platform_version_id) {
       steps.push({
         order: steps.length + 1,
@@ -72,7 +68,6 @@ export class RollbackOrchestrator {
       });
     }
 
-    // Notification step
     steps.push({
       order: steps.length + 1,
       action: 'notify',
@@ -80,7 +75,6 @@ export class RollbackOrchestrator {
       status: 'pending',
     });
 
-    // Validate dependency safety
     const snapshot = this.dependencyResolver.snapshot();
     const depSafe = snapshot.conflicts.filter(c => c.severity === 'error').length === 0;
 
@@ -97,24 +91,18 @@ export class RollbackOrchestrator {
     };
   }
 
-  /** Execute a rollback plan step by step */
   executeStep(plan: RollbackPlan, stepOrder: number): RollbackStep | null {
     const step = plan.steps.find(s => s.order === stepOrder);
     if (!step || step.status !== 'pending') return null;
     step.status = 'in_progress';
-
-    // In a real system, each action would be performed here.
-    // For now we mark as done.
     step.status = 'done';
     return step;
   }
 
-  /** Execute full rollback */
   executeFull(plan: RollbackPlan): RollbackPlan {
     for (const step of plan.steps.sort((a, b) => a.order - b.order)) {
       this.executeStep(plan, step.order);
     }
-    // Mark releases
     this.releaseManager.transition(plan.release_id, 'rolled_back');
     return plan;
   }

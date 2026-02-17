@@ -34,26 +34,26 @@ export interface PlatformVersion {
 }
 
 // ── Module Version ──
+export type ModuleVersionStatus = 'draft' | 'released' | 'deprecated';
+
 export interface ModuleVersion {
   id: string;
-  module_key: string;
+  module_id: string;
   version: SemanticVersion;
-  status: ReleaseStatus;
-  min_platform_version?: SemanticVersion;
+  version_tag: string;               // "vMAJOR.MINOR.PATCH"
+  status: ModuleVersionStatus;
+  breaking_changes: boolean;
   dependencies: ModuleDependency[];
-  changelog_entries: string[];
-  breaking_changes: string[];
-  migration_notes?: string;
+  changelog_summary: string;
+  released_at: string | null;
   created_at: string;
   created_by: string;
-  published_at?: string;
 }
 
 export interface ModuleDependency {
-  module_key: string;
-  min_version: SemanticVersion;
-  max_version?: SemanticVersion;
-  optional: boolean;
+  module_id: string;
+  required_module_id: string;
+  required_version: SemanticVersion;
 }
 
 // ── Changelog ──
