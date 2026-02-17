@@ -52,3 +52,6 @@ export type { ConversionPipelineSnapshot, PipelineStageMetrics } from './convers
 // ── MarketingAnalyticsAggregator ──
 export { marketingAnalyticsAggregator, MarketingAnalyticsAggregator } from './marketing-analytics-aggregator';
 export type { MarketingKPIs, AssetPerformance, SourceAttribution } from './marketing-analytics-aggregator';
+
+// ── WebsitePipelineBridge ──
+export { websitePipelineBridge, initWebsitePipelineBridge, trackWebsiteCTAClick, trackWebsitePageView } from './website-pipeline-bridge';
