@@ -25,10 +25,10 @@ export const platformAccessProvider: GraphProvider = {
     const edges: UnifiedEdge[] = [];
 
     for (const [id, gNode] of graph.getNodes()) {
-      const type = gNode.type === 'role' ? 'platform_role' as const
+      const type = gNode.type === 'role' ? 'role' as const
         : gNode.type === 'permission' ? 'permission' as const
         : gNode.type === 'scope' ? 'scope' as const
-        : 'user' as const;
+        : 'platform_user' as const;
 
       nodes.push({
         uid: `platform_access:${id}`,
@@ -42,9 +42,9 @@ export const platformAccessProvider: GraphProvider = {
 
     for (const gEdge of graph.getEdges()) {
       const relationMap: Record<string, UnifiedEdge['relation']> = {
-        HAS_ROLE: 'HAS_PLATFORM_ROLE',
-        GRANTS_PERMISSION: 'PLATFORM_GRANTS',
-        INHERITS_ROLE: 'PLATFORM_INHERITS',
+        HAS_ROLE: 'HAS_ROLE',
+        GRANTS_PERMISSION: 'GRANTS_PERMISSION',
+        INHERITS_ROLE: 'INHERITS_ROLE',
         HAS_SCOPE: 'PLATFORM_SCOPE',
       };
 

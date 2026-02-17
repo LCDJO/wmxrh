@@ -38,7 +38,7 @@ export function assessRisk(snapshot: UnifiedGraphSnapshot): RiskAssessment {
 
   // ── 2. Privilege concentration ──
   for (const { node, edgeCount } of analysis.highFanOutNodes) {
-    if (node.type === 'user' && edgeCount > MAX_PERMISSIONS_PER_USER) {
+    if ((node.type === 'platform_user' || node.type === 'tenant_user') && edgeCount > MAX_PERMISSIONS_PER_USER) {
       signals.push({
         id: `privilege_concentration_${node.uid}`,
         level: 'high',
@@ -52,7 +52,7 @@ export function assessRisk(snapshot: UnifiedGraphSnapshot): RiskAssessment {
 
   // ── 3. Super admin count ──
   const superAdmins = Array.from(snapshot.nodes.values()).filter(
-    n => n.type === 'platform_role' && n.meta?.slug === 'platform_super_admin',
+    n => n.type === 'role' && n.meta?.slug === 'platform_super_admin',
   );
   // Count users linked to super admin role
   const superAdminUserCount = snapshot.edges.filter(
