@@ -2602,69 +2602,65 @@ export type Database = {
       }
       notifications: {
         Row: {
-          action_label: string | null
-          action_metadata: Json | null
-          action_route: string | null
-          category: Database["public"]["Enums"]["notification_category"]
+          action_command: string | null
+          action_url: string | null
+          company_id: string | null
           created_at: string
-          dismissed_at: string | null
-          expires_at: string | null
-          icon: string | null
+          description: string
+          group_id: string | null
           id: string
-          is_dismissed: boolean
           is_read: boolean
-          message: string
-          priority: Database["public"]["Enums"]["notification_priority"]
-          read_at: string | null
-          source_event: string | null
           source_module: string | null
           tenant_id: string
           title: string
-          user_id: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string | null
         }
         Insert: {
-          action_label?: string | null
-          action_metadata?: Json | null
-          action_route?: string | null
-          category?: Database["public"]["Enums"]["notification_category"]
+          action_command?: string | null
+          action_url?: string | null
+          company_id?: string | null
           created_at?: string
-          dismissed_at?: string | null
-          expires_at?: string | null
-          icon?: string | null
+          description: string
+          group_id?: string | null
           id?: string
-          is_dismissed?: boolean
           is_read?: boolean
-          message: string
-          priority?: Database["public"]["Enums"]["notification_priority"]
-          read_at?: string | null
-          source_event?: string | null
           source_module?: string | null
           tenant_id: string
           title: string
-          user_id: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string | null
         }
         Update: {
-          action_label?: string | null
-          action_metadata?: Json | null
-          action_route?: string | null
-          category?: Database["public"]["Enums"]["notification_category"]
+          action_command?: string | null
+          action_url?: string | null
+          company_id?: string | null
           created_at?: string
-          dismissed_at?: string | null
-          expires_at?: string | null
-          icon?: string | null
+          description?: string
+          group_id?: string | null
           id?: string
-          is_dismissed?: boolean
           is_read?: boolean
-          message?: string
-          priority?: Database["public"]["Enums"]["notification_priority"]
-          read_at?: string | null
-          source_event?: string | null
           source_module?: string | null
           tenant_id?: string
           title?: string
-          user_id?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -5284,15 +5280,7 @@ export type Database = {
         | "reajuste_anual"
         | "banco_horas"
         | "custom"
-      notification_category:
-        | "compliance"
-        | "security"
-        | "hr"
-        | "payroll"
-        | "system"
-        | "onboarding"
-        | "approval"
-      notification_priority: "low" | "medium" | "high" | "critical"
+      notification_type: "info" | "warning" | "critical" | "success"
       payroll_incidence:
         | "inss"
         | "irrf"
@@ -5547,16 +5535,7 @@ export const Constants = {
         "banco_horas",
         "custom",
       ],
-      notification_category: [
-        "compliance",
-        "security",
-        "hr",
-        "payroll",
-        "system",
-        "onboarding",
-        "approval",
-      ],
-      notification_priority: ["low", "medium", "high", "critical"],
+      notification_type: ["info", "warning", "critical", "success"],
       payroll_incidence: [
         "inss",
         "irrf",
