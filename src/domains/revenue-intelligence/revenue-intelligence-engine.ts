@@ -392,12 +392,34 @@ export function createChurnPredictionService(): ChurnPredictionServiceAPI {
 export function createUpgradeRecommendationService(): UpgradeRecommendationServiceAPI {
   return {
     async getCandidates(): Promise<UpgradeCandidate[]> {
-      const [tpRes, plansRes] = await Promise.all([
+      const [tpRes, plansRes, tiersRes, usageRes] = await Promise.all([
         supabase.from('tenant_plans').select('tenant_id, plan_id, saas_plans(name, price), tenants(name)').eq('status', 'active'),
         supabase.from('saas_plans').select('id, name, price').eq('is_active', true).order('price', { ascending: true }),
+        supabase.from('usage_pricing_tiers').select('plan_id, metric_key, included_quantity').eq('is_active', true),
+        // Current month usage per tenant
+        supabase.from('usage_records').select('tenant_id, metric_key, quantity')
+          .gte('recorded_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
       ]);
 
       const plans = plansRes.data ?? [];
+      const tiers = tiersRes.data ?? [];
+      const usage = usageRes.data ?? [];
+
+      // Aggregate usage per tenant per metric
+      const usageMap = new Map<string, Map<string, number>>();
+      for (const u of usage) {
+        if (!usageMap.has(u.tenant_id)) usageMap.set(u.tenant_id, new Map());
+        const m = usageMap.get(u.tenant_id)!;
+        m.set(u.metric_key, (m.get(u.metric_key) ?? 0) + Number(u.quantity));
+      }
+
+      // Plan limits: plan_id → metric_key → included_quantity
+      const limitMap = new Map<string, Map<string, number>>();
+      for (const t of tiers) {
+        if (!limitMap.has(t.plan_id)) limitMap.set(t.plan_id, new Map());
+        limitMap.get(t.plan_id)!.set(t.metric_key, Number(t.included_quantity));
+      }
+
       const candidates: UpgradeCandidate[] = [];
 
       for (const tp of tpRes.data ?? []) {
@@ -406,18 +428,58 @@ export function createUpgradeRecommendationService(): UpgradeRecommendationServi
         const nextPlan = plans.find(p => Number(p.price) > Number(currentPlan.price));
         if (!nextPlan) continue;
 
-        candidates.push({
-          tenant_id: tp.tenant_id,
-          tenant_name: (tp as any).tenants?.name ?? tp.tenant_id,
-          current_plan: currentPlan.name,
-          recommended_plan: nextPlan.name,
-          usage_pct: Math.floor(Math.random() * 40 + 60), // placeholder — would come from usage engine
-          potential_uplift_brl: Number(nextPlan.price) - Number(currentPlan.price),
-          signals: ['Alto uso de recursos', 'Crescimento de usuários'],
-        });
+        const tenantUsage = usageMap.get(tp.tenant_id);
+        const planLimits = limitMap.get(tp.plan_id);
+
+        // Calculate max usage percentage across all metrics
+        let maxUsagePct = 0;
+        const signals: string[] = [];
+
+        if (tenantUsage && planLimits) {
+          for (const [metric, used] of tenantUsage.entries()) {
+            const limit = planLimits.get(metric);
+            if (limit && limit > 0) {
+              const pct = Math.round((used / limit) * 100);
+              if (pct > maxUsagePct) maxUsagePct = pct;
+              if (pct >= 90) {
+                signals.push(`${metric}: ${pct}% do limite (${used}/${limit})`);
+              } else if (pct >= 70) {
+                signals.push(`${metric}: ${pct}% do limite`);
+              }
+            }
+          }
+        }
+
+        // Even without tier limits, check if there's significant usage
+        if (!planLimits || planLimits.size === 0) {
+          if (tenantUsage && tenantUsage.size > 0) {
+            const totalUsage = [...tenantUsage.values()].reduce((s, v) => s + v, 0);
+            if (totalUsage > 0) {
+              signals.push(`${tenantUsage.size} métricas de uso ativas`);
+              maxUsagePct = 50; // moderate signal
+            }
+          }
+        }
+
+        // Only recommend if usage is meaningful (>= 60%) or we have signals
+        if (maxUsagePct >= 60 || signals.length > 0) {
+          if (signals.length === 0) {
+            signals.push('Uso crescente de recursos');
+          }
+
+          candidates.push({
+            tenant_id: tp.tenant_id,
+            tenant_name: (tp as any).tenants?.name ?? tp.tenant_id,
+            current_plan: currentPlan.name,
+            recommended_plan: nextPlan.name,
+            usage_pct: Math.min(maxUsagePct, 100),
+            potential_uplift_brl: Number(nextPlan.price) - Number(currentPlan.price),
+            signals,
+          });
+        }
       }
 
-      return candidates.sort((a, b) => b.potential_uplift_brl - a.potential_uplift_brl);
+      return candidates.sort((a, b) => b.usage_pct - a.usage_pct);
     },
   };
 }
