@@ -13,7 +13,11 @@ export type PlatformRoleType =
   | 'platform_support'
   | 'platform_finance'
   | 'platform_fiscal'
-  | 'platform_read_only';
+  | 'platform_read_only'
+  // ── Future roles (prepared, not yet active) ──
+  | 'platform_delegated_support'
+  | 'platform_marketplace_admin'
+  | 'platform_compliance';
 
 interface PlatformIdentity {
   id: string;
