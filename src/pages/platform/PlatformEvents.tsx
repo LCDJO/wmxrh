@@ -2,111 +2,15 @@
  * PlatformEvents — Dashboard listing all domain events across modules.
  */
 import { useCallback, useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Zap, Filter, RefreshCw } from 'lucide-react';
+import { Search, Zap, Filter, RefreshCw, Activity, Layers, Eye, Box } from 'lucide-react';
 import { toast } from 'sonner';
-
-// ── Aggregate all domain event catalogs ────────────────────────
-
-interface EventCatalogEntry {
-  domain: string;
-  domainColor: string;
-  eventName: string;
-  description: string;
-}
-
-const EVENT_CATALOG: EventCatalogEntry[] = [
-  // IAM
-  { domain: 'IAM', domainColor: 'hsl(200 70% 50%)', eventName: 'UserInvited', description: 'Novo membro convidado para o tenant' },
-  { domain: 'IAM', domainColor: 'hsl(200 70% 50%)', eventName: 'UserRoleAssigned', description: 'Role vinculada a um usuário + escopo' },
-  { domain: 'IAM', domainColor: 'hsl(200 70% 50%)', eventName: 'UserRoleRemoved', description: 'Role desvinculada do usuário' },
-  { domain: 'IAM', domainColor: 'hsl(200 70% 50%)', eventName: 'RolePermissionsUpdated', description: 'Conjunto de permissões alterado' },
-  { domain: 'IAM', domainColor: 'hsl(200 70% 50%)', eventName: 'AccessGraphRebuilt', description: 'Cache do grafo de acesso invalidado' },
-
-  // Billing
-  { domain: 'Billing', domainColor: 'hsl(145 60% 42%)', eventName: 'TenantPlanAssigned', description: 'Plano atribuído ao tenant' },
-  { domain: 'Billing', domainColor: 'hsl(145 60% 42%)', eventName: 'TenantPlanUpgraded', description: 'Upgrade de plano realizado' },
-  { domain: 'Billing', domainColor: 'hsl(145 60% 42%)', eventName: 'InvoiceGenerated', description: 'Fatura gerada para o tenant' },
-  { domain: 'Billing', domainColor: 'hsl(145 60% 42%)', eventName: 'RevenueUpdated', description: 'Receita atualizada (MRR/ARR)' },
-  { domain: 'Billing', domainColor: 'hsl(145 60% 42%)', eventName: 'UsageRecorded', description: 'Uso registrado (métrica + quantidade)' },
-  { domain: 'Billing', domainColor: 'hsl(145 60% 42%)', eventName: 'CouponCreated', description: 'Cupom criado na plataforma' },
-  { domain: 'Billing', domainColor: 'hsl(145 60% 42%)', eventName: 'CouponRedeemed', description: 'Cupom resgatado por um tenant' },
-  { domain: 'Billing', domainColor: 'hsl(145 60% 42%)', eventName: 'InvoiceDiscountApplied', description: 'Desconto aplicado em fatura' },
-  { domain: 'Billing', domainColor: 'hsl(145 60% 42%)', eventName: 'UsageOverageCalculated', description: 'Excedente de uso calculado' },
-
-  // Observability
-  { domain: 'Observability', domainColor: 'hsl(35 90% 55%)', eventName: 'ModuleHealthChanged', description: 'Status de saúde do módulo alterado' },
-  { domain: 'Observability', domainColor: 'hsl(35 90% 55%)', eventName: 'ApplicationErrorDetected', description: 'Erro de aplicação capturado' },
-  { domain: 'Observability', domainColor: 'hsl(35 90% 55%)', eventName: 'LatencyThresholdExceeded', description: 'Latência p95 acima do threshold' },
-  { domain: 'Observability', domainColor: 'hsl(35 90% 55%)', eventName: 'ErrorRateSpike', description: 'Pico na taxa de erros' },
-
-  // Security
-  { domain: 'Security', domainColor: 'hsl(0 70% 55%)', eventName: 'UnauthorizedAccessAttempt', description: 'Tentativa de acesso não autorizado' },
-  { domain: 'Security', domainColor: 'hsl(0 70% 55%)', eventName: 'ScopeViolationDetected', description: 'Violação de escopo detectada' },
-  { domain: 'Security', domainColor: 'hsl(0 70% 55%)', eventName: 'PermissionDenied', description: 'Permissão negada' },
-  { domain: 'Security', domainColor: 'hsl(0 70% 55%)', eventName: 'SuspiciousActivityFlagged', description: 'Atividade suspeita sinalizada' },
-
-  // Self-Healing
-  { domain: 'Self-Healing', domainColor: 'hsl(280 60% 55%)', eventName: 'IncidentDetected', description: 'Incidente detectado automaticamente' },
-  { domain: 'Self-Healing', domainColor: 'hsl(280 60% 55%)', eventName: 'SelfHealingTriggered', description: 'Auto-recuperação acionada' },
-  { domain: 'Self-Healing', domainColor: 'hsl(280 60% 55%)', eventName: 'CircuitBreakerOpened', description: 'Circuit breaker aberto' },
-  { domain: 'Self-Healing', domainColor: 'hsl(280 60% 55%)', eventName: 'CircuitBreakerClosed', description: 'Circuit breaker fechado' },
-  { domain: 'Self-Healing', domainColor: 'hsl(280 60% 55%)', eventName: 'ModuleRecovered', description: 'Módulo recuperado com sucesso' },
-
-  // Governance AI
-  { domain: 'Governance AI', domainColor: 'hsl(320 60% 50%)', eventName: 'GovernanceRiskDetected', description: 'Risco de governança detectado por IA' },
-  { domain: 'Governance AI', domainColor: 'hsl(320 60% 50%)', eventName: 'RoleOptimizationSuggested', description: 'Sugestão de otimização de role' },
-  { domain: 'Governance AI', domainColor: 'hsl(320 60% 50%)', eventName: 'ComplianceViolation', description: 'Violação de compliance detectada' },
-  { domain: 'Governance AI', domainColor: 'hsl(320 60% 50%)', eventName: 'PolicyRecommendation', description: 'Recomendação de política gerada' },
-
-  // Onboarding
-  { domain: 'Onboarding', domainColor: 'hsl(175 60% 45%)', eventName: 'TenantOnboardingStarted', description: 'Onboarding do tenant iniciado' },
-  { domain: 'Onboarding', domainColor: 'hsl(175 60% 45%)', eventName: 'OnboardingStepCompleted', description: 'Etapa de onboarding concluída' },
-  { domain: 'Onboarding', domainColor: 'hsl(175 60% 45%)', eventName: 'OnboardingCompleted', description: 'Onboarding finalizado' },
-  { domain: 'Onboarding', domainColor: 'hsl(175 60% 45%)', eventName: 'OnboardingAbandoned', description: 'Onboarding abandonado' },
-
-  // Payroll Simulation
-  { domain: 'Payroll', domainColor: 'hsl(55 70% 45%)', eventName: 'PayrollSimulationCreated', description: 'Simulação de folha criada' },
-  { domain: 'Payroll', domainColor: 'hsl(55 70% 45%)', eventName: 'EncargoEstimateUpdated', description: 'Estimativa de encargos atualizada' },
-  { domain: 'Payroll', domainColor: 'hsl(55 70% 45%)', eventName: 'SimulationApproved', description: 'Simulação aprovada' },
-
-  // Workforce Intelligence
-  { domain: 'Workforce', domainColor: 'hsl(220 60% 55%)', eventName: 'WorkforceInsightCreated', description: 'Insight de workforce criado' },
-  { domain: 'Workforce', domainColor: 'hsl(220 60% 55%)', eventName: 'RiskScoreUpdated', description: 'Score de risco atualizado' },
-
-  // NR Training Lifecycle
-  { domain: 'NR Training', domainColor: 'hsl(15 70% 50%)', eventName: 'TrainingAssigned', description: 'Treinamento atribuído ao colaborador' },
-  { domain: 'NR Training', domainColor: 'hsl(15 70% 50%)', eventName: 'TrainingCompleted', description: 'Treinamento concluído' },
-  { domain: 'NR Training', domainColor: 'hsl(15 70% 50%)', eventName: 'TrainingExpired', description: 'Treinamento expirado' },
-  { domain: 'NR Training', domainColor: 'hsl(15 70% 50%)', eventName: 'TrainingBlocked', description: 'Treinamento bloqueado (blocking level)' },
-  { domain: 'NR Training', domainColor: 'hsl(15 70% 50%)', eventName: 'TrainingRenewalDue', description: 'Renovação de treinamento próxima' },
-  { domain: 'NR Training', domainColor: 'hsl(15 70% 50%)', eventName: 'TrainingStatusChanged', description: 'Status do treinamento alterado' },
-
-  // Platform OS
-  { domain: 'Platform OS', domainColor: 'hsl(265 60% 55%)', eventName: 'ModuleRegistered', description: 'Módulo registrado na plataforma' },
-  { domain: 'Platform OS', domainColor: 'hsl(265 60% 55%)', eventName: 'ModuleEnabled', description: 'Módulo habilitado para tenant' },
-  { domain: 'Platform OS', domainColor: 'hsl(265 60% 55%)', eventName: 'ModuleDisabled', description: 'Módulo desabilitado para tenant' },
-  { domain: 'Platform OS', domainColor: 'hsl(265 60% 55%)', eventName: 'TenantCreated', description: 'Tenant criado na plataforma' },
-  { domain: 'Platform OS', domainColor: 'hsl(265 60% 55%)', eventName: 'TenantSuspended', description: 'Tenant suspenso' },
-
-  // Revenue Intelligence
-  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'ReferralLinkCreated', description: 'Link de referral criado' },
-  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'ReferralSignup', description: 'Signup via referral registrado' },
-  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'ReferralConverted', description: 'Referral convertido em pagante' },
-  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'RewardAwarded', description: 'Recompensa concedida ao referrer' },
-  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'TierUpgraded', description: 'Tier de gamificação elevado' },
-  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'ChurnRiskDetected', description: 'Risco de churn detectado' },
-  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'UpgradeRecommended', description: 'Upgrade recomendado para tenant' },
-];
-
-// ── Unique domains ─────────────────────────────────────────────
-
-const ALL_DOMAINS = [...new Set(EVENT_CATALOG.map(e => e.domain))];
+import { EVENT_CATALOG, ALL_DOMAINS, type EventCatalogEntry } from './event-catalog-data';
 
 export default function PlatformEvents() {
   const [search, setSearch] = useState('');
@@ -124,7 +28,7 @@ export default function PlatformEvents() {
   }, []);
 
   const filtered = useMemo(() => {
-    void refreshKey; // dependency to force re-compute
+    void refreshKey;
     return EVENT_CATALOG.filter(e => {
       const matchesDomain = selectedDomain === 'all' || e.domain === selectedDomain;
       const matchesSearch =
@@ -146,70 +50,86 @@ export default function PlatformEvents() {
     return map;
   }, [filtered]);
 
+  const statCards = [
+    { label: 'Total de Eventos', value: EVENT_CATALOG.length, icon: Zap, accent: 'hsl(265 80% 55%)' },
+    { label: 'Domínios', value: ALL_DOMAINS.length, icon: Layers, accent: 'hsl(280 75% 60%)' },
+    { label: 'Filtrados', value: filtered.length, icon: Eye, accent: 'hsl(250 70% 58%)' },
+    { label: 'Domínios Visíveis', value: groupedByDomain.size, icon: Box, accent: 'hsl(290 65% 55%)' },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Catálogo de Eventos</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Todos os eventos de domínio emitidos pelo sistema, organizados por módulo.
-          </p>
+    <div className="space-y-8">
+      {/* ── Hero Header ── */}
+      <div className="relative overflow-hidden rounded-xl gradient-platform-surface border border-platform p-6 md:p-8">
+        <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full opacity-[0.07]" style={{ background: 'radial-gradient(circle, hsl(265 80% 55%), transparent 70%)' }} />
+        <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full opacity-[0.05]" style={{ background: 'radial-gradient(circle, hsl(280 75% 60%), transparent 70%)' }} />
+        
+        <div className="relative flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg gradient-platform-accent shadow-platform">
+                <Activity className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+                  Catálogo de Eventos
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Eventos de domínio emitidos pelo sistema, organizados por módulo.
+                </p>
+              </div>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="shrink-0 border-platform hover:bg-accent/50 transition-all duration-200"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="shrink-0"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Atualizar
-        </Button>
       </div>
 
-      {/* Summary cards */}
+      {/* ── Stat Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="text-2xl font-bold text-foreground">{EVENT_CATALOG.length}</div>
-            <div className="text-xs text-muted-foreground">Total de Eventos</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="text-2xl font-bold text-foreground">{ALL_DOMAINS.length}</div>
-            <div className="text-xs text-muted-foreground">Domínios</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="text-2xl font-bold text-foreground">{filtered.length}</div>
-            <div className="text-xs text-muted-foreground">Filtrados</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="text-2xl font-bold text-foreground">{groupedByDomain.size}</div>
-            <div className="text-xs text-muted-foreground">Domínios Visíveis</div>
-          </CardContent>
-        </Card>
+        {statCards.map(({ label, value, icon: Icon, accent }) => (
+          <Card key={label} className="group relative overflow-hidden border-border/60 hover:border-platform transition-all duration-300 hover:shadow-platform">
+            <div className="absolute top-0 left-0 w-full h-[3px] opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: `linear-gradient(90deg, ${accent}, transparent)` }} />
+            <CardContent className="pt-5 pb-4 px-5">
+              <div className="flex items-center justify-between mb-2">
+                <div
+                  className="flex items-center justify-center w-8 h-8 rounded-lg"
+                  style={{ backgroundColor: `${accent}15` }}
+                >
+                  <Icon className="h-4 w-4" style={{ color: accent }} />
+                </div>
+              </div>
+              <div className="text-3xl font-bold text-foreground tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+                {value}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Filters */}
+      {/* ── Filters ── */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar evento ou domínio..."
+            placeholder="Buscar evento, domínio ou descrição..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-10 border-border/60 focus-visible:ring-platform focus-visible:border-platform transition-colors"
           />
         </div>
         <Select value={selectedDomain} onValueChange={setSelectedDomain}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <Filter className="h-4 w-4 mr-2" />
+          <SelectTrigger className="w-full sm:w-[220px] h-10 border-border/60">
+            <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
             <SelectValue placeholder="Filtrar domínio" />
           </SelectTrigger>
           <SelectContent>
@@ -221,48 +141,56 @@ export default function PlatformEvents() {
         </Select>
       </div>
 
-      {/* Event list grouped by domain */}
-      <ScrollArea className="h-[calc(100vh-380px)]">
-        <div className="space-y-6">
+      {/* ── Domain Groups ── */}
+      <ScrollArea className="h-[calc(100vh-440px)]">
+        <div className="space-y-5">
           {[...groupedByDomain.entries()].map(([domain, events]) => {
             const color = events[0]?.domainColor ?? 'hsl(0 0% 50%)';
             return (
-              <Card key={domain} className="overflow-hidden">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-3 text-base">
-                    <div
-                      className="h-3 w-3 rounded-full shrink-0"
-                      style={{ backgroundColor: color }}
-                    />
+              <Card key={domain} className="overflow-hidden border-border/60 shadow-card hover:shadow-card-hover transition-shadow duration-300">
+                {/* Domain header bar */}
+                <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border/40" style={{ background: `linear-gradient(135deg, ${color}08, transparent)` }}>
+                  <div
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: color, boxShadow: `0 0 0 3px ${color}30` }}
+                  />
+                  <span className="text-sm font-semibold text-foreground" style={{ fontFamily: 'var(--font-display)' }}>
                     {domain}
-                    <Badge variant="secondary" className="ml-auto text-xs font-normal">
-                      {events.length} evento{events.length > 1 ? 's' : ''}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="divide-y divide-border">
-                    {events.map(ev => (
+                  </span>
+                  <Badge
+                    variant="secondary"
+                    className="ml-auto text-[11px] font-medium px-2.5 py-0.5 rounded-full"
+                    style={{ backgroundColor: `${color}12`, color }}
+                  >
+                    {events.length} evento{events.length > 1 ? 's' : ''}
+                  </Badge>
+                </div>
+
+                {/* Event rows */}
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border/40">
+                    {events.map((ev, i) => (
                       <div
                         key={ev.eventName}
-                        className="flex items-center gap-4 py-3 first:pt-0 last:pb-0"
+                        className="group/row flex items-center gap-4 px-5 py-3 hover:bg-muted/30 transition-colors duration-150"
                       >
-                        <Zap className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div
+                          className="flex items-center justify-center w-7 h-7 rounded-md shrink-0 transition-transform duration-200 group-hover/row:scale-110"
+                          style={{ backgroundColor: `${color}10` }}
+                        >
+                          <Zap className="h-3.5 w-3.5" style={{ color }} />
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <code className="text-sm font-semibold text-foreground">
+                          <code className="text-[13px] font-semibold text-foreground tracking-tight">
                             {ev.eventName}
                           </code>
                           <p className="text-xs text-muted-foreground mt-0.5 truncate">
                             {ev.description}
                           </p>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className="shrink-0 text-[10px]"
-                          style={{ borderColor: color, color }}
-                        >
-                          {ev.domain}
-                        </Badge>
+                        <span className="hidden sm:inline-flex text-[10px] text-muted-foreground/60 font-mono tabular-nums shrink-0">
+                          #{String(i + 1).padStart(2, '0')}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -272,8 +200,12 @@ export default function PlatformEvents() {
           })}
 
           {groupedByDomain.size === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              Nenhum evento encontrado para o filtro aplicado.
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-muted/50 mb-4">
+                <Search className="h-6 w-6 text-muted-foreground/60" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">Nenhum evento encontrado</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Tente ajustar os filtros aplicados.</p>
             </div>
           )}
         </div>
