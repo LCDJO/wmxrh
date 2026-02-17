@@ -12,7 +12,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import type { LandingVersionStatus } from './landing-page-status-machine';
-import { getVersionTransitions, requiresNewVersion } from './landing-page-status-machine';
+import { getVersionTransitions, requiresNewVersion, validateVersionCreation } from './landing-page-status-machine';
 import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 
 // ═══════════════════════════════════
@@ -67,6 +67,9 @@ export const landingVersionService = {
         `Landing page com status "${lp.status}" pode ser editada diretamente. Versionamento não necessário.`
       );
     }
+
+    // 2b. Block versioning if experiments are running
+    validateVersionCreation(landingPageId);
 
     // 3. Determine next version number
     const { count } = await supabase
