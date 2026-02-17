@@ -61,6 +61,8 @@ export type RecoveryActionType =
   | 'sandbox_reset'
   | 'access_graph_rebuild'
   | 'rate_limit_engage'
+  | 'route_isolate'
+  | 'widget_disable'
   | 'escalate';
 
 export type RecoveryResult = 'success' | 'partial' | 'failed' | 'skipped';
