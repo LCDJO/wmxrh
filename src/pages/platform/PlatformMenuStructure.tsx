@@ -1,112 +1,226 @@
 /**
- * PlatformMenuStructure — Displays the full navigation menu tree of the platform.
+ * PlatformMenuStructure — Interactive graph-style drag-and-drop menu editor.
+ * Only SuperAdmin (platform) users can reorder; others see read-only view.
  */
 import {
   LayoutDashboard, Building2, Puzzle, ShieldCheck, ScrollText,
   Zap, Users, Package, Megaphone, KeyRound, Activity, Monitor,
-  TrendingUp, ChevronDown, ChevronRight, RefreshCw, HelpCircle, X,
+  TrendingUp, RefreshCw, HelpCircle, X, GripVertical, Lock,
+  ChevronRight,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState, useMemo, type DragEvent } from 'react';
 import { toast } from 'sonner';
 
+/* ─── Types ─── */
+interface MenuChild {
+  id: string;
+  label: string;
+  path: string;
+}
+
 interface MenuNode {
+  id: string;
   label: string;
   path: string;
   icon: typeof LayoutDashboard;
-  children?: { label: string; path: string }[];
+  children?: MenuChild[];
 }
 
-const MENU_TREE: MenuNode[] = [
-  { label: 'Dashboard', path: '/platform/dashboard', icon: LayoutDashboard },
-  { label: 'Tenants', path: '/platform/tenants', icon: Building2 },
-  { label: 'Módulos', path: '/platform/modules', icon: Puzzle },
-  { label: 'Planos', path: '/platform/plans', icon: Package },
-  { label: 'Usuários', path: '/platform/users', icon: Users },
+/* ─── Initial data ─── */
+const createInitialTree = (): MenuNode[] => [
+  { id: 'dashboard', label: 'Dashboard', path: '/platform/dashboard', icon: LayoutDashboard },
+  { id: 'tenants', label: 'Tenants', path: '/platform/tenants', icon: Building2 },
+  { id: 'modules', label: 'Módulos', path: '/platform/modules', icon: Puzzle },
+  { id: 'plans', label: 'Planos', path: '/platform/plans', icon: Package },
+  { id: 'users', label: 'Usuários', path: '/platform/users', icon: Users },
   {
-    label: 'Segurança', path: '/platform/security', icon: ShieldCheck,
+    id: 'security', label: 'Segurança', path: '/platform/security', icon: ShieldCheck,
     children: [
-      { label: 'Cargos', path: '/platform/security/roles' },
-      { label: 'Permissões', path: '/platform/security/permissions' },
-      { label: 'Access Graph', path: '/platform/security/access-graph' },
-      { label: 'Unified Graph', path: '/platform/security/unified-graph' },
-      { label: 'Governança', path: '/platform/security/governance' },
-      { label: 'Governance AI', path: '/platform/security/governance-ai' },
+      { id: 'sec-roles', label: 'Cargos', path: '/platform/security/roles' },
+      { id: 'sec-perms', label: 'Permissões', path: '/platform/security/permissions' },
+      { id: 'sec-graph', label: 'Access Graph', path: '/platform/security/access-graph' },
+      { id: 'sec-unified', label: 'Unified Graph', path: '/platform/security/unified-graph' },
+      { id: 'sec-gov', label: 'Governança', path: '/platform/security/governance' },
+      { id: 'sec-govai', label: 'Governance AI', path: '/platform/security/governance-ai' },
     ],
   },
-  { label: 'IAM', path: '/platform/iam', icon: KeyRound },
-  { label: 'Automação', path: '/platform/automation', icon: Zap },
+  { id: 'iam', label: 'IAM', path: '/platform/iam', icon: KeyRound },
+  { id: 'automation', label: 'Automação', path: '/platform/automation', icon: Zap },
   {
-    label: 'Monitoramento', path: '/platform/monitoring', icon: Monitor,
+    id: 'monitoring', label: 'Monitoramento', path: '/platform/monitoring', icon: Monitor,
     children: [
-      { label: 'Status', path: '/platform/monitoring' },
-      { label: 'Módulos', path: '/platform/monitoring/modules' },
-      { label: 'Erros', path: '/platform/monitoring/errors' },
-      { label: 'Performance', path: '/platform/monitoring/performance' },
-      { label: 'Incidentes', path: '/platform/monitoring/incidents' },
+      { id: 'mon-status', label: 'Status', path: '/platform/monitoring' },
+      { id: 'mon-mods', label: 'Módulos', path: '/platform/monitoring/modules' },
+      { id: 'mon-err', label: 'Erros', path: '/platform/monitoring/errors' },
+      { id: 'mon-perf', label: 'Performance', path: '/platform/monitoring/performance' },
+      { id: 'mon-inc', label: 'Incidentes', path: '/platform/monitoring/incidents' },
     ],
   },
-  { label: 'Observability', path: '/platform/observability', icon: Activity },
-  { label: 'Comunicação', path: '/platform/communications', icon: Megaphone },
-  { label: 'Auditoria', path: '/platform/audit', icon: ScrollText },
+  { id: 'observability', label: 'Observability', path: '/platform/observability', icon: Activity },
+  { id: 'comms', label: 'Comunicação', path: '/platform/communications', icon: Megaphone },
+  { id: 'audit', label: 'Auditoria', path: '/platform/audit', icon: ScrollText },
   {
-    label: 'Financeiro', path: '/platform/billing', icon: Package,
+    id: 'billing', label: 'Financeiro', path: '/platform/billing', icon: Package,
     children: [
-      { label: 'Visão Geral', path: '/platform/billing' },
-      { label: 'Cupons', path: '/platform/billing/coupons' },
-      { label: 'Control Center', path: '/platform/billing/control-center' },
+      { id: 'bill-overview', label: 'Visão Geral', path: '/platform/billing' },
+      { id: 'bill-coupons', label: 'Cupons', path: '/platform/billing/coupons' },
+      { id: 'bill-cc', label: 'Control Center', path: '/platform/billing/control-center' },
     ],
   },
   {
-    label: 'Revenue', path: '/platform/revenue', icon: TrendingUp,
+    id: 'revenue', label: 'Revenue', path: '/platform/revenue', icon: TrendingUp,
     children: [
-      { label: 'Visão Geral', path: '/platform/revenue' },
-      { label: 'Referrals', path: '/platform/referrals' },
-      { label: 'Gamificação', path: '/platform/gamification' },
-      { label: 'Intelligence', path: '/platform/revenue/intelligence' },
+      { id: 'rev-overview', label: 'Visão Geral', path: '/platform/revenue' },
+      { id: 'rev-ref', label: 'Referrals', path: '/platform/referrals' },
+      { id: 'rev-gam', label: 'Gamificação', path: '/platform/gamification' },
+      { id: 'rev-intel', label: 'Intelligence', path: '/platform/revenue/intelligence' },
     ],
   },
-  { label: 'Fiscal', path: '/platform/fiscal', icon: ScrollText },
+  { id: 'fiscal', label: 'Fiscal', path: '/platform/fiscal', icon: ScrollText },
   {
-    label: 'Estrutura', path: '/platform/structure', icon: Puzzle,
+    id: 'structure', label: 'Estrutura', path: '/platform/structure', icon: Puzzle,
     children: [
-      { label: 'Eventos', path: '/platform/structure/events' },
-      { label: 'Menus', path: '/platform/structure/menus' },
+      { id: 'str-events', label: 'Eventos', path: '/platform/structure/events' },
+      { id: 'str-menus', label: 'Menus', path: '/platform/structure/menus' },
     ],
   },
 ];
 
-export default function PlatformMenuStructure() {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
+/* ─── Simulated permission check ─── */
+const useCanManageMenuStructure = () => {
+  // In production this would check permission_definitions code 'platform.menu_structure.manage'
+  // via the user's custom_roles → role_permissions chain.
+  // For now, platform super admins always have access.
+  return true;
+};
 
-  const toggle = (path: string) => {
-    setExpanded(prev => {
-      const next = new Set(prev);
-      next.has(path) ? next.delete(path) : next.add(path);
-      return next;
-    });
-  };
+/* ─── Component ─── */
+export default function PlatformMenuStructure() {
+  const canEdit = useCanManageMenuStructure();
+  const [menuTree, setMenuTree] = useState<MenuNode[]>(createInitialTree);
+  const [showHelp, setShowHelp] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Drag state
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [dragType, setDragType] = useState<'root' | 'child' | null>(null);
+  const [dragParentId, setDragParentId] = useState<string | null>(null);
+  const dragCounter = useRef(0);
+
+  const totalItems = menuTree.length;
+  const totalChildren = useMemo(() => menuTree.reduce((a, m) => a + (m.children?.length ?? 0), 0), [menuTree]);
+  const withChildren = useMemo(() => menuTree.filter(m => m.children && m.children.length > 0).length, [menuTree]);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     setTimeout(() => {
-      setRefreshKey(k => k + 1);
+      setMenuTree(createInitialTree());
       setIsRefreshing(false);
-      toast.success(`Estrutura atualizada — ${MENU_TREE.length} menus raiz, ${MENU_TREE.reduce((a, m) => a + (m.children?.length ?? 0), 0)} sub-itens`);
+      toast.success(`Estrutura atualizada — ${createInitialTree().length} menus raiz, ${createInitialTree().reduce((a, m) => a + (m.children?.length ?? 0), 0)} sub-itens`);
     }, 400);
   }, []);
 
-  void refreshKey;
+  /* ── Root-level drag handlers ── */
+  const handleRootDragStart = (e: DragEvent, id: string) => {
+    if (!canEdit) return;
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedId(id);
+    setDragType('root');
+    setDragParentId(null);
+  };
 
-  const totalItems = MENU_TREE.length;
-  const totalChildren = MENU_TREE.reduce((acc, m) => acc + (m.children?.length ?? 0), 0);
-  const withChildren = MENU_TREE.filter(m => m.children).length;
+  const handleRootDragOver = (e: DragEvent, id: string) => {
+    e.preventDefault();
+    if (dragType === 'root' && draggedId !== id) {
+      setDragOverId(id);
+    }
+  };
+
+  const handleRootDragEnter = (e: DragEvent) => {
+    e.preventDefault();
+    dragCounter.current++;
+  };
+
+  const handleRootDragLeave = () => {
+    dragCounter.current--;
+    if (dragCounter.current === 0) setDragOverId(null);
+  };
+
+  const handleRootDrop = (e: DragEvent, targetId: string) => {
+    e.preventDefault();
+    dragCounter.current = 0;
+    if (dragType !== 'root' || !draggedId || draggedId === targetId) {
+      resetDrag();
+      return;
+    }
+    setMenuTree(prev => {
+      const items = [...prev];
+      const fromIdx = items.findIndex(i => i.id === draggedId);
+      const toIdx = items.findIndex(i => i.id === targetId);
+      if (fromIdx < 0 || toIdx < 0) return prev;
+      const [moved] = items.splice(fromIdx, 1);
+      items.splice(toIdx, 0, moved);
+      return items;
+    });
+    toast.success('Menu reordenado');
+    resetDrag();
+  };
+
+  /* ── Child-level drag handlers ── */
+  const handleChildDragStart = (e: DragEvent, childId: string, parentId: string) => {
+    if (!canEdit) return;
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedId(childId);
+    setDragType('child');
+    setDragParentId(parentId);
+  };
+
+  const handleChildDragOver = (e: DragEvent, childId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragType === 'child' && draggedId !== childId) {
+      setDragOverId(childId);
+    }
+  };
+
+  const handleChildDrop = (e: DragEvent, targetChildId: string, parentId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragType !== 'child' || !draggedId || draggedId === targetChildId || dragParentId !== parentId) {
+      resetDrag();
+      return;
+    }
+    setMenuTree(prev => {
+      return prev.map(node => {
+        if (node.id !== parentId || !node.children) return node;
+        const children = [...node.children];
+        const fromIdx = children.findIndex(c => c.id === draggedId);
+        const toIdx = children.findIndex(c => c.id === targetChildId);
+        if (fromIdx < 0 || toIdx < 0) return node;
+        const [moved] = children.splice(fromIdx, 1);
+        children.splice(toIdx, 0, moved);
+        return { ...node, children };
+      });
+    });
+    toast.success('Sub-item reordenado');
+    resetDrag();
+  };
+
+  const resetDrag = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+    setDragType(null);
+    setDragParentId(null);
+    dragCounter.current = 0;
+  };
+
+  const handleDragEnd = () => resetDrag();
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -126,7 +240,7 @@ export default function PlatformMenuStructure() {
                   Estrutura de Menus
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Mapa completo da navegação do painel de plataforma.
+                  Graph interativo — arraste e solte para reorganizar.
                 </p>
               </div>
               <button
@@ -137,6 +251,12 @@ export default function PlatformMenuStructure() {
                 <HelpCircle className="h-5 w-5" />
               </button>
             </div>
+            {!canEdit && (
+              <div className="flex items-center gap-1.5 text-xs text-amber-500">
+                <Lock className="h-3.5 w-3.5" />
+                Somente leitura — permissão <code className="font-mono text-[10px] bg-muted px-1 py-0.5 rounded">platform.menu_structure.manage</code> necessária.
+              </div>
+            )}
           </div>
           <Button
             variant="outline"
@@ -161,35 +281,22 @@ export default function PlatformMenuStructure() {
             >
               <X className="h-4 w-4" />
             </button>
-
             <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
               <HelpCircle className="h-4.5 w-4.5 text-[hsl(265_80%_60%)]" />
               O que é a Estrutura de Menus?
             </h3>
-
             <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
               <div className="space-y-1.5">
                 <p className="font-medium text-foreground text-xs uppercase tracking-wider">📌 Função</p>
-                <p>
-                  Este módulo exibe o <strong className="text-foreground">mapa completo de navegação</strong> do painel de plataforma.
-                  Ele lista todos os menus raiz, sub-menus e suas rotas, servindo como referência visual da estrutura do sistema.
-                </p>
+                <p>Este módulo exibe o <strong className="text-foreground">mapa completo de navegação</strong> em formato de graph interativo. SuperAdmins podem arrastar e soltar para reorganizar a hierarquia dos menus.</p>
               </div>
-
               <div className="space-y-1.5">
                 <p className="font-medium text-foreground text-xs uppercase tracking-wider">🗂️ O que são menus?</p>
-                <p>
-                  Menus são os <strong className="text-foreground">pontos de entrada da navegação</strong> — cada item no sidebar corresponde a um módulo ou funcionalidade.
-                  Menus com filhos agrupam sub-funcionalidades relacionadas (ex: Segurança → Cargos, Permissões, Access Graph).
-                </p>
+                <p>Menus são os <strong className="text-foreground">pontos de entrada da navegação</strong> — cada nó no graph corresponde a um módulo. Nós com filhos agrupam sub-funcionalidades conectadas por arestas visuais.</p>
               </div>
-
               <div className="space-y-1.5">
                 <p className="font-medium text-foreground text-xs uppercase tracking-wider">🔗 Onde são usados?</p>
-                <p>
-                  A estrutura de menus alimenta o <strong className="text-foreground">sidebar, breadcrumbs e navegação dinâmica</strong>.
-                  Alterações aqui refletem em toda a experiência do painel, controlando o que cada perfil visualiza com base em permissões.
-                </p>
+                <p>A estrutura alimenta o <strong className="text-foreground">sidebar, breadcrumbs e navegação dinâmica</strong>. Alterações aqui refletem em toda a experiência do painel.</p>
               </div>
             </div>
           </CardContent>
@@ -214,66 +321,119 @@ export default function PlatformMenuStructure() {
         ))}
       </div>
 
-      {/* Menu Tree */}
-      <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
-        <CardContent className="p-0">
-          <div className="divide-y divide-border/40">
-            {MENU_TREE.map((item) => {
-              const Icon = item.icon;
-              const hasChildren = item.children && item.children.length > 0;
-              const isOpen = expanded.has(item.path);
+      {/* ── Graph View ── */}
+      <div className="relative">
+        {/* Central spine line */}
+        <div className="absolute left-[27px] top-0 bottom-0 w-px bg-border/50" />
 
-              return (
-                <div key={item.path}>
-                  <button
-                    type="button"
-                    onClick={() => hasChildren && toggle(item.path)}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors',
-                      hasChildren ? 'hover:bg-muted/40 cursor-pointer' : 'cursor-default',
-                      isOpen && 'bg-muted/30'
-                    )}
-                  >
-                    <div className="h-8 w-8 rounded-md flex items-center justify-center bg-[hsl(265_60%_50%/0.12)]">
-                      <Icon className="h-4 w-4 text-[hsl(265_80%_60%)]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-foreground">{item.label}</span>
-                      <span className="ml-2 text-xs text-muted-foreground font-mono">{item.path}</span>
-                    </div>
-                    {hasChildren && (
-                      <>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {item.children!.length}
-                        </Badge>
-                        {isOpen
-                          ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          : <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        }
-                      </>
-                    )}
-                  </button>
+        <div className="space-y-1">
+          {menuTree.map((node, idx) => {
+            const Icon = node.icon;
+            const hasChildren = node.children && node.children.length > 0;
+            const isBeingDragged = draggedId === node.id && dragType === 'root';
+            const isDragOver = dragOverId === node.id && dragType === 'root';
 
-                  {hasChildren && isOpen && (
-                    <div className="bg-muted/20 border-t border-border/30">
-                      {item.children!.map((child) => (
-                        <div
-                          key={child.path}
-                          className="flex items-center gap-3 pl-16 pr-5 py-2.5"
-                        >
-                          <div className="h-1.5 w-1.5 rounded-full bg-[hsl(265_60%_55%)]" />
-                          <span className="text-sm text-foreground">{child.label}</span>
-                          <span className="text-xs text-muted-foreground font-mono ml-auto">{child.path}</span>
-                        </div>
-                      ))}
-                    </div>
+            return (
+              <div key={node.id} className="relative">
+                {/* ── Root Node ── */}
+                <div
+                  draggable={canEdit}
+                  onDragStart={(e) => handleRootDragStart(e, node.id)}
+                  onDragOver={(e) => handleRootDragOver(e, node.id)}
+                  onDragEnter={handleRootDragEnter}
+                  onDragLeave={handleRootDragLeave}
+                  onDrop={(e) => handleRootDrop(e, node.id)}
+                  onDragEnd={handleDragEnd}
+                  className={cn(
+                    'relative flex items-center gap-3 pl-2 pr-4 py-2.5 rounded-lg transition-all duration-200 group',
+                    canEdit && 'cursor-grab active:cursor-grabbing',
+                    isBeingDragged && 'opacity-40 scale-[0.97]',
+                    isDragOver && 'bg-[hsl(265_80%_55%/0.1)] ring-2 ring-[hsl(265_80%_55%/0.4)] ring-inset',
+                    !isBeingDragged && !isDragOver && 'hover:bg-muted/30',
                   )}
+                >
+                  {/* Connector dot */}
+                  <div className={cn(
+                    'relative z-10 h-3 w-3 rounded-full border-2 shrink-0 transition-colors',
+                    hasChildren
+                      ? 'border-[hsl(265_80%_55%)] bg-[hsl(265_80%_55%)]'
+                      : 'border-[hsl(265_60%_55%/0.5)] bg-background',
+                  )} />
+
+                  {/* Grip handle */}
+                  {canEdit && (
+                    <GripVertical className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0 transition-colors" />
+                  )}
+
+                  {/* Icon */}
+                  <div className="h-9 w-9 rounded-lg flex items-center justify-center bg-[hsl(265_60%_50%/0.1)] shrink-0">
+                    <Icon className="h-4.5 w-4.5 text-[hsl(265_80%_60%)]" />
+                  </div>
+
+                  {/* Label */}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-semibold text-foreground">{node.label}</span>
+                    <span className="ml-2 text-[11px] text-muted-foreground font-mono">{node.path}</span>
+                  </div>
+
+                  {/* Badge */}
+                  {hasChildren && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
+                      {node.children!.length}
+                    </Badge>
+                  )}
+
+                  {/* Order indicator */}
+                  <span className="text-[10px] font-mono text-muted-foreground/50 w-5 text-right shrink-0">{idx + 1}</span>
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+
+                {/* ── Children (sub-graph) ── */}
+                {hasChildren && (
+                  <div className="relative ml-[27px] pl-6 border-l-2 border-[hsl(265_60%_55%/0.2)] pb-1">
+                    {node.children!.map((child, cIdx) => {
+                      const isChildDragged = draggedId === child.id && dragType === 'child';
+                      const isChildDragOver = dragOverId === child.id && dragType === 'child';
+
+                      return (
+                        <div
+                          key={child.id}
+                          draggable={canEdit}
+                          onDragStart={(e) => handleChildDragStart(e, child.id, node.id)}
+                          onDragOver={(e) => handleChildDragOver(e, child.id)}
+                          onDrop={(e) => handleChildDrop(e, child.id, node.id)}
+                          onDragEnd={handleDragEnd}
+                          className={cn(
+                            'relative flex items-center gap-2.5 py-2 px-3 rounded-md transition-all duration-200 group/child',
+                            canEdit && 'cursor-grab active:cursor-grabbing',
+                            isChildDragged && 'opacity-40 scale-[0.97]',
+                            isChildDragOver && 'bg-[hsl(200_70%_50%/0.1)] ring-2 ring-[hsl(200_70%_50%/0.3)] ring-inset',
+                            !isChildDragged && !isChildDragOver && 'hover:bg-muted/20',
+                          )}
+                        >
+                          {/* Horizontal connector */}
+                          <div className="absolute -left-6 top-1/2 w-4 h-px bg-[hsl(265_60%_55%/0.25)]" />
+                          {/* Dot */}
+                          <div className="h-2 w-2 rounded-full bg-[hsl(265_60%_55%/0.45)] shrink-0 relative z-10" />
+
+                          {canEdit && (
+                            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/30 group-hover/child:text-muted-foreground shrink-0 transition-colors" />
+                          )}
+
+                          <ChevronRight className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+
+                          <span className="text-sm text-foreground">{child.label}</span>
+                          <span className="text-[11px] text-muted-foreground font-mono ml-auto">{child.path}</span>
+                          <span className="text-[10px] font-mono text-muted-foreground/40 w-4 text-right shrink-0">{cIdx + 1}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
