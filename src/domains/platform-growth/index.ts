@@ -13,6 +13,7 @@
  */
 
 export { growthInsightEngine, GrowthInsightEngine } from './growth-insight-engine';
+export type { GrowthInsightResult } from './growth-insight-engine';
 export { planOptimizationAdvisor, PlanOptimizationAdvisor } from './plan-optimization-advisor';
 export { conversionPredictionService, ConversionPredictionService } from './conversion-prediction-service';
 export { landingPageBuilder, LandingPageBuilder, fabContentEngine, FABContentEngine } from './landing-page-builder';
