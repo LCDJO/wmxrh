@@ -122,10 +122,22 @@
   .gradient-platform-accent {
     background: linear-gradient(135deg, hsl(265 80% 55%), hsl(280 75% 60%));
   }
+  .gradient-platform-surface {
+    background: linear-gradient(135deg, hsl(265 60% 50% / 0.04), hsl(280 50% 50% / 0.06));
+  }
   .shadow-card {
     box-shadow: 0 1px 3px 0 hsl(215 25% 15% / 0.04), 0 1px 2px -1px hsl(215 25% 15% / 0.04);
   }
   .shadow-card-hover {
     box-shadow: 0 4px 12px 0 hsl(215 25% 15% / 0.08), 0 2px 4px -1px hsl(215 25% 15% / 0.04);
+  }
+  .shadow-platform {
+    box-shadow: 0 4px 20px -4px hsl(265 60% 50% / 0.12), 0 2px 6px -2px hsl(265 60% 50% / 0.06);
+  }
+  .border-platform {
+    border-color: hsl(265 60% 50% / 0.2);
+  }
+  .ring-platform {
+    --tw-ring-color: hsl(265 60% 50% / 0.3);
   }
 }

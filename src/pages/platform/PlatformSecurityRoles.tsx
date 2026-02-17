@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
-import { PlatformRolesTab } from '@/components/platform/PlatformRolesTab';
+import { PlatformPermissionMatrix } from '@/components/platform/PlatformPermissionMatrix';
 import { Loader2, Shield } from 'lucide-react';
 import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission } from './PlatformSecurity';
 
@@ -43,22 +43,21 @@ export default function PlatformSecurityRoles() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-          <Shield className="h-5 w-5 text-primary" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-platform-accent">
+          <Shield className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold font-display text-foreground">Cargos da Plataforma</h1>
+          <h1 className="text-2xl font-bold font-display text-foreground">Cargos & Permissões</h1>
           <p className="text-sm text-muted-foreground">
-            Crie, edite cargos e gerencie a matrix de permissões por cargo.
+            Crie cargos, edite permissões e gerencie a matrix de acesso da plataforma.
           </p>
         </div>
       </div>
 
-      <PlatformRolesTab
+      <PlatformPermissionMatrix
         roles={roles}
         permissions={permissions}
         rolePerms={rolePerms}
-        loading={false}
         isSuperAdmin={isSuperAdmin}
         onRefresh={fetchAll}
       />
