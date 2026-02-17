@@ -32,7 +32,6 @@ import { IdentityActivityFeed } from '@/components/control-plane/IdentityActivit
 import { GrowthControlCenter } from '@/components/control-plane/GrowthControlCenter';
 import { WebsiteControlCenter } from '@/components/control-plane/WebsiteControlCenter';
 import { MarketingControlCenter } from '@/components/control-plane/MarketingControlCenter';
-import { MarketingDigitalStatusWidget } from '@/components/control-plane/MarketingDigitalStatusWidget';
 
 // ── Hook ──────────────────────────────────────────────────────
 
@@ -170,10 +169,7 @@ export default function PlatformControlPlane() {
           {/* Row 3: Module Health Grid (full width) */}
           <ModuleHealthGrid modules={modules} onAction={executeAction} />
 
-          {/* Row 4: Marketing Digital Status */}
-          <MarketingDigitalStatusWidget />
-
-          {/* Row 5: Identity Activity Feed */}
+          {/* Row 4: Identity Activity Feed */}
           <IdentityActivityFeed identity={identity} />
         </TabsContent>
 

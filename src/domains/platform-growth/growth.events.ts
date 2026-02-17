@@ -13,8 +13,6 @@
  * ║  7. RollbackExecuted          → rollback completed             ║
  * ║  8. RollbackPreventedByExperiment → blocked by A/B test        ║
  * ║  9. RollbackAuditLogged       → audit entry recorded           ║
- * ║ 10. AIHeadlineSuggested       → AI headline suggestion made    ║
- * ║ 11. AILayoutOptimizationSuggested → AI layout opt suggested    ║
  * ║                                                                ║
  * ║  Pure data — NO UI, NO side-effects inside this file.          ║
  * ╚════════════════════════════════════════════════════════════════╝
@@ -38,9 +36,7 @@ export type GrowthEventType =
   | 'RollbackSuggested'
   | 'RollbackExecuted'
   | 'RollbackPreventedByExperiment'
-  | 'RollbackAuditLogged'
-  | 'AIHeadlineSuggested'
-  | 'AILayoutOptimizationSuggested';
+  | 'RollbackAuditLogged';
 
 // ── Payloads ──
 
@@ -199,30 +195,6 @@ export interface RollbackAuditLoggedPayload {
   auditEntryId: string;
 }
 
-// ── AI Suggestion Payloads ──
-
-export interface AIHeadlineSuggestedPayload {
-  type: 'AIHeadlineSuggested';
-  timestamp: number;
-  pageId: string;
-  pageName: string;
-  headline: string;
-  tone: string;
-  predictedLiftPct: number;
-  confidence: number;
-}
-
-export interface AILayoutOptimizationSuggestedPayload {
-  type: 'AILayoutOptimizationSuggested';
-  timestamp: number;
-  pageId: string;
-  pageName: string;
-  optimizationType: string;
-  description: string;
-  predictedLiftPct: number;
-  confidence: number;
-}
-
 // ── Union ──
 
 export type GrowthDomainEvent =
@@ -239,9 +211,7 @@ export type GrowthDomainEvent =
   | RollbackSuggestedPayload
   | RollbackExecutedPayload
   | RollbackPreventedByExperimentPayload
-  | RollbackAuditLoggedPayload
-  | AIHeadlineSuggestedPayload
-  | AILayoutOptimizationSuggestedPayload;
+  | RollbackAuditLoggedPayload;
 
 // ════════════════════════════════════
 // EVENT BUS (synchronous, in-memory)

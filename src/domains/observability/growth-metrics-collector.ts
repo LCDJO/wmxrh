@@ -12,10 +12,6 @@
  *   landing_performance_drop_score    (gauge,   labels: landing)
  *   rollback_success_rate             (gauge,   global)
  *
- *   growth_ai_suggestions_total       (counter, labels: type)
- *   growth_ai_acceptance_rate         (gauge,   global)
- *   growth_ai_conversion_gain_estimate (gauge,  global)
- *
  * Legacy metrics (kept for backward compat):
  *   landing_page_views_total          (counter, labels: page)
  *   landing_conversion_total          (counter, labels: page, type)
@@ -77,40 +73,6 @@ export function updateRollbackSuccessRate(completed: number, total: number) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// GrowthAI Observability metrics
-// ═══════════════════════════════════════════════════════════════
-
-const aiSuggestionAccumulator = { total: 0, accepted: 0, conversionGainEstimate: 0 };
-
-/** Record a GrowthAI suggestion generated */
-export function recordAISuggestion(type: 'headline' | 'fab' | 'layout' | 'experiment') {
-  aiSuggestionAccumulator.total += 1;
-  getMetricsCollector().increment('growth_ai_suggestions_total', { type });
-}
-
-/** Record acceptance of a GrowthAI suggestion */
-export function recordAISuggestionAccepted(type: 'headline' | 'fab' | 'layout' | 'experiment') {
-  aiSuggestionAccumulator.accepted += 1;
-  getMetricsCollector().increment('growth_ai_suggestions_accepted_total', { type });
-  // Update acceptance rate gauge
-  const rate = aiSuggestionAccumulator.total > 0
-    ? Math.round((aiSuggestionAccumulator.accepted / aiSuggestionAccumulator.total) * 10000) / 100
-    : 0;
-  getMetricsCollector().gauge('growth_ai_acceptance_rate', rate);
-}
-
-/** Record estimated conversion gain from AI suggestions (cumulative %) */
-export function recordAIConversionGainEstimate(estimatedGainPct: number) {
-  aiSuggestionAccumulator.conversionGainEstimate += estimatedGainPct;
-  getMetricsCollector().gauge('growth_ai_conversion_gain_estimate', aiSuggestionAccumulator.conversionGainEstimate);
-}
-
-/** Get current AI suggestion accumulator snapshot */
-export function getAISuggestionStats() {
-  return { ...aiSuggestionAccumulator };
-}
-
-// ═══════════════════════════════════════════════════════════════
 // In-memory accumulators for rate calculation
 // ═══════════════════════════════════════════════════════════════
 
@@ -149,11 +111,6 @@ export interface GrowthMetricsSnapshot {
   ai_generated_headlines_total: Array<{ page: string; tone: string; value: number }>;
   fab_section_click_rate: Array<{ page: string; section: string; value: number }>;
 
-  // GrowthAI metrics
-  growth_ai_suggestions_total: number;
-  growth_ai_acceptance_rate: number;
-  growth_ai_conversion_gain_estimate: number;
-
   // Legacy
   landing_page_views_total: Array<{ page: string; value: number }>;
   landing_conversion_total: Array<{ page: string; type: string; value: number }>;
@@ -170,11 +127,6 @@ export async function collectGrowthMetrics(): Promise<GrowthMetricsSnapshot> {
     landing_conversion_rate: [],
     ai_generated_headlines_total: [],
     fab_section_click_rate: [],
-    growth_ai_suggestions_total: aiSuggestionAccumulator.total,
-    growth_ai_acceptance_rate: aiSuggestionAccumulator.total > 0
-      ? Math.round((aiSuggestionAccumulator.accepted / aiSuggestionAccumulator.total) * 10000) / 100
-      : 0,
-    growth_ai_conversion_gain_estimate: aiSuggestionAccumulator.conversionGainEstimate,
     landing_page_views_total: [],
     landing_conversion_total: [],
     fab_cta_click_total: [],

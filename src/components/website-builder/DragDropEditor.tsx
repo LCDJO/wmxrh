@@ -14,13 +14,12 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Monitor, Smartphone, Tablet, ShieldCheck, Sparkles } from 'lucide-react';
+import { Monitor, Smartphone, Tablet, ShieldCheck } from 'lucide-react';
 import type { WebsiteBlock, WebsiteBlockType, Viewport } from '@/domains/website-builder/types';
 import { BLOCK_DEFINITIONS } from '@/domains/website-builder/types';
 import { ComponentPalette } from './ComponentPalette';
 import { SortableBlock } from './SortableBlock';
 import { CompliancePanel } from './CompliancePanel';
-import { AIContentAdvisor } from './AIContentAdvisor';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 
@@ -29,7 +28,6 @@ export function DragDropEditor() {
   const [blocks, setBlocks] = useState<WebsiteBlock[]>([]);
   const [viewport, setViewport] = useState<Viewport>('desktop');
   const [showCompliance, setShowCompliance] = useState(true);
-  const [showAIAdvisor, setShowAIAdvisor] = useState(true);
 
   const complianceOptions = useMemo(() => ({
     hasGTM: false,
@@ -85,15 +83,6 @@ export function DragDropEditor() {
           </span>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowAIAdvisor((v) => !v)}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                showAIAdvisor ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-              }`}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              AI Advisor
-            </button>
-            <button
               onClick={() => setShowCompliance((v) => !v)}
               className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 showCompliance ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -148,10 +137,7 @@ export function DragDropEditor() {
         </ScrollArea>
       </div>
 
-      {/* Right panels */}
-      {showAIAdvisor && (
-        <AIContentAdvisor blocks={blocks} />
-      )}
+      {/* Compliance Panel */}
       {showCompliance && blocks.length > 0 && (
         <CompliancePanel blocks={blocks} options={complianceOptions} />
       )}
