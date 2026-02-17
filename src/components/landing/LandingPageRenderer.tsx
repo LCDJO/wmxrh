@@ -20,6 +20,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { LPCopyBlueprint, LandingPage } from '@/domains/platform-growth/types';
 import { fabContentEngine } from '@/domains/platform-growth/landing-page-builder';
 import { conversionTrackingService } from '@/domains/platform-growth/conversion-tracking-service';
+import { tagManagerIntegration } from '@/domains/platform-growth/tag-manager-integration';
 import { HeroSection } from './HeroSection';
 import { FABSection } from './FABSection';
 import { PricingSection } from './PricingSection';
@@ -55,10 +56,17 @@ export function LandingPageRenderer({
     return fabContentEngine.generateBlueprint(industry, modules);
   }, [externalBlueprint, industry, modules]);
 
-  // ── Track page view on mount ──
+  // ── Inject GTM snippet + track page view on mount ──
   useEffect(() => {
     if (page && !viewTracked.current) {
       viewTracked.current = true;
+
+      // Inject GTM script if container ID is configured
+      if (page.gtm_container_id) {
+        injectGTM(page.gtm_container_id);
+        pushDataLayer('landing_page_view', { page_id: page.id, slug: page.slug });
+      }
+
       conversionTrackingService.track({
         landingPageId: page.id,
         type: 'signup',
@@ -69,9 +77,10 @@ export function LandingPageRenderer({
     }
   }, [page, referralCode]);
 
-  // ── Track CTA clicks ──
+  // ── Track CTA clicks (conversion tracking + GTM dataLayer) ──
   const handleCTAClick = (section: string) => {
     if (!page) return;
+    pushDataLayer('cta_click', { page_id: page.id, section });
     conversionTrackingService.track({
       landingPageId: page.id,
       type: 'signup',
@@ -128,16 +137,39 @@ function detectSource(): string {
   return 'direct';
 }
 
-/** Delegate click handler for CTA buttons (data-cta attribute) */
+/** Delegate click handler for CTA buttons */
 function captureCtaClicks(handler: (section: string) => void) {
   return (e: React.MouseEvent) => {
     const target = (e.target as HTMLElement).closest('button, a');
     if (!target) return;
-    // Identify section by closest <section> or <footer>
     const section = target.closest('section, footer');
     if (section) {
       const heading = section.querySelector('h1, h2');
       handler(heading?.textContent ?? 'unknown');
     }
   };
+}
+
+// ── GTM Helpers ──────────────────────────────────────────────
+
+declare global {
+  interface Window { dataLayer: Record<string, unknown>[]; }
+}
+
+/** Inject the GTM <script> tag once */
+function injectGTM(containerId: string) {
+  if (document.querySelector(`script[data-gtm="${containerId}"]`)) return;
+  const snippet = tagManagerIntegration.generateSnippet(containerId);
+  const wrapper = document.createRange().createContextualFragment(snippet);
+  const script = wrapper.querySelector('script');
+  if (script) {
+    script.setAttribute('data-gtm', containerId);
+    document.head.appendChild(script);
+  }
+}
+
+/** Push a custom event to the GTM dataLayer */
+function pushDataLayer(event: string, params: Record<string, unknown> = {}) {
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({ event, ...params });
 }
