@@ -11,13 +11,15 @@ import type {
   Invoice,
 } from './types';
 import type { BillingCycle } from '@/domains/platform-experience/types';
+import type { ModulePlanSyncAPI } from './module-plan-sync-service';
 
 export function createSubscriptionLifecycleManager(
   planLifecycle: PlanLifecycleManagerAPI,
   calculator: BillingCalculatorAPI,
   invoices: InvoiceEngineAPI,
   ledger: FinancialLedgerAdapterAPI,
-  paymentPolicy?: PaymentPolicyEngineAPI
+  paymentPolicy?: PaymentPolicyEngineAPI,
+  modulePlanSync?: ModulePlanSyncAPI
 ): SubscriptionLifecycleManagerAPI {
   return {
     async activate(tenantId, planId, cycle) {
@@ -41,6 +43,9 @@ export function createSubscriptionLifecycleManager(
       });
 
       ledger.recordCharge(tenantId, invoice.id, calc.total_brl, `Fatura #${invoice.id.slice(0, 8)}`);
+
+      // Sync modules to match new plan
+      modulePlanSync?.syncModulesForPlan(tenantId, planId);
     },
 
     async upgrade(tenantId, toPlanId) {
@@ -68,18 +73,26 @@ export function createSubscriptionLifecycleManager(
         });
         ledger.recordCharge(tenantId, invoice.id, proration.total_brl, 'Proration charge');
       }
+
+      // Sync modules to match new plan
+      modulePlanSync?.syncModulesForPlan(tenantId, toPlanId);
     },
 
     async downgrade(tenantId, toPlanId) {
       planLifecycle.transition(tenantId, 'downgrade', toPlanId, 'Plan downgrade (next cycle)');
+      // Modules will sync when the downgrade takes effect at next billing cycle
     },
 
     async suspend(tenantId, reason) {
       planLifecycle.transition(tenantId, 'suspend', 'current', reason);
+      // Deactivate all modules on suspension
+      modulePlanSync?.deactivateAllModules(tenantId);
     },
 
     async cancel(tenantId, reason) {
       planLifecycle.transition(tenantId, 'cancel', 'current', reason);
+      // Deactivate all modules on cancellation
+      modulePlanSync?.deactivateAllModules(tenantId);
     },
 
     async reactivate(tenantId) {
