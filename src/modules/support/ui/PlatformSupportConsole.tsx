@@ -51,7 +51,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const PlatformSupportConsole = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('queue');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   if (!user) return <div className="p-6 text-muted-foreground">Carregando...</div>;
 
@@ -69,12 +69,16 @@ const PlatformSupportConsole = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
+          <TabsTrigger value="dashboard" className="gap-2"><BarChart3 className="h-4 w-4" /> Dashboard</TabsTrigger>
           <TabsTrigger value="queue" className="gap-2"><Inbox className="h-4 w-4" /> Fila</TabsTrigger>
           <TabsTrigger value="wiki" className="gap-2"><BookOpen className="h-4 w-4" /> Wiki</TabsTrigger>
           <TabsTrigger value="evaluations" className="gap-2"><Star className="h-4 w-4" /> Avaliações</TabsTrigger>
           <TabsTrigger value="metrics" className="gap-2"><BarChart3 className="h-4 w-4" /> Métricas</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="dashboard" className="mt-4">
+          <AgentDashboard userId={user.id} onNavigate={setActiveTab} />
+        </TabsContent>
         <TabsContent value="queue" className="mt-4">
           <TicketQueue userId={user.id} />
         </TabsContent>
@@ -91,6 +95,117 @@ const PlatformSupportConsole = () => {
     </div>
   );
 };
+
+// ── Agent Dashboard ──
+
+function AgentDashboard({ userId, onNavigate }: { userId: string; onNavigate: (tab: string) => void }) {
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [evaluations, setEvaluations] = useState<SupportEvaluation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      TicketService.listAll(),
+      EvaluationService.listAll(),
+    ])
+      .then(([t, e]) => {
+        setTickets(t);
+        setEvaluations(e.filter(ev => ev.agent_id === userId));
+      })
+      .catch(() => toast.error('Erro ao carregar dashboard'))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  const openCount = tickets.filter(t => t.status === 'open' || t.status === 'awaiting_agent').length;
+  const inProgressCount = tickets.filter(t => t.status === 'in_progress' && t.assigned_to === userId).length;
+  const closedCount = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
+  const myEvalsCount = evaluations.length;
+  const avgScore = myEvalsCount > 0
+    ? (evaluations.reduce((s, e) => s + (e.agent_score ?? 0), 0) / myEvalsCount).toFixed(1)
+    : '—';
+
+  const kpis = [
+    { label: 'Tickets Abertos', value: openCount, icon: AlertCircle, color: 'hsl(35 80% 50%)', tab: 'queue' },
+    { label: 'Em Atendimento', value: inProgressCount, icon: Loader2, color: 'hsl(200 70% 50%)', tab: 'queue' },
+    { label: 'Encerrados', value: closedCount, icon: CheckCircle2, color: 'hsl(145 60% 42%)', tab: 'metrics' },
+    { label: 'Minhas Avaliações', value: myEvalsCount, icon: Star, color: 'hsl(45 90% 55%)', tab: 'evaluations' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {kpis.map(k => {
+          const Icon = k.icon;
+          return (
+            <Card
+              key={k.label}
+              className="cursor-pointer hover:shadow-sm transition-shadow"
+              onClick={() => onNavigate(k.tab)}
+            >
+              <CardContent className="py-4 px-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon className="h-4 w-4" style={{ color: k.color }} />
+                  <p className="text-xs text-muted-foreground">{k.label}</p>
+                </div>
+                <p className="text-3xl font-bold text-foreground">{k.value}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* My Evaluations Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Star className="h-4 w-4 text-primary" />
+            Minhas Avaliações Recentes
+            {myEvalsCount > 0 && (
+              <Badge variant="secondary" className="ml-auto text-xs">
+                Média: {avgScore}★
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {evaluations.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-4">Nenhuma avaliação recebida ainda.</p>
+          ) : (
+            <div className="space-y-2">
+              {evaluations.slice(0, 5).map(ev => (
+                <div key={ev.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <Star
+                        key={n}
+                        className="h-3.5 w-3.5"
+                        fill={(ev.agent_score ?? 0) >= n ? 'hsl(45 90% 55%)' : 'transparent'}
+                        stroke={(ev.agent_score ?? 0) >= n ? 'hsl(45 90% 55%)' : 'hsl(var(--muted-foreground))'}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-sm text-foreground flex-1 truncate">{ev.comment || 'Sem comentário'}</p>
+                  <span className="text-[10px] text-muted-foreground shrink-0">
+                    {new Date(ev.created_at).toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+              ))}
+              {evaluations.length > 5 && (
+                <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => onNavigate('evaluations')}>
+                  Ver todas ({evaluations.length})
+                </Button>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 // ── Ticket Queue ──
 
