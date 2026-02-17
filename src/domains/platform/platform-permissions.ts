@@ -80,12 +80,6 @@ export const PLATFORM_PERMISSIONS = [
   'website.structure_manage',
   // ── A/B Experiments ──
   'ab_experiment.start',
-  // ── Funnels / Pipeline ──
-  'funnel.view',
-  'funnel.create',
-  'funnel.edit',
-  'funnel.publish',
-  'funnel.delete',
   // ── Growth Insights ──
   'growth_insights.view',
   // ── Future: Marketplace ──
@@ -213,10 +207,6 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'audit.view',
     'ab_experiment.start',
     'growth_insights.view',
-    // Funnel
-    'funnel.view',
-    'funnel.create',
-    'funnel.edit',
     // Landing governance (granular)
     'landing.create',
     'landing.edit',
@@ -241,8 +231,6 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing_page.create',
     'landing_page.submit',
     'audit.view',
-    // Funnel (view only)
-    'funnel.view',
     // Landing governance (granular)
     'landing.create',
     'landing.edit',
@@ -275,12 +263,6 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing_page.publish',
     'landing_page.delete',
     'audit.view',
-    // Funnel (full)
-    'funnel.view',
-    'funnel.create',
-    'funnel.edit',
-    'funnel.publish',
-    'funnel.delete',
     // Landing governance (granular)
     'landing.create',
     'landing.edit',

@@ -173,34 +173,6 @@ serve(async (req) => {
     lines.push("# TYPE revenue_forecast_value gauge");
     lines.push(`revenue_forecast_value ${forecastMrr.toFixed(2)}`);
 
-    // ── marketing_funnel_conversion_rate ──────────────────────
-    // Average conversion across active funnels (placeholder: derived from referral data)
-    const totalTracking = (trackingRes.data ?? []).length;
-    const funnelConvRate = totalTracking > 0
-      ? (conversions.length / totalTracking) * 100
-      : 0;
-    lines.push("# HELP marketing_funnel_conversion_rate Average marketing funnel conversion rate (%)");
-    lines.push("# TYPE marketing_funnel_conversion_rate gauge");
-    lines.push(`marketing_funnel_conversion_rate ${funnelConvRate.toFixed(2)}`);
-
-    // ── growth_ai_suggestions_total ──────────────────────────
-    const { count: aiSuggestionsCount } = await sb
-      .from("landing_pages")
-      .select("id", { count: "exact", head: true })
-      .in("status", ["draft", "review"]);
-    lines.push("# HELP growth_ai_suggestions_total Total Growth AI optimization suggestions generated");
-    lines.push("# TYPE growth_ai_suggestions_total counter");
-    lines.push(`growth_ai_suggestions_total ${aiSuggestionsCount ?? 0}`);
-
-    // ── marketing_pipeline_drop_rate ─────────────────────────
-    const pendingTracking = (trackingRes.data ?? []).filter(t => t.status === "pending").length;
-    const pipelineDropRate = totalTracking > 0
-      ? (pendingTracking / totalTracking) * 100
-      : 0;
-    lines.push("# HELP marketing_pipeline_drop_rate Marketing pipeline drop-off rate (%)");
-    lines.push("# TYPE marketing_pipeline_drop_rate gauge");
-    lines.push(`marketing_pipeline_drop_rate ${pipelineDropRate.toFixed(2)}`);
-
     // Trailing newline required by Prometheus spec
     return new Response(lines.join("\n") + "\n", {
       headers: {

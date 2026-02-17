@@ -49,12 +49,7 @@ export type PlatformEventType =
   | 'LandingVersionCreated'
   | 'LandingVersionApproved'
   | 'LandingVersionPublished'
-  | 'LandingVersionSuperseded'
-  // Marketing Digital OS — Funnel & Pipeline events
-  | 'FunnelCreated'
-  | 'FunnelActivated'
-  | 'AIOptimizationSuggested'
-  | 'PipelineConversionUpdated';
+  | 'LandingVersionSuperseded';
 
 export interface PlatformEventPayload {
   type: PlatformEventType;
@@ -63,7 +58,7 @@ export interface PlatformEventPayload {
   actorId: string;
   actorEmail?: string;
   /** Target entity */
-  targetType: 'platform_user' | 'tenant' | 'platform_role' | 'cognitive_layer' | 'billing' | 'marketing' | 'governance' | 'funnel' | 'pipeline';
+  targetType: 'platform_user' | 'tenant' | 'platform_role' | 'cognitive_layer' | 'billing' | 'marketing' | 'governance';
   targetId: string;
   /** Extra context */
   metadata?: Record<string, unknown>;

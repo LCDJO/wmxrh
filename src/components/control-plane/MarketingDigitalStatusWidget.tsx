@@ -1,10 +1,8 @@
 /**
  * MarketingDigitalStatusWidget — Control Plane widget showing:
- * - Funis ativos (active funnels)
- * - Campanhas com risco (campaigns at risk)
- * - Sugestões AI pendentes (pending AI suggestions)
  * - Active experiments
- * - Pages at risk
+ * - Pages at risk of performance decline
+ * - Automatic AI suggestions
  */
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,17 +10,13 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   FlaskConical, AlertTriangle, Lightbulb, TrendingDown, Activity, Clock,
-  ArrowUpRight, CheckCircle2, Filter, Megaphone, Brain,
+  ArrowUpRight, CheckCircle2,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { abTestingManager } from '@/domains/platform-growth/autonomous-marketing/ab-testing-manager';
 import { landingPerformanceRanker } from '@/domains/platform-growth/autonomous-marketing/landing-performance-ranker';
 import { aiExperimentAdvisor } from '@/domains/platform-growth/autonomous-marketing/ai-experiment-advisor';
-import { funnelOrchestrator } from '@/domains/marketing-digital-os';
-import { campaignLifecycleManager } from '@/domains/marketing-digital-os';
-import { growthAISupportLayer } from '@/domains/platform-growth/growth-ai-support-layer';
 import type { LandingPage } from '@/domains/platform-growth/types';
-import type { MarketingFunnel, FunnelHealth } from '@/domains/marketing-digital-os';
 
 interface AtRiskPage {
   id: string;
@@ -35,7 +29,7 @@ interface AISuggestion {
   id: string;
   title: string;
   expectedLift: string;
-  type: 'headline' | 'experiment' | 'layout' | 'funnel' | 'campaign';
+  type: 'headline' | 'experiment' | 'layout';
 }
 
 interface ActiveExp {
@@ -46,27 +40,10 @@ interface ActiveExp {
   hasSignificance: boolean;
 }
 
-interface FunnelSummary {
-  id: string;
-  name: string;
-  conversionRate: number;
-  weakestStage: string;
-  dropoffRate: number;
-}
-
-interface CampaignRisk {
-  id: string;
-  name: string;
-  status: string;
-  issue: string;
-}
-
 export function MarketingDigitalStatusWidget() {
   const [experiments, setExperiments] = useState<ActiveExp[]>([]);
   const [atRisk, setAtRisk] = useState<AtRiskPage[]>([]);
   const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
-  const [funnels, setFunnels] = useState<FunnelSummary[]>([]);
-  const [campaignRisks, setCampaignRisks] = useState<CampaignRisk[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -106,40 +83,6 @@ export function MarketingDigitalStatusWidget() {
         };
       });
 
-      // ── Funnels ──
-      try {
-        const allFunnels = await funnelOrchestrator.buildAllFunnels();
-        const funnelSummaries: FunnelSummary[] = allFunnels.map(f => {
-          const health = funnelOrchestrator.analyzeFunnelHealth(f);
-          return {
-            id: f.id,
-            name: f.name,
-            conversionRate: f.overallConversionRate,
-            weakestStage: health.weakestStage,
-            dropoffRate: health.dropoffRate,
-          };
-        });
-        setFunnels(funnelSummaries);
-      } catch { setFunnels([]); }
-
-      // ── Campaigns at risk ──
-      try {
-        const allCampaigns = campaignLifecycleManager.getAll();
-        const risks: CampaignRisk[] = allCampaigns
-          .filter(c => c.status === 'active' || c.status === 'paused')
-          .filter(c => {
-            // Campaign is at risk if it has no assets or has been paused
-            return c.status === 'paused' || c.assets.length === 0;
-          })
-          .map(c => ({
-            id: c.id,
-            name: c.name,
-            status: c.status,
-            issue: c.status === 'paused' ? 'Campanha pausada' : 'Sem ativos vinculados',
-          }));
-        setCampaignRisks(risks);
-      } catch { setCampaignRisks([]); }
-
       // Active experiments
       const running = abTestingManager.listByStatus('running');
       const exps: ActiveExp[] = running.map(e => {
@@ -163,6 +106,7 @@ export function MarketingDigitalStatusWidget() {
         .sort((a, b) => a.overallScore - b.overallScore)
         .slice(0, 5)
         .map(s => {
+          // Use the individual score dimensions to find the weakest area
           const dims: Record<string, number> = {
             conversion: s.conversionScore,
             engagement: s.engagementScore,
@@ -179,7 +123,7 @@ export function MarketingDigitalStatusWidget() {
         });
       setAtRisk(risky);
 
-      // AI suggestions (includes funnel + campaign suggestions)
+      // AI suggestions
       const advisorSuggestions = aiExperimentAdvisor.analyzeRunningExperiments();
       const mapped: AISuggestion[] = advisorSuggestions.slice(0, 5).map((s, i) => ({
         id: `sug-${i}`,
@@ -188,24 +132,8 @@ export function MarketingDigitalStatusWidget() {
         type: s.type === 'new_experiment' ? 'experiment' : s.type === 'scale_winner' ? 'layout' : 'headline',
       }));
 
-      // Add funnel optimization suggestions
-      try {
-        const allFunnels = await funnelOrchestrator.buildAllFunnels();
-        for (const f of allFunnels) {
-          const health = funnelOrchestrator.analyzeFunnelHealth(f);
-          if (health.dropoffRate > 50) {
-            mapped.push({
-              id: `funnel-${f.id}`,
-              title: `Funil "${f.name}": otimizar ${health.weakestStage} (${Math.round(health.dropoffRate)}% dropoff)`,
-              expectedLift: '+10-20%',
-              type: 'funnel',
-            });
-          }
-        }
-      } catch { /* ignore */ }
-
-      // Add page-level AI suggestions
-      if (mapped.length < 6 && pages.length > 0) {
+      // Add fallback suggestions if none from advisor
+      if (mapped.length === 0 && pages.length > 0) {
         const lowConv = pages.filter(p => p.analytics.conversionRate < 2 && p.analytics.views > 10);
         for (const p of lowConv.slice(0, 3)) {
           mapped.push({
@@ -232,79 +160,82 @@ export function MarketingDigitalStatusWidget() {
     );
   }
 
-  const totalIssues = atRisk.length + campaignRisks.length;
-
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Activity className="h-4 w-4 text-primary" />
-            Marketing Digital OS — Status
+            Marketing Digital Status
           </CardTitle>
           <Badge variant="outline" className="text-[10px]">
-            {funnels.length} funis · {totalIssues} riscos · {suggestions.length} sugestões
+            {experiments.length} exp. · {atRisk.length} riscos · {suggestions.length} sugestões
           </Badge>
         </div>
         <CardDescription className="text-xs">
-          Funis ativos, campanhas com risco e sugestões de otimização IA
+          Visão consolidada de experimentos, riscos e oportunidades de marketing
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Active Funnels */}
+        {/* Active Experiments */}
         <div>
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <Filter className="h-3 w-3" /> Funis Ativos
+            <FlaskConical className="h-3 w-3" /> Experimentos Ativos
           </h4>
-          {funnels.length === 0 ? (
+          {experiments.length === 0 ? (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-border/50">
               <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[11px] text-muted-foreground">Nenhum funil ativo</span>
+              <span className="text-[11px] text-muted-foreground">Nenhum experimento em execução</span>
             </div>
           ) : (
             <div className="space-y-1.5">
-              {funnels.slice(0, 4).map(f => (
-                <div key={f.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
-                  <Filter className={`h-3.5 w-3.5 shrink-0 ${f.dropoffRate > 50 ? 'text-destructive' : 'text-primary'}`} />
+              {experiments.map(exp => (
+                <div key={exp.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
+                  <FlaskConical className={`h-3.5 w-3.5 shrink-0 ${exp.hasSignificance ? 'text-emerald-500' : 'text-primary'}`} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium truncate">{f.name}</div>
-                    <div className="text-[10px] text-muted-foreground">
-                      Conv: {f.conversionRate}% · Gargalo: {f.weakestStage}
+                    <div className="text-xs font-medium truncate">{exp.name}</div>
+                    <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                      {exp.variants} variantes
+                      <span>·</span>
+                      <Clock className="h-2.5 w-2.5" />
+                      {exp.daysRunning}d
                     </div>
                   </div>
-                  <Badge
-                    variant={f.dropoffRate > 60 ? 'destructive' : f.dropoffRate > 40 ? 'secondary' : 'outline'}
-                    className="text-[9px] h-4 shrink-0"
-                  >
-                    {Math.round(f.dropoffRate)}% drop
-                  </Badge>
+                  {exp.hasSignificance && (
+                    <Badge variant="default" className="text-[9px] h-4 bg-emerald-500/20 text-emerald-600 border-emerald-500/30">
+                      Significante
+                    </Badge>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Campaigns at Risk */}
+        {/* Pages at Risk */}
         <div>
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <Megaphone className="h-3 w-3" /> Campanhas com Risco
+            <TrendingDown className="h-3 w-3" /> Páginas com Risco de Queda
           </h4>
-          {campaignRisks.length === 0 ? (
+          {atRisk.length === 0 ? (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-border/50">
               <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[11px] text-muted-foreground">Todas as campanhas saudáveis</span>
+              <span className="text-[11px] text-muted-foreground">Todas as páginas com score saudável</span>
             </div>
           ) : (
             <div className="space-y-1.5">
-              {campaignRisks.map(c => (
-                <div key={c.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              {atRisk.map(page => (
+                <div key={page.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
+                  <AlertTriangle className={`h-3.5 w-3.5 shrink-0 ${page.score < 30 ? 'text-destructive' : 'text-amber-500'}`} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium truncate">{c.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{c.issue}</div>
+                    <div className="text-xs font-medium truncate">{page.name}</div>
+                    <div className="text-[10px] text-muted-foreground">{page.mainIssue}</div>
                   </div>
-                  <Badge variant="secondary" className="text-[9px] h-4 shrink-0">
-                    {c.status}
+                  <Badge
+                    variant={page.score < 30 ? 'destructive' : 'secondary'}
+                    className="text-[9px] h-4 shrink-0"
+                  >
+                    {page.score}/100
                   </Badge>
                 </div>
               ))}
@@ -315,7 +246,7 @@ export function MarketingDigitalStatusWidget() {
         {/* AI Suggestions */}
         <div>
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <Brain className="h-3 w-3" /> Sugestões AI Pendentes
+            <Lightbulb className="h-3 w-3" /> Sugestões Automáticas
           </h4>
           {suggestions.length === 0 ? (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-border/50">
@@ -323,7 +254,7 @@ export function MarketingDigitalStatusWidget() {
               <span className="text-[11px] text-muted-foreground">Sem sugestões no momento</span>
             </div>
           ) : (
-            <ScrollArea className={suggestions.length > 4 ? 'h-[160px]' : ''}>
+            <ScrollArea className={suggestions.length > 3 ? 'h-[140px]' : ''}>
               <div className="space-y-1.5">
                 {suggestions.map(sug => (
                   <div key={sug.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
@@ -344,59 +275,6 @@ export function MarketingDigitalStatusWidget() {
             </ScrollArea>
           )}
         </div>
-
-        {/* Active Experiments (compact) */}
-        {experiments.length > 0 && (
-          <div>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <FlaskConical className="h-3 w-3" /> Experimentos Ativos
-            </h4>
-            <div className="space-y-1.5">
-              {experiments.map(exp => (
-                <div key={exp.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
-                  <FlaskConical className={`h-3.5 w-3.5 shrink-0 ${exp.hasSignificance ? 'text-emerald-500' : 'text-primary'}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium truncate">{exp.name}</div>
-                    <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-                      {exp.variants} variantes · <Clock className="h-2.5 w-2.5" /> {exp.daysRunning}d
-                    </div>
-                  </div>
-                  {exp.hasSignificance && (
-                    <Badge variant="secondary" className="text-[9px] h-4">
-                      Significante
-                    </Badge>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Pages at Risk (compact) */}
-        {atRisk.length > 0 && (
-          <div>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <TrendingDown className="h-3 w-3" /> Páginas com Risco
-            </h4>
-            <div className="space-y-1.5">
-              {atRisk.map(page => (
-                <div key={page.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
-                  <AlertTriangle className={`h-3.5 w-3.5 shrink-0 ${page.score < 30 ? 'text-destructive' : 'text-amber-500'}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium truncate">{page.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{page.mainIssue}</div>
-                  </div>
-                  <Badge
-                    variant={page.score < 30 ? 'destructive' : 'secondary'}
-                    className="text-[9px] h-4 shrink-0"
-                  >
-                    {page.score}/100
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

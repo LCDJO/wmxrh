@@ -30,8 +30,6 @@ import {
   TrendingUp,
   Rocket,
   Globe,
-  Filter,
-  GitBranch,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -110,18 +108,17 @@ const NAV_ITEMS: PlatformNavItem[] = [
   },
   {
     to: '/platform/marketing-digital',
-    label: 'Marketing Digital OS',
+    label: 'Marketing Digital',
     icon: Rocket,
     requiredPermission: 'growth.view',
     children: [
       { to: '/platform/marketing/dashboard', label: 'Dashboard' },
       { to: '/platform/website', label: 'Website', requiredPermission: 'website.view' },
       { to: '/platform/landing', label: 'Landing Pages', requiredPermission: 'landing_page.view' },
+      { to: '/platform/marketing/insights', label: 'Insights de Crescimento' },
       { to: '/platform/marketing/funnels', label: 'Funis' },
       { to: '/platform/marketing/pipeline', label: 'Pipeline de Conversão' },
       { to: '/platform/marketing/campaigns', label: 'Campanhas' },
-      { to: '/platform/marketing/insights', label: 'Growth AI Insights' },
-      { to: '/platform/growth/designer', label: 'AI Designer' },
     ],
   },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
