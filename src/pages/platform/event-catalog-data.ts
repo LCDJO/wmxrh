@@ -32,6 +32,11 @@ const eventModules = import.meta.glob<{ __DOMAIN_CATALOG?: DomainRegistry | Doma
     '../../domains/**/*event*.ts',
     '../../domains/**/*events*.ts',
     '../../modules/**/*event*.ts',
+    '!**/__tests__/**',
+    '!**/*.test.ts',
+    '!**/*.spec.ts',
+    '!**/*.test.tsx',
+    '!**/*.spec.tsx',
   ],
   { eager: true },
 );
