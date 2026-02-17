@@ -342,6 +342,17 @@ const DOMAIN_REGISTRIES: DomainRegistry[] = [
       { name: 'RollbackApplied', description: 'Rollback de versão aplicado em landing page' },
     ],
   },
+
+  // ─── Menu Structure ───
+  {
+    domain: 'Menu Structure',
+    color: 'hsl(190 60% 45%)',
+    events: [
+      { name: 'MenuStructureUpdated', description: 'Estrutura completa do menu salva/atualizada' },
+      { name: 'MenuItemMoved', description: 'Item de menu movido (reordenado ou reparentado)' },
+      { name: 'MenuVersionCreated', description: 'Snapshot versionado da estrutura de menu criado' },
+    ],
+  },
 ];
 
 // ── Builder ────────────────────────────────────────────────────

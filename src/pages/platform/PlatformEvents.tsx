@@ -41,6 +41,7 @@ const DOMAIN_META: Record<string, { icon: typeof Shield }> = {
   'Platform IAM':         { icon: KeyRound },
   'Platform Cognitive':   { icon: Sparkles },
   'Revenue Intelligence': { icon: TrendingUp },
+  'Menu Structure':       { icon: Layers },
 };
 
 const DEFAULT_DOMAIN_META = { icon: Zap };
