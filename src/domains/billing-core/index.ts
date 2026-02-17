@@ -113,6 +113,7 @@ export type {
   BillingAdjustment,
   CouponManagerAPI,
   CouponValidationServiceAPI,
+  CouponValidationOpts,
   CouponLifecycleManagerAPI,
   DiscountEngineAPI,
   BillingAdjustmentServiceAPI,

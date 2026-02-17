@@ -1320,6 +1320,8 @@ export type Database = {
       }
       coupons: {
         Row: {
+          allowed_modules: string[] | null
+          allowed_payment_methods: string[] | null
           applicable_billing_cycles: string[] | null
           applicable_plan_ids: string[] | null
           applies_to: string
@@ -1339,11 +1341,14 @@ export type Database = {
           min_plan_tier: string | null
           name: string
           status: string
+          tenant_scope: string | null
           updated_at: string
           valid_from: string
           valid_until: string | null
         }
         Insert: {
+          allowed_modules?: string[] | null
+          allowed_payment_methods?: string[] | null
           applicable_billing_cycles?: string[] | null
           applicable_plan_ids?: string[] | null
           applies_to?: string
@@ -1363,11 +1368,14 @@ export type Database = {
           min_plan_tier?: string | null
           name: string
           status?: string
+          tenant_scope?: string | null
           updated_at?: string
           valid_from?: string
           valid_until?: string | null
         }
         Update: {
+          allowed_modules?: string[] | null
+          allowed_payment_methods?: string[] | null
           applicable_billing_cycles?: string[] | null
           applicable_plan_ids?: string[] | null
           applies_to?: string
@@ -1387,6 +1395,7 @@ export type Database = {
           min_plan_tier?: string | null
           name?: string
           status?: string
+          tenant_scope?: string | null
           updated_at?: string
           valid_from?: string
           valid_until?: string | null
