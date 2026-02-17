@@ -532,13 +532,19 @@ export function createReferralManager(): ReferralManagerAPI {
     },
 
     // ── Links ──
-    async generateLink(userId, programId) {
+    async generateLink(userId, options) {
       const code = generateReferralCode();
-      const url = `${window.location.origin}/signup?ref=${code}`;
+      const url = `${window.location.origin}/ref/${code}`;
 
       const { data, error } = await supabase
         .from('referral_links')
-        .insert({ referrer_user_id: userId, code, url, program_id: programId ?? null } as any)
+        .insert({
+          referrer_user_id: userId,
+          owner_tenant_id: options?.tenantId ?? null,
+          code,
+          url,
+          program_id: options?.programId ?? null,
+        } as any)
         .select()
         .single();
 
@@ -546,9 +552,10 @@ export function createReferralManager(): ReferralManagerAPI {
       return data as unknown as ReferralLink;
     },
 
-    async getLinks(userId) {
+    async getLinks(userId, tenantId) {
       let query = supabase.from('referral_links').select('*').order('created_at', { ascending: false });
       if (userId) query = query.eq('referrer_user_id', userId);
+      if (tenantId) query = query.eq('owner_tenant_id', tenantId);
       const { data } = await query;
       return (data ?? []) as unknown as ReferralLink[];
     },

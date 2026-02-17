@@ -84,6 +84,7 @@ export interface ReferralProgram {
 export interface ReferralLink {
   id: string;
   referrer_user_id: string;
+  owner_tenant_id: string | null;
   code: string;
   url: string;
   is_active: boolean;
@@ -168,8 +169,8 @@ export interface ReferralManagerAPI {
   getPrograms(activeOnly?: boolean): Promise<ReferralProgram[]>;
   updateProgram(id: string, updates: Partial<ReferralProgram>): Promise<void>;
   // Links
-  generateLink(userId: string, programId?: string): Promise<ReferralLink>;
-  getLinks(userId?: string): Promise<ReferralLink[]>;
+  generateLink(userId: string, options?: { programId?: string; tenantId?: string }): Promise<ReferralLink>;
+  getLinks(userId?: string, tenantId?: string): Promise<ReferralLink[]>;
   getTracking(linkId?: string): Promise<ReferralTracking[]>;
   recordConversion(trackingId: string, planId: string, paymentBrl: number): Promise<void>;
 }

@@ -4473,6 +4473,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          owner_tenant_id: string | null
           program_id: string | null
           referrer_user_id: string
           total_clicks: number
@@ -4487,6 +4488,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          owner_tenant_id?: string | null
           program_id?: string | null
           referrer_user_id: string
           total_clicks?: number
@@ -4501,6 +4503,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          owner_tenant_id?: string | null
           program_id?: string | null
           referrer_user_id?: string
           total_clicks?: number
@@ -4511,6 +4514,13 @@ export type Database = {
           url?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "referral_links_owner_tenant_id_fkey"
+            columns: ["owner_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "referral_links_program_id_fkey"
             columns: ["program_id"]
