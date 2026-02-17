@@ -58,8 +58,8 @@ const TRANSITION_MAP: Record<LandingPageStatus, TransitionRule[]> = {
 // Deletion Rules
 // ═══════════════════════════════════
 
-/** Statuses where deletion is BLOCKED */
-const NON_DELETABLE_STATUSES: readonly LandingPageStatus[] = ['approved', 'published', 'archived'];
+/** Only 'draft' status allows deletion. Everything else is blocked. */
+const DELETABLE_STATUSES: readonly LandingPageStatus[] = ['draft'];
 
 // ═══════════════════════════════════
 // Machine Functions
@@ -113,9 +113,34 @@ export function validateTransition(
 
 /**
  * Checks if a landing page in the given status can be deleted.
+ * Only drafts can be deleted. After submission, deletion is blocked.
  */
 export function canDelete(status: LandingPageStatus): boolean {
-  return !NON_DELETABLE_STATUSES.includes(status);
+  return DELETABLE_STATUSES.includes(status);
+}
+
+/**
+ * Checks if a user can delete a specific landing page.
+ * - PlatformMarketing can delete their OWN drafts only
+ * - PlatformMarketingDirector / SuperAdmin can delete ANY draft
+ */
+export function canDeletePage(
+  status: LandingPageStatus,
+  role: PlatformRoleType | null | undefined,
+  pageCreatedBy: string | null,
+  currentUserId: string | null,
+): boolean {
+  if (!canDelete(status) || !role) return false;
+
+  // Directors and SuperAdmins can delete any draft
+  if (role === 'platform_marketing_director' || role === 'platform_super_admin') return true;
+
+  // Marketing can delete only their own drafts
+  if (role === 'platform_marketing' || role === 'platform_marketing_team') {
+    return !!pageCreatedBy && !!currentUserId && pageCreatedBy === currentUserId;
+  }
+
+  return false;
 }
 
 /**
@@ -125,7 +150,7 @@ export function validateDeletion(status: LandingPageStatus): void {
   if (!canDelete(status)) {
     throw new Error(
       `Landing page com status "${status}" não pode ser excluída. ` +
-      `Somente páginas em "draft" ou "submitted" podem ser removidas.`
+      `Somente páginas em "draft" podem ser removidas.`
     );
   }
 }
