@@ -78,11 +78,11 @@ function fromUGEConflicts(analysis: AnalysisResult): GovernanceInsight[] {
       ...conflict.roles.map(r => ({ type: 'role' as const, id: r.originalId, label: r.label, domain: r.domain })),
     ],
     recommendation: 'Remover um dos cargos conflitantes ou criar um cargo combinado com restrições adequadas.',
-    auto_remediable: true,
+    auto_remediable: false,
     remediation_action: buildRemediation(
       'remove_role',
-      `Remover cargo de menor prioridade do usuário ${conflict.user.label}`,
-      'Reduz risco de fraude por segregação inadequada',
+      `Sugestão: remover cargo de menor prioridade do usuário ${conflict.user.label}`,
+      'Reduz risco de fraude por segregação inadequada — requer aprovação manual',
       conflict.roles.map((r, i) => ({
         order: i + 1,
         action: 'evaluate_role_removal',
@@ -125,11 +125,11 @@ function fromSoDPolicyMatrix(snapshot: UnifiedGraphSnapshot): GovernanceInsight[
             { type: 'role', id: matchB.originalId, label: matchB.label, domain: matchB.domain },
           ],
           recommendation: `Remover "${matchA.label}" ou "${matchB.label}" do usuário ${user.label}. ${policy.reason}.`,
-          auto_remediable: true,
+          auto_remediable: false,
           remediation_action: buildRemediation(
             'remove_role',
-            `Resolver conflito SoD: ${matchA.label} ↔ ${matchB.label}`,
-            `Eliminação de conflito de segregação de funções — ${policy.reason}`,
+            `Sugestão: resolver conflito SoD: ${matchA.label} ↔ ${matchB.label}`,
+            `Eliminação de conflito de segregação de funções — requer aprovação manual`,
             [
               { order: 1, action: 'evaluate_business_need', target: user.originalId, details: `Determinar qual cargo é essencial para ${user.label}` },
               { order: 2, action: 'remove_role', target: matchB.originalId, details: `Remover "${matchB.label}" (menor prioridade presumida)` },

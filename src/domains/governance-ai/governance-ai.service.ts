@@ -11,6 +11,7 @@ import { assessRisk } from '@/domains/security/kernel/unified-graph-engine/risk-
 import { runHeuristicScan } from './heuristic-engine';
 import type { GovernanceInsight, GovernanceAIRequest, GovernanceAIResponse, GovernanceAIState } from './types';
 import { supabase } from '@/integrations/supabase/client';
+import { emitRiskDetected, emitConflictDetected } from './governance-events';
 
 export class GovernanceAIService {
   private state: GovernanceAIState = {
@@ -55,6 +56,14 @@ export class GovernanceAIService {
       this.state.last_scan_at = Date.now();
       this.state.scanning = false;
       this.notify();
+
+      // Emit governance events (read-only / suggestion-only)
+      emitRiskDetected(insights);
+      for (const insight of insights) {
+        if (insight.category === 'sod_conflict' || insight.category === 'role_overlap' || insight.category === 'privilege_escalation') {
+          emitConflictDetected(insight);
+        }
+      }
 
       return insights;
     } catch (err) {

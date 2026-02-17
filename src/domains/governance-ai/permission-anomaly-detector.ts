@@ -48,11 +48,11 @@ function detectDuplicateRoles(
           { type: 'role', id: dup.roleB.originalId, label: dup.roleB.label, domain: dup.roleB.domain },
         ],
         recommendation: `Remover a role com menor escopo ("${dup.roleB.label}") pois suas permissões já estão cobertas.`,
-        auto_remediable: true,
+        auto_remediable: false,
         remediation_action: buildRemediation(
           'remove_role',
-          `Remover role redundante "${dup.roleB.label}" do usuário ${user.label}`,
-          `Elimina redundância sem impacto funcional`,
+          `Sugestão: remover role redundante "${dup.roleB.label}" do usuário ${user.label}`,
+          `Elimina redundância sem impacto funcional — requer aprovação manual`,
           [
             { order: 1, action: 'compare_permissions', target: dup.roleB.originalId, details: `Confirmar que todas as ${dup.sharedPermissions.length} permissões compartilhadas estão cobertas por "${dup.roleA.label}"` },
             { order: 2, action: 'remove_role', target: dup.roleB.originalId, details: `Remover "${dup.roleB.label}" do usuário` },
@@ -207,11 +207,11 @@ function detectRoleConflicts(
           ...roles.map(r => ({ type: 'role' as const, id: r.originalId, label: r.label, domain: r.domain })),
         ],
         recommendation: 'Remover o cargo read-only ou o cargo administrativo para eliminar ambiguidade.',
-        auto_remediable: true,
+        auto_remediable: false,
         remediation_action: buildRemediation(
           'remove_role',
-          `Resolver conflito de escopo para ${user.label}`,
-          `Elimina ambiguidade de permissões`,
+          `Sugestão: resolver conflito de escopo para ${user.label}`,
+          `Elimina ambiguidade de permissões — requer aprovação manual`,
           [
             { order: 1, action: 'identify_intent', target: user.originalId, details: 'Determinar se o usuário deve ter acesso read-only ou administrativo' },
             { order: 2, action: 'remove_role', target: 'conflicting_role', details: 'Remover o cargo que contradiz a intenção' },
