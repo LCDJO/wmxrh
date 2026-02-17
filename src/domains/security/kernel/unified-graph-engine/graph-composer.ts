@@ -7,6 +7,7 @@
  */
 
 import { graphRegistry } from './graph-registry';
+import { emitUGEEvent } from './uge-events';
 import type {
   GraphDomain,
   UnifiedNode,
@@ -19,6 +20,8 @@ let snapshotVersion = 0;
 export function composeUnifiedGraph(
   domains?: GraphDomain[],
 ): UnifiedGraphSnapshot {
+  const t0 = performance.now();
+
   const providers = domains
     ? domains
         .map(d => graphRegistry.getProvider(d))
@@ -54,6 +57,19 @@ export function composeUnifiedGraph(
     builtAt: Date.now(),
     version: snapshotVersion,
   };
+
+  const compositionTimeMs = performance.now() - t0;
+
+  // Emit GraphComposed event
+  emitUGEEvent({
+    type: 'GraphComposed',
+    timestamp: Date.now(),
+    version: snapshotVersion,
+    domains: snapshot.domains,
+    nodeCount: nodes.size,
+    edgeCount: dedupedEdges.length,
+    compositionTimeMs: Math.round(compositionTimeMs * 100) / 100,
+  });
 
   // SECURITY: Freeze the snapshot — UGE is strictly read-only.
   return Object.freeze(snapshot);
