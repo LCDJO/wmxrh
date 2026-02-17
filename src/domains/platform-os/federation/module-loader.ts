@@ -86,6 +86,14 @@ export interface ModuleManifest {
   preload?: 'idle' | 'hover' | 'none';
 }
 
+/** Context for conditional module loading */
+export interface ModuleLoadContext {
+  tenant_id: string;
+  roles: string[];
+  permissions: string[];
+  feature_flags: string[];
+}
+
 export interface ModuleLoaderAPI {
   /** Register a lazy-loadable manifest */
   registerManifest(manifest: ModuleManifest): void;
@@ -97,6 +105,27 @@ export interface ModuleLoaderAPI {
   hasManifest(key: string): boolean;
   /** List all registered manifest keys */
   manifestKeys(): string[];
+  /** Get the full manifest for a module */
+  getManifest(key: string): ModuleManifest | null;
+  /**
+   * Resolve which modules should be loaded for a given context.
+   * Filters by tenant activation, feature flags, roles & permissions.
+   */
+  resolveForContext(
+    ctx: ModuleLoadContext,
+    isEnabledForTenant: (key: string, tenantId: string) => boolean,
+  ): ModuleManifest[];
+  /** Get all widgets from loaded modules matching a slot */
+  resolveWidgets(
+    slot: ModuleWidget['slot'],
+    ctx: ModuleLoadContext,
+    isEnabledForTenant: (key: string, tenantId: string) => boolean,
+  ): ModuleWidget[];
+  /** Get merged navigation entries from all eligible modules */
+  resolveNavigation(
+    ctx: ModuleLoadContext,
+    isEnabledForTenant: (key: string, tenantId: string) => boolean,
+  ): ModuleNavigationEntry[];
 }
 
 export function createModuleLoader(events: GlobalEventKernelAPI): ModuleLoaderAPI {
@@ -108,10 +137,13 @@ export function createModuleLoader(events: GlobalEventKernelAPI): ModuleLoaderAP
     manifests.set(manifest.module_id, manifest);
     events.emit('module:manifest_registered', 'ModuleLoader', { key: manifest.module_id });
 
-    // Schedule idle preload if requested
     if (manifest.preload === 'idle' && typeof requestIdleCallback !== 'undefined') {
       requestIdleCallback(() => preload(manifest.module_id));
     }
+  }
+
+  function getManifest(key: string): ModuleManifest | null {
+    return manifests.get(key) ?? null;
   }
 
   function getComponent(key: string): React.LazyExoticComponent<React.ComponentType<any>> | null {
@@ -159,5 +191,95 @@ export function createModuleLoader(events: GlobalEventKernelAPI): ModuleLoaderAP
     return [...manifests.keys()];
   }
 
-  return { registerManifest, getComponent, preload, hasManifest, manifestKeys };
+  // ── Context-aware resolution ──────────────────────────────
+
+  function isManifestEligible(
+    manifest: ModuleManifest,
+    ctx: ModuleLoadContext,
+    isEnabledForTenant: (key: string, tenantId: string) => boolean,
+  ): boolean {
+    // 1. Tenant activation check
+    if (!isEnabledForTenant(manifest.module_id, ctx.tenant_id)) return false;
+
+    // 2. Feature flag gate — at least one of the module's flags must be active
+    //    (if the module declares flags; no flags = always eligible)
+    if (manifest.feature_flags.length > 0) {
+      const hasActiveFlag = manifest.feature_flags.some(f => ctx.feature_flags.includes(f));
+      if (!hasActiveFlag) return false;
+    }
+
+    // 3. Permission check — user must have at least one module permission
+    if (manifest.permissions.length > 0) {
+      const hasPermission = manifest.permissions.some(p => ctx.permissions.includes(p));
+      if (!hasPermission) return false;
+    }
+
+    return true;
+  }
+
+  function resolveForContext(
+    ctx: ModuleLoadContext,
+    isEnabledForTenant: (key: string, tenantId: string) => boolean,
+  ): ModuleManifest[] {
+    const eligible: ModuleManifest[] = [];
+    for (const manifest of manifests.values()) {
+      if (isManifestEligible(manifest, ctx, isEnabledForTenant)) {
+        eligible.push(manifest);
+      }
+    }
+    events.emit('module:context_resolved', 'ModuleLoader', {
+      tenant_id: ctx.tenant_id,
+      resolved: eligible.map(m => m.module_id),
+    });
+    return eligible;
+  }
+
+  function resolveWidgets(
+    slot: ModuleWidget['slot'],
+    ctx: ModuleLoadContext,
+    isEnabledForTenant: (key: string, tenantId: string) => boolean,
+  ): ModuleWidget[] {
+    const eligible = resolveForContext(ctx, isEnabledForTenant);
+    const widgets: ModuleWidget[] = [];
+
+    for (const manifest of eligible) {
+      for (const widget of manifest.widgets) {
+        if (widget.slot !== slot) continue;
+        // Widget-level permission check
+        if (widget.required_permission && !ctx.permissions.includes(widget.required_permission)) continue;
+        widgets.push(widget);
+      }
+    }
+
+    return widgets.sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
+  }
+
+  function resolveNavigation(
+    ctx: ModuleLoadContext,
+    isEnabledForTenant: (key: string, tenantId: string) => boolean,
+  ): ModuleNavigationEntry[] {
+    const eligible = resolveForContext(ctx, isEnabledForTenant);
+    const entries: ModuleNavigationEntry[] = [];
+
+    for (const manifest of eligible) {
+      for (const entry of manifest.navigation_entries) {
+        if (entry.required_permission && !ctx.permissions.includes(entry.required_permission)) continue;
+        entries.push(entry);
+      }
+    }
+
+    return entries.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+  }
+
+  return {
+    registerManifest,
+    getComponent,
+    preload,
+    hasManifest,
+    manifestKeys,
+    getManifest,
+    resolveForContext,
+    resolveWidgets,
+    resolveNavigation,
+  };
 }
