@@ -84,7 +84,34 @@ export function createPaymentPolicyEngine(
     },
 
     isMethodAllowed(tenantId: string, method: PaymentMethod): boolean {
-      return this.getAllowedMethods(tenantId).includes(method);
+      return this.validatePaymentMethod(tenantId, method).valid;
+    },
+
+    validatePaymentMethod(tenantId: string, method: PaymentMethod, toPlanId?: string) {
+      // If toPlanId provided, validate against target plan's allowed methods
+      if (toPlanId) {
+        const target = planRegistry.get(toPlanId);
+        if (!target) return { valid: false, reason: 'Plano destino não encontrado' };
+        const policy = DEFAULT_POLICIES[target.tier] ?? DEFAULT_POLICIES.free;
+        if (!policy.allowed_methods.includes(method)) {
+          return {
+            valid: false,
+            reason: `Método "${method}" não é permitido no plano ${target.name}. Métodos aceitos: ${policy.allowed_methods.join(', ')}`,
+            allowed_methods: policy.allowed_methods,
+          };
+        }
+        return { valid: true, allowed_methods: policy.allowed_methods };
+      }
+      // Validate against current tenant plan
+      const allowed = this.getAllowedMethods(tenantId);
+      if (!allowed.includes(method)) {
+        return {
+          valid: false,
+          reason: `Método "${method}" não é permitido no plano atual. Métodos aceitos: ${allowed.join(', ')}`,
+          allowed_methods: allowed,
+        };
+      }
+      return { valid: true, allowed_methods: allowed };
     },
 
     canDowngrade(tenantId: string, toPlanId: string) {
