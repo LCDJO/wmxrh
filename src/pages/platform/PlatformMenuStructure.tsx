@@ -90,6 +90,8 @@ const createDefaultTree = (): MenuNode[] => [
       { id: 'growth-landing', label: 'Landing Pages', path: '/platform/growth/landing-pages' },
       { id: 'growth-conversions', label: 'Conversões', path: '/platform/growth/conversions' },
       { id: 'growth-fab', label: 'FAB Builder', path: '/platform/growth/fab-builder' },
+      { id: 'growth-submissions', label: 'Minhas Submissões', path: '/platform/growth/submissions' },
+      { id: 'growth-approvals', label: 'Fila de Aprovação', path: '/platform/growth/approvals' },
       { id: 'growth-versions', label: 'Versionamento & Publicação', path: '/platform/growth/version-publish' },
     ],
   },

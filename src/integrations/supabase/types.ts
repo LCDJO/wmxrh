@@ -2975,6 +2975,122 @@ export type Database = {
           },
         ]
       }
+      growth_submission_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          performed_by: string
+          performed_by_email: string
+          submission_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          performed_by: string
+          performed_by_email: string
+          submission_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          performed_by?: string
+          performed_by_email?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_submission_logs_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "growth_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      growth_submissions: {
+        Row: {
+          change_summary: string | null
+          content_id: string
+          content_snapshot: Json
+          content_title: string
+          content_type: string
+          created_at: string
+          diff_from_previous: Json | null
+          id: string
+          publish_approved_at: string | null
+          publish_approved_by: string | null
+          published_at: string | null
+          published_by: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_email: string | null
+          status: string
+          submitted_at: string
+          submitted_by: string
+          submitted_by_email: string
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          change_summary?: string | null
+          content_id: string
+          content_snapshot: Json
+          content_title: string
+          content_type: string
+          created_at?: string
+          diff_from_previous?: Json | null
+          id?: string
+          publish_approved_at?: string | null
+          publish_approved_by?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_email?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by: string
+          submitted_by_email: string
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          change_summary?: string | null
+          content_id?: string
+          content_snapshot?: Json
+          content_title?: string
+          content_type?: string
+          created_at?: string
+          diff_from_previous?: Json | null
+          id?: string
+          publish_approved_at?: string | null
+          publish_approved_by?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_email?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string
+          submitted_by_email?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
       health_programs: {
         Row: {
           company_group_id: string | null
@@ -6902,6 +7018,8 @@ export type Database = {
         | "platform_operations"
         | "platform_read_only"
         | "platform_fiscal"
+        | "platform_marketing_team"
+        | "platform_marketing_director"
       risk_category:
         | "fisico"
         | "quimico"
@@ -7170,6 +7288,8 @@ export const Constants = {
         "platform_operations",
         "platform_read_only",
         "platform_fiscal",
+        "platform_marketing_team",
+        "platform_marketing_director",
       ],
       risk_category: [
         "fisico",

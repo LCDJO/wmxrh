@@ -4,7 +4,7 @@
  */
 import { useState, useMemo, useCallback } from 'react';
 import {
-  GripVertical, Plus, Trash2, Eye, EyeOff, Sparkles, Save,
+  GripVertical, Plus, Trash2, Eye, EyeOff, Sparkles, Save, Send,
   Layout, Type, Star, CreditCard, MessageSquare, HelpCircle, ArrowDown,
   LayoutTemplate, ChevronRight, ToggleLeft, ToggleRight, Lock, Gift,
   Rocket, Building2, Zap,
@@ -25,6 +25,10 @@ import {
 } from '@/domains/platform-growth/landing-template-engine';
 import type { FABBlock, FABBlockType, FABContent } from '@/domains/platform-growth/types';
 import { LandingPageRenderer } from '@/components/landing/LandingPageRenderer';
+import { growthSubmissionService } from '@/domains/platform-growth/growth-submission.service';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
+import { hasPlatformPermission } from '@/domains/platform/platform-permissions';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -68,6 +72,10 @@ function createBlock(type: FABBlockType, order: number): FABBlock {
 
 export default function GrowthFABBuilder() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { identity } = usePlatformIdentity();
+  const canSubmit = hasPlatformPermission(identity?.role, 'growth.submit');
+  const canPublishAutonomously = hasPlatformPermission(identity?.role, 'growth.approve') && hasPlatformPermission(identity?.role, 'growth.publish');
 
   // ── FAB Editor state ──
   const [blocks, setBlocks] = useState<FABBlock[]>(() => [
@@ -85,6 +93,8 @@ export default function GrowthFABBuilder() {
   const [lpName, setLpName] = useState('');
   const [lpSlug, setLpSlug] = useState('');
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [changeSummary, setChangeSummary] = useState('');
 
   // ── Template state ──
   const templates = landingTemplateEngine.getAll();
@@ -204,6 +214,34 @@ export default function GrowthFABBuilder() {
     }
   };
 
+  /** Submit content for director/superadmin approval */
+  const handleSubmitForApproval = async (contentBlocks: FABBlock[]) => {
+    if (!lpName.trim() || !user) {
+      toast.error('Informe um nome para a Landing Page');
+      return;
+    }
+    const slug = lpSlug.trim() || lpName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    setSubmitting(true);
+    try {
+      await growthSubmissionService.submit({
+        content_type: 'landing_page',
+        content_id: slug,
+        content_title: lpName.trim(),
+        content_snapshot: { blocks: contentBlocks, industry, slug } as any,
+        change_summary: changeSummary || undefined,
+        submitted_by_email: user.email || '',
+      }, user.id);
+      toast.success('Submissão enviada para aprovação!', {
+        description: 'O Diretor de Marketing ou SuperAdmin precisam aprovar antes da publicação.',
+      });
+      navigate('/platform/growth/submissions');
+    } catch {
+      toast.error('Erro ao submeter para aprovação.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const enabledCount = templateSections.filter(s => s.enabled).length;
 
   return (
@@ -268,15 +306,25 @@ export default function GrowthFABBuilder() {
                       <Input value={industry} onChange={e => setIndustry(e.target.value)} placeholder="tech" className="h-8 text-sm" />
                     </div>
                   </div>
-                  <Button onClick={handleSave} disabled={saving} className="gap-1.5 shrink-0">
-                    <Save className="h-4 w-4" />
-                    {saving ? 'Salvando...' : 'Salvar como Rascunho'}
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button onClick={handleSave} disabled={saving} variant="outline" className="gap-1.5">
+                      <Save className="h-4 w-4" />
+                      {saving ? 'Salvando...' : 'Rascunho'}
+                    </Button>
+                    {canSubmit && (
+                      <Button onClick={() => handleSubmitForApproval(blocks)} disabled={submitting} className="gap-1.5">
+                        <Send className="h-4 w-4" />
+                        {submitting ? 'Enviando...' : 'Submeter para Aprovação'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2">
-                  A LP será salva como <Badge variant="outline" className="text-[9px] mx-1">rascunho</Badge>
-                  e ficará disponível em Landing Pages para revisão e autorização de publicação.
-                </p>
+                <div className="flex items-center gap-3 mt-2">
+                  <Input value={changeSummary} onChange={e => setChangeSummary(e.target.value)} placeholder="Resumo das alterações (opcional)" className="h-7 text-xs flex-1" />
+                  <p className="text-[10px] text-muted-foreground shrink-0">
+                    {canPublishAutonomously ? 'SuperAdmin: publicação autônoma disponível.' : 'Publicação requer aprovação do Diretor.'}
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
@@ -418,13 +466,31 @@ export default function GrowthFABBuilder() {
                       <Input value={lpSlug} onChange={e => setLpSlug(e.target.value)} placeholder="auto-gerado do nome" className="h-8 text-sm" />
                     </div>
                   </div>
-                  <Button onClick={handleSaveFromTemplate} disabled={saving} className="gap-1.5 shrink-0">
-                    <Save className="h-4 w-4" />
-                    {saving ? 'Salvando...' : 'Salvar como Rascunho'}
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button onClick={handleSaveFromTemplate} disabled={saving} variant="outline" className="gap-1.5">
+                      <Save className="h-4 w-4" />
+                      {saving ? 'Salvando...' : 'Rascunho'}
+                    </Button>
+                    {canSubmit && (
+                      <Button onClick={() => {
+                        const enabledSections = templateSections.filter(s => s.enabled);
+                        const tplBlocks: FABBlock[] = enabledSections.map((s, i) => ({
+                          id: s.id,
+                          type: s.type === 'fab' ? 'features' : s.type === 'referral_cta' ? 'cta' : s.type as FABBlockType,
+                          order: i,
+                          fab: createDefaultFAB(),
+                          content: {},
+                        }));
+                        handleSubmitForApproval(tplBlocks);
+                      }} disabled={submitting} className="gap-1.5">
+                        <Send className="h-4 w-4" />
+                        {submitting ? 'Enviando...' : 'Submeter para Aprovação'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-2">
-                  Criará uma LP com base no template selecionado como <Badge variant="outline" className="text-[9px] mx-1">rascunho</Badge>.
+                  Criará uma LP com base no template selecionado. {canPublishAutonomously ? 'SuperAdmin: publicação autônoma.' : 'Requer aprovação do Diretor.'}
                 </p>
               </CardContent>
             </Card>

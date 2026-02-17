@@ -84,6 +84,8 @@ import GrowthConversions from "./pages/platform/growth/GrowthConversions";
 import GrowthFABBuilder from "./pages/platform/growth/GrowthFABBuilder";
 import GrowthTemplateEngine from "./pages/platform/growth/GrowthTemplateEngine";
 import GrowthVersionPublish from "./pages/platform/growth/GrowthVersionPublish";
+import GrowthSubmissions from "./pages/platform/growth/GrowthSubmissions";
+import GrowthApprovals from "./pages/platform/growth/GrowthApprovals";
 import GrowthWebsiteDashboard from "./pages/platform/growth/GrowthWebsiteDashboard";
 import GrowthAIDesigner from "./pages/platform/growth/GrowthAIDesigner";
 import ReferralPage from "./pages/ReferralPage";
@@ -167,6 +169,8 @@ function AppRoutes() {
         <Route path="growth/fab-builder" element={<GrowthFABBuilder />} />
         <Route path="growth/template-engine" element={<GrowthTemplateEngine />} />
         <Route path="growth/version-publish" element={<GrowthVersionPublish />} />
+        <Route path="growth/submissions" element={<GrowthSubmissions />} />
+        <Route path="growth/approvals" element={<GrowthApprovals />} />
         <Route path="website" element={<GrowthWebsiteDashboard />} />
         <Route path="website/ai-designer" element={<GrowthAIDesigner />} />
         <Route path="website/templates" element={<GrowthTemplateEngine />} />

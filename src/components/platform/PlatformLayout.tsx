@@ -117,6 +117,8 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/growth/landing-pages', label: 'Landing Pages' },
       { to: '/platform/growth/conversions', label: 'Conversões' },
       { to: '/platform/growth/fab-builder', label: 'FAB Builder' },
+      { to: '/platform/growth/submissions', label: 'Minhas Submissões' },
+      { to: '/platform/growth/approvals', label: 'Fila de Aprovação' },
       { to: '/platform/growth/version-publish', label: 'Versionamento & Publicação' },
     ],
   },
