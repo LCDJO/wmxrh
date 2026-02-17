@@ -20,6 +20,7 @@ import { fabContentEngine } from '@/domains/platform-growth/landing-page-builder
 import { conversionTrackingService } from '@/domains/platform-growth/conversion-tracking-service';
 import { gtmInjectionService } from '@/domains/platform-growth/tag-manager-integration';
 import { referralTrackingService } from '@/domains/platform-growth/referral-tracking-service';
+import { seoOptimizationService } from '@/domains/platform-growth/seo-optimization-service';
 import { useAuth } from '@/contexts/AuthContext';
 import { HeroSection } from './HeroSection';
 import { FABSection } from './FABSection';
@@ -29,6 +30,8 @@ import { TestimonialsSection } from './TestimonialsSection';
 import { FAQSection } from './FAQSection';
 import { FooterSection } from './FooterSection';
 import { SiteNavbar } from './SiteNavbar';
+import { SEOHead } from './SEOHead';
+import { LazySection } from './LazySection';
 
 interface LandingPageRendererProps {
   blueprint?: LPCopyBlueprint;
@@ -168,40 +171,68 @@ export function LandingPageRenderer({
     }
   };
 
+  // ── SEO meta + JSON-LD ──
+  const baseUrl = window.location.origin;
+  const seoMeta = useMemo(() => {
+    if (!page) return null;
+    const metaTags = seoOptimizationService.generateMetaTags(page, blueprint, baseUrl);
+    const jsonLd = seoOptimizationService.generateJsonLd(page, blueprint, baseUrl);
+    return { metaTags, jsonLd };
+  }, [page, blueprint, baseUrl]);
+
   return (
     <div className="min-h-screen bg-background text-foreground" onClick={captureCtaClicks(handleCTAClick)}>
+      {/* Dynamic SEO head injection */}
+      {seoMeta && (
+        <SEOHead
+          metaTags={seoMeta.metaTags}
+          jsonLd={seoMeta.jsonLd}
+          preconnectOrigins={['https://fonts.googleapis.com', 'https://fonts.gstatic.com']}
+        />
+      )}
+
       <SiteNavbar domain={page?.slug ?? 'default'} />
 
-      {/* 1. Hero */}
+      {/* 1. Hero — always eager (above the fold) */}
       <HeroSection
         data={blueprint.hero}
         onCTAClick={() => handleTrialStart()}
       />
 
-      {/* 2. FAB */}
-      <FABSection
-        features={blueprint.features}
-        advantages={blueprint.advantages}
-        benefits={blueprint.benefits}
-      />
+      {/* 2. FAB — lazy */}
+      <LazySection minHeight="400px">
+        <FABSection
+          features={blueprint.features}
+          advantages={blueprint.advantages}
+          benefits={blueprint.benefits}
+        />
+      </LazySection>
 
-      {/* 3. Pricing — fires plan_selected + trial_start */}
-      <PricingSection
-        onPlanSelect={handlePlanSelected}
-        onTrialStart={handleTrialStart}
-      />
+      {/* 3. Pricing — lazy */}
+      <LazySection minHeight="350px">
+        <PricingSection
+          onPlanSelect={handlePlanSelected}
+          onTrialStart={handleTrialStart}
+        />
+      </LazySection>
 
-      {/* 4. Referral CTA — fires referral_signup */}
-      <ReferralCTA
-        referralCode={resolvedRef}
-        onReferralAction={handleReferralAction}
-      />
+      {/* 4. Referral CTA — lazy */}
+      <LazySection minHeight="200px">
+        <ReferralCTA
+          referralCode={resolvedRef}
+          onReferralAction={handleReferralAction}
+        />
+      </LazySection>
 
-      {/* 5. Testimonials */}
-      <TestimonialsSection data={blueprint.proof} />
+      {/* 5. Testimonials — lazy */}
+      <LazySection minHeight="300px">
+        <TestimonialsSection data={blueprint.proof} />
+      </LazySection>
 
-      {/* 6. FAQ */}
-      <FAQSection />
+      {/* 6. FAQ — lazy */}
+      <LazySection minHeight="300px">
+        <FAQSection />
+      </LazySection>
 
       {/* 7. Footer */}
       <FooterSection cta={blueprint.cta} />
