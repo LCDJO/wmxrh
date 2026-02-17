@@ -5170,6 +5170,15 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: undefined
       }
+      user_can_see_notification: {
+        Args: {
+          _company_id: string
+          _group_id: string
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       user_has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["tenant_role"][]
