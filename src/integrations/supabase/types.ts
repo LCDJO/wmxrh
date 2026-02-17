@@ -8031,6 +8031,7 @@ export type Database = {
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       generate_billing_alerts: { Args: never; Returns: undefined }
+      generate_support_protocol: { Args: never; Returns: string }
       get_cognitive_event_stats: { Args: { days_back?: number }; Returns: Json }
       get_platform_metrics: { Args: never; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
