@@ -38,6 +38,7 @@ import WorkforceIntelligence from "./pages/WorkforceIntelligence";
 import StrategicIntelligence from "./pages/StrategicIntelligence";
 import ESocialDashboard from "./pages/ESocialDashboard";
 import AgreementManagement from "./pages/AgreementManagement";
+import TenantCommunicationCenter from "./pages/TenantCommunicationCenter";
 import TenantAnnouncements from "./pages/TenantAnnouncements";
 import DocumentSignatureIntegrations from "./pages/DocumentSignatureIntegrations";
 import OccupationalCompliance from "./pages/OccupationalCompliance";
@@ -161,6 +162,7 @@ function AppRoutes() {
           } />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/announcements" element={<TenantAnnouncements />} />
+          <Route path="/communication-center" element={<TenantCommunicationCenter />} />
           <Route path="/audit" element={
             <ProtectedRoute navKey="audit"><Audit /></ProtectedRoute>
           } />
