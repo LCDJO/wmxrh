@@ -47,6 +47,18 @@ export const PLATFORM_EVENTS = {
   ModuleDisabled: 'platform:module_disabled',
   /** Module was upgraded to a new version */
   ModuleUpgraded: 'platform:module_upgraded',
+
+  // ── Website / Growth Events ────────────────────────────────
+  /** A website or landing page was published to production */
+  WebsitePublished: 'platform:website_published',
+  /** A new versioned snapshot of a landing page was created */
+  LandingVersionCreated: 'platform:landing_version_created',
+  /** AI Conversion Designer produced an optimization suggestion */
+  AIConversionSuggested: 'platform:ai_conversion_suggested',
+  /** FAB Content Engine generated a new Feature-Advantage-Benefit section */
+  FABSectionGenerated: 'platform:fab_section_generated',
+  /** Google Tag Manager container was injected into a published page */
+  GTMInjected: 'platform:gtm_injected',
 } as const;
 
 export type PlatformEventType = typeof PLATFORM_EVENTS[keyof typeof PLATFORM_EVENTS];
@@ -121,4 +133,50 @@ export interface ModuleUpgradedPayload {
   previous_version: string;
   new_version: string;
   breaking: boolean;
+}
+
+// ── Website / Growth Payloads ─────────────────────────────────
+
+export interface WebsitePublishedPayload {
+  page_id: string;
+  page_slug: string;
+  page_title: string;
+  version: number;
+  published_by: string;
+  publisher_role: string;
+  url: string;
+}
+
+export interface LandingVersionCreatedPayload {
+  page_id: string;
+  page_title: string;
+  version_number: number;
+  change_summary: string;
+  created_by: string;
+  snapshot_size_bytes: number;
+}
+
+export interface AIConversionSuggestedPayload {
+  page_id: string;
+  page_title: string;
+  suggestion_id: string;
+  category: string;
+  predicted_lift_pct: number;
+  confidence: number;
+}
+
+export interface FABSectionGeneratedPayload {
+  page_id: string;
+  block_id: string;
+  block_type: string;
+  fields_generated: ('feature' | 'advantage' | 'benefit')[];
+  generated_by: 'ai' | 'manual';
+}
+
+export interface GTMInjectedPayload {
+  page_id: string;
+  page_slug: string;
+  container_id: string;
+  events_count: number;
+  injected_by: string;
 }
