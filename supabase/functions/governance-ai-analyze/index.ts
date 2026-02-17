@@ -40,6 +40,20 @@ ${context.user_scores?.filter((u: any) => u.score >= 50).map((u: any) => `- ${u.
       ? 'Realize uma auditoria de compliance considerando LGPD, SOX e ISO 27001. Identifique gaps e sugira remediações.'
       : analysis_type === 'remediation_plan'
       ? 'Crie um plano detalhado de remediação para os insights detectados, ordenado por prioridade e estimativa de redução de risco.'
+      : analysis_type === 'referral_fraud'
+      ? `Analise os seguintes padrões de fraude em referral detectados pelo motor heurístico:
+
+Tipos de fraude detectados:
+- Abuso de indicações (referral_abuse): picos de volume, auto-referral, reward cap excedido
+- Loops de referral (referral_loop): cadeias circulares A→B→A ou A→B→C→A
+- Uso excessivo de cupons via referral (referral_coupon_abuse): múltiplos resgates, acúmulo de recompensas
+
+Para cada insight, forneça:
+1) Confirmação ou refutação do padrão (com grau de confiança)
+2) Impacto financeiro estimado
+3) Recomendação de remediação específica
+4) Se o padrão indica fraude organizada ou uso indevido acidental
+5) Projeção de risco se não remediado em 30 e 90 dias`
       : 'Analise as tendências de risco e projete cenários para 30 e 90 dias, considerando os padrões atuais.';
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

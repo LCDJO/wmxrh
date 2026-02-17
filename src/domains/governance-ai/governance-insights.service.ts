@@ -18,6 +18,7 @@ import { detectPermissionAnomalies } from './permission-anomaly-detector';
 import { detectRoleOverlaps } from './role-optimization-advisor';
 import { analyzeAccessRisk } from './access-risk-analyzer';
 import { analyzePlanUsage } from './plan-usage-analyzer';
+import { analyzeReferralFraud } from './referral-fraud-analyzer';
 
 const SEVERITY_ORDER: Record<InsightSeverity, number> = { critical: 0, warning: 1, info: 2 };
 
@@ -52,9 +53,12 @@ export function runHeuristicScan(
 export async function runAsyncAnalyzers(
   existingInsights: GovernanceInsight[] = [],
 ): Promise<GovernanceInsight[]> {
-  const planInsights = await analyzePlanUsage();
+  const [planInsights, referralInsights] = await Promise.all([
+    analyzePlanUsage(),
+    analyzeReferralFraud(),
+  ]);
 
-  const all = [...existingInsights, ...planInsights];
+  const all = [...existingInsights, ...planInsights, ...referralInsights];
 
   all.sort((a, b) => {
     const sd = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
