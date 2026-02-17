@@ -143,10 +143,11 @@ export interface TagManagerEvent {
 export interface ConversionEvent {
   id: string;
   landingPageId: string;
-  type: 'signup' | 'trial_start' | 'purchase' | 'referral_click';
+  type: 'signup' | 'trial_start' | 'purchase' | 'referral_click' | 'tenant_created' | 'plan_selected' | 'revenue_generated';
   source: string;
   referralCode?: string;
   tenantId?: string;
+  planSelected?: string;
   revenue?: number;
   metadata: Record<string, unknown>;
   trackedAt: string;
