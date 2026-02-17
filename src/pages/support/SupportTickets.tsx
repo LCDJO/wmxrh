@@ -189,27 +189,14 @@ function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTic
     if (agentRating === 0 && systemRating === 0) return;
     try {
       setSubmittingEval(true);
-      const promises: Promise<unknown>[] = [];
-      if (agentRating > 0) {
-        promises.push(EvaluationService.createTicketEvaluation({
-          ticket_id: ticket.id,
-          tenant_id: tenantId,
-          evaluator_id: userId,
-          agent_id: ticket.assigned_to,
-          rating: agentRating,
-          feedback: evalFeedback || undefined,
-        }));
-      }
-      if (systemRating > 0) {
-        promises.push(EvaluationService.createSystemRating({
-          tenant_id: tenantId,
-          user_id: userId,
-          category: 'ticket_closure',
-          rating: systemRating,
-          feedback: evalFeedback || undefined,
-        }));
-      }
-      await Promise.all(promises);
+      await EvaluationService.createTicketEvaluation({
+        ticket_id: ticket.id,
+        tenant_id: tenantId,
+        agent_id: ticket.assigned_to,
+        agent_score: agentRating > 0 ? agentRating : null,
+        system_score: systemRating > 0 ? systemRating : null,
+        comment: evalFeedback || undefined,
+      });
       toast.success('Avaliação enviada! Obrigado pelo feedback.');
       setExistingEval(true);
     } catch { toast.error('Erro ao enviar avaliação'); }

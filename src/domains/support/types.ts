@@ -75,10 +75,10 @@ export interface SupportEvaluation {
   id: string;
   ticket_id: string;
   tenant_id: string;
-  evaluator_id: string;
   agent_id: string | null;
-  rating: number;
-  feedback: string | null;
+  agent_score: number | null;
+  system_score: number | null;
+  comment: string | null;
   created_at: string;
 }
 

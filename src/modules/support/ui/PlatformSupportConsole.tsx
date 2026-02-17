@@ -489,7 +489,7 @@ function EvaluationsPanel() {
   }, []);
 
   const avgRating = evaluations.length > 0
-    ? (evaluations.reduce((s, e) => s + e.rating, 0) / evaluations.length).toFixed(1)
+    ? (evaluations.reduce((s, e) => s + (e.agent_score ?? 0), 0) / evaluations.length).toFixed(1)
     : '—';
 
   return (
@@ -515,7 +515,7 @@ function EvaluationsPanel() {
         <Card>
           <CardContent className="py-4 px-4 text-center">
             <p className="text-3xl font-bold text-foreground">
-              {evaluations.filter(e => e.rating >= 4).length}
+              {evaluations.filter(e => (e.agent_score ?? 0) >= 4).length}
             </p>
             <p className="text-xs text-muted-foreground mt-1">Positivas (≥4★)</p>
           </CardContent>
@@ -531,11 +531,11 @@ function EvaluationsPanel() {
               <CardContent className="py-3 px-4 flex items-center gap-4">
                 <div className="flex gap-0.5">
                   {[1, 2, 3, 4, 5].map(n => (
-                    <Star key={n} className="h-3.5 w-3.5" fill={ev.rating >= n ? 'hsl(45 90% 55%)' : 'transparent'} stroke="hsl(45 90% 55%)" />
+                    <Star key={n} className="h-3.5 w-3.5" fill={(ev.agent_score ?? 0) >= n ? 'hsl(45 90% 55%)' : 'transparent'} stroke="hsl(45 90% 55%)" />
                   ))}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground truncate">{ev.feedback || 'Sem comentário'}</p>
+                  <p className="text-sm text-foreground truncate">{ev.comment || 'Sem comentário'}</p>
                   <p className="text-xs text-muted-foreground">{new Date(ev.created_at).toLocaleDateString('pt-BR')}</p>
                 </div>
               </CardContent>

@@ -286,10 +286,10 @@ function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTic
       await EvaluationService.createTicketEvaluation({
         ticket_id: ticket.id,
         tenant_id: tenantId,
-        evaluator_id: userId,
         agent_id: ticket.assigned_to,
-        rating: evaluation.rating,
-        feedback: evaluation.feedback || undefined,
+        agent_score: evaluation.rating,
+        system_score: null,
+        comment: evaluation.feedback || undefined,
       });
       toast.success('Avaliação enviada!');
       setExistingEval(true);
