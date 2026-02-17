@@ -12,6 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { hasPlatformPermission } from '@/domains/platform/platform-permissions';
 import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import type { PlatformPermission } from '@/domains/platform/platform-permissions';
+import { runPrePublishGate } from '@/domains/platform-growth/pre-publish-compliance-gate';
+import { landingPageBuilder } from '@/domains/platform-growth/landing-page-builder';
 
 // ═══════════════════════════════════
 // Status Definitions
@@ -211,7 +213,7 @@ class WebsiteGovernanceEngine {
     websiteId: string,
     actor: ActorContext,
     notes?: string,
-  ): Promise<void> {
+  ): Promise<{ warnings: string[] }> {
     requirePermission(actor, 'website.publish', 'publish website');
 
     const { data: page } = await supabase
@@ -225,6 +227,28 @@ class WebsiteGovernanceEngine {
       throw new Error(`Cannot publish: website must be approved first (current: "${page.status}")`);
     }
 
+    // ── Pre-publish compliance gate (GrowthAI + ComplianceEngine + GTM) ──
+    const warnings: string[] = [];
+    try {
+      const fullPage = await landingPageBuilder.getById(websiteId);
+      if (fullPage) {
+        const gate = runPrePublishGate(fullPage);
+        const blocking = gate.issues.filter(i => i.severity === 'blocking');
+        if (blocking.length > 0) {
+          throw new Error(
+            `Publicação bloqueada por compliance:\n${blocking.map(i => `• [${i.source}] ${i.title}: ${i.description}`).join('\n')}`
+          );
+        }
+        // Collect warnings for caller
+        for (const w of gate.issues.filter(i => i.severity === 'warning')) {
+          warnings.push(`[${w.source}] ${w.title}: ${w.description}`);
+        }
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith('Publicação bloqueada')) throw err;
+      console.warn('[WebsiteGovernance] Compliance gate skipped:', err);
+    }
+
     const now = new Date().toISOString();
     const { error } = await supabase
       .from('landing_pages')
@@ -232,6 +256,8 @@ class WebsiteGovernanceEngine {
       .eq('id', websiteId);
 
     if (error) throw new Error(`Failed to publish: ${error.message}`);
+
+    return { warnings };
   }
 
   /**

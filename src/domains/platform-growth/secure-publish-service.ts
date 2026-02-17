@@ -16,6 +16,7 @@ import { versioningManager } from './versioning-manager';
 import { landingVersionService } from './landing-version-service';
 import { emitGrowthEvent } from './growth.events';
 import { getSmartRollbackEngine } from './smart-rollback/smart-rollback-engine';
+import { runPrePublishGate } from './pre-publish-compliance-gate';
 
 // ── Publish Result ──────────────────────────────────
 
@@ -86,9 +87,17 @@ export class SecurePublishService {
       };
     }
 
-    // 4. Pre-publish validation
+    // 4. Pre-publish validation (Compliance + GrowthAI + GTM)
     if (!config.skipValidation) {
-      errors.push(...this.validate(page));
+      const gate = runPrePublishGate(page);
+
+      for (const issue of gate.issues) {
+        errors.push({
+          code: issue.code,
+          message: `[${issue.source}] ${issue.title}: ${issue.description}`,
+          severity: issue.severity,
+        });
+      }
     }
 
     // 5. Check blocking errors
