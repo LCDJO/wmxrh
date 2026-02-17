@@ -6,6 +6,11 @@
  *  - TenantPlanUpgraded
  *  - InvoiceGenerated
  *  - RevenueUpdated
+ *  - UsageRecorded
+ *  - CouponCreated
+ *  - CouponRedeemed
+ *  - InvoiceDiscountApplied
+ *  - UsageOverageCalculated
  */
 
 // ── Event Types ─────────────────────────────────────────────────
@@ -14,7 +19,12 @@ export type BillingEventType =
   | 'TenantPlanAssigned'
   | 'TenantPlanUpgraded'
   | 'InvoiceGenerated'
-  | 'RevenueUpdated';
+  | 'RevenueUpdated'
+  | 'UsageRecorded'
+  | 'CouponCreated'
+  | 'CouponRedeemed'
+  | 'InvoiceDiscountApplied'
+  | 'UsageOverageCalculated';
 
 export interface BillingEventBase {
   type: BillingEventType;
@@ -51,11 +61,56 @@ export interface RevenueUpdatedEvent extends BillingEventBase {
   entry_type: 'charge' | 'payment' | 'refund' | 'adjustment';
 }
 
+export interface UsageRecordedEvent extends BillingEventBase {
+  type: 'UsageRecorded';
+  metric: string;
+  quantity: number;
+  unit: string;
+}
+
+export interface CouponCreatedEvent extends BillingEventBase {
+  type: 'CouponCreated';
+  coupon_id: string;
+  code: string;
+  discount_type: string;
+  discount_value: number;
+}
+
+export interface CouponRedeemedEvent extends BillingEventBase {
+  type: 'CouponRedeemed';
+  coupon_id: string;
+  code: string;
+  discount_applied_brl: number;
+  invoice_id: string | null;
+}
+
+export interface InvoiceDiscountAppliedEvent extends BillingEventBase {
+  type: 'InvoiceDiscountApplied';
+  invoice_id: string;
+  coupon_code: string;
+  discount_brl: number;
+  final_amount_brl: number;
+}
+
+export interface UsageOverageCalculatedEvent extends BillingEventBase {
+  type: 'UsageOverageCalculated';
+  metric: string;
+  included_qty: number;
+  actual_qty: number;
+  overage_qty: number;
+  overage_amount_brl: number;
+}
+
 export type BillingDomainEvent =
   | TenantPlanAssignedEvent
   | TenantPlanUpgradedEvent
   | InvoiceGeneratedEvent
-  | RevenueUpdatedEvent;
+  | RevenueUpdatedEvent
+  | UsageRecordedEvent
+  | CouponCreatedEvent
+  | CouponRedeemedEvent
+  | InvoiceDiscountAppliedEvent
+  | UsageOverageCalculatedEvent;
 
 // ── Event Bus ───────────────────────────────────────────────────
 
