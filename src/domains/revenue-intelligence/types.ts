@@ -230,7 +230,27 @@ export interface GamificationEngineAPI {
   updatePointWeight(id: string, updates: Partial<GamificationPointWeight>): Promise<void>;
 }
 
+export type RewardMode = 'credit' | 'coupon' | 'points';
+
+export interface RewardResult {
+  mode: RewardMode;
+  amount_brl: number;
+  points: number;
+  coupon_code: string | null;
+  ledger_entry_id: string | null;
+  description: string;
+}
+
 export interface RewardCalculatorAPI {
   calculateCommission(paymentBrl: number, tier: GamificationTier): number;
   getTierThresholds(): Record<GamificationTier, number>;
+  /** Award a reward: writes to ledger, creates coupon, or awards points */
+  issueReward(
+    referrerUserId: string,
+    tenantId: string,
+    paymentBrl: number,
+    tier: GamificationTier,
+    mode: RewardMode,
+    trackingId?: string,
+  ): Promise<RewardResult>;
 }

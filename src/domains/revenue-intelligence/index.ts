@@ -13,6 +13,8 @@ export type {
   GamificationPointWeight,
   GamificationProfile,
   GamificationLeaderboardEntry,
+  RewardMode,
+  RewardResult,
 } from './types';
 export {
   emitRevenueIntelligenceEvent,
