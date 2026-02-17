@@ -155,9 +155,11 @@ function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTic
   const [newMsg, setNewMsg] = useState('');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [evaluation, setEvaluation] = useState<{ rating: number; feedback: string } | null>(null);
+  const [agentRating, setAgentRating] = useState(0);
+  const [systemRating, setSystemRating] = useState(0);
+  const [evalFeedback, setEvalFeedback] = useState('');
   const [existingEval, setExistingEval] = useState(false);
-  const [showEvalDialog, setShowEvalDialog] = useState(false);
+  const [submittingEval, setSubmittingEval] = useState(false);
 
   const loadMessages = useCallback(async () => {
     try {
@@ -183,21 +185,35 @@ function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTic
     finally { setSending(false); }
   };
 
-  const handleEvaluate = async () => {
-    if (!evaluation || evaluation.rating === 0) return;
+  const handleSubmitEvaluation = async () => {
+    if (agentRating === 0 && systemRating === 0) return;
     try {
-      await EvaluationService.createTicketEvaluation({
-        ticket_id: ticket.id,
-        tenant_id: tenantId,
-        evaluator_id: userId,
-        agent_id: ticket.assigned_to,
-        rating: evaluation.rating,
-        feedback: evaluation.feedback || undefined,
-      });
-      toast.success('Avaliação enviada!');
+      setSubmittingEval(true);
+      const promises: Promise<unknown>[] = [];
+      if (agentRating > 0) {
+        promises.push(EvaluationService.createTicketEvaluation({
+          ticket_id: ticket.id,
+          tenant_id: tenantId,
+          evaluator_id: userId,
+          agent_id: ticket.assigned_to,
+          rating: agentRating,
+          feedback: evalFeedback || undefined,
+        }));
+      }
+      if (systemRating > 0) {
+        promises.push(EvaluationService.createSystemRating({
+          tenant_id: tenantId,
+          user_id: userId,
+          category: 'ticket_closure',
+          rating: systemRating,
+          feedback: evalFeedback || undefined,
+        }));
+      }
+      await Promise.all(promises);
+      toast.success('Avaliação enviada! Obrigado pelo feedback.');
       setExistingEval(true);
-      setShowEvalDialog(false);
     } catch { toast.error('Erro ao enviar avaliação'); }
+    finally { setSubmittingEval(false); }
   };
 
   const st = STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.open;
@@ -267,49 +283,97 @@ function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTic
               </Button>
             </div>
           )}
-
-          {isResolved && !existingEval && (
-            <div className="mt-4 pt-4 border-t">
-              <Dialog open={showEvalDialog} onOpenChange={setShowEvalDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Star className="h-4 w-4" /> Avaliar Atendimento
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-sm">
-                  <DialogHeader><DialogTitle>Avaliar Atendimento</DialogTitle></DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex justify-center gap-2">
-                      {[1, 2, 3, 4, 5].map(n => (
-                        <button
-                          key={n}
-                          onClick={() => setEvaluation(prev => ({ feedback: prev?.feedback ?? '', rating: n }))}
-                          className="p-1 transition-transform hover:scale-110"
-                        >
-                          <Star
-                            className="h-7 w-7"
-                            fill={(evaluation?.rating ?? 0) >= n ? 'hsl(45 90% 55%)' : 'transparent'}
-                            stroke={(evaluation?.rating ?? 0) >= n ? 'hsl(45 90% 55%)' : 'hsl(var(--muted-foreground))'}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                    <Textarea
-                      placeholder="Comentários (opcional)"
-                      value={evaluation?.feedback ?? ''}
-                      onChange={e => setEvaluation(prev => ({ rating: prev?.rating ?? 0, feedback: e.target.value }))}
-                      rows={3}
-                    />
-                    <Button onClick={handleEvaluate} className="w-full" disabled={!evaluation || evaluation.rating === 0}>
-                      Enviar Avaliação
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          )}
         </CardContent>
       </Card>
+
+      {/* Evaluation Card — shown inline when ticket is resolved/closed */}
+      {isResolved && !existingEval && (
+        <Card className="border-primary/20 bg-primary/[0.02]">
+          <CardContent className="py-5 px-5 space-y-5">
+            <div className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Avalie este atendimento</h3>
+            </div>
+
+            {/* Agent rating */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-foreground">Avaliação do Atendente</p>
+              <p className="text-[11px] text-muted-foreground">Como foi a qualidade do suporte recebido?</p>
+              <StarRatingRow value={agentRating} onChange={setAgentRating} />
+            </div>
+
+            {/* System rating */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-foreground">Avaliação do Sistema</p>
+              <p className="text-[11px] text-muted-foreground">Como avalia a experiência geral com a plataforma?</p>
+              <StarRatingRow value={systemRating} onChange={setSystemRating} />
+            </div>
+
+            {/* Feedback */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-foreground">Comentário <span className="text-muted-foreground font-normal">(opcional)</span></p>
+              <Textarea
+                placeholder="Deixe um comentário sobre sua experiência..."
+                value={evalFeedback}
+                onChange={e => setEvalFeedback(e.target.value)}
+                rows={3}
+                className="text-sm"
+              />
+            </div>
+
+            <Button
+              onClick={handleSubmitEvaluation}
+              disabled={submittingEval || (agentRating === 0 && systemRating === 0)}
+              className="w-full gap-2"
+            >
+              {submittingEval ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Enviar Avaliação
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {isResolved && existingEval && (
+        <Card className="border-green-500/20 bg-green-500/[0.03]">
+          <CardContent className="py-4 px-4 flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+            <p className="text-sm text-foreground">Você já avaliou este chamado. Obrigado!</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ── Star Rating Row Component ──
+
+function StarRatingRow({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0);
+  const labels = ['', 'Péssimo', 'Ruim', 'Regular', 'Bom', 'Excelente'];
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map(n => (
+          <button
+            key={n}
+            type="button"
+            onMouseEnter={() => setHover(n)}
+            onMouseLeave={() => setHover(0)}
+            onClick={() => onChange(n)}
+            className="p-0.5 transition-transform hover:scale-110"
+          >
+            <Star
+              className="h-6 w-6 transition-colors"
+              fill={(hover || value) >= n ? 'hsl(45 93% 47%)' : 'transparent'}
+              stroke={(hover || value) >= n ? 'hsl(45 93% 47%)' : 'hsl(var(--muted-foreground))'}
+            />
+          </button>
+        ))}
+      </div>
+      {(hover || value) > 0 && (
+        <span className="text-xs text-muted-foreground">{labels[hover || value]}</span>
+      )}
     </div>
   );
 }
