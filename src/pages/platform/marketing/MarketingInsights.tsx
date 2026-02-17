@@ -24,14 +24,17 @@ import type { LandingPage } from '@/domains/platform-growth/types';
 import GrowthHeatmap from '@/components/platform/marketing/GrowthHeatmap';
 import ConversionOpportunities from '@/components/platform/marketing/ConversionOpportunities';
 import AIRecommendationsFeed from '@/components/platform/marketing/AIRecommendationsFeed';
+import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 
 export default function MarketingInsights() {
+  const { can } = usePlatformPermissions();
+  const hasAccess = can('growth_insights.view');
   const [pages, setPages] = useState<LandingPage[]>([]);
   const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => { landingPageBuilder.getAll().then(setPages); }, []);
 
-  // ── Derived metrics ──
+  // ── Derived metrics (hooks must be before any early return) ──
   const topPages = useMemo(
     () => [...pages].sort((a, b) => b.analytics.conversionRate - a.analytics.conversionRate).slice(0, 5),
     [pages],
@@ -41,9 +44,9 @@ export default function MarketingInsights() {
     if (pages.length === 0) return 0;
     const scores = pages.map(p => {
       const fab = growthAISupportLayer.suggestFABStructure(p);
-      return 3 - fab.missingElements.length; // 0-3 completeness
+      return 3 - fab.missingElements.length;
     });
-    return Math.round((scores.reduce((s, v) => s + v, 0) / scores.length) * 33.3); // normalize to 0-100
+    return Math.round((scores.reduce((s, v) => s + v, 0) / scores.length) * 33.3);
   }, [pages]);
 
   const bestHeadlines = useMemo(() => {
@@ -60,6 +63,14 @@ export default function MarketingInsights() {
     const avgConversion = pages.reduce((s, p) => s + p.analytics.conversionRate, 0) / pages.length;
     return Math.min(100, Math.round(avgConversion * 12 + avgFABScore * 0.3));
   }, [pages, avgFABScore]);
+
+  if (!hasAccess) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-sm text-muted-foreground">Sem permissão para acessar Insights de Crescimento.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
