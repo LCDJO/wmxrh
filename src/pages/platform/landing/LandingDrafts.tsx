@@ -1,16 +1,37 @@
 /**
  * /platform/landing/drafts — Landing pages em rascunho e rejeitadas.
+ * 
+ * Features:
+ *  - Save draft
+ *  - Submit for approval
+ *  - Safe delete (only draft/submitted — governed by status machine)
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import { landingPageGovernance } from '@/domains/platform-growth/landing-page-governance';
-import { getStatusLabel, getStatusVariant, getAvailableTransitions, type LandingPageStatus } from '@/domains/platform-growth/landing-page-status-machine';
+import {
+  getStatusLabel,
+  getStatusVariant,
+  getAvailableTransitions,
+  canDelete,
+  type LandingPageStatus,
+} from '@/domains/platform-growth/landing-page-status-machine';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, FileEdit, Send } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Loader2, FileEdit, Send, Trash2, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface LandingPage {
@@ -30,6 +51,8 @@ export default function LandingDrafts() {
   const [pages, setPages] = useState<LandingPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<LandingPage | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchDrafts = async () => {
     setLoading(true);
@@ -60,7 +83,6 @@ export default function LandingDrafts() {
     }
   };
 
-
   const handleSubmit = async (pageId: string) => {
     if (!identity) return;
     setSubmitting(pageId);
@@ -76,6 +98,60 @@ export default function LandingDrafts() {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     } finally {
       setSubmitting(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const status = deleteTarget.status as LandingPageStatus;
+
+    // Double-check governance rules
+    if (!canDelete(status)) {
+      toast({
+        title: 'Exclusão bloqueada',
+        description: `Landing pages com status "${getStatusLabel(status)}" não podem ser excluídas. Somente rascunhos e submetidas.`,
+        variant: 'destructive',
+      });
+      setDeleteTarget(null);
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      // If submitted, cancel pending approval requests first
+      if (status === 'submitted' || status === 'draft') {
+        const requests = await landingPageGovernance.listByPage(deleteTarget.id);
+        const pendingRequests = requests.filter(r => r.status === 'pending_review' || r.status === 'approved');
+        for (const req of pendingRequests) {
+          if (identity) {
+            await landingPageGovernance.cancel(req.id, {
+              userId: identity.id,
+              email: identity.email,
+              role: identity.role,
+            }, 'Cancelado automaticamente: landing page excluída');
+          }
+        }
+      }
+
+      // Soft delete: set status to a terminal state and mark deleted_at
+      // Since the table doesn't have deleted_at, we'll actually delete the row
+      const { error } = await supabase
+        .from('landing_pages')
+        .delete()
+        .eq('id', deleteTarget.id);
+
+      if (error) throw new Error(error.message);
+
+      toast({
+        title: 'Excluída',
+        description: `"${deleteTarget.name}" foi removida permanentemente.`,
+      });
+      fetchDrafts();
+    } catch (err: any) {
+      toast({ title: 'Erro ao excluir', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -96,7 +172,7 @@ export default function LandingDrafts() {
         <div>
           <h1 className="text-2xl font-bold font-display text-foreground">Rascunhos</h1>
           <p className="text-sm text-muted-foreground">
-            Landing pages em rascunho — edite e submeta para aprovação.
+            Landing pages em rascunho — edite, submeta para aprovação ou exclua com segurança.
           </p>
         </div>
       </div>
@@ -110,15 +186,18 @@ export default function LandingDrafts() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {pages.map(page => {
-            const transitions = getAvailableTransitions(page.status as LandingPageStatus, identity?.role);
+            const status = page.status as LandingPageStatus;
+            const transitions = getAvailableTransitions(status, identity?.role);
             const canSubmit = transitions.some(t => t.to === 'submitted');
+            const isDeletable = canDelete(status);
+
             return (
               <Card key={page.id} className="flex flex-col">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base truncate">{page.name}</CardTitle>
-                    <Badge variant={getStatusVariant(page.status as LandingPageStatus)}>
-                      {getStatusLabel(page.status as LandingPageStatus)}
+                    <Badge variant={getStatusVariant(status)}>
+                      {getStatusLabel(status)}
                     </Badge>
                   </div>
                   <CardDescription className="text-xs">/{page.slug}</CardDescription>
@@ -157,6 +236,17 @@ export default function LandingDrafts() {
                         Submeter para Aprovação
                       </Button>
                     )}
+                    {isDeletable && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteTarget(page)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Excluir
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -164,6 +254,45 @@ export default function LandingDrafts() {
           })}
         </div>
       )}
+
+      {/* Safe Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-destructive" />
+              Excluir Landing Page
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                Tem certeza que deseja excluir <strong>"{deleteTarget?.name}"</strong>?
+              </span>
+              <span className="block text-xs">
+                Esta ação é permanente. Todos os dados do rascunho serão removidos.
+                {deleteTarget?.status === 'submitted' && (
+                  <span className="block mt-1 text-warning">
+                    ⚠️ Esta página possui uma submissão pendente que será cancelada automaticamente.
+                  </span>
+                )}
+              </span>
+              <span className="block text-[11px] text-muted-foreground border-t border-border/40 pt-2 mt-2">
+                Nota: Páginas aprovadas, publicadas ou arquivadas não podem ser excluídas para preservar o histórico de governança.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              Excluir Permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

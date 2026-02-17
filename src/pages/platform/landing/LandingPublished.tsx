@@ -1,16 +1,42 @@
 /**
- * /platform/landing/published — Landing pages publicadas e aprovadas prontas para publicação.
+ * /platform/landing/published — Landing pages publicadas, aprovadas e arquivadas.
+ *
+ * Features:
+ *  - Publish approved pages
+ *  - Archive published pages
+ *  - Create new version from published page (copies to new draft, preserves history)
+ *  - View version history
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import { landingPageGovernance } from '@/domains/platform-growth/landing-page-governance';
-import { getStatusLabel, getStatusVariant, getAvailableTransitions, type LandingPageStatus } from '@/domains/platform-growth/landing-page-status-machine';
+import {
+  getStatusLabel,
+  getStatusVariant,
+  getAvailableTransitions,
+  canEditInPlace,
+  type LandingPageStatus,
+} from '@/domains/platform-growth/landing-page-status-machine';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Globe, Rocket, Archive, ExternalLink } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import {
+  Loader2, Globe, Rocket, Archive, ExternalLink, GitBranch,
+  History, Clock, CheckCircle2, User,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface LandingPage {
@@ -18,9 +44,11 @@ interface LandingPage {
   name: string;
   slug: string;
   status: string;
+  blocks: unknown[];
   published_at: string | null;
   created_at: string;
   updated_at: string;
+  created_by: string | null;
 }
 
 export default function LandingPublished() {
@@ -31,11 +59,21 @@ export default function LandingPublished() {
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
 
+  // New version dialog
+  const [newVersionTarget, setNewVersionTarget] = useState<LandingPage | null>(null);
+  const [newVersionNotes, setNewVersionNotes] = useState('');
+  const [creatingVersion, setCreatingVersion] = useState(false);
+
+  // Version history dialog
+  const [historyTarget, setHistoryTarget] = useState<LandingPage | null>(null);
+  const [versionHistory, setVersionHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   const fetchPages = async () => {
     setLoading(true);
     const { data } = await supabase
       .from('landing_pages')
-      .select('id, name, slug, status, published_at, created_at, updated_at')
+      .select('id, name, slug, status, blocks, published_at, created_at, updated_at, created_by')
       .in('status', ['approved', 'published', 'archived'])
       .order('updated_at', { ascending: false });
     setPages((data as LandingPage[]) ?? []);
@@ -48,7 +86,6 @@ export default function LandingPublished() {
     if (!identity) return;
     setActing(pageId);
     try {
-      // Find the latest approved request for this page
       const requests = await landingPageGovernance.listByPage(pageId);
       const approvedReq = requests.find(r => r.status === 'approved');
       if (!approvedReq) {
@@ -86,6 +123,80 @@ export default function LandingPublished() {
     }
   };
 
+  /**
+   * Create a new version from a published/approved page.
+   * 
+   * Strategy: The ORIGINAL page stays untouched (preserving history).
+   * A new landing_page row is created as "draft" with:
+   *  - Same slug + "-v{N}" suffix
+   *  - Same blocks (deep copy)
+   *  - Reference to the original page in the name
+   * 
+   * After approval and publish of the new version, the old page
+   * is archived automatically by the governance engine.
+   */
+  const handleCreateNewVersion = async () => {
+    if (!newVersionTarget || !identity) return;
+    setCreatingVersion(true);
+
+    try {
+      const original = newVersionTarget;
+
+      // Count existing versions to determine version number
+      const { count } = await supabase
+        .from('landing_pages')
+        .select('*', { count: 'exact', head: true })
+        .ilike('slug', `${original.slug}%`);
+
+      const versionNum = (count ?? 1) + 1;
+      const newSlug = `${original.slug}-v${versionNum}`;
+
+      // Create new draft with deep-copied blocks
+      const { data: newPage, error } = await supabase
+        .from('landing_pages')
+        .insert({
+          name: `${original.name} (v${versionNum})`,
+          slug: newSlug,
+          status: 'draft',
+          blocks: original.blocks as any,
+          created_by: identity.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw new Error(error.message);
+
+      toast({
+        title: 'Nova versão criada!',
+        description: `"${original.name} (v${versionNum})" criada como rascunho. O original permanece publicado.`,
+      });
+
+      setNewVersionTarget(null);
+      setNewVersionNotes('');
+      fetchPages();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setCreatingVersion(false);
+    }
+  };
+
+  /**
+   * Load version history (approval requests) for a page.
+   */
+  const handleViewHistory = async (page: LandingPage) => {
+    setHistoryTarget(page);
+    setLoadingHistory(true);
+    try {
+      const requests = await landingPageGovernance.listByPage(page.id);
+      setVersionHistory(requests);
+    } catch {
+      setVersionHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -103,7 +214,7 @@ export default function LandingPublished() {
         <div>
           <h1 className="text-2xl font-bold font-display text-foreground">Publicadas</h1>
           <p className="text-sm text-muted-foreground">
-            Landing pages aprovadas, publicadas e arquivadas.
+            Landing pages aprovadas, publicadas e arquivadas. Edite via versionamento.
           </p>
         </div>
       </div>
@@ -119,8 +230,10 @@ export default function LandingPublished() {
           {pages.map(page => {
             const status = page.status as LandingPageStatus;
             const transitions = getAvailableTransitions(status, identity?.role);
-            const canPublish = status === 'approved' && transitions.some(t => t.to === 'published');
-            const canArchive = status === 'published' && transitions.some(t => t.to === 'archived');
+            const canPublishPage = status === 'approved' && transitions.some(t => t.to === 'published');
+            const canArchivePage = status === 'published' && transitions.some(t => t.to === 'archived');
+            const isEditable = canEditInPlace(status);
+            const needsVersioning = !isEditable && status !== 'archived';
 
             return (
               <Card key={page.id} className="flex flex-col">
@@ -140,7 +253,7 @@ export default function LandingPublished() {
                     </p>
                   )}
                   <div className="flex gap-2 flex-wrap">
-                    {canPublish && (
+                    {canPublishPage && (
                       <Button
                         size="sm"
                         className="gap-1.5"
@@ -151,7 +264,7 @@ export default function LandingPublished() {
                         Publicar
                       </Button>
                     )}
-                    {canArchive && (
+                    {canArchivePage && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -163,9 +276,31 @@ export default function LandingPublished() {
                         Arquivar
                       </Button>
                     )}
+                    {needsVersioning && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => setNewVersionTarget(page)}
+                      >
+                        <GitBranch className="h-3 w-3" />
+                        Nova Versão
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => handleViewHistory(page)}
+                    >
+                      <History className="h-3 w-3" />
+                      Histórico
+                    </Button>
                     {status === 'published' && (
-                      <Button variant="ghost" size="sm" className="gap-1.5">
-                        <ExternalLink className="h-3 w-3" /> Abrir
+                      <Button variant="ghost" size="sm" className="gap-1.5" asChild>
+                        <a href={`/lp/${page.slug}`} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3 w-3" /> Abrir
+                        </a>
                       </Button>
                     )}
                   </div>
@@ -175,6 +310,147 @@ export default function LandingPublished() {
           })}
         </div>
       )}
+
+      {/* New Version Dialog */}
+      <Dialog open={!!newVersionTarget} onOpenChange={(open) => !open && setNewVersionTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitBranch className="h-5 w-5 text-primary" />
+              Criar Nova Versão
+            </DialogTitle>
+            <DialogDescription>
+              Uma cópia da página será criada como rascunho. A versão atual permanece publicada e inalterada até que a nova versão seja aprovada e publicada.
+            </DialogDescription>
+          </DialogHeader>
+
+          {newVersionTarget && (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-border/40 bg-muted/30 p-4 space-y-2">
+                <p className="text-sm font-medium text-foreground">{newVersionTarget.name}</p>
+                <p className="text-xs text-muted-foreground">/{newVersionTarget.slug}</p>
+                <div className="flex items-center gap-2">
+                  <Badge variant={getStatusVariant(newVersionTarget.status as LandingPageStatus)}>
+                    {getStatusLabel(newVersionTarget.status as LandingPageStatus)}
+                  </Badge>
+                  <span className="text-[10px] text-muted-foreground">
+                    {Array.isArray(newVersionTarget.blocks) ? newVersionTarget.blocks.length : 0} blocos
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Motivo da nova versão</label>
+                <Textarea
+                  value={newVersionNotes}
+                  onChange={(e) => setNewVersionNotes(e.target.value)}
+                  placeholder="Descreva as alterações planejadas..."
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1">
+                <p className="text-xs font-semibold text-foreground">🔒 Preservação de Histórico</p>
+                <ul className="text-[11px] text-muted-foreground space-y-0.5 list-disc list-inside">
+                  <li>A página atual permanece publicada</li>
+                  <li>Uma cópia é criada como novo rascunho</li>
+                  <li>A nova versão passa pelo fluxo completo de governança</li>
+                  <li>Ao publicar a nova versão, a anterior é arquivada automaticamente</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewVersionTarget(null)} disabled={creatingVersion}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateNewVersion} disabled={creatingVersion} className="gap-1.5">
+              {creatingVersion ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitBranch className="h-4 w-4" />}
+              Criar Nova Versão
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Version History Dialog */}
+      <Dialog open={!!historyTarget} onOpenChange={(open) => !open && setHistoryTarget(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Histórico de Versões
+            </DialogTitle>
+            <DialogDescription>
+              {historyTarget?.name} — Registro completo de aprovações e publicações.
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingHistory ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : versionHistory.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <History className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">Nenhum registro de governança encontrado.</p>
+            </div>
+          ) : (
+            <ScrollArea className="max-h-80">
+              <div className="space-y-3 pr-2">
+                {versionHistory.map((req: any, idx: number) => (
+                  <div key={req.id} className="flex gap-3 items-start">
+                    <div className="flex flex-col items-center gap-1 pt-1">
+                      <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        idx === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                      }`}>
+                        v{req.version_number}
+                      </div>
+                      {idx < versionHistory.length - 1 && (
+                        <div className="w-px h-6 bg-border/60" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={
+                          req.status === 'published' ? 'default' :
+                          req.status === 'approved' ? 'default' :
+                          req.status === 'rejected' ? 'destructive' :
+                          'secondary'
+                        } className="text-[10px]">
+                          {req.status}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(req.created_at).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                      <div className="mt-1 space-y-0.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <User className="h-3 w-3" /> Submetido por: {req.submitted_by}
+                        </p>
+                        {req.reviewed_by && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> Revisado por: {req.reviewed_by}
+                          </p>
+                        )}
+                        {req.review_notes && (
+                          <p className="text-[11px] text-foreground italic mt-1">"{req.review_notes}"</p>
+                        )}
+                        {req.published_by && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Rocket className="h-3 w-3" /> Publicado por: {req.published_by}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
