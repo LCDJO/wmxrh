@@ -150,7 +150,22 @@ export class MenuTreeManager {
 // MenuPermissionResolver
 // ════════════════════════════════════
 
+export type MenuEditorRole =
+  | 'PlatformSuperAdmin'
+  | 'PlatformMarketing'
+  | 'PlatformOperations'
+  | 'TenantAdmin'
+  | 'TenantUser';
+
+/** Slug prefixes that PlatformMarketing can edit */
+const MARKETING_EDITABLE_PREFIXES = [
+  '/platform/website',
+  '/platform/growth',
+  '/platform/marketing',
+];
+
 export class MenuPermissionResolver {
+  /** Filter tree to only visible nodes for a given role */
   filterByRole(tree: MenuTreeNode[], userRole: string): MenuTreeNode[] {
     return tree
       .filter(n => !n.role_permissions || n.role_permissions.length === 0 || n.role_permissions.includes(userRole))
@@ -158,6 +173,37 @@ export class MenuPermissionResolver {
         ...n,
         children: n.children ? this.filterByRole(n.children, userRole) : undefined,
       }));
+  }
+
+  /** Check if a role can edit a specific node */
+  canEditNode(node: MenuTreeNode, editorRole: MenuEditorRole): boolean {
+    switch (editorRole) {
+      case 'PlatformSuperAdmin':
+        return true; // full access
+      case 'PlatformMarketing':
+        return MARKETING_EDITABLE_PREFIXES.some(prefix => node.slug.startsWith(prefix));
+      case 'PlatformOperations':
+        return !node.slug.startsWith('/platform/billing') && !node.slug.startsWith('/platform/fiscal');
+      case 'TenantAdmin':
+      case 'TenantUser':
+        return false; // tenants cannot alter platform structure
+    }
+  }
+
+  /** Check if a role can edit ANY node (global write access) */
+  canEditTree(editorRole: MenuEditorRole): boolean {
+    return editorRole !== 'TenantAdmin' && editorRole !== 'TenantUser';
+  }
+
+  /** Get human-readable scope description */
+  getEditScopeLabel(editorRole: MenuEditorRole): string {
+    switch (editorRole) {
+      case 'PlatformSuperAdmin': return 'Acesso total';
+      case 'PlatformMarketing': return 'Website & Growth';
+      case 'PlatformOperations': return 'Operacional (exceto billing/fiscal)';
+      case 'TenantAdmin':
+      case 'TenantUser': return 'Somente leitura';
+    }
   }
 
   getNodePermissions(nodeId: string, tree: MenuTreeNode[]): string[] {
