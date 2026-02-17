@@ -55,6 +55,11 @@ export default function GrowthLandingPages() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Button size="sm" variant="ghost" className="gap-1 text-xs" asChild>
+                  <a href={`/lp/${page.slug}`} target="_blank" rel="noopener noreferrer">
+                    <Eye className="h-3 w-3" />Preview
+                  </a>
+                </Button>
                 {canPublish && page.status === 'draft' && (
                   <Button size="sm" variant="outline" className="gap-1 text-xs">
                     <Upload className="h-3 w-3" />Publicar
