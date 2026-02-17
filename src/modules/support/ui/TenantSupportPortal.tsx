@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import {
   Plus, MessageSquare, Clock, CheckCircle2, AlertCircle, Send,
   BookOpen, Search, Star, ArrowLeft, Loader2, Filter,
-  Circle,
+  Circle, Radio,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +19,7 @@ import { useTenant } from '@/contexts/TenantContext';
 import { TicketService } from '@/domains/support/ticket-service';
 import { WikiService } from '@/domains/support/wiki-service';
 import { EvaluationService } from '@/domains/support/evaluation-service';
+import LiveChatWindow from './LiveChatWindow';
 import type { SupportTicket, TicketMessage, WikiArticle, TicketPriority, TicketCategory, TicketStatus } from '@/domains/support/types';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof Clock }> = {
@@ -438,93 +439,117 @@ function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTic
         </CardContent>
       </Card>
 
-      {/* Messages */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Conversação</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-          ) : messages.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-6">Nenhuma mensagem ainda.</p>
-          ) : (
-            <ScrollArea className="max-h-[400px]">
-              <div className="space-y-3">
-                {messages.map(msg => {
-                  const isMe = msg.sender_type === 'tenant_user';
-                  return (
-                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${isMe ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                        <p className={`text-[10px] mt-1 ${isMe ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
-                          {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                          {!isMe && ' · Suporte'}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          )}
+      {/* Communication Tabs */}
+      <Tabs defaultValue="chat" className="w-full">
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="chat" className="gap-2">
+            <Radio className="h-3.5 w-3.5" /> Chat ao Vivo
+          </TabsTrigger>
+          <TabsTrigger value="messages" className="gap-2">
+            <MessageSquare className="h-3.5 w-3.5" /> Mensagens
+          </TabsTrigger>
+        </TabsList>
 
-          {canChat && (
-            <div className="flex gap-2 mt-4">
-              <Input
-                placeholder="Digite sua mensagem..."
-                value={newMsg}
-                onChange={e => setNewMsg(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-              />
-              <Button size="icon" onClick={handleSend} disabled={sending || !newMsg.trim()}>
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
-            </div>
-          )}
+        <TabsContent value="chat" className="mt-3">
+          <LiveChatWindow
+            ticketId={ticket.id}
+            tenantId={tenantId}
+            userId={userId}
+            senderType="tenant"
+            assignedAgentId={ticket.assigned_to}
+            ticketSubject={ticket.subject}
+          />
+        </TabsContent>
 
-          {isResolved && !existingEval && (
-            <div className="mt-4 pt-4 border-t">
-              <Dialog open={showEvalDialog} onOpenChange={setShowEvalDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Star className="h-4 w-4" /> Avaliar Atendimento
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-sm">
-                  <DialogHeader><DialogTitle>Avaliar Atendimento</DialogTitle></DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex justify-center gap-2">
-                      {[1, 2, 3, 4, 5].map(n => (
-                        <button
-                          key={n}
-                          onClick={() => setEvaluation(prev => ({ feedback: prev?.feedback ?? '', rating: n }))}
-                          className="p-1 transition-transform hover:scale-110"
-                        >
-                          <Star
-                            className="h-7 w-7"
-                            fill={(evaluation?.rating ?? 0) >= n ? 'hsl(45 90% 55%)' : 'transparent'}
-                            stroke={(evaluation?.rating ?? 0) >= n ? 'hsl(45 90% 55%)' : 'hsl(var(--muted-foreground))'}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                    <Textarea
-                      placeholder="Comentários (opcional)"
-                      value={evaluation?.feedback ?? ''}
-                      onChange={e => setEvaluation(prev => ({ rating: prev?.rating ?? 0, feedback: e.target.value }))}
-                      rows={3}
-                    />
-                    <Button onClick={handleEvaluate} className="w-full" disabled={!evaluation || evaluation.rating === 0}>
-                      Enviar Avaliação
-                    </Button>
+        <TabsContent value="messages" className="mt-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Histórico de Mensagens</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : messages.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">Nenhuma mensagem ainda.</p>
+              ) : (
+                <ScrollArea className="max-h-[400px]">
+                  <div className="space-y-3">
+                    {messages.map(msg => {
+                      const isMe = msg.sender_type === 'tenant_user';
+                      return (
+                        <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${isMe ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                            <p className={`text-[10px] mt-1 ${isMe ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
+                              {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              {!isMe && ' · Suporte'}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </ScrollArea>
+              )}
+
+              {canChat && (
+                <div className="flex gap-2 mt-4">
+                  <Input
+                    placeholder="Digite sua mensagem..."
+                    value={newMsg}
+                    onChange={e => setNewMsg(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                  />
+                  <Button size="icon" onClick={handleSend} disabled={sending || !newMsg.trim()}>
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
+              )}
+
+              {isResolved && !existingEval && (
+                <div className="mt-4 pt-4 border-t">
+                  <Dialog open={showEvalDialog} onOpenChange={setShowEvalDialog}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <Star className="h-4 w-4" /> Avaliar Atendimento
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-sm">
+                      <DialogHeader><DialogTitle>Avaliar Atendimento</DialogTitle></DialogHeader>
+                      <div className="space-y-4">
+                        <div className="flex justify-center gap-2">
+                          {[1, 2, 3, 4, 5].map(n => (
+                            <button
+                              key={n}
+                              onClick={() => setEvaluation(prev => ({ feedback: prev?.feedback ?? '', rating: n }))}
+                              className="p-1 transition-transform hover:scale-110"
+                            >
+                              <Star
+                                className="h-7 w-7"
+                                fill={(evaluation?.rating ?? 0) >= n ? 'hsl(45 90% 55%)' : 'transparent'}
+                                stroke={(evaluation?.rating ?? 0) >= n ? 'hsl(45 90% 55%)' : 'hsl(var(--muted-foreground))'}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                        <Textarea
+                          placeholder="Comentários (opcional)"
+                          value={evaluation?.feedback ?? ''}
+                          onChange={e => setEvaluation(prev => ({ rating: prev?.rating ?? 0, feedback: e.target.value }))}
+                          rows={3}
+                        />
+                        <Button onClick={handleEvaluate} className="w-full" disabled={!evaluation || evaluation.rating === 0}>
+                          Enviar Avaliação
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
