@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import { landingPageGovernance } from '@/domains/platform-growth/landing-page-governance';
+import { landingAuditLog } from '@/domains/platform-growth/landing-audit-log';
 import {
   getStatusLabel,
   getStatusVariant,
@@ -154,21 +155,14 @@ export default function LandingDrafts() {
 
       if (error) throw new Error(error.message);
 
-      // Write audit log
-      await supabase.from('audit_logs').insert({
-        tenant_id: '00000000-0000-0000-0000-000000000000', // platform-level
-        entity_type: 'landing_page',
-        entity_id: deleteTarget.id,
-        action: 'LandingDraftDeleted',
-        user_id: identity.id,
-        metadata: {
-          page_name: deleteTarget.name,
-          page_slug: deleteTarget.slug,
-          deleted_by_role: identity.role,
-          deleted_by_email: identity.email,
-        },
-        old_value: { status: deleteTarget.status, name: deleteTarget.name },
-        new_value: { deleted_at: new Date().toISOString() },
+      // Write audit log (standardized)
+      await landingAuditLog.draftDeleted({
+        landingPageId: deleteTarget.id,
+        pageName: deleteTarget.name,
+        pageSlug: deleteTarget.slug,
+        actorId: identity.id,
+        actorEmail: identity.email,
+        actorRole: identity.role,
       });
 
       toast({
