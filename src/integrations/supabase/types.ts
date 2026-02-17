@@ -6472,6 +6472,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_referral_link_conversions: {
+        Args: { link_id: string }
+        Returns: undefined
+      }
+      increment_referral_link_signups: {
+        Args: { link_id: string }
+        Returns: undefined
+      }
       is_active_platform_user: { Args: { _user_id: string }; Returns: boolean }
       is_platform_billing_admin: {
         Args: { _user_id: string }

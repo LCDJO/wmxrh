@@ -11,6 +11,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { emitBillingEvent } from '@/domains/billing-core/billing-events';
+import { emitRevenueIntelligenceEvent } from './revenue-events';
 import type {
   RevenueAnalyzerAPI,
   ChurnPredictionServiceAPI,
@@ -567,8 +568,56 @@ export function createReferralManager(): ReferralManagerAPI {
       return (data ?? []) as unknown as ReferralTracking[];
     },
 
+    async recordSignup(linkId: string, referrerUserId: string, referredTenantId: string) {
+      const { data, error } = await supabase
+        .from('referral_tracking')
+        .insert({
+          referral_link_id: linkId,
+          referrer_user_id: referrerUserId,
+          referred_tenant_id: referredTenantId,
+          status: 'pending',
+          signed_up_at: new Date().toISOString(),
+        } as any)
+        .select()
+        .single();
+
+      if (error) throw new Error(`ReferralManager.recordSignup: ${error.message}`);
+
+      // Increment link signup counter
+      await supabase.rpc('increment_referral_link_signups' as any, { link_id: linkId });
+
+      emitRevenueIntelligenceEvent({
+        type: 'ReferralSignup',
+        timestamp: Date.now(),
+        referrer_user_id: referrerUserId,
+        referred_tenant_id: referredTenantId,
+      });
+
+      return data as unknown as ReferralTracking;
+    },
+
     async recordConversion(trackingId, planId, paymentBrl) {
-      await supabase
+      // Validate: tenant must have account + active plan (conversion = conta + plano ativo)
+      const { data: tracking } = await supabase
+        .from('referral_tracking')
+        .select('*')
+        .eq('id', trackingId)
+        .single();
+
+      if (!tracking) throw new Error('Tracking record not found');
+      if ((tracking as any).status === 'converted') throw new Error('Already converted');
+
+      // Verify tenant has an active plan
+      const { data: tenantPlan } = await supabase
+        .from('tenant_plans' as any)
+        .select('id, status')
+        .eq('tenant_id', (tracking as any).referred_tenant_id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (!tenantPlan) throw new Error('Conversão inválida: tenant não possui plano ativo');
+
+      const { error } = await supabase
         .from('referral_tracking')
         .update({
           status: 'converted',
@@ -577,6 +626,22 @@ export function createReferralManager(): ReferralManagerAPI {
           first_payment_brl: paymentBrl,
         })
         .eq('id', trackingId);
+
+      if (error) throw new Error(`ReferralManager.recordConversion: ${error.message}`);
+
+      // Increment link conversion counter
+      await supabase.rpc('increment_referral_link_conversions' as any, {
+        link_id: (tracking as any).referral_link_id,
+      });
+
+      emitRevenueIntelligenceEvent({
+        type: 'ReferralConverted',
+        timestamp: Date.now(),
+        tracking_id: trackingId,
+        payment_brl: paymentBrl,
+        user_id: (tracking as any).referrer_user_id,
+        tenant_id: (tracking as any).referred_tenant_id,
+      });
     },
   };
 }
