@@ -9,6 +9,7 @@
 import type { LandingPage, FABBlock, GrowthInsight } from './types';
 import { landingPageBuilder } from './landing-page-builder';
 import { conversionTrackingService } from './conversion-tracking-service';
+import { emitGrowthEvent } from './growth.events';
 
 // ── Thresholds ──────────────────────────────────────────────────
 
@@ -49,10 +50,26 @@ export class GrowthGovernanceAnalyzer {
       findings.push(...this.checkSessionTime(page));
     }
 
-    return findings.sort((a, b) => {
+    const sorted = findings.sort((a, b) => {
       const sev = { critical: 0, warning: 1, info: 2 };
       return sev[a.severity] - sev[b.severity];
     });
+
+    // Emit GrowthInsightGenerated for each finding
+    for (const f of sorted) {
+      emitGrowthEvent({
+        type: 'GrowthInsightGenerated',
+        timestamp: Date.now(),
+        insightId: f.id,
+        category: f.category,
+        severity: f.severity,
+        pageId: f.pageId,
+        pageName: f.pageName,
+        title: f.title,
+      });
+    }
+
+    return sorted;
   }
 
   /** Convert findings to GrowthInsights for the unified dashboard */

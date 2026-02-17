@@ -1,8 +1,11 @@
 /**
  * ConversionTrackingService — Tracks and aggregates conversion events from landing pages.
  * Connects to Revenue Intelligence, Referral Engine, and Billing Core.
+ * Emits ConversionTracked domain events and bridges revenue to BillingCore ledger.
  */
 import type { ConversionEvent } from './types';
+import { emitGrowthEvent } from './growth.events';
+import { createFinancialLedgerAdapter } from '@/domains/billing-core/financial-ledger-adapter';
 
 export class ConversionTrackingService {
   private events: ConversionEvent[] = [
@@ -14,6 +17,8 @@ export class ConversionTrackingService {
     { id: 'ce-6', landingPageId: 'lp-1', type: 'referral_click', source: 'email', referralCode: 'REF-XYZ', trackedAt: '2026-02-17T09:00:00Z', metadata: {} },
   ];
 
+  private ledger = createFinancialLedgerAdapter();
+
   track(event: Omit<ConversionEvent, 'id' | 'trackedAt'>): ConversionEvent {
     const tracked: ConversionEvent = {
       ...event,
@@ -21,6 +26,33 @@ export class ConversionTrackingService {
       trackedAt: new Date().toISOString(),
     };
     this.events.push(tracked);
+
+    // Emit domain event
+    emitGrowthEvent({
+      type: 'ConversionTracked',
+      timestamp: Date.now(),
+      pageId: tracked.landingPageId,
+      conversionType: tracked.type,
+      source: tracked.source,
+      referralCode: tracked.referralCode,
+      tenantId: tracked.tenantId,
+      revenue: tracked.revenue,
+    });
+
+    // Bridge revenue_generated to BillingCore ledger
+    if (tracked.type === 'revenue_generated' && tracked.tenantId && tracked.revenue) {
+      try {
+        this.ledger.recordPayment(
+          tracked.tenantId,
+          '',
+          tracked.revenue,
+          `lp_conversion`,
+        );
+      } catch (err) {
+        console.error('[ConversionTracking] Ledger write failed:', err);
+      }
+    }
+
     return tracked;
   }
 

@@ -2,9 +2,11 @@
  * LandingPageBuilder — CRUD + orchestrator for landing pages.
  * Persists to the `landing_pages` table via Supabase.
  * FABContentEngine generates high-conversion block content.
+ * Emits LandingPageCreated, LandingPagePublished, FABContentUpdated domain events.
  */
 import { supabase } from '@/integrations/supabase/client';
 import type { LandingPage, FABBlock, FABBlockType, FABContent, LandingPageAnalytics, LPCopyBlueprint } from './types';
+import { emitGrowthEvent } from './growth.events';
 
 // ── Default analytics for new pages ────────────────────────────
 const DEFAULT_ANALYTICS: LandingPageAnalytics = {
@@ -93,7 +95,19 @@ export class LandingPageBuilder {
       console.error('[LandingPageBuilder] create error:', error);
       return null;
     }
-    return rowToLandingPage(data);
+    const page = rowToLandingPage(data);
+
+    emitGrowthEvent({
+      type: 'LandingPageCreated',
+      timestamp: Date.now(),
+      pageId: page.id,
+      pageName: page.name,
+      slug: page.slug,
+      blocksCount: page.blocks.length,
+      createdBy: page.created_by ?? 'unknown',
+    });
+
+    return page;
   }
 
   /** Update an existing landing page */
@@ -127,7 +141,37 @@ export class LandingPageBuilder {
       console.error('[LandingPageBuilder] update error:', error);
       return null;
     }
-    return rowToLandingPage(data);
+    const page = rowToLandingPage(data);
+
+    // Emit LandingPagePublished when status transitions to published
+    if (fields.status === 'published') {
+      emitGrowthEvent({
+        type: 'LandingPagePublished',
+        timestamp: Date.now(),
+        pageId: page.id,
+        pageName: page.name,
+        slug: page.slug,
+        publishedBy: page.created_by ?? 'unknown',
+        publisherRole: 'platform_user',
+      });
+    }
+
+    // Emit FABContentUpdated when blocks change
+    if (fields.blocks) {
+      for (const block of fields.blocks) {
+        emitGrowthEvent({
+          type: 'FABContentUpdated',
+          timestamp: Date.now(),
+          pageId: page.id,
+          blockId: block.id,
+          blockType: block.type,
+          changedFields: ['feature', 'advantage', 'benefit'],
+          updatedBy: page.created_by ?? 'unknown',
+        });
+      }
+    }
+
+    return page;
   }
 
   /** Delete a landing page */
