@@ -43,7 +43,7 @@ function detectRoleOverlapInsights(analysis: AnalysisResult): GovernanceInsight[
         { type: 'role' as const, id: overlap.roleB.originalId, label: overlap.roleB.label, domain: overlap.roleB.domain },
       ],
       recommendation: `Consolidar em um único cargo ou definir diferenciação clara entre as ${overlap.sharedPermissions.length} permissões compartilhadas.`,
-      auto_remediable: true,
+      auto_remediable: false,
       remediation_action: buildRemediation(
         'merge_roles',
         `Consolidar "${overlap.roleA.label}" e "${overlap.roleB.label}"`,
@@ -195,7 +195,7 @@ function detectRedundantPermissions(snapshot: UnifiedGraphSnapshot): GovernanceI
         { type: 'role', id: roleNode.originalId, label: roleNode.label, domain: roleNode.domain },
       ],
       recommendation: `Remover ${redundant.length} permissão(ões) direta(s) que já são fornecidas via herança de cargo.`,
-      auto_remediable: true,
+      auto_remediable: false,
       remediation_action: buildRemediation(
         'remove_permission',
         `Remover ${redundant.length} permissões redundantes de "${roleNode.label}"`,

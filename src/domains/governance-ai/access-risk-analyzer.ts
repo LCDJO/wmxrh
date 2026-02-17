@@ -209,7 +209,7 @@ function insightForImpersonation(profile: AccessRiskProfile): GovernanceInsight 
     recommendation: isActive
       ? 'Encerrar sessão de impersonation imediatamente e auditar ações realizadas.'
       : 'Revisar frequência de uso de impersonation e considerar alternativas.',
-    auto_remediable: isActive,
+    auto_remediable: false,
     confidence: isActive ? 0.95 : 0.8,
     detected_at: Date.now(),
     source: 'heuristic',

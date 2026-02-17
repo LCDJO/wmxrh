@@ -23,5 +23,24 @@ export { detectSoDConflicts } from './segregation-of-duties-checker';
 export { runHeuristicScan } from './governance-insights.service';
 export { GovernanceAIService, getGovernanceAIService } from './governance-ai.service';
 
+// Events
+export {
+  emitGovernanceEvent,
+  emitRiskDetected,
+  emitOptimizationSuggested,
+  emitConflictDetected,
+  onGovernanceEvent,
+  onGovernanceEventType,
+  getGovernanceEventLog,
+  clearGovernanceEventLog,
+} from './governance-events';
+export type {
+  GovernanceEventType,
+  GovernanceDomainEvent,
+  GovernanceRiskDetectedPayload,
+  RoleOptimizationSuggestedPayload,
+  PermissionConflictDetectedPayload,
+} from './governance-events';
+
 // Types
 export type * from './types';
