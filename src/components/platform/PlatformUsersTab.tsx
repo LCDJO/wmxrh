@@ -1,9 +1,10 @@
 /**
  * Platform Users Tab — List, create, edit, remove platform-level users.
+ * Now uses platform_roles table with role_id FK instead of enum.
  */
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { PlatformUser } from '@/pages/platform/PlatformSecurity';
+import type { PlatformUser, PlatformRole } from '@/pages/platform/PlatformSecurity';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,22 +18,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, MoreHorizontal, UserCog, Ban, CheckCircle, Trash2, Loader2, Shield } from 'lucide-react';
 import { format } from 'date-fns';
 
-const ROLE_LABELS: Record<string, string> = {
-  platform_super_admin: 'Super Admin',
-  platform_operations: 'Operações',
-  platform_support: 'Suporte',
-  platform_finance: 'Financeiro',
-  platform_read_only: 'Somente Leitura',
-};
-
-const ROLE_OPTIONS = [
-  { value: 'platform_super_admin', label: 'Super Admin' },
-  { value: 'platform_operations', label: 'Operações' },
-  { value: 'platform_support', label: 'Suporte' },
-  { value: 'platform_finance', label: 'Financeiro' },
-  { value: 'platform_read_only', label: 'Somente Leitura' },
-];
-
 const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   active: { label: 'Ativo', variant: 'default' },
   inactive: { label: 'Inativo', variant: 'secondary' },
@@ -41,13 +26,14 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'second
 
 interface Props {
   users: PlatformUser[];
+  roles: PlatformRole[];
   loading: boolean;
   isSuperAdmin: boolean;
   currentUserId?: string;
   onRefresh: () => void;
 }
 
-export function PlatformUsersTab({ users, loading, isSuperAdmin, currentUserId, onRefresh }: Props) {
+export function PlatformUsersTab({ users, roles, loading, isSuperAdmin, currentUserId, onRefresh }: Props) {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -55,49 +41,62 @@ export function PlatformUsersTab({ users, loading, isSuperAdmin, currentUserId, 
   const [saving, setSaving] = useState(false);
 
   // Create form
-  const [form, setForm] = useState({ email: '', display_name: '', role: 'platform_read_only', password: '' });
+  const [form, setForm] = useState({ email: '', display_name: '', role_id: '', password: '' });
   // Edit form
-  const [editRole, setEditRole] = useState('');
+  const [editRoleId, setEditRoleId] = useState('');
 
-  const filtered = users.filter(u =>
-    u.email.toLowerCase().includes(search.toLowerCase()) ||
-    u.display_name?.toLowerCase().includes(search.toLowerCase()) ||
-    ROLE_LABELS[u.role]?.toLowerCase().includes(search.toLowerCase())
-  );
+  const getRoleName = (user: PlatformUser) => {
+    if (user.platform_roles) return user.platform_roles.name;
+    const role = roles.find(r => r.id === user.role_id);
+    return role?.name ?? user.role;
+  };
+
+  const filtered = users.filter(u => {
+    const q = search.toLowerCase();
+    return u.email.toLowerCase().includes(q) ||
+      u.display_name?.toLowerCase().includes(q) ||
+      getRoleName(u).toLowerCase().includes(q);
+  });
+
+  const defaultRoleId = roles.find(r => r.slug === 'platform_read_only')?.id ?? '';
 
   const handleCreate = async () => {
     if (!form.email || !form.password) return;
     setSaving(true);
 
-    // Use edge function to create auth user + platform_users entry
+    const roleId = form.role_id || defaultRoleId;
+    const role = roles.find(r => r.id === roleId);
+
     const { data, error } = await supabase.functions.invoke('manage-platform-user', {
       body: {
         action: 'create',
         email: form.email.trim(),
         password: form.password,
         display_name: form.display_name.trim() || null,
-        role: form.role,
+        role: role?.slug ?? 'platform_read_only',
+        role_id: roleId,
       },
     });
 
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: 'Usuário criado', description: `${form.email} adicionado como ${ROLE_LABELS[form.role]}.` });
+      toast({ title: 'Usuário criado', description: `${form.email} adicionado como ${role?.name ?? 'usuário'}.` });
       setCreateOpen(false);
-      setForm({ email: '', display_name: '', role: 'platform_read_only', password: '' });
+      setForm({ email: '', display_name: '', role_id: '', password: '' });
       onRefresh();
     }
     setSaving(false);
   };
 
   const handleUpdateRole = async () => {
-    if (!editUser || !editRole) return;
+    if (!editUser || !editRoleId) return;
     setSaving(true);
 
+    const role = roles.find(r => r.id === editRoleId);
     const { error } = await supabase
       .from('platform_users')
-      .update({ role: editRole } as any)
+      .update({ role_id: editRoleId, role: role?.slug } as any)
       .eq('id', editUser.id);
 
     if (error) {
@@ -208,7 +207,7 @@ export function PlatformUsersTab({ users, loading, isSuperAdmin, currentUserId, 
                       <TableCell className="font-medium">{u.display_name || '—'}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-xs">{ROLE_LABELS[u.role] || u.role}</Badge>
+                        <Badge variant="outline" className="text-xs">{getRoleName(u)}</Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={st.variant} className="text-[10px]">{st.label}</Badge>
@@ -223,7 +222,7 @@ export function PlatformUsersTab({ users, loading, isSuperAdmin, currentUserId, 
                               <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => { setEditUser(u); setEditRole(u.role); }}>
+                              <DropdownMenuItem onClick={() => { setEditUser(u); setEditRoleId(u.role_id); }}>
                                 <UserCog className="h-4 w-4 mr-2" /> Alterar Cargo
                               </DropdownMenuItem>
                               {!isSelf && (
@@ -276,11 +275,11 @@ export function PlatformUsersTab({ users, loading, isSuperAdmin, currentUserId, 
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Cargo</Label>
-              <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
+              <Select value={form.role_id || defaultRoleId} onValueChange={v => setForm(f => ({ ...f, role_id: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {ROLE_OPTIONS.map(r => (
-                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  {roles.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -300,15 +299,15 @@ export function PlatformUsersTab({ users, loading, isSuperAdmin, currentUserId, 
             <DialogDescription>{editUser?.email}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <Select value={editRole} onValueChange={setEditRole}>
+            <Select value={editRoleId} onValueChange={setEditRoleId}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {ROLE_OPTIONS.map(r => (
-                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                {roles.map(r => (
+                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button className="w-full" disabled={saving || editRole === editUser?.role} onClick={handleUpdateRole}>
+            <Button className="w-full" disabled={saving || editRoleId === editUser?.role_id} onClick={handleUpdateRole}>
               {saving ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>

@@ -254,9 +254,9 @@ export class CognitiveContextCollector {
 
     const [tenantsRes, usersRes, permsRes, rpRes] = await Promise.all([
       supabase.from('tenants').select('id, name, status, created_at').limit(100),
-      supabase.from('platform_users').select('id, email, role, status').limit(200),
-      supabase.from('platform_permission_definitions').select('id, code, module, description'),
-      supabase.from('platform_role_permissions').select('id, role, permission_id'),
+      supabase.from('platform_users').select('id, email, role, role_id, status, platform_roles(slug, name)').limit(200),
+      supabase.from('platform_permission_definitions').select('id, code, module, resource, action, domain, description'),
+      supabase.from('platform_role_permissions').select('id, role, role_id, permission_id'),
     ]);
 
     this.snapshotCache = {

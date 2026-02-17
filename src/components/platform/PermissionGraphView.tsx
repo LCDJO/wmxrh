@@ -1,16 +1,6 @@
 /**
  * PermissionGraphView — Interactive visual graph showing Role → Permission relationships.
- *
- * Layout:
- *   - Left column: Role nodes (colored by role type)
- *   - Center: Connection lines (SVG)
- *   - Right column: Permission nodes grouped by module
- *
- * Features:
- *   - Click a role to highlight its permissions
- *   - Click a permission to highlight which roles have it
- *   - Hover for tooltips
- *   - Module grouping with collapsible sections
+ * Uses platform_roles table data instead of hardcoded roles.
  */
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -21,54 +11,43 @@ import {
   Shield, Lock, Eye, Headphones, Wallet, Settings,
   ChevronDown, ChevronRight, Zap, Network,
 } from 'lucide-react';
-import type { PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/PlatformSecurity';
+import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/PlatformSecurity';
 
-// ── Role metadata ───────────────────────────────────────────────
+const ROLE_STYLE: Record<string, { icon: typeof Shield; color: string }> = {
+  platform_super_admin: { icon: Lock, color: 'bg-destructive/15 text-destructive border-destructive/30' },
+  platform_operations: { icon: Settings, color: 'bg-primary/15 text-primary border-primary/30' },
+  platform_support: { icon: Headphones, color: 'bg-info/15 text-info border-info/30' },
+  platform_finance: { icon: Wallet, color: 'bg-warning/15 text-warning border-warning/30' },
+  platform_read_only: { icon: Eye, color: 'bg-muted text-muted-foreground border-border' },
+};
 
-const ROLES = [
-  { key: 'platform_super_admin', label: 'Super Admin', icon: Lock, color: 'bg-destructive/15 text-destructive border-destructive/30' },
-  { key: 'platform_operations', label: 'Operações', icon: Settings, color: 'bg-primary/15 text-primary border-primary/30' },
-  { key: 'platform_support', label: 'Suporte', icon: Headphones, color: 'bg-info/15 text-info border-info/30' },
-  { key: 'platform_finance', label: 'Financeiro', icon: Wallet, color: 'bg-warning/15 text-warning border-warning/30' },
-  { key: 'platform_read_only', label: 'Somente Leitura', icon: Eye, color: 'bg-muted text-muted-foreground border-border' },
-] as const;
+const DEFAULT_STYLE = { icon: Shield, color: 'bg-muted text-muted-foreground border-border' };
 
 const MODULE_ICONS: Record<string, typeof Shield> = {
-  tenants: Shield,
-  modulos: Zap,
-  auditoria: Eye,
-  financeiro: Wallet,
-  usuarios: Settings,
-  seguranca: Lock,
+  tenants: Shield, modulos: Zap, auditoria: Eye, financeiro: Wallet, usuarios: Settings, seguranca: Lock,
 };
 
 const MODULE_LABELS: Record<string, string> = {
-  tenants: 'Tenants',
-  modulos: 'Módulos',
-  auditoria: 'Auditoria',
-  financeiro: 'Financeiro',
-  usuarios: 'Usuários',
-  seguranca: 'Segurança',
+  tenants: 'Tenants', modulos: 'Módulos', auditoria: 'Auditoria',
+  financeiro: 'Financeiro', usuarios: 'Usuários', seguranca: 'Segurança',
 };
 
-// ── Props ────────────────────────────────────────────────────────
-
 interface PermissionGraphViewProps {
+  roles: PlatformRole[];
   permissions: PlatformPermissionDef[];
   rolePerms: PlatformRolePermission[];
 }
 
-export function PermissionGraphView({ permissions, rolePerms }: PermissionGraphViewProps) {
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+export function PermissionGraphView({ roles, permissions, rolePerms }: PermissionGraphViewProps) {
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [selectedPerm, setSelectedPerm] = useState<string | null>(null);
   const [collapsedModules, setCollapsedModules] = useState<Set<string>>(new Set());
-  const [lines, setLines] = useState<{ x1: number; y1: number; x2: number; y2: number; roleKey: string; permId: string }[]>([]);
+  const [lines, setLines] = useState<{ x1: number; y1: number; x2: number; y2: number; roleId: string; permId: string }[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const roleRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const permRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Group permissions by module
   const groupedPerms = useMemo(() => {
     const map = new Map<string, PlatformPermissionDef[]>();
     permissions.forEach(p => {
@@ -79,22 +58,20 @@ export function PermissionGraphView({ permissions, rolePerms }: PermissionGraphV
     return map;
   }, [permissions]);
 
-  // Role → permission IDs mapping
   const rolePermMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
     rolePerms.forEach(rp => {
-      if (!map.has(rp.role)) map.set(rp.role, new Set());
-      map.get(rp.role)!.add(rp.permission_id);
+      if (!map.has(rp.role_id)) map.set(rp.role_id, new Set());
+      map.get(rp.role_id)!.add(rp.permission_id);
     });
     return map;
   }, [rolePerms]);
 
-  // Permission → roles mapping (reverse)
   const permRoleMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
     rolePerms.forEach(rp => {
       if (!map.has(rp.permission_id)) map.set(rp.permission_id, new Set());
-      map.get(rp.permission_id)!.add(rp.role);
+      map.get(rp.permission_id)!.add(rp.role_id);
     });
     return map;
   }, [rolePerms]);
@@ -102,20 +79,18 @@ export function PermissionGraphView({ permissions, rolePerms }: PermissionGraphV
   const toggleModule = (mod: string) => {
     setCollapsedModules(prev => {
       const next = new Set(prev);
-      if (next.has(mod)) next.delete(mod);
-      else next.add(mod);
+      if (next.has(mod)) next.delete(mod); else next.add(mod);
       return next;
     });
   };
 
-  // Compute SVG lines
   const computeLines = useCallback(() => {
     if (!containerRef.current) return;
     const containerRect = containerRef.current.getBoundingClientRect();
     const newLines: typeof lines = [];
 
-    for (const [role, permIds] of rolePermMap) {
-      const roleEl = roleRefs.current.get(role);
+    for (const [roleId, permIds] of rolePermMap) {
+      const roleEl = roleRefs.current.get(roleId);
       if (!roleEl) continue;
       const roleRect = roleEl.getBoundingClientRect();
 
@@ -129,7 +104,7 @@ export function PermissionGraphView({ permissions, rolePerms }: PermissionGraphV
           y1: roleRect.top + roleRect.height / 2 - containerRect.top,
           x2: permRect.left - containerRect.left,
           y2: permRect.top + permRect.height / 2 - containerRect.top,
-          roleKey: role,
+          roleId,
           permId,
         });
       }
@@ -138,41 +113,33 @@ export function PermissionGraphView({ permissions, rolePerms }: PermissionGraphV
   }, [rolePermMap]);
 
   useEffect(() => {
-    // Compute after layout
     const timer = setTimeout(computeLines, 100);
     window.addEventListener('resize', computeLines);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', computeLines);
-    };
+    return () => { clearTimeout(timer); window.removeEventListener('resize', computeLines); };
   }, [computeLines, collapsedModules, permissions, rolePerms]);
 
-  // Determine if a line should be highlighted
-  const isLineHighlighted = (roleKey: string, permId: string) => {
-    if (!selectedRole && !selectedPerm) return true;
-    if (selectedRole && roleKey === selectedRole) return true;
+  const isLineHighlighted = (roleId: string, permId: string) => {
+    if (!selectedRoleId && !selectedPerm) return true;
+    if (selectedRoleId && roleId === selectedRoleId) return true;
     if (selectedPerm && permId === selectedPerm) return true;
     return false;
   };
 
-  const isRoleHighlighted = (roleKey: string) => {
-    if (!selectedRole && !selectedPerm) return true;
-    if (selectedRole === roleKey) return true;
-    if (selectedPerm && permRoleMap.get(selectedPerm)?.has(roleKey)) return true;
+  const isRoleHighlighted = (roleId: string) => {
+    if (!selectedRoleId && !selectedPerm) return true;
+    if (selectedRoleId === roleId) return true;
+    if (selectedPerm && permRoleMap.get(selectedPerm)?.has(roleId)) return true;
     return false;
   };
 
   const isPermHighlighted = (permId: string) => {
-    if (!selectedRole && !selectedPerm) return true;
+    if (!selectedRoleId && !selectedPerm) return true;
     if (selectedPerm === permId) return true;
-    if (selectedRole && rolePermMap.get(selectedRole)?.has(permId)) return true;
+    if (selectedRoleId && rolePermMap.get(selectedRoleId)?.has(permId)) return true;
     return false;
   };
 
-  const clearSelection = () => {
-    setSelectedRole(null);
-    setSelectedPerm(null);
-  };
+  const clearSelection = () => { setSelectedRoleId(null); setSelectedPerm(null); };
 
   return (
     <Card>
@@ -189,15 +156,11 @@ export function PermissionGraphView({ permissions, rolePerms }: PermissionGraphV
         <div
           ref={containerRef}
           className="relative min-h-[400px]"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) clearSelection();
-          }}
+          onClick={(e) => { if (e.target === e.currentTarget) clearSelection(); }}
         >
-          {/* SVG overlay for lines */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ overflow: 'visible' }}>
             {lines.map((line, i) => {
-              const highlighted = isLineHighlighted(line.roleKey, line.permId);
-              const roleMeta = ROLES.find(r => r.key === line.roleKey);
+              const highlighted = isLineHighlighted(line.roleId, line.permId);
               return (
                 <path
                   key={i}
@@ -213,36 +176,36 @@ export function PermissionGraphView({ permissions, rolePerms }: PermissionGraphV
           </svg>
 
           <div className="grid grid-cols-[200px_1fr_1fr] gap-8 relative z-10">
-            {/* ── Left: Roles ── */}
             <div className="space-y-2">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                Cargos ({ROLES.length})
+                Cargos ({roles.length})
               </h3>
-              {ROLES.map(role => {
-                const Icon = role.icon;
-                const permCount = rolePermMap.get(role.key)?.size ?? 0;
-                const highlighted = isRoleHighlighted(role.key);
-                const isSelected = selectedRole === role.key;
+              {roles.map(role => {
+                const style = ROLE_STYLE[role.slug] ?? DEFAULT_STYLE;
+                const Icon = style.icon;
+                const permCount = rolePermMap.get(role.id)?.size ?? 0;
+                const highlighted = isRoleHighlighted(role.id);
+                const isSelected = selectedRoleId === role.id;
 
                 return (
                   <div
-                    key={role.key}
-                    ref={el => { if (el) roleRefs.current.set(role.key, el); }}
+                    key={role.id}
+                    ref={el => { if (el) roleRefs.current.set(role.id, el); }}
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedPerm(null);
-                      setSelectedRole(isSelected ? null : role.key);
+                      setSelectedRoleId(isSelected ? null : role.id);
                     }}
                     className={cn(
                       'flex items-center gap-2.5 px-3 py-2.5 rounded-lg border cursor-pointer transition-all duration-200',
-                      role.color,
+                      style.color,
                       !highlighted && 'opacity-30',
                       isSelected && 'ring-2 ring-primary shadow-md scale-[1.02]',
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold truncate">{role.label}</p>
+                      <p className="text-xs font-semibold truncate">{role.name}</p>
                       <p className="text-[10px] opacity-70">{permCount} perms</p>
                     </div>
                   </div>
@@ -250,7 +213,6 @@ export function PermissionGraphView({ permissions, rolePerms }: PermissionGraphV
               })}
             </div>
 
-            {/* ── Right: Permissions by module (spanning 2 cols) ── */}
             <div className="col-span-2 space-y-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                 Permissões ({permissions.length})
@@ -285,7 +247,7 @@ export function PermissionGraphView({ permissions, rolePerms }: PermissionGraphV
                               ref={el => { if (el) permRefs.current.set(perm.id, el); }}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedRole(null);
+                                setSelectedRoleId(null);
                                 setSelectedPerm(isSelected ? null : perm.id);
                               }}
                               className={cn(

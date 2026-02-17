@@ -18,12 +18,13 @@ import { Key, Network, GitBranch, Loader2 } from 'lucide-react';
 import { PlatformRolesTab } from '@/components/platform/PlatformRolesTab';
 import { PermissionGraphView } from '@/components/platform/PermissionGraphView';
 import { AccessGraphView } from '@/components/platform/AccessGraphView';
-import type { PlatformUser, PlatformPermissionDef, PlatformRolePermission } from './PlatformSecurity';
+import type { PlatformUser, PlatformRole, PlatformPermissionDef, PlatformRolePermission } from './PlatformSecurity';
 
 export default function PlatformIAM() {
   const { user } = useAuth();
   const { identity } = usePlatformIdentity();
   const [users, setUsers] = useState<PlatformUser[]>([]);
+  const [roles, setRoles] = useState<PlatformRole[]>([]);
   const [permissions, setPermissions] = useState<PlatformPermissionDef[]>([]);
   const [rolePerms, setRolePerms] = useState<PlatformRolePermission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,12 +33,14 @@ export default function PlatformIAM() {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [usersRes, permsRes, rpRes] = await Promise.all([
-      supabase.from('platform_users').select('*').order('created_at', { ascending: false }),
+    const [usersRes, rolesRes, permsRes, rpRes] = await Promise.all([
+      supabase.from('platform_users').select('*, platform_roles(*)').order('created_at', { ascending: false }),
+      supabase.from('platform_roles').select('*').order('name'),
       supabase.from('platform_permission_definitions').select('*').order('module, code'),
       supabase.from('platform_role_permissions').select('*'),
     ]);
     setUsers((usersRes.data as PlatformUser[]) ?? []);
+    setRoles((rolesRes.data as PlatformRole[]) ?? []);
     setPermissions((permsRes.data as PlatformPermissionDef[]) ?? []);
     setRolePerms((rpRes.data as PlatformRolePermission[]) ?? []);
     setLoading(false);
@@ -86,6 +89,7 @@ export default function PlatformIAM() {
 
         <TabsContent value="roles">
           <PlatformRolesTab
+            roles={roles}
             permissions={permissions}
             rolePerms={rolePerms}
             loading={false}
@@ -96,6 +100,7 @@ export default function PlatformIAM() {
 
         <TabsContent value="permission-graph">
           <PermissionGraphView
+            roles={roles}
             permissions={permissions}
             rolePerms={rolePerms}
           />
@@ -104,6 +109,7 @@ export default function PlatformIAM() {
         <TabsContent value="access-graph">
           <AccessGraphView
             users={users}
+            roles={roles}
             permissions={permissions}
             rolePerms={rolePerms}
           />

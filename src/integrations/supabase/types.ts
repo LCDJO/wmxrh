@@ -3455,6 +3455,38 @@ export type Database = {
           },
         ]
       }
+      platform_access_scopes: {
+        Row: {
+          created_at: string
+          id: string
+          role_id: string
+          scope_id: string | null
+          scope_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role_id: string
+          scope_id?: string | null
+          scope_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role_id?: string
+          scope_id?: string | null
+          scope_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_access_scopes_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "platform_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_cognitive_events: {
         Row: {
           created_at: string
@@ -3484,25 +3516,34 @@ export type Database = {
       }
       platform_permission_definitions: {
         Row: {
+          action: string
           code: string
           created_at: string
           description: string | null
+          domain: string
           id: string
           module: string
+          resource: string
         }
         Insert: {
+          action: string
           code: string
           created_at?: string
           description?: string | null
+          domain?: string
           id?: string
           module: string
+          resource: string
         }
         Update: {
+          action?: string
           code?: string
           created_at?: string
           description?: string | null
+          domain?: string
           id?: string
           module?: string
+          resource?: string
         }
         Relationships: []
       }
@@ -3513,6 +3554,7 @@ export type Database = {
           id: string
           permission_id: string
           role: Database["public"]["Enums"]["platform_role"]
+          role_id: string
         }
         Insert: {
           created_at?: string
@@ -3520,6 +3562,7 @@ export type Database = {
           id?: string
           permission_id: string
           role: Database["public"]["Enums"]["platform_role"]
+          role_id: string
         }
         Update: {
           created_at?: string
@@ -3527,6 +3570,7 @@ export type Database = {
           id?: string
           permission_id?: string
           role?: Database["public"]["Enums"]["platform_role"]
+          role_id?: string
         }
         Relationships: [
           {
@@ -3536,7 +3580,47 @@ export type Database = {
             referencedRelation: "platform_permission_definitions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "platform_role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "platform_roles"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      platform_roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          inherits_role_ids: string[] | null
+          is_system_role: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          inherits_role_ids?: string[] | null
+          is_system_role?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          inherits_role_ids?: string[] | null
+          is_system_role?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       platform_users: {
         Row: {
@@ -3545,6 +3629,7 @@ export type Database = {
           email: string
           id: string
           role: Database["public"]["Enums"]["platform_role"]
+          role_id: string
           status: string
           updated_at: string
           user_id: string
@@ -3555,6 +3640,7 @@ export type Database = {
           email: string
           id?: string
           role?: Database["public"]["Enums"]["platform_role"]
+          role_id: string
           status?: string
           updated_at?: string
           user_id: string
@@ -3565,11 +3651,20 @@ export type Database = {
           email?: string
           id?: string
           role?: Database["public"]["Enums"]["platform_role"]
+          role_id?: string
           status?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "platform_users_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "platform_roles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       positions: {
         Row: {

@@ -36,15 +36,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check caller is platform super admin
+    // Check caller is platform super admin (using role_id → platform_roles join)
     const { data: callerPlatform } = await adminClient
       .from("platform_users")
-      .select("role")
+      .select("role_id, platform_roles(slug)")
       .eq("user_id", caller.id)
       .eq("status", "active")
       .single();
 
-    if (!callerPlatform || callerPlatform.role !== "platform_super_admin") {
+    const callerSlug = (callerPlatform as any)?.platform_roles?.slug;
+    if (!callerPlatform || callerSlug !== "platform_super_admin") {
       return new Response(JSON.stringify({ error: "Only super admins can manage platform users" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -55,13 +56,31 @@ Deno.serve(async (req) => {
     const { action } = body;
 
     if (action === "create") {
-      const { email, password, display_name, role } = body;
+      const { email, password, display_name, role, role_id } = body;
 
       if (!email || !password) {
         return new Response(JSON.stringify({ error: "Email and password required" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+
+      // Resolve role_id if not provided (fallback from slug)
+      let resolvedRoleId = role_id;
+      let resolvedSlug = role || "platform_read_only";
+      if (!resolvedRoleId) {
+        const { data: roleData } = await adminClient
+          .from("platform_roles")
+          .select("id, slug")
+          .eq("slug", resolvedSlug)
+          .single();
+        if (!roleData) {
+          return new Response(JSON.stringify({ error: "Invalid role" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        resolvedRoleId = roleData.id;
       }
 
       // Create auth user
@@ -79,19 +98,19 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Insert into platform_users
+      // Insert into platform_users with both role (enum) and role_id (FK)
       const { error: insertError } = await adminClient
         .from("platform_users")
         .insert({
           user_id: authData.user.id,
           email,
           display_name: display_name || null,
-          role: role || "platform_read_only",
+          role: resolvedSlug,
+          role_id: resolvedRoleId,
           status: "active",
         });
 
       if (insertError) {
-        // Cleanup auth user if platform_users insert fails
         await adminClient.auth.admin.deleteUser(authData.user.id);
         return new Response(JSON.stringify({ error: insertError.message }), {
           status: 400,

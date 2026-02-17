@@ -1,22 +1,15 @@
 /**
  * Platform Roles Tab — View roles, permission matrix, toggle permissions per role.
+ * Now uses platform_roles table with role_id FK instead of enum.
  */
 import { useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/PlatformSecurity';
+import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/PlatformSecurity';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Shield, Lock, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-const PLATFORM_ROLES = [
-  { key: 'platform_super_admin', label: 'Super Admin', description: 'Acesso total à plataforma', locked: true },
-  { key: 'platform_operations', label: 'Operações', description: 'Gestão de tenants e módulos' },
-  { key: 'platform_support', label: 'Suporte', description: 'Visualização e impersonação' },
-  { key: 'platform_finance', label: 'Financeiro', description: 'Faturamento e billing' },
-  { key: 'platform_read_only', label: 'Somente Leitura', description: 'Apenas visualização' },
-];
 
 const MODULE_LABELS: Record<string, string> = {
   tenants: 'Tenants',
@@ -28,6 +21,7 @@ const MODULE_LABELS: Record<string, string> = {
 };
 
 interface Props {
+  roles: PlatformRole[];
   permissions: PlatformPermissionDef[];
   rolePerms: PlatformRolePermission[];
   loading: boolean;
@@ -35,10 +29,14 @@ interface Props {
   onRefresh: () => void;
 }
 
-export function PlatformRolesTab({ permissions, rolePerms, loading, isSuperAdmin, onRefresh }: Props) {
+export function PlatformRolesTab({ roles, permissions, rolePerms, loading, isSuperAdmin, onRefresh }: Props) {
   const { toast } = useToast();
-  const [selectedRole, setSelectedRole] = useState<string>('platform_super_admin');
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
+
+  // Default to first role
+  const activeRoleId = selectedRoleId ?? roles[0]?.id ?? null;
+  const activeRole = roles.find(r => r.id === activeRoleId);
 
   // Group permissions by module
   const groupedPerms = useMemo(() => {
@@ -53,28 +51,28 @@ export function PlatformRolesTab({ permissions, rolePerms, loading, isSuperAdmin
 
   // Current role's permission IDs
   const currentRolePermIds = useMemo(() => {
-    return new Set(rolePerms.filter(rp => rp.role === selectedRole).map(rp => rp.permission_id));
-  }, [rolePerms, selectedRole]);
+    return new Set(rolePerms.filter(rp => rp.role_id === activeRoleId).map(rp => rp.permission_id));
+  }, [rolePerms, activeRoleId]);
 
-  const isLocked = selectedRole === 'platform_super_admin';
+  const isLocked = activeRole?.slug === 'platform_super_admin';
 
   const handleToggle = async (permId: string, currently: boolean) => {
-    if (isLocked || !isSuperAdmin) return;
+    if (isLocked || !isSuperAdmin || !activeRoleId) return;
     setToggling(permId);
 
     if (currently) {
-      // Remove
       const { error } = await supabase
         .from('platform_role_permissions')
         .delete()
-        .eq('role', selectedRole as any)
+        .eq('role_id', activeRoleId)
         .eq('permission_id', permId);
       if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
-      // Add
+      // Need enum value for the legacy `role` column — get slug from active role
+      const slug = activeRole?.slug ?? 'platform_read_only';
       const { error } = await supabase
         .from('platform_role_permissions')
-        .insert({ role: selectedRole, permission_id: permId } as any);
+        .insert({ role_id: activeRoleId, permission_id: permId, role: slug } as any);
       if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
 
@@ -90,22 +88,22 @@ export function PlatformRolesTab({ permissions, rolePerms, loading, isSuperAdmin
     <div className="space-y-6">
       {/* Role cards */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {PLATFORM_ROLES.map(role => {
-          const permCount = rolePerms.filter(rp => rp.role === role.key).length;
-          const isActive = selectedRole === role.key;
+        {roles.map(role => {
+          const permCount = rolePerms.filter(rp => rp.role_id === role.id).length;
+          const isActive = activeRoleId === role.id;
           return (
             <Card
-              key={role.key}
+              key={role.id}
               className={`cursor-pointer transition-all ${isActive ? 'ring-2 ring-primary shadow-md' : 'hover:shadow-sm'}`}
-              onClick={() => setSelectedRole(role.key)}
+              onClick={() => setSelectedRoleId(role.id)}
             >
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    {role.locked ? <Lock className="h-3.5 w-3.5 text-muted-foreground" /> : <Shield className="h-3.5 w-3.5 text-primary" />}
-                    <span className="text-sm font-semibold">{role.label}</span>
+                    {role.slug === 'platform_super_admin' ? <Lock className="h-3.5 w-3.5 text-muted-foreground" /> : <Shield className="h-3.5 w-3.5 text-primary" />}
+                    <span className="text-sm font-semibold">{role.name}</span>
                   </div>
-                  {role.locked && <Badge variant="secondary" className="text-[9px]">Fixo</Badge>}
+                  {role.is_system_role && <Badge variant="secondary" className="text-[9px]">Sistema</Badge>}
                 </div>
                 <p className="text-xs text-muted-foreground">{role.description}</p>
                 <p className="text-xs text-muted-foreground mt-1.5">
@@ -123,7 +121,7 @@ export function PlatformRolesTab({ permissions, rolePerms, loading, isSuperAdmin
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base">
-                Permissões: {PLATFORM_ROLES.find(r => r.key === selectedRole)?.label}
+                Permissões: {activeRole?.name ?? '—'}
               </CardTitle>
               <CardDescription>
                 {isLocked
