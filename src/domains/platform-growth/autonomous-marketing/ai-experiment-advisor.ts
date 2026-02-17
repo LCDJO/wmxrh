@@ -1,12 +1,107 @@
 /**
  * AIExperimentAdvisor — Uses heuristics and AI signals to recommend
  * experiment actions: new tests, early stops, scaling winners.
+ *
+ * Now integrates with AIConversionDesigner (ai-conversion-designer edge function)
+ * for AI-powered suggestions: headlines, FAB reorganization, CTA alternatives, layout.
  */
 import type { ExperimentSuggestion, ABExperiment, LandingPerformanceScore } from './types';
 import { abTestingManager } from './ab-testing-manager';
 import { conversionAnalyzer } from './conversion-analyzer';
+import { supabase } from '@/integrations/supabase/client';
+
+// ── AI Conversion Designer Types ──
+
+export interface HeadlineSuggestion {
+  text: string;
+  approach: 'pain' | 'benefit' | 'social_proof' | 'urgency' | 'curiosity';
+  rationale: string;
+}
+
+export interface FABReorganization {
+  suggested_order: string[];
+  rationale: string;
+  key_changes: string[];
+}
+
+export interface CTAAlternative {
+  button_text: string;
+  microcopy: string;
+  approach: 'action' | 'benefit' | 'low_commitment' | 'urgency' | 'social_proof';
+  rationale: string;
+}
+
+export interface LayoutRecommendation {
+  area: string;
+  recommendation: string;
+  expected_impact: 'low' | 'medium' | 'high';
+  rationale: string;
+}
+
+export interface ConversionDesignerResult {
+  landing_page_id: string;
+  page_name: string;
+  kpis: {
+    page_views: number;
+    unique_visitors: number;
+    conversion_rate: number;
+    ctr: number;
+    revenue_per_visitor: number;
+    total_revenue: number;
+  };
+  suggestions: {
+    headlines: HeadlineSuggestion[];
+    fab_reorganization: FABReorganization;
+    cta_alternatives: CTAAlternative[];
+    layout_recommendations: LayoutRecommendation[];
+  };
+  generated_at: string;
+}
 
 class AIExperimentAdvisor {
+
+  // ══════════════════════════════════════════════
+  //  AI CONVERSION DESIGNER
+  // ══════════════════════════════════════════════
+
+  /** Get AI-powered conversion optimization suggestions for a landing page */
+  async getConversionDesign(landingPageId: string): Promise<ConversionDesignerResult> {
+    const { data, error } = await supabase.functions.invoke('ai-conversion-designer', {
+      body: { landing_page_id: landingPageId },
+    });
+
+    if (error) throw new Error(`AI Conversion Designer error: ${error.message}`);
+    return data as ConversionDesignerResult;
+  }
+
+  /** Get only headline suggestions */
+  async suggestHeadlines(landingPageId: string): Promise<HeadlineSuggestion[]> {
+    const result = await this.getConversionDesign(landingPageId);
+    return result.suggestions.headlines;
+  }
+
+  /** Get FAB block reorganization suggestion */
+  async suggestFABReorganization(landingPageId: string): Promise<FABReorganization> {
+    const result = await this.getConversionDesign(landingPageId);
+    return result.suggestions.fab_reorganization;
+  }
+
+  /** Get CTA alternative suggestions */
+  async suggestCTAs(landingPageId: string): Promise<CTAAlternative[]> {
+    const result = await this.getConversionDesign(landingPageId);
+    return result.suggestions.cta_alternatives;
+  }
+
+  /** Get layout recommendations */
+  async suggestLayout(landingPageId: string): Promise<LayoutRecommendation[]> {
+    const result = await this.getConversionDesign(landingPageId);
+    return result.suggestions.layout_recommendations;
+  }
+
+  // ══════════════════════════════════════════════
+  //  HEURISTIC-BASED EXPERIMENT ANALYSIS
+  // ══════════════════════════════════════════════
+
   /** Generate suggestions for running experiments */
   analyzeRunningExperiments(): ExperimentSuggestion[] {
     const running = abTestingManager.listByStatus('running');
@@ -95,7 +190,7 @@ class AIExperimentAdvisor {
         }
       }
 
-      // Check for stale experiments (running too long without significance)
+      // Check for stale experiments
       const daysSinceStart = exp.startedAt
         ? (Date.now() - new Date(exp.startedAt).getTime()) / 86400000
         : 0;
