@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-type ActionType = "suggest_headlines" | "organize_fab" | "optimize_cta" | "suggest_layout";
+type ActionType = "suggest_headlines" | "organize_fab" | "optimize_cta" | "suggest_layout" | "generate_fab";
 
 const SYSTEM_PROMPTS: Record<ActionType, string> = {
   suggest_headlines: `You are an expert conversion copywriter for B2B SaaS landing pages (HR / People Management platform).
@@ -26,6 +26,15 @@ Always respond using the optimize_cta tool.`,
   suggest_layout: `You are a landing page layout strategist who optimizes section order for maximum conversion.
 Given sections and industry context, suggest the optimal order with reasoning.
 Always respond using the suggest_layout tool.`,
+
+  generate_fab: `You are an expert FAB (Feature-Advantage-Benefit) content strategist for B2B SaaS landing pages.
+Given a product module or raw feature description, generate complete FAB sections following this structure:
+- Feature: What it is (concrete capability)
+- Advantage: Why it matters (competitive differentiator)  
+- Benefit: Measurable result for the customer (with metrics when possible)
+
+Generate content in Portuguese (Brazil). Be specific, use numbers and percentages when possible.
+Always respond using the generate_fab tool.`,
 };
 
 const TOOLS: Record<ActionType, unknown[]> = {
@@ -155,6 +164,54 @@ const TOOLS: Record<ActionType, unknown[]> = {
             expected_improvement: { type: "string" },
           },
           required: ["sections", "layout_strategy", "expected_improvement"],
+          additionalProperties: false,
+        },
+      },
+    },
+  ],
+
+  generate_fab: [
+    {
+      type: "function",
+      function: {
+        name: "generate_fab",
+        description: "Generate complete FAB (Feature-Advantage-Benefit) content sections for landing pages.",
+        parameters: {
+          type: "object",
+          properties: {
+            sections: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  module: { type: "string", description: "Module or category name" },
+                  feature: { type: "string", description: "What it is — concrete capability" },
+                  advantage: { type: "string", description: "Why it matters — competitive differentiator" },
+                  benefit: { type: "string", description: "Measurable result for the customer" },
+                  impact_score: { type: "number", description: "Estimated conversion impact 1-10" },
+                  suggested_icon: { type: "string", description: "Lucide icon name suggestion" },
+                  cta_text: { type: "string", description: "Micro-CTA for this section" },
+                },
+                required: ["module", "feature", "advantage", "benefit", "impact_score", "suggested_icon", "cta_text"],
+                additionalProperties: false,
+              },
+            },
+            hero_fab: {
+              type: "object",
+              description: "The single strongest FAB to use in the hero section",
+              properties: {
+                feature: { type: "string" },
+                advantage: { type: "string" },
+                benefit: { type: "string" },
+                headline: { type: "string" },
+                subheadline: { type: "string" },
+              },
+              required: ["feature", "advantage", "benefit", "headline", "subheadline"],
+              additionalProperties: false,
+            },
+            strategy_summary: { type: "string", description: "Overall FAB content strategy explanation" },
+          },
+          required: ["sections", "hero_fab", "strategy_summary"],
           additionalProperties: false,
         },
       },
@@ -301,6 +358,23 @@ Page goal: ${ctx.goal || "conversion to free trial"}${dataContext}
 
 Use landing analytics (bounce rate, avg time, conversion rate) and FAB performance to determine optimal section ordering.
 Suggest optimal section order for maximum conversion. Respond in Portuguese (Brazil).`;
+
+    case "generate_fab":
+      return `Industry: ${industry}
+Modules to generate FAB content for: ${modules.join(", ") || "multi-tenant, admissao-digital, folha, compliance, referral"}
+Target audience: ${ctx.audience || "HR directors, People Ops managers, DP managers"}
+${ctx.rawFeatures ? `Raw features to expand:\n${JSON.stringify(ctx.rawFeatures)}` : ""}
+${currentContent ? `Existing FAB content for reference:\n${currentContent}` : ""}${dataContext}
+
+EXAMPLE FAB:
+Feature: Controle multi-tenant
+Advantage: Gestão centralizada de múltiplas empresas
+Benefit: Redução de custos operacionais em até 40% e escalabilidade sem limite
+
+Generate 5-8 complete FAB sections covering the modules above.
+Prioritize based on revenue data and conversion performance when available.
+Include a hero_fab with the single strongest FAB for the hero section.
+All content in Portuguese (Brazil).`;
 
     default:
       return JSON.stringify(ctx);
