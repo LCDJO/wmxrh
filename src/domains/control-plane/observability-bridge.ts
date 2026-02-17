@@ -36,6 +36,10 @@ export class ObservabilityBridge {
     metrics.increment('landing_rollback_triggered_total', {}, 0);
     metrics.gauge('landing_performance_drop_score', 0);
     metrics.gauge('rollback_success_rate', 100);
+    // Marketing Digital OS baselines
+    metrics.gauge('marketing_funnel_conversion_rate', 0);
+    metrics.increment('growth_ai_suggestions_total', {}, 0);
+    metrics.gauge('marketing_pipeline_drop_rate', 0);
   }
 
   /** Update gauges from current state */
