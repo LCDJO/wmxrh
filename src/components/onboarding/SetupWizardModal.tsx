@@ -34,6 +34,7 @@ import {
   Star,
   Users,
   Rocket,
+  SkipForward,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ModuleSetupOption, BootstrapRole, RoleBootstrapPlan } from '@/domains/adaptive-onboarding/types';
@@ -72,6 +73,7 @@ interface SetupWizardModalProps {
     selectedModules: string[];
     selectedRoles: string[];
   }) => void;
+  onSkip?: () => void;
 }
 
 export function SetupWizardModal({
@@ -83,6 +85,7 @@ export function SetupWizardModal({
   recommendedModules,
   suggestedRoles,
   onFinish,
+  onSkip,
 }: SetupWizardModalProps) {
   const [currentStep, setCurrentStep] = useState<WizardStep>('welcome');
   const [selectedModules, setSelectedModules] = useState<Set<string>>(() =>
@@ -420,16 +423,33 @@ export function SetupWizardModal({
         {/* ── Footer with actions ── */}
         <DialogFooter className="px-6 py-4 bg-muted/30">
           <div className="flex items-center justify-between w-full">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={goBack}
-              disabled={stepIndex === 0}
-              className="gap-1"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Voltar
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goBack}
+                disabled={stepIndex === 0}
+                className="gap-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Voltar
+              </Button>
+
+              {onSkip && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    onSkip();
+                    onOpenChange(false);
+                  }}
+                  className="gap-1 text-muted-foreground hover:text-foreground"
+                >
+                  <SkipForward className="h-4 w-4" />
+                  Pular configuração
+                </Button>
+              )}
+            </div>
 
             {currentStep === 'review' ? (
               <Button
