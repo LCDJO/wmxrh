@@ -342,13 +342,13 @@ export class MenuLayoutValidator {
     return { valid: errors.length === 0, errors, warnings };
   }
 
-  /** Auto-fix common validation errors. Returns the fixed tree + list of fixes applied. */
-  autoFix(tree: MenuTreeNode[]): { fixed: MenuTreeNode[]; fixes: string[] } {
+  /** Auto-fix common validation errors and warnings. Returns the fixed tree + list of fixes applied. */
+  autoFix(tree: MenuTreeNode[], fixWarnings = false): { fixed: MenuTreeNode[]; fixes: string[] } {
     const result = structuredClone(tree);
     const fixes: string[] = [];
     const slugs = new Set<string>();
 
-    const fixWalk = (nodes: MenuTreeNode[], depth: number, parentId: string | null) => {
+    const fixWalk = (nodes: MenuTreeNode[], depth: number, parentId: string | null, parentRoles: string[] = []) => {
       for (let i = nodes.length - 1; i >= 0; i--) {
         const n = nodes[i];
 
@@ -375,21 +375,26 @@ export class MenuLayoutValidator {
         }
         slugs.add(n.slug);
 
+        // Fix warnings: inherit parent roles if node has no permissions
+        if (fixWarnings && (!n.role_permissions || n.role_permissions.length === 0) && parentRoles.length > 0) {
+          n.role_permissions = [...parentRoles];
+          fixes.push(`"${n.label}" herdou roles do pai: ${parentRoles.join(', ')}`);
+        }
+
         // Fix max depth: move nodes exceeding max depth up to their grandparent
         if (depth >= MAX_TREE_DEPTH && n.children && n.children.length > 0) {
           fixes.push(`Filhos de "${n.label}" promovidos (profundidade ${depth + 1} > max ${MAX_TREE_DEPTH})`);
-          // Promote children to current level
           nodes.splice(i + 1, 0, ...n.children.map(c => ({ ...c, parent_id: parentId, depth_level: depth })));
           n.children = [];
         }
 
         if (n.children && n.children.length > 0) {
-          fixWalk(n.children, depth + 1, n.id);
+          fixWalk(n.children, depth + 1, n.id, n.role_permissions.length > 0 ? n.role_permissions : parentRoles);
         }
       }
     };
 
-    fixWalk(result, 0, null);
+    fixWalk(result, 0, null, []);
     return { fixed: result, fixes };
   }
 
