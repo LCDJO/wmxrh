@@ -23,15 +23,16 @@ const DOMAIN_COLORS: Record<GraphDomain, string> = {
 };
 
 const TYPE_SIZES: Record<UnifiedNodeType, number> = {
-  user: 24,
-  platform_role: 20,
-  tenant_role: 20,
+  platform_user: 24,
+  tenant_user: 24,
+  role: 20,
   permission: 12,
-  scope: 14,
+  module: 20,
   tenant: 28,
+  identity_session: 22,
+  scope: 14,
   company_group: 22,
   company: 18,
-  module: 20,
   resource: 10,
 };
 

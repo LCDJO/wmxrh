@@ -30,7 +30,7 @@ export const identityProvider: GraphProvider = {
     nodes.push({
       uid: realUid,
       domain: 'identity',
-      type: 'user',
+      type: 'identity_session',
       originalId: real.userId,
       label: real.email ?? real.userId,
       meta: { userType: real.userType, platformRole: real.platformRole },
@@ -58,7 +58,7 @@ export const identityProvider: GraphProvider = {
         nodes.push({
           uid: activeUid,
           domain: 'identity',
-          type: 'user',
+          type: 'identity_session',
           originalId: active.userId,
           label: `Impersonated: ${active.userId}`,
           meta: { tenantId: active.tenantId, userType: active.userType },

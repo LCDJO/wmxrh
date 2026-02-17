@@ -26,8 +26,8 @@ export const tenantAccessProvider: GraphProvider = {
 
     for (const [id, gNode] of graph.getNodes()) {
       const typeMap: Record<string, UnifiedNode['type']> = {
-        user: 'user',
-        role: 'tenant_role',
+        user: 'tenant_user',
+        role: 'role',
         tenant: 'tenant',
         company_group: 'company_group',
         company: 'company',
@@ -46,12 +46,12 @@ export const tenantAccessProvider: GraphProvider = {
 
     for (const gEdge of graph.getEdges()) {
       const relationMap: Record<string, UnifiedEdge['relation']> = {
-        HAS_ROLE: 'HAS_TENANT_ROLE',
-        GRANTS: 'TENANT_GRANTS',
+        HAS_ROLE: 'HAS_ROLE',
+        GRANTS: 'GRANTS_PERMISSION',
         SCOPED_TO: 'TENANT_SCOPE',
-        BELONGS_TO: 'BELONGS_TO_COMPANY',
-        IN_GROUP: 'BELONGS_TO_GROUP',
-        IN_TENANT: 'BELONGS_TO_TENANT',
+        BELONGS_TO: 'BELONGS_TO',
+        IN_GROUP: 'BELONGS_TO',
+        IN_TENANT: 'BELONGS_TO',
       };
 
       edges.push({

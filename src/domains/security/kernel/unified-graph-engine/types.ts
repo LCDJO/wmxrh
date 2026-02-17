@@ -30,15 +30,17 @@ export type GraphDomain =
 // ════════════════════════════════════
 
 export type UnifiedNodeType =
-  | 'user'
-  | 'platform_role'
-  | 'tenant_role'
+  | 'platform_user'
+  | 'tenant_user'
+  | 'role'
   | 'permission'
-  | 'scope'
+  | 'module'
   | 'tenant'
+  | 'identity_session'
+  // Extended (kept for backward compat & visualization)
+  | 'scope'
   | 'company_group'
   | 'company'
-  | 'module'
   | 'resource';
 
 export interface UnifiedNode {
@@ -56,24 +58,27 @@ export interface UnifiedNode {
 // ════════════════════════════════════
 
 export type UnifiedEdgeRelation =
-  // Platform
+  // Core relations (spec)
+  | 'HAS_ROLE'
+  | 'GRANTS_PERMISSION'
+  | 'BELONGS_TO'
+  | 'ENABLES_MODULE'
+  | 'INHERITS_ROLE'
+  | 'IMPERSONATES'
+  // Extended (domain-specific detail)
   | 'HAS_PLATFORM_ROLE'
   | 'PLATFORM_GRANTS'
   | 'PLATFORM_INHERITS'
   | 'PLATFORM_SCOPE'
-  // Tenant
   | 'HAS_TENANT_ROLE'
   | 'TENANT_GRANTS'
   | 'TENANT_SCOPE'
   | 'BELONGS_TO_TENANT'
   | 'BELONGS_TO_GROUP'
   | 'BELONGS_TO_COMPANY'
-  // Module
   | 'HAS_MODULE_ACCESS'
   | 'MODULE_REQUIRES'
-  // Identity
-  | 'IDENTITY_LINK'
-  | 'IMPERSONATES';
+  | 'IDENTITY_LINK';
 
 export interface UnifiedEdge {
   from: string; // uid

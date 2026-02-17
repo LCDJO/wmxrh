@@ -63,7 +63,7 @@ export function analyzeGraph(snapshot: UnifiedGraphSnapshot): AnalysisResult {
   // Cross-domain users: users appearing in both platform_access and tenant_access
   const usersByDomain = new Map<string, Set<GraphDomain>>();
   for (const node of nodes.values()) {
-    if (node.type === 'user') {
+    if (node.type === 'platform_user' || node.type === 'tenant_user' || node.type === 'identity_session') {
       const key = node.originalId;
       if (!usersByDomain.has(key)) usersByDomain.set(key, new Set());
       usersByDomain.get(key)!.add(node.domain);
