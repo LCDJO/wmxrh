@@ -24,6 +24,7 @@ import {
 } from '@/domains/menu-structure/menu-structure-engine';
 import type { MenuTreeNode, MenuValidationResult, MenuDiff } from '@/domains/menu-structure/types';
 import type { NavigationEntry } from '@/domains/platform-os/types';
+import { PLATFORM_EVENTS } from '@/domains/platform-os/platform-events';
 import { usePlatformOS } from '@/domains/platform-os/platform-context';
 import { MenuTreeBuilder } from '@/components/platform/MenuTreeBuilder';
 import { MenuDiffViewer } from '@/components/platform/MenuDiffViewer';
@@ -205,6 +206,23 @@ export default function PlatformMenuStructure() {
       os?.navigation.registerCoreRoutes(navEntries);
     } catch { /* PlatformOS may not be ready */ }
 
+    // ── Observability: emit menu events ──
+    const newVersion = (versions[0]?.version ?? 0) + 1;
+    try {
+      os?.events.emit(PLATFORM_EVENTS.MenuVersionCreated, 'MenuStructure', {
+        version_id: `v${newVersion}`,
+        version_number: newVersion,
+        created_by: editorRole,
+        node_count: flatNodes.length,
+      });
+      os?.events.emit(PLATFORM_EVENTS.MenuStructureUpdated, 'MenuStructure', {
+        total_nodes: flatNodes.length,
+        root_count: tree.length,
+        max_depth: Math.max(...flatNodes.map(n => n.depth_level), 0),
+        updated_by: editorRole,
+      });
+    } catch { /* PlatformOS may not be ready */ }
+
     setTimeout(() => { setIsSaving(false); setHasChanges(false); toast.success('Salvo & Versionado!'); }, 400);
   };
 
@@ -341,6 +359,17 @@ export default function PlatformMenuStructure() {
                   permissionResolver={engine.permissions}
                   editorRole={editorRole}
                   onTreeChange={syncTree}
+                  onItemMoved={(item, fromParent, toParent, newIndex) => {
+                    try {
+                      os?.events.emit(PLATFORM_EVENTS.MenuItemMoved, 'MenuStructure', {
+                        item_id: item.id,
+                        item_label: item.label,
+                        from_parent: fromParent,
+                        to_parent: toParent,
+                        new_index: newIndex,
+                      });
+                    } catch { /* safe */ }
+                  }}
                   selectedId={selectedId}
                   onSelectNode={setSelectedId}
                 />
