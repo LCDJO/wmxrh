@@ -19,6 +19,7 @@ import type {
   ReferralManagerAPI,
   GamificationEngineAPI,
   RewardCalculatorAPI,
+  RewardResult,
   RevenueMetrics,
   RevenueForecast,
   ChurnRiskTenant,
@@ -61,6 +62,103 @@ export function createRewardCalculator(): RewardCalculatorAPI {
     },
     getTierThresholds() {
       return { ...TIER_THRESHOLDS };
+    },
+
+    async issueReward(referrerUserId, tenantId, paymentBrl, tier, mode, trackingId) {
+      const commission = Math.round(paymentBrl * COMMISSION_RATES[tier] * 100) / 100;
+      const result: RewardResult = {
+        mode,
+        amount_brl: commission,
+        points: 0,
+        coupon_code: null,
+        ledger_entry_id: null,
+        description: '',
+      };
+
+      if (mode === 'credit') {
+        // ── Crédito financeiro no ledger ──
+        const { createFinancialLedgerAdapter } = await import('@/domains/billing-core/financial-ledger-adapter');
+        const ledger = createFinancialLedgerAdapter();
+        const desc = `Comissão referral (${(COMMISSION_RATES[tier] * 100).toFixed(0)}%) — R$${commission.toFixed(2)}`;
+        const entry = ledger.recordCredit(tenantId, commission, desc);
+        result.ledger_entry_id = entry.id;
+        result.description = desc;
+
+        emitRevenueIntelligenceEvent({
+          type: 'RewardAwarded',
+          timestamp: Date.now(),
+          user_id: referrerUserId,
+          tenant_id: tenantId,
+          reward_type: 'credit',
+          amount_brl: commission,
+          points: 0,
+        });
+
+      } else if (mode === 'coupon') {
+        // ── Cupom automático ──
+        const { createCouponManager } = await import('@/domains/billing-core/coupon-discount-engine');
+        const coupons = createCouponManager();
+        const code = `REF-${Date.now().toString(36).toUpperCase()}`;
+        const coupon = await coupons.create({
+          code,
+          name: `Referral Reward — ${code}`,
+          discount_type: 'fixed_amount',
+          discount_value: commission,
+          applies_to: 'plan',
+          valid_from: new Date().toISOString(),
+          valid_until: new Date(Date.now() + 90 * 86400000).toISOString(), // 90 days
+          max_redemptions: 1,
+        });
+        result.coupon_code = coupon.code;
+        result.description = `Cupom ${code} de R$${commission.toFixed(2)} gerado automaticamente`;
+
+        emitRevenueIntelligenceEvent({
+          type: 'RewardAwarded',
+          timestamp: Date.now(),
+          user_id: referrerUserId,
+          tenant_id: tenantId,
+          reward_type: 'coupon',
+          amount_brl: commission,
+          points: 0,
+        });
+
+      } else if (mode === 'points') {
+        // ── Pontos extras ──
+        const pointsAwarded = Math.round(commission * 10); // R$1 = 10 pts
+        const engine = createGamificationEngine();
+        await engine.awardPoints(
+          referrerUserId,
+          'reward_points',
+          pointsAwarded,
+          trackingId ? `referral:${trackingId}` : 'referral_reward',
+          `Pontos de recompensa: ${pointsAwarded} pts (R$${commission.toFixed(2)} × 10)`,
+        );
+        result.points = pointsAwarded;
+        result.amount_brl = 0;
+        result.description = `${pointsAwarded} pontos extras concedidos`;
+
+        emitRevenueIntelligenceEvent({
+          type: 'RewardAwarded',
+          timestamp: Date.now(),
+          user_id: referrerUserId,
+          tenant_id: tenantId,
+          reward_type: 'points',
+          amount_brl: 0,
+          points: pointsAwarded,
+        });
+      }
+
+      // Record in referral_rewards table
+      await supabase.from('referral_rewards' as any).insert({
+        referrer_user_id: referrerUserId,
+        tracking_id: trackingId ?? null,
+        reward_type: mode === 'credit' ? 'commission' : mode === 'coupon' ? 'credit' : 'bonus',
+        amount_brl: result.amount_brl,
+        description: result.description,
+        status: 'approved',
+      } as any);
+
+      return result;
     },
   };
 }
