@@ -75,6 +75,7 @@ import PlatformEvents from "./pages/platform/PlatformEvents";
 import PlatformRevenueIntelligence from "./pages/platform/PlatformRevenueIntelligence";
 import PlatformReferrals from "./pages/platform/PlatformReferrals";
 import PlatformGamification from "./pages/platform/PlatformGamification";
+import ReferralPage from "./pages/ReferralPage";
 
 const queryClient = new QueryClient();
 
@@ -249,6 +250,9 @@ function AppRoutes() {
           } />
           <Route path="/settings/gamification" element={
             <ProtectedRoute navKey="iam_roles"><SettingsGamification /></ProtectedRoute>
+          } />
+          <Route path="/referral" element={
+            <ProtectedRoute navKey="dashboard"><ReferralPage /></ProtectedRoute>
           } />
         </Route>
       )}
