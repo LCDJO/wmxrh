@@ -392,12 +392,18 @@ export interface Coupon {
   applies_to: CouponAppliesTo;
   max_discount_brl: number | null;
   currency: string;
+  // Restrictions
   applicable_plan_ids: string[] | null;
+  allowed_modules: string[] | null;
+  allowed_payment_methods: string[] | null;
+  tenant_scope: string | null;
   applicable_billing_cycles: string[] | null;
   min_plan_tier: string | null;
+  // Limits
   max_redemptions: number | null;
   max_redemptions_per_tenant: number;
   current_redemptions: number;
+  // Validity
   valid_from: string;
   valid_until: string | null;
   duration_months: number | null;
@@ -416,6 +422,9 @@ export interface CreateCouponDTO {
   applies_to?: CouponAppliesTo;
   max_discount_brl?: number;
   applicable_plan_ids?: string[];
+  allowed_modules?: string[];
+  allowed_payment_methods?: string[];
+  tenant_scope?: string;
   applicable_billing_cycles?: string[];
   min_plan_tier?: string;
   max_redemptions?: number;
@@ -479,8 +488,13 @@ export interface CouponManagerAPI {
   archive(couponId: string): Promise<Coupon>;
 }
 
+export interface CouponValidationOpts {
+  moduleId?: string;
+  paymentMethod?: string;
+}
+
 export interface CouponValidationServiceAPI {
-  validate(code: string, tenantId: string, planId?: string, billingCycle?: string): Promise<CouponValidationResult>;
+  validate(code: string, tenantId: string, planId?: string, billingCycle?: string, opts?: CouponValidationOpts): Promise<CouponValidationResult>;
 }
 
 export interface CouponLifecycleManagerAPI {

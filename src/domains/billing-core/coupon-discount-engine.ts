@@ -43,6 +43,9 @@ function createCouponManager(): CouponManagerAPI {
           applies_to: dto.applies_to ?? 'invoice',
           max_discount_brl: dto.max_discount_brl ?? null,
           applicable_plan_ids: dto.applicable_plan_ids ?? null,
+          allowed_modules: dto.allowed_modules ?? null,
+          allowed_payment_methods: dto.allowed_payment_methods ?? null,
+          tenant_scope: dto.tenant_scope ?? null,
           applicable_billing_cycles: dto.applicable_billing_cycles ?? null,
           min_plan_tier: dto.min_plan_tier ?? null,
           max_redemptions: dto.max_redemptions ?? null,
@@ -120,7 +123,7 @@ function createCouponManager(): CouponManagerAPI {
 
 function createCouponValidationService(): CouponValidationServiceAPI {
   return {
-    async validate(code, tenantId, planId, billingCycle) {
+    async validate(code, tenantId, planId, billingCycle, opts) {
       const { data: coupon } = await supabase
         .from('coupons')
         .select('*')
@@ -149,7 +152,12 @@ function createCouponValidationService(): CouponValidationServiceAPI {
         return { valid: false, reason: 'Cupom esgotado.' };
       }
 
-      // Per-tenant redemption limit
+      // Tenant scope
+      if (c.tenant_scope && c.tenant_scope !== tenantId) {
+        return { valid: false, reason: 'Cupom não disponível para este tenant.' };
+      }
+
+      // Per-tenant limit
       if (c.max_redemptions_per_tenant != null) {
         const { count } = await supabase
           .from('coupon_redemptions')
@@ -170,7 +178,21 @@ function createCouponValidationService(): CouponValidationServiceAPI {
         }
       }
 
-      // Billing cycle restriction
+      // allowed_modules
+      if (opts?.moduleId && c.allowed_modules && c.allowed_modules.length > 0) {
+        if (!c.allowed_modules.includes(opts.moduleId)) {
+          return { valid: false, reason: 'Cupom não aplicável a este módulo.' };
+        }
+      }
+
+      // allowed_payment_methods
+      if (opts?.paymentMethod && c.allowed_payment_methods && c.allowed_payment_methods.length > 0) {
+        if (!c.allowed_payment_methods.includes(opts.paymentMethod)) {
+          return { valid: false, reason: 'Cupom não aplicável a este método de pagamento.' };
+        }
+      }
+
+      // Billing cycle
       if (billingCycle && c.applicable_billing_cycles && c.applicable_billing_cycles.length > 0) {
         if (!c.applicable_billing_cycles.includes(billingCycle)) {
           return { valid: false, reason: 'Cupom não aplicável a este ciclo de cobrança.' };
