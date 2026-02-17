@@ -172,6 +172,7 @@ export interface ReferralManagerAPI {
   generateLink(userId: string, options?: { programId?: string; tenantId?: string }): Promise<ReferralLink>;
   getLinks(userId?: string, tenantId?: string): Promise<ReferralLink[]>;
   getTracking(linkId?: string): Promise<ReferralTracking[]>;
+  recordSignup(linkId: string, referrerUserId: string, referredTenantId: string): Promise<ReferralTracking>;
   recordConversion(trackingId: string, planId: string, paymentBrl: number): Promise<void>;
 }
 
