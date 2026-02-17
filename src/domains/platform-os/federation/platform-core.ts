@@ -82,7 +82,11 @@ export function createPlatformCore(events: GlobalEventKernelAPI): PlatformCoreAP
 
   function register(mod: ModuleRegistration, manifest?: ModuleManifest): void {
     registry.register(mod);
-    if (manifest) loader.registerManifest(manifest);
+    if (manifest) {
+      loader.registerManifest(manifest);
+      // Auto-register module permissions in the PermissionEngine
+      permissions.registerModulePermissions(manifest);
+    }
     // Auto-create sandbox on registration
     sandboxManager.create(mod.key as string);
     events.emit('platform:module_federated', 'PlatformCore', { key: mod.key });

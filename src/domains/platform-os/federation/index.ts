@@ -6,7 +6,8 @@ export { createModuleRegistry, type ModuleRegistryAPI, type InternalModule } fro
 export { createModuleLoader, type ModuleLoaderAPI, type ModuleManifest, type ModuleWidget, type ModuleNavigationEntry, type ModuleLoadContext } from './module-loader';
 export { createModuleSandbox, type ModuleSandboxAPI, type SandboxContext, type SandboxStateAPI, type DomainGateway, type DomainGatewayFactory } from './module-sandbox';
 export { createModuleLifecycleManager, type ModuleLifecycleManagerAPI } from './module-lifecycle-manager';
-export { createModulePermissionAdapter, type ModulePermissionAdapterAPI, type PermissionContext } from './module-permission-adapter';
+export { createModulePermissionAdapter, type ModulePermissionAdapterAPI, type PermissionContext, type PermissionDefinition } from './module-permission-adapter';
+export { createModuleNavigationBridge, type ModuleNavigationBridgeAPI } from './module-navigation-bridge';
 export { createPlatformCore, type PlatformCoreAPI } from './platform-core';
 export {
   CORE_HR_MANIFEST, COMPENSATION_ENGINE_MANIFEST, TENANT_ADMIN_MANIFEST, REPORTING_MANIFEST,
