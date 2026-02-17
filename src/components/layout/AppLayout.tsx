@@ -3,8 +3,7 @@ import { AppSidebar } from './AppSidebar';
 import { AppBreadcrumbs } from './AppBreadcrumbs';
 import { ImpersonationBanner } from './ImpersonationBanner';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
-import { Bell, Search } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useSecurityMonitor } from '@/domains/security/useSecurityMonitor';
 import { dualIdentityEngine } from '@/domains/security/kernel/dual-identity-engine';
@@ -32,10 +31,7 @@ export function AppLayout() {
             <AppBreadcrumbs />
           </div>
           <div className="flex items-center gap-4">
-            <button className="relative p-2 rounded-lg hover:bg-secondary transition-colors">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
-            </button>
+            <NotificationBell />
             <Avatar className={`h-9 w-9 border-2 ${
               isImpersonating ? 'border-[hsl(var(--impersonation))]' : 'border-primary/20'
             }`}>

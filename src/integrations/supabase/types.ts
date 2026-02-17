@@ -2600,6 +2600,80 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          action_label: string | null
+          action_metadata: Json | null
+          action_route: string | null
+          category: Database["public"]["Enums"]["notification_category"]
+          created_at: string
+          dismissed_at: string | null
+          expires_at: string | null
+          icon: string | null
+          id: string
+          is_dismissed: boolean
+          is_read: boolean
+          message: string
+          priority: Database["public"]["Enums"]["notification_priority"]
+          read_at: string | null
+          source_event: string | null
+          source_module: string | null
+          tenant_id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          action_label?: string | null
+          action_metadata?: Json | null
+          action_route?: string | null
+          category?: Database["public"]["Enums"]["notification_category"]
+          created_at?: string
+          dismissed_at?: string | null
+          expires_at?: string | null
+          icon?: string | null
+          id?: string
+          is_dismissed?: boolean
+          is_read?: boolean
+          message: string
+          priority?: Database["public"]["Enums"]["notification_priority"]
+          read_at?: string | null
+          source_event?: string | null
+          source_module?: string | null
+          tenant_id: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          action_label?: string | null
+          action_metadata?: Json | null
+          action_route?: string | null
+          category?: Database["public"]["Enums"]["notification_category"]
+          created_at?: string
+          dismissed_at?: string | null
+          expires_at?: string | null
+          icon?: string | null
+          id?: string
+          is_dismissed?: boolean
+          is_read?: boolean
+          message?: string
+          priority?: Database["public"]["Enums"]["notification_priority"]
+          read_at?: string | null
+          source_event?: string | null
+          source_module?: string | null
+          tenant_id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nr_training_assignments: {
         Row: {
           agreement_id: string | null
@@ -5210,6 +5284,15 @@ export type Database = {
         | "reajuste_anual"
         | "banco_horas"
         | "custom"
+      notification_category:
+        | "compliance"
+        | "security"
+        | "hr"
+        | "payroll"
+        | "system"
+        | "onboarding"
+        | "approval"
+      notification_priority: "low" | "medium" | "high" | "critical"
       payroll_incidence:
         | "inss"
         | "irrf"
@@ -5464,6 +5547,16 @@ export const Constants = {
         "banco_horas",
         "custom",
       ],
+      notification_category: [
+        "compliance",
+        "security",
+        "hr",
+        "payroll",
+        "system",
+        "onboarding",
+        "approval",
+      ],
+      notification_priority: ["low", "medium", "high", "critical"],
       payroll_incidence: [
         "inss",
         "irrf",

@@ -33,6 +33,7 @@ import LegalDashboard from "./pages/LegalDashboard";
 import Audit from "./pages/Audit";
 import PayrollSimulation from "./pages/PayrollSimulation";
 import NotFound from "./pages/NotFound";
+import Notifications from "./pages/Notifications";
 import WorkforceIntelligence from "./pages/WorkforceIntelligence";
 import StrategicIntelligence from "./pages/StrategicIntelligence";
 import ESocialDashboard from "./pages/ESocialDashboard";
@@ -155,6 +156,7 @@ function AppRoutes() {
           <Route path="/labor-dashboard" element={
             <ProtectedRoute navKey="labor_dashboard"><LaborDashboard /></ProtectedRoute>
           } />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/audit" element={
             <ProtectedRoute navKey="audit"><Audit /></ProtectedRoute>
           } />
