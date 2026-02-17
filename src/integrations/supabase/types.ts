@@ -3418,6 +3418,62 @@ export type Database = {
           },
         ]
       }
+      landing_pages: {
+        Row: {
+          analytics: Json
+          blocks: Json
+          created_at: string
+          created_by: string | null
+          gtm_container_id: string | null
+          id: string
+          name: string
+          published_at: string | null
+          referral_program_id: string | null
+          slug: string
+          status: string
+          target_plan_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          analytics?: Json
+          blocks?: Json
+          created_at?: string
+          created_by?: string | null
+          gtm_container_id?: string | null
+          id?: string
+          name: string
+          published_at?: string | null
+          referral_program_id?: string | null
+          slug: string
+          status?: string
+          target_plan_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          analytics?: Json
+          blocks?: Json
+          created_at?: string
+          created_by?: string | null
+          gtm_container_id?: string | null
+          id?: string
+          name?: string
+          published_at?: string | null
+          referral_program_id?: string | null
+          slug?: string
+          status?: string
+          target_plan_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_pages_target_plan_id_fkey"
+            columns: ["target_plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_command: string | null

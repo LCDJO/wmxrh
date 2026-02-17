@@ -41,7 +41,8 @@ export default function PlatformGrowthAI() {
   const [planSuggestions, setPlanSuggestions] = useState<import('@/domains/platform-growth/types').PlanOptimizationSuggestion[]>([]);
   useEffect(() => { planOptimizationAdvisor.getSuggestions().then(setPlanSuggestions); }, []);
   const predictions = useMemo(() => conversionPredictionService.getBatchPredictions(), []);
-  const pages = useMemo(() => landingPageBuilder.getAll(), []);
+  const [pages, setPages] = useState<import('@/domains/platform-growth/types').LandingPage[]>([]);
+  useEffect(() => { landingPageBuilder.getAll().then(setPages); }, []);
   const funnel = useMemo(() => conversionTrackingService.getConversionFunnel('lp-1'), []);
 
   const architectureNodes = [
@@ -250,7 +251,7 @@ export default function PlatformGrowthAI() {
                       <Globe className="h-5 w-5 text-[hsl(30_90%_55%)]" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground">{page.title}</h3>
+                      <h3 className="text-sm font-semibold text-foreground">{page.name}</h3>
                       <p className="text-xs text-muted-foreground">/{page.slug} • {page.blocks.length} blocos</p>
                     </div>
                   </div>

@@ -177,8 +177,8 @@ function buildLandingPageInsights(pages: LandingPage[]): GrowthInsight[] {
   const insights: GrowthInsight[] = [{
     id: `gi-lp-${Date.now()}`,
     type: 'acquisition',
-    title: `LP "${best.title}" tem ${best.analytics.conversionRate}% de conversão`,
-    description: `${best.analytics.views.toLocaleString()} views, ${best.analytics.conversions} conversões. ${best.analytics.topSources[0]?.source ?? 'Orgânico'} é a principal fonte. ${pages.length > 1 ? `"${worst.title}" tem apenas ${worst.analytics.conversionRate}% — replicar estrutura da melhor LP.` : ''}`,
+    title: `LP "${best.name}" tem ${best.analytics.conversionRate}% de conversão`,
+    description: `${best.analytics.views.toLocaleString()} views, ${best.analytics.conversions} conversões. ${best.analytics.topSources[0]?.source ?? 'Orgânico'} é a principal fonte. ${pages.length > 1 ? `"${worst.name}" tem apenas ${worst.analytics.conversionRate}% — replicar estrutura da melhor LP.` : ''}`,
     impact: best.analytics.conversionRate > 5 ? 'high' : 'medium',
     confidence: 88,
     suggestedActions: [

@@ -49,20 +49,25 @@ export interface FABBlock {
   styling?: Record<string, string>;
 }
 
+/** DB-backed entity */
 export interface LandingPage {
   id: string;
+  name: string;
   slug: string;
-  title: string;
-  status: 'draft' | 'published' | 'archived';
+  status: 'draft' | 'published';
+  target_plan_id?: string | null;
+  referral_program_id?: string | null;
+  gtm_container_id?: string | null;
   blocks: FABBlock[];
-  gtmContainerId?: string;
-  conversionGoal?: string;
-  referralCode?: string;
-  createdAt: string;
-  updatedAt: string;
-  publishedAt?: string;
   analytics: LandingPageAnalytics;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  published_at?: string | null;
 }
+
+/** Convenience alias used by legacy consumers */
+export type { LandingPage as LandingPageEntity };
 
 export interface LandingPageAnalytics {
   views: number;

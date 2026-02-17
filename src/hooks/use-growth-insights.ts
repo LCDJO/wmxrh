@@ -19,7 +19,7 @@ export function useGrowthInsights() {
 
   const refresh = useCallback(async () => {
     setResult(prev => ({ ...prev, loading: true, error: null }));
-    const pages = landingPageBuilder.getAll();
+    const pages = await landingPageBuilder.getAll();
     const data = await growthInsightEngine.generateInsights(pages);
     setResult(data);
   }, []);
