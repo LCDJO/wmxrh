@@ -23,6 +23,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
 import { useIdentityIntelligence } from '@/domains/security/kernel/identity-intelligence';
 import { useNavigationPins } from '@/hooks/use-navigation-pins';
+import { useOnboardingStatus } from '@/hooks/use-onboarding-status';
 import { useExperienceProfile } from '@/hooks/use-experience-profile';
 import { NavigationSuggestionsPanel } from './NavigationSuggestionsPanel';
 import { Progress } from '@/components/ui/progress';
@@ -161,9 +162,9 @@ export function AppSidebar() {
   const hasCriticalAnnouncement = announcements.some(a => a.severity === 'critical');
   const { isPathVisible, isPathLocked, profile: expProfile } = useExperienceProfile();
 
-  // ── Onboarding progress (mock-safe: reads from PXE profile or defaults) ──
-  const onboardingComplete = (expProfile as any)?.onboarding_complete ?? true;
-  const onboardingPct = (expProfile as any)?.onboarding_pct ?? 100;
+  // ── Onboarding progress from cache-backed hook ──
+  const { isOnboarding, completionPct: onboardingPct } = useOnboardingStatus();
+  const onboardingComplete = !isOnboarding;
 
   const isVisible = (item: NavChild) => {
     if (loading) return true;
