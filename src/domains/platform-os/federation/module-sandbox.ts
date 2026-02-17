@@ -6,71 +6,37 @@
  *   ✅ Modules emit events ONLY under their own namespace
  *   ❌ Modules CANNOT access SecurityKernel directly
  *   ❌ Modules CANNOT access the database directly
+ *   ❌ Modules CANNOT import from blocked paths
  *
- * Provides:
- *   - DomainGateway proxy (safe data access layer)
- *   - Scoped event namespace
- *   - Scoped state container
- *   - Error boundary integration
- *   - Resource tracking (cleanup on deactivation)
+ * Isolation enforced via:
+ *   1. BLOCKED_DOMAINS — gateway-level domain deny-list
+ *   2. BLOCKED_IMPORT_PATTERNS — static import path validation
+ *   3. Proxy-wrapped gateway — runtime property access guard
  */
 
 import type { GlobalEventKernelAPI } from '../types';
 
 // ── DomainGateway — Safe data access proxy ─────────────────────
 
-/**
- * DomainGateway is the ONLY way a module can access data.
- * It proxies requests through the platform, enforcing:
- *   - Tenant isolation (auto-injects tenant_id)
- *   - Permission checks (validates caller has required access)
- *   - Audit logging (all mutations are recorded)
- */
 export interface DomainGateway {
-  /**
-   * Query data from a domain.
-   * @param domain - Target domain (e.g. 'employees', 'compensation', 'benefits')
-   * @param operation - Operation name (e.g. 'list', 'getById', 'search')
-   * @param params - Operation-specific parameters
-   */
   query<T = unknown>(domain: string, operation: string, params?: Record<string, unknown>): Promise<T>;
-
-  /**
-   * Mutate data through a domain.
-   * @param domain - Target domain
-   * @param operation - Mutation name (e.g. 'create', 'update', 'delete')
-   * @param payload - Mutation payload
-   */
   mutate<T = unknown>(domain: string, operation: string, payload?: Record<string, unknown>): Promise<T>;
-
-  /**
-   * Subscribe to domain data changes.
-   * Returns an unsubscribe function.
-   */
   subscribe(domain: string, event: string, handler: (data: unknown) => void): () => void;
 }
 
-/** Factory that creates a tenant-scoped DomainGateway for a module */
 export type DomainGatewayFactory = (moduleKey: string) => DomainGateway;
 
 // ── Sandbox Types ──────────────────────────────────────────────
 
 export interface SandboxContext {
-  /** Module key owning this sandbox */
-  moduleKey: string;
-  /** Emit an event scoped to this module */
+  readonly moduleKey: string;
   emit(event: string, payload?: unknown): void;
-  /** Subscribe to events (any namespace) */
   on(event: string, handler: (...args: any[]) => void): () => void;
-  /** Scoped key-value store */
   state: SandboxStateAPI;
-  /** Register a cleanup function to run on deactivation */
   addCleanup(fn: () => void): void;
-  /**
-   * DomainGateway — the ONLY approved data access channel.
-   * Modules MUST use this instead of direct DB or SecurityKernel access.
-   */
-  gateway: DomainGateway;
+  readonly gateway: DomainGateway;
+  /** Validate an import path — throws if blocked */
+  assertImportAllowed(importPath: string): void;
 }
 
 export interface SandboxStateAPI {
@@ -82,29 +48,118 @@ export interface SandboxStateAPI {
 }
 
 export interface ModuleSandboxAPI {
-  /** Create or retrieve an isolated sandbox for a module */
   create(moduleKey: string): SandboxContext;
-  /** Destroy a sandbox and run all cleanup functions */
   destroy(moduleKey: string): void;
-  /** Check if a sandbox exists */
   has(moduleKey: string): boolean;
-  /** Get sandbox for inspection */
   get(moduleKey: string): SandboxContext | null;
-  /** Set the gateway factory (called during platform boot) */
   setGatewayFactory(factory: DomainGatewayFactory): void;
 }
 
-// ── Blocked access guards ──────────────────────────────────────
+// ── Security Guards ────────────────────────────────────────────
 
-const BLOCKED_DOMAINS = ['_security_kernel', '_auth_internal', '_raw_db', '_supabase'];
+const BLOCKED_DOMAINS = [
+  '_security_kernel',
+  '_auth_internal',
+  '_raw_db',
+  '_supabase',
+  '_platform_internals',
+  'auth.users',
+] as const;
+
+/**
+ * Import paths that modules are NOT allowed to reference.
+ * Enforced at build-time via `assertImportAllowed` and
+ * at review-time via lint rules.
+ */
+const BLOCKED_IMPORT_PATTERNS = [
+  /supabase\/client/i,
+  /integrations\/supabase/i,
+  /@supabase\//i,
+  /security-kernel/i,
+  /SecurityKernel/i,
+  /platform-os\/(?!federation|ui)/i,  // only federation + ui are public
+  /\.env/i,
+] as const;
 
 function assertNotBlocked(domain: string, moduleKey: string): void {
-  if (BLOCKED_DOMAINS.some(b => domain.startsWith(b))) {
+  const lower = domain.toLowerCase();
+  if (BLOCKED_DOMAINS.some(b => lower.startsWith(b))) {
     throw new Error(
       `[ModuleSandbox] Module "${moduleKey}" attempted to access blocked domain "${domain}". ` +
       `Modules must use DomainGateway operations, not direct kernel/DB access.`,
     );
   }
+}
+
+function assertImportAllowed(importPath: string, moduleKey: string): void {
+  for (const pattern of BLOCKED_IMPORT_PATTERNS) {
+    if (pattern.test(importPath)) {
+      throw new Error(
+        `[ModuleSandbox] Module "${moduleKey}" attempted to import blocked path "${importPath}". ` +
+        `Use the DomainGateway instead.`,
+      );
+    }
+  }
+}
+
+// ── Proxy-wrapped gateway ──────────────────────────────────────
+
+/**
+ * Wraps a DomainGateway in a Proxy that:
+ *   - Blocks access to forbidden properties (e.g. _raw, _client)
+ *   - Intercepts query/mutate to validate domain names
+ *   - Prevents prototype pollution
+ */
+function createGuardedGateway(inner: DomainGateway, moduleKey: string, events: GlobalEventKernelAPI): DomainGateway {
+  const FORBIDDEN_PROPS = new Set([
+    '_raw', '_client', '_db', '_supabase', 'client',
+    'constructor', '__proto__', 'prototype',
+  ]);
+
+  return new Proxy(inner, {
+    get(target, prop, receiver) {
+      if (typeof prop === 'string' && FORBIDDEN_PROPS.has(prop)) {
+        events.emit('sandbox:access_violation', `Sandbox[${moduleKey}]`, {
+          module: moduleKey,
+          property: prop,
+          type: 'forbidden_property',
+        });
+        throw new Error(
+          `[ModuleSandbox] Module "${moduleKey}" attempted to access forbidden gateway property "${prop}".`,
+        );
+      }
+
+      const value = Reflect.get(target, prop, receiver);
+
+      // Wrap query/mutate to inject domain validation
+      if (prop === 'query' || prop === 'mutate') {
+        return (domain: string, operation: string, data?: Record<string, unknown>) => {
+          assertNotBlocked(domain, moduleKey);
+          return (value as Function).call(target, domain, operation, data);
+        };
+      }
+
+      if (prop === 'subscribe') {
+        return (domain: string, event: string, handler: (d: unknown) => void) => {
+          assertNotBlocked(domain, moduleKey);
+          return (value as Function).call(target, domain, event, handler);
+        };
+      }
+
+      return value;
+    },
+
+    set(_target, prop) {
+      events.emit('sandbox:access_violation', `Sandbox[${moduleKey}]`, {
+        module: moduleKey,
+        property: String(prop),
+        type: 'write_attempt',
+      });
+      throw new Error(
+        `[ModuleSandbox] Module "${moduleKey}" attempted to write to gateway property "${String(prop)}". Gateway is read-only.`,
+      );
+    },
+  });
 }
 
 // ── Default gateway (no-op until platform wires the real one) ──
@@ -113,14 +168,14 @@ function createDefaultGateway(moduleKey: string, events: GlobalEventKernelAPI): 
   return {
     async query(domain, operation, params) {
       assertNotBlocked(domain, moduleKey);
-      events.emit(`gateway:query`, `Sandbox[${moduleKey}]`, { domain, operation, params });
-      console.warn(`[DomainGateway] No gateway factory configured. query(${domain}.${operation}) from "${moduleKey}" will return empty.`);
+      events.emit('gateway:query', `Sandbox[${moduleKey}]`, { domain, operation, params });
+      console.warn(`[DomainGateway] No factory configured. query(${domain}.${operation}) from "${moduleKey}" → empty.`);
       return undefined as any;
     },
     async mutate(domain, operation, payload) {
       assertNotBlocked(domain, moduleKey);
-      events.emit(`gateway:mutate`, `Sandbox[${moduleKey}]`, { domain, operation, payload });
-      console.warn(`[DomainGateway] No gateway factory configured. mutate(${domain}.${operation}) from "${moduleKey}" will no-op.`);
+      events.emit('gateway:mutate', `Sandbox[${moduleKey}]`, { domain, operation, payload });
+      console.warn(`[DomainGateway] No factory configured. mutate(${domain}.${operation}) from "${moduleKey}" → no-op.`);
       return undefined as any;
     },
     subscribe(domain, event, handler) {
@@ -144,9 +199,8 @@ export function createModuleSandbox(events: GlobalEventKernelAPI): ModuleSandbox
 
   function setGatewayFactory(factory: DomainGatewayFactory): void {
     gatewayFactory = factory;
-    // Re-wire existing sandboxes with the real gateway
     for (const [key, sandbox] of sandboxes) {
-      (sandbox.context as any).gateway = factory(key);
+      (sandbox.context as any).gateway = createGuardedGateway(factory(key), key, events);
     }
     events.emit('module:gateway_factory_set', 'ModuleSandbox', { count: sandboxes.size });
   }
@@ -166,9 +220,11 @@ export function createModuleSandbox(events: GlobalEventKernelAPI): ModuleSandbox
       keys: () => [...stateStore.keys()],
     };
 
-    const gateway = gatewayFactory
+    const rawGateway = gatewayFactory
       ? gatewayFactory(moduleKey)
       : createDefaultGateway(moduleKey, events);
+
+    const gateway = createGuardedGateway(rawGateway, moduleKey, events);
 
     const context: SandboxContext = {
       moduleKey,
@@ -181,10 +237,11 @@ export function createModuleSandbox(events: GlobalEventKernelAPI): ModuleSandbox
         return unsub;
       },
       state,
-      addCleanup(fn: () => void) {
-        cleanups.push(fn);
-      },
+      addCleanup(fn: () => void) { cleanups.push(fn); },
       gateway,
+      assertImportAllowed(importPath: string) {
+        assertImportAllowed(importPath, moduleKey);
+      },
     };
 
     sandboxes.set(moduleKey, { context, cleanups, state: stateStore, unsubscribers });
@@ -195,28 +252,22 @@ export function createModuleSandbox(events: GlobalEventKernelAPI): ModuleSandbox
   function destroy(moduleKey: string): void {
     const sandbox = sandboxes.get(moduleKey);
     if (!sandbox) return;
-
     for (const fn of sandbox.cleanups) {
-      try { fn(); } catch (e) {
-        console.error(`[ModuleSandbox] cleanup error in "${moduleKey}":`, e);
-      }
+      try { fn(); } catch (e) { console.error(`[ModuleSandbox] cleanup error in "${moduleKey}":`, e); }
     }
     for (const unsub of sandbox.unsubscribers) {
       try { unsub(); } catch { /* ignore */ }
     }
-
     sandbox.state.clear();
     sandboxes.delete(moduleKey);
     events.emit('module:sandbox_destroyed', 'ModuleSandbox', { key: moduleKey });
   }
 
-  function has(moduleKey: string): boolean {
-    return sandboxes.has(moduleKey);
-  }
-
-  function get(moduleKey: string): SandboxContext | null {
-    return sandboxes.get(moduleKey)?.context ?? null;
-  }
-
-  return { create, destroy, has, get, setGatewayFactory };
+  return {
+    create,
+    destroy,
+    has: (k) => sandboxes.has(k),
+    get: (k) => sandboxes.get(k)?.context ?? null,
+    setGatewayFactory,
+  };
 }
