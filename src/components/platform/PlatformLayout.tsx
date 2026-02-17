@@ -111,7 +111,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
     children: [
       { to: '/platform/revenue', label: 'Visão Geral' },
       { to: '/platform/referrals', label: 'Referrals' },
-      { to: '/platform/gamification', label: 'Gamificação' },
+      
       { to: '/platform/revenue/intelligence', label: 'Intelligence' },
     ],
   },
@@ -151,6 +151,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
     label: 'Settings',
     icon: Settings,
     children: [
+      { to: '/platform/settings/gamification', label: 'Gamificação' },
       { to: '/platform/settings/versioning', label: 'Versionamento' },
       {
         to: '/platform/structure',

@@ -76,7 +76,7 @@ import PlatformMenuStructure from "./pages/platform/PlatformMenuStructure";
 import PlatformModulesCatalog from "./pages/platform/PlatformModulesCatalog";
 import PlatformRevenueIntelligence from "./pages/platform/PlatformRevenueIntelligence";
 import PlatformReferrals from "./pages/platform/PlatformReferrals";
-import PlatformGamification from "./pages/platform/PlatformGamification";
+
 import PlatformGrowthAI from "./pages/platform/PlatformGrowthAI";
 import GrowthInsights from "./pages/platform/growth/GrowthInsights";
 import GrowthLandingPages from "./pages/platform/growth/GrowthLandingPages";
@@ -166,7 +166,7 @@ function AppRoutes() {
         <Route path="revenue" element={<PlatformRevenue />} />
         <Route path="revenue/intelligence" element={<PlatformRevenueIntelligence />} />
         <Route path="referrals" element={<PlatformReferrals />} />
-        <Route path="gamification" element={<PlatformGamification />} />
+        <Route path="settings/gamification" element={<SettingsGamification />} />
         <Route path="iam" element={<PlatformIAM />} />
         <Route path="structure/events" element={<PlatformEvents />} />
         <Route path="structure/menus" element={<PlatformMenuStructure />} />
@@ -294,9 +294,6 @@ function AppRoutes() {
           } />
           <Route path="/settings/roles" element={
             <ProtectedRoute navKey="iam_roles"><SettingsRoles /></ProtectedRoute>
-          } />
-          <Route path="/settings/gamification" element={
-            <ProtectedRoute navKey="iam_roles"><SettingsGamification /></ProtectedRoute>
           } />
           <Route path="/referral" element={
             <ProtectedRoute navKey="dashboard"><ReferralPage /></ProtectedRoute>
