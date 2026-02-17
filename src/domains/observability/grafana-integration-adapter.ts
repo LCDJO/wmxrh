@@ -16,6 +16,7 @@ import { getPerformanceProfiler } from './performance-profiler';
 import { getLogStreamAdapter, type LogEntry } from './log-stream-adapter';
 import { getSecurityEventCollector } from './security-event-collector';
 import { getGatewayPerformanceTracker } from './gateway-performance-tracker';
+import { getBillingMetricsSnapshot } from './billing-metrics-collector';
 import type { PrometheusMetric } from './types';
 
 // ═══════════════════════════════════════════════════════════════
@@ -141,6 +142,20 @@ export function exportPrometheus(): PrometheusExportResult {
     }
   } catch {
     // Self-healing engine not initialised — skip
+  }
+
+  // ── Billing metrics ─────────────────────────────────────────
+  try {
+    const billingMetrics = getBillingMetricsSnapshot();
+    collector.gauge('billing_active_subscriptions', billingMetrics.active_subscriptions);
+    collector.gauge('billing_mrr_total', billingMetrics.mrr_total);
+    collector.gauge('billing_invoice_errors', billingMetrics.invoice_errors);
+    collector.gauge('billing_arr_total', billingMetrics.mrr_total * 12);
+    collector.gauge('billing_invoices_paid', billingMetrics.invoices_paid);
+    collector.gauge('billing_invoices_pending', billingMetrics.invoices_pending);
+    collector.gauge('billing_invoices_overdue', billingMetrics.invoices_overdue);
+  } catch {
+    // Billing metrics unavailable — skip
   }
 
   const metrics = collector.toPrometheus();
@@ -463,6 +478,14 @@ export function generateDashboardModel(): {
       { title: 'Auto-Recovery Rate', type: 'gauge', metric: 'auto_recovery_success_rate', description: 'Percentage of auto-recovered incidents', datasource: 'prometheus' },
       { title: 'Active Incidents', type: 'stat', metric: 'self_healing_active_incidents', description: 'Currently active incidents', datasource: 'prometheus' },
       { title: 'Avg Recovery Time', type: 'gauge', metric: 'self_healing_avg_recovery_ms', description: 'Average time to auto-recover (ms)', datasource: 'prometheus' },
+      // ── Billing panels ────────────────────────────────────────
+      { title: 'Active Subscriptions', type: 'stat', metric: 'billing_active_subscriptions', description: 'Total active billing subscriptions', datasource: 'prometheus' },
+      { title: 'MRR Total', type: 'stat', metric: 'billing_mrr_total', description: 'Monthly Recurring Revenue (BRL)', datasource: 'prometheus' },
+      { title: 'ARR Total', type: 'stat', metric: 'billing_arr_total', description: 'Annual Recurring Revenue (BRL)', datasource: 'prometheus' },
+      { title: 'Invoice Errors', type: 'stat', metric: 'billing_invoice_errors', description: 'Failed/overdue invoices count', datasource: 'prometheus' },
+      { title: 'Invoices Paid', type: 'stat', metric: 'billing_invoices_paid', description: 'Total paid invoices', datasource: 'prometheus' },
+      { title: 'Invoices Pending', type: 'stat', metric: 'billing_invoices_pending', description: 'Pending invoices awaiting payment', datasource: 'prometheus' },
+      { title: 'Invoices Overdue', type: 'stat', metric: 'billing_invoices_overdue', description: 'Overdue invoices', datasource: 'prometheus' },
       // ── Loki panels ────────────────────────────────────────
       { title: 'Log Stream', type: 'logs', metric: 'logs_total', description: 'Structured log stream from all sources', datasource: 'loki' },
       // ── Tempo panels ───────────────────────────────────────
