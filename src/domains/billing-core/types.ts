@@ -86,7 +86,9 @@ export interface BillingCalculation {
   billing_cycle: BillingCycle;
   line_items: BillingLineItem[];
   subtotal_brl: number;
+  usage_overage_brl: number;
   discount_brl: number;
+  coupon_discount_brl: number;
   total_brl: number;
   period_start: string;
   period_end: string;
