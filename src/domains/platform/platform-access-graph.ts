@@ -17,6 +17,8 @@
  */
 
 import type { PlatformPermission } from './platform-permissions';
+import { onPlatformEvent } from './platform.events';
+import type { PlatformDomainEvent } from './platform.events';
 
 // ════════════════════════════════════
 // TYPES
@@ -449,3 +451,29 @@ export const platformAccessGraphService = {
     return currentPlatformGraph;
   },
 };
+
+// ════════════════════════════════════
+// EVENT-DRIVEN CACHE INVALIDATION
+// ════════════════════════════════════
+// Only role/permission mutations invalidate the graph cache.
+// The TTL (5 min) serves as a safety-net fallback.
+
+const INVALIDATING_EVENTS = new Set([
+  'PlatformRoleCreated',
+  'PlatformRoleUpdated',
+  'PlatformPermissionAssigned',
+  'PlatformPermissionRevoked',
+]);
+
+onPlatformEvent((event: PlatformDomainEvent) => {
+  if (!INVALIDATING_EVENTS.has(event.type)) return;
+
+  // Invalidate all cached graphs — role changes can cascade via inheritance
+  platformAccessGraphService.invalidateAll();
+
+  if (process.env.NODE_ENV === 'development') {
+    console.debug(
+      `[PlatformAccessGraph] Cache invalidated by ${event.type}`,
+    );
+  }
+});
