@@ -71,3 +71,7 @@ export type {
   ConversionDataPoint, ConversionFunnel, LandingPerformanceScore,
   MarketingInsight, TrafficRule, TrafficAllocation,
 } from './autonomous-marketing';
+
+// ── Landing Page Governance ──
+export { landingPageGovernance, LandingPageGovernanceEngine } from './landing-page-governance';
+export type { ApprovalRequest, GovernanceLog, GovernanceStatus } from './landing-page-governance';

@@ -3629,6 +3629,131 @@ export type Database = {
           },
         ]
       }
+      landing_page_approval_requests: {
+        Row: {
+          created_at: string
+          id: string
+          landing_page_id: string
+          page_snapshot: Json
+          published_at: string | null
+          published_by: string | null
+          published_by_user_id: string | null
+          review_decision: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_user_id: string | null
+          status: string
+          submission_notes: string | null
+          submitted_at: string
+          submitted_by: string
+          submitted_by_user_id: string
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          landing_page_id: string
+          page_snapshot?: Json
+          published_at?: string | null
+          published_by?: string | null
+          published_by_user_id?: string | null
+          review_decision?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_user_id?: string | null
+          status?: string
+          submission_notes?: string | null
+          submitted_at?: string
+          submitted_by: string
+          submitted_by_user_id: string
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          landing_page_id?: string
+          page_snapshot?: Json
+          published_at?: string | null
+          published_by?: string | null
+          published_by_user_id?: string | null
+          review_decision?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_user_id?: string | null
+          status?: string
+          submission_notes?: string | null
+          submitted_at?: string
+          submitted_by?: string
+          submitted_by_user_id?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_page_approval_requests_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_page_governance_logs: {
+        Row: {
+          action: string
+          approval_request_id: string
+          created_at: string
+          id: string
+          landing_page_id: string
+          metadata: Json | null
+          notes: string | null
+          performed_by: string
+          performed_by_user_id: string
+        }
+        Insert: {
+          action: string
+          approval_request_id: string
+          created_at?: string
+          id?: string
+          landing_page_id: string
+          metadata?: Json | null
+          notes?: string | null
+          performed_by: string
+          performed_by_user_id: string
+        }
+        Update: {
+          action?: string
+          approval_request_id?: string
+          created_at?: string
+          id?: string
+          landing_page_id?: string
+          metadata?: Json | null
+          notes?: string | null
+          performed_by?: string
+          performed_by_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_page_governance_logs_approval_request_id_fkey"
+            columns: ["approval_request_id"]
+            isOneToOne: false
+            referencedRelation: "landing_page_approval_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_page_governance_logs_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       landing_pages: {
         Row: {
           analytics: Json

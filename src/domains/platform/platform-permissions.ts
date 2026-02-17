@@ -42,6 +42,9 @@ export const PLATFORM_PERMISSIONS = [
   // ── Growth / Landing Pages ──
   'landing_page.view',
   'landing_page.create',
+  'landing_page.submit',
+  'landing_page.approve',
+  'landing_page.reject',
   'landing_page.publish',
   'landing_page.delete',
   // ── Growth AI / Marketing ──
@@ -93,6 +96,9 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'security.view',
     'landing_page.view',
     'landing_page.create',
+    'landing_page.submit',
+    'landing_page.approve',
+    'landing_page.reject',
     'landing_page.publish',
     'landing_page.delete',
     'ab_experiment.start',
@@ -172,6 +178,9 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'tenant.view',
     'landing_page.view',
     'landing_page.create',
+    'landing_page.submit',
+    'landing_page.approve',
+    'landing_page.reject',
     'landing_page.publish',
     'landing_page.delete',
     'audit.view',
@@ -186,6 +195,7 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'growth.version_view',
     'landing_page.view',
     'landing_page.create',
+    'landing_page.submit',      // can submit for review, NOT approve/publish
     'audit.view',
   ],
 
@@ -200,6 +210,9 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'growth.version_view',
     'landing_page.view',
     'landing_page.create',
+    'landing_page.submit',
+    'landing_page.approve',     // can approve submissions
+    'landing_page.reject',      // can reject submissions
     'landing_page.publish',
     'landing_page.delete',
     'audit.view',

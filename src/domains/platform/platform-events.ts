@@ -38,7 +38,12 @@ export type PlatformEventType =
   | 'ABVariantAssigned'
   | 'ConversionTracked'
   | 'LandingRankUpdated'
-  | 'AIExperimentSuggestionGenerated';
+  | 'AIExperimentSuggestionGenerated'
+  // Landing Page Governance events
+  | 'LandingPageSubmitted'
+  | 'LandingPageApproved'
+  | 'LandingPageRejected'
+  | 'LandingPagePublished';
 
 export interface PlatformEventPayload {
   type: PlatformEventType;
@@ -47,7 +52,7 @@ export interface PlatformEventPayload {
   actorId: string;
   actorEmail?: string;
   /** Target entity */
-  targetType: 'platform_user' | 'tenant' | 'platform_role' | 'cognitive_layer' | 'billing' | 'marketing';
+  targetType: 'platform_user' | 'tenant' | 'platform_role' | 'cognitive_layer' | 'billing' | 'marketing' | 'governance';
   targetId: string;
   /** Extra context */
   metadata?: Record<string, unknown>;
@@ -347,6 +352,54 @@ export const platformEvents = {
       actorId,
       targetType: 'marketing',
       targetId: opts.experimentId,
+      metadata: opts,
+    });
+  },
+
+  // ═══════════════════════════════════
+  // Landing Page Governance Events
+  // ═══════════════════════════════════
+
+  landingPageSubmitted(actorId: string, opts: { landingPageId: string; requestId: string; pageName: string; version: number }) {
+    emit({
+      type: 'LandingPageSubmitted',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'governance',
+      targetId: opts.requestId,
+      metadata: opts,
+    });
+  },
+
+  landingPageApproved(actorId: string, opts: { landingPageId: string; requestId: string; approvedBy: string }) {
+    emit({
+      type: 'LandingPageApproved',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'governance',
+      targetId: opts.requestId,
+      metadata: opts,
+    });
+  },
+
+  landingPageRejected(actorId: string, opts: { landingPageId: string; requestId: string; rejectedBy: string; reason: string }) {
+    emit({
+      type: 'LandingPageRejected',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'governance',
+      targetId: opts.requestId,
+      metadata: opts,
+    });
+  },
+
+  landingPagePublished(actorId: string, opts: { landingPageId: string; requestId: string; publishedBy: string; version: number }) {
+    emit({
+      type: 'LandingPagePublished',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'governance',
+      targetId: opts.requestId,
       metadata: opts,
     });
   },
