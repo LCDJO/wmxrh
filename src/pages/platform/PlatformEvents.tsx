@@ -1,13 +1,15 @@
 /**
  * PlatformEvents — Dashboard listing all domain events across modules.
  */
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Zap, Filter } from 'lucide-react';
+import { Search, Zap, Filter, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 // ── Aggregate all domain event catalogs ────────────────────────
 
@@ -109,8 +111,20 @@ const ALL_DOMAINS = [...new Set(EVENT_CATALOG.map(e => e.domain))];
 export default function PlatformEvents() {
   const [search, setSearch] = useState('');
   const [selectedDomain, setSelectedDomain] = useState<string>('all');
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setRefreshKey(k => k + 1);
+      setIsRefreshing(false);
+      toast.success(`Catálogo atualizado — ${EVENT_CATALOG.length} eventos carregados`);
+    }, 400);
+  }, []);
 
   const filtered = useMemo(() => {
+    void refreshKey; // dependency to force re-compute
     return EVENT_CATALOG.filter(e => {
       const matchesDomain = selectedDomain === 'all' || e.domain === selectedDomain;
       const matchesSearch =
@@ -120,7 +134,7 @@ export default function PlatformEvents() {
         e.domain.toLowerCase().includes(search.toLowerCase());
       return matchesDomain && matchesSearch;
     });
-  }, [search, selectedDomain]);
+  }, [search, selectedDomain, refreshKey]);
 
   const groupedByDomain = useMemo(() => {
     const map = new Map<string, EventCatalogEntry[]>();
@@ -135,11 +149,23 @@ export default function PlatformEvents() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Catálogo de Eventos</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Todos os eventos de domínio emitidos pelo sistema, organizados por módulo.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Catálogo de Eventos</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Todos os eventos de domínio emitidos pelo sistema, organizados por módulo.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="shrink-0"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Atualizar
+        </Button>
       </div>
 
       {/* Summary cards */}
