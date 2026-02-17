@@ -138,3 +138,20 @@ export type { AnalysisResult } from './graph-analyzer';
 export type { GraphProvider } from './graph-registry';
 export type { UserAccessMap, TenantAccessOverview, PermissionUsage } from './graph-query-service';
 export { graphRegistry } from './graph-registry';
+
+// ── UGE Events ──
+export type {
+  UGEEventType,
+  UGEDomainEvent,
+  GraphComposedPayload,
+  RiskScoreUpdatedPayload,
+  AccessAnomalyDetectedPayload,
+  AnomalyKind,
+} from './uge-events';
+export {
+  onUGEEvent,
+  onUGEEventType,
+  emitUGEEvent,
+  getUGEEventLog,
+  clearUGEEventLog,
+} from './uge-events';

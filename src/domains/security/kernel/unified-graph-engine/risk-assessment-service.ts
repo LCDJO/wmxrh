@@ -21,6 +21,8 @@ import type {
   UnifiedEdgeRelation,
 } from './types';
 import { analyzeGraph } from './graph-analyzer';
+import { emitUGEEvent } from './uge-events';
+import type { AnomalyKind } from './uge-events';
 
 const MAX_SUPER_ADMINS = 3;
 
@@ -133,12 +135,60 @@ export function assessRisk(snapshot: UnifiedGraphSnapshot): RiskAssessment {
         ? 'medium'
         : 'low';
 
-  return {
+  const result: RiskAssessment = {
     overallLevel,
     signals,
     userScores,
     assessedAt: Date.now(),
   };
+
+  // Emit RiskScoreUpdated
+  emitUGEEvent({
+    type: 'RiskScoreUpdated',
+    timestamp: Date.now(),
+    previousLevel: null, // stateless — callers track previous
+    currentLevel: overallLevel,
+    signalCount: signals.length,
+    criticalSignals: signals.filter(s => s.level === 'critical').length,
+    highSignals: signals.filter(s => s.level === 'high').length,
+    userScoreCount: userScores.length,
+  });
+
+  // Emit AccessAnomalyDetected for notable findings
+  emitAnomalies(signals, analysis);
+
+  return result;
+}
+
+// ════════════════════════════════════
+// ANOMALY EMISSION
+// ════════════════════════════════════
+
+function emitAnomalies(signals: RiskSignal[], analysis: ReturnType<typeof analyzeGraph>): void {
+  const anomalyMap: Array<{ match: (s: RiskSignal) => boolean; kind: AnomalyKind }> = [
+    { match: s => s.id === 'orphan_nodes', kind: 'orphan_nodes' },
+    { match: s => s.id.startsWith('excessive_perms_'), kind: 'excessive_permissions' },
+    { match: s => s.id === 'cross_domain_users', kind: 'cross_domain_leak' },
+    { match: s => s.id.startsWith('role_overlap_'), kind: 'role_overlap' },
+  ];
+
+  for (const { match, kind } of anomalyMap) {
+    const matched = signals.filter(match);
+    for (const signal of matched) {
+      if (signal.level === 'high' || signal.level === 'critical') {
+        emitUGEEvent({
+          type: 'AccessAnomalyDetected',
+          timestamp: Date.now(),
+          anomalyKind: kind,
+          severity: signal.level,
+          title: signal.title,
+          detail: signal.detail,
+          affectedNodeUids: signal.affectedNodeUids,
+          relatedSignals: [signal.id],
+        });
+      }
+    }
+  }
 }
 
 // ════════════════════════════════════
