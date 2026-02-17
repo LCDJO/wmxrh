@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, tenant_id, trend_data, compliance_data, audit_data } = await req.json();
+    const { action, tenant_id, trend_data, compliance_data, audit_data, coupon_data } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -184,6 +184,80 @@ DELTAS: ${JSON.stringify(audit_data.deltas, null, 2)}`;
         break;
       }
 
+      // ═══════════════════════════════════
+      // COUPON ABUSE DETECTION
+      // ═══════════════════════════════════
+      case "analyze_coupon_abuse": {
+        systemPrompt = `You are a financial governance AI for a multi-tenant SaaS platform.
+Analyze coupon usage data and detect abusive patterns. Respond in Portuguese (BR).
+
+Patterns to detect:
+1. Cupons com taxa de uso anormalmente alta (uso/max > 80%)
+2. Tenants acumulando múltiplos cupons simultaneamente
+3. Descontos excessivos (>50% do valor do plano)
+4. Cupons sendo usados repetidamente pelo mesmo tenant
+5. Padrões temporais suspeitos (muitos resgates em curto período)
+6. Tenants cujo desconto total acumulado excede limites razoáveis`;
+
+        userPrompt = `Analise os seguintes dados de cupons e resgates para detectar abusos:
+
+CUPONS ATIVOS: ${JSON.stringify(coupon_data?.coupons ?? [], null, 2)}
+RESGATES RECENTES: ${JSON.stringify(coupon_data?.redemptions ?? [], null, 2)}
+RESUMO POR TENANT: ${JSON.stringify(coupon_data?.tenant_summary ?? [], null, 2)}
+ENTRADAS FINANCEIRAS (coupon_discount): ${JSON.stringify(coupon_data?.financial_entries ?? [], null, 2)}`;
+
+        tools = [{
+          type: "function",
+          function: {
+            name: "coupon_abuse_analysis",
+            description: "Return coupon abuse detection results",
+            parameters: {
+              type: "object",
+              properties: {
+                risk_level: { type: "string", enum: ["low", "medium", "high", "critical"] },
+                summary: { type: "string" },
+                abusive_coupons: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      coupon_code: { type: "string" },
+                      reason: { type: "string" },
+                      severity: { type: "string", enum: ["warning", "critical"] },
+                      recommendation: { type: "string" },
+                    },
+                    required: ["coupon_code", "reason", "severity", "recommendation"],
+                    additionalProperties: false,
+                  },
+                },
+                excessive_discount_tenants: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      tenant_id: { type: "string" },
+                      tenant_name: { type: "string" },
+                      total_discount_brl: { type: "number" },
+                      coupon_count: { type: "number" },
+                      reason: { type: "string" },
+                      severity: { type: "string", enum: ["warning", "critical"] },
+                      recommendation: { type: "string" },
+                    },
+                    required: ["tenant_id", "total_discount_brl", "coupon_count", "reason", "severity", "recommendation"],
+                    additionalProperties: false,
+                  },
+                },
+                recommendations: { type: "array", items: { type: "string" } },
+              },
+              required: ["risk_level", "summary", "abusive_coupons", "excessive_discount_tenants", "recommendations"],
+              additionalProperties: false,
+            },
+          },
+        }];
+        tool_choice = { type: "function", function: { name: "coupon_abuse_analysis" } };
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: `Unknown action: ${action}` }),
@@ -256,6 +330,8 @@ DELTAS: ${JSON.stringify(audit_data.deltas, null, 2)}`;
     } else if (action === "analyze_compliance") {
       responseData.analysis = result;
     } else if (action === "analyze_audit") {
+      responseData.analysis = result;
+    } else if (action === "analyze_coupon_abuse") {
       responseData.analysis = result;
     }
 
