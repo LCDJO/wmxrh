@@ -138,6 +138,7 @@ const navStructure: NavEntry[] = [
     icon: Headphones,
     label: 'Suporte',
     children: [
+      { to: '/support/chat', icon: MessageSquarePlus, label: 'Chat ao Vivo', key: 'support' },
       { to: '/support/new', icon: MessageSquarePlus, label: 'Abrir Chamado', key: 'support' },
       { to: '/support/tickets', icon: Headphones, label: 'Meus Chamados', key: 'support' },
       { to: '/support/wiki', icon: BookOpen, label: 'Base de Conhecimento', key: 'support' },
