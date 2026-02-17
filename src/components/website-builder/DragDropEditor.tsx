@@ -15,13 +15,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { Monitor, Smartphone, Tablet } from 'lucide-react';
-import type { WebsiteBlock, WebsiteBlockType } from '@/domains/website-builder/types';
+import type { WebsiteBlock, WebsiteBlockType, Viewport } from '@/domains/website-builder/types';
 import { BLOCK_DEFINITIONS } from '@/domains/website-builder/types';
 import { ComponentPalette } from './ComponentPalette';
 import { SortableBlock } from './SortableBlock';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-type Viewport = 'desktop' | 'tablet' | 'mobile';
+
 
 export function DragDropEditor() {
   const [blocks, setBlocks] = useState<WebsiteBlock[]>([]);
@@ -110,7 +110,7 @@ export function DragDropEditor() {
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
                   {blocks.map((block) => (
-                    <SortableBlock key={block.id} block={block} onRemove={removeBlock} />
+                    <SortableBlock key={block.id} block={block} viewport={viewport} onRemove={removeBlock} />
                   ))}
                 </SortableContext>
               </DndContext>

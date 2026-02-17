@@ -1,4 +1,5 @@
-import type { WebsiteBlock } from '@/domains/website-builder/types';
+import type { WebsiteBlock, Viewport } from '@/domains/website-builder/types';
+import { resolveBreakpoint } from '@/domains/website-builder/responsive-layout-engine';
 import {
   HeroPreview,
   FeatureGridPreview,
@@ -11,24 +12,31 @@ import {
 
 interface Props {
   block: WebsiteBlock;
+  viewport?: Viewport;
 }
 
-export function BlockRenderer({ block }: Props) {
+export function BlockRenderer({ block, viewport = 'desktop' }: Props) {
+  const bp = resolveBreakpoint(block, viewport);
+
+  if (bp.hidden) return null;
+
+  const props = { content: block.content, viewport, breakpoint: bp };
+
   switch (block.type) {
     case 'hero':
-      return <HeroPreview content={block.content} />;
+      return <HeroPreview {...props} />;
     case 'feature-grid':
-      return <FeatureGridPreview content={block.content} />;
+      return <FeatureGridPreview {...props} />;
     case 'fab-block':
-      return <FABBlockPreview content={block.content} />;
+      return <FABBlockPreview {...props} />;
     case 'pricing-table':
-      return <PricingTablePreview content={block.content} />;
+      return <PricingTablePreview {...props} />;
     case 'cta-section':
-      return <CTASectionPreview content={block.content} />;
+      return <CTASectionPreview {...props} />;
     case 'testimonial-slider':
-      return <TestimonialSliderPreview content={block.content} />;
+      return <TestimonialSliderPreview {...props} />;
     case 'faq-accordion':
-      return <FAQAccordionPreview content={block.content} />;
+      return <FAQAccordionPreview {...props} />;
     default:
       return (
         <div className="rounded-lg border border-border/60 bg-card/60 p-6 text-center">

@@ -1,4 +1,5 @@
 import { ChevronDown } from 'lucide-react';
+import type { Viewport, BreakpointOverrides } from '@/domains/website-builder/types';
 
 interface FAQItem {
   question: string;
@@ -7,13 +8,15 @@ interface FAQItem {
 
 interface Props {
   content: Record<string, unknown>;
+  viewport: Viewport;
+  breakpoint: BreakpointOverrides;
 }
 
-export function FAQAccordionPreview({ content }: Props) {
+export function FAQAccordionPreview({ content, breakpoint }: Props) {
   const items = (content.items as FAQItem[]) || [];
 
   return (
-    <div className="space-y-4 p-6">
+    <div className={`space-y-4 ${breakpoint.padding ?? 'p-6'}`}>
       <h3 className="text-lg font-bold font-display text-foreground text-center">
         {(content.title as string) || 'FAQ'}
       </h3>

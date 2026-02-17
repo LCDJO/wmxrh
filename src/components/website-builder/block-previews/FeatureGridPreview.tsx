@@ -1,4 +1,6 @@
 import { Users, DollarSign, Shield } from 'lucide-react';
+import type { Viewport, BreakpointOverrides } from '@/domains/website-builder/types';
+import { getGridCols } from '@/domains/website-builder/responsive-layout-engine';
 
 const iconMap: Record<string, React.ElementType> = { Users, DollarSign, Shield };
 
@@ -10,18 +12,20 @@ interface Feature {
 
 interface Props {
   content: Record<string, unknown>;
+  viewport: Viewport;
+  breakpoint: BreakpointOverrides;
 }
 
-export function FeatureGridPreview({ content }: Props) {
+export function FeatureGridPreview({ content, breakpoint }: Props) {
   const features = (content.features as Feature[]) || [];
-  const cols = (content.columns as number) || 3;
+  const cols = breakpoint.columns ?? 3;
 
   return (
-    <div className="space-y-4 p-6">
+    <div className={`space-y-4 ${breakpoint.padding ?? 'p-6'}`}>
       <h3 className="text-lg font-bold font-display text-foreground text-center">
         {(content.title as string) || 'Funcionalidades'}
       </h3>
-      <div className={`grid gap-4 ${cols === 2 ? 'grid-cols-2' : cols === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+      <div className={`grid gap-4 ${getGridCols(cols)}`}>
         {features.map((f, i) => {
           const Icon = iconMap[f.icon || ''] || Users;
           return (
