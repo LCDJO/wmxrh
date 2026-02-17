@@ -11,12 +11,14 @@
 
 import type { User, Session } from '@supabase/supabase-js';
 import type { TenantRole, UserRole, ScopeType } from '@/domains/shared/types';
+import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import { resolveScope, type ScopeResolution } from './scope-resolver';
 import { featureFlagEngine } from './feature-flag-engine';
 import { getAccessGraph } from './access-graph';
 import { dualIdentityEngine } from './dual-identity-engine';
 import type { RealIdentity, ActiveIdentity } from './dual-identity-engine.types';
 import type { SecurityFeatureKey, FeatureKey } from '../feature-flags';
+import { platformAccessGraphService, type PlatformAccessGraph } from '@/domains/platform/platform-access-graph';
 
 // ════════════════════════════════════
 // SECURITY CONTEXT — the universal auth envelope
@@ -53,6 +55,12 @@ export interface SecurityContext {
   active_identity: ActiveIdentity;
   /** Whether this context is operating under impersonation */
   is_impersonating: boolean;
+
+  // ── PLATFORM LAYER ──
+  /** Platform-level roles (only populated when user_type === 'platform') */
+  platform_roles: PlatformRoleType[];
+  /** Platform access graph for O(1) authorization checks (null for tenant users) */
+  platform_access_graph: PlatformAccessGraph | null;
 
   /** Additional identity metadata */
   meta: {
@@ -120,6 +128,8 @@ export interface BuildSecurityContextInput {
   uiScopeLevel: ScopeType;
   uiGroupId: string | null;
   uiCompanyId: string | null;
+  /** Platform roles resolved from platform_users table (only for platform users) */
+  platformRoles?: PlatformRoleType[];
 }
 
 /**
@@ -181,6 +191,16 @@ export function buildSecurityContext(input: BuildSecurityContextInput): Security
     ? activeIdentity.userType
     : (input.userType ?? 'tenant');
 
+  // ── Platform layer resolution ──
+  const platformRoles: PlatformRoleType[] = input.platformRoles ?? [];
+  const isPlatformUser = effectiveUserType === 'platform' || platformRoles.length > 0;
+
+  // Resolve platform access graph (only for platform users)
+  let platformGraph: PlatformAccessGraph | null = null;
+  if (isPlatformUser) {
+    platformGraph = platformAccessGraphService.getCurrentGraph();
+  }
+
   return {
     request_id: generateRequestId(),
     user_type: effectiveUserType,
@@ -194,6 +214,8 @@ export function buildSecurityContext(input: BuildSecurityContextInput): Security
     real_identity: realIdentity,
     active_identity: activeIdentity,
     is_impersonating: isImpersonating,
+    platform_roles: platformRoles,
+    platform_access_graph: platformGraph,
     meta: {
       email: input.user.email ?? null,
       session_id: input.session.access_token?.slice(-8) ?? null,
