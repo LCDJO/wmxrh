@@ -9,7 +9,9 @@ import { getAccessGraph } from '../../access-graph';
 
 export const tenantAccessProvider: GraphProvider = {
   domain: 'tenant_access',
+  graphId: 'tenant_access_v1',
   name: 'Tenant Access Graph',
+  sourceService: 'AccessGraphService',
 
   isAvailable(): boolean {
     return getAccessGraph() !== null;

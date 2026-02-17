@@ -9,7 +9,9 @@ import { platformAccessGraphService } from '@/domains/platform/platform-access-g
 
 export const platformAccessProvider: GraphProvider = {
   domain: 'platform_access',
+  graphId: 'platform_access_v1',
   name: 'Platform Access Graph',
+  sourceService: 'PlatformAccessGraphService',
 
   isAvailable(): boolean {
     return platformAccessGraphService.getCurrentGraph() !== null;

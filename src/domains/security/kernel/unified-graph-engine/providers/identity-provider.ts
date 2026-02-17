@@ -10,7 +10,9 @@ import { dualIdentityEngine } from '../../dual-identity-engine';
 
 export const identityProvider: GraphProvider = {
   domain: 'identity',
+  graphId: 'identity_v1',
   name: 'Identity Graph',
+  sourceService: 'DualIdentityEngine',
 
   isAvailable(): boolean {
     return dualIdentityEngine.realIdentity !== null;
