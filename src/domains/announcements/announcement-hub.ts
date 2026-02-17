@@ -126,12 +126,44 @@ export function severityToNotificationType(severity: Severity): 'info' | 'warnin
 }
 
 // ══════════════════════════════════════════════════════════════
-// AnnouncementDispatcher — CRUD
+// Tenant-scoped cache
+// ══════════════════════════════════════════════════════════════
+
+const CACHE_TTL_MS = 60_000; // 1 minute
+
+interface CacheEntry {
+  data: TenantAnnouncement[];
+  fetchedAt: number;
+  tenantId: string;
+}
+
+let _cache: CacheEntry | null = null;
+let _dismissedCache: { userId: string; ids: Set<string>; fetchedAt: number } | null = null;
+
+function isCacheValid(tenantId: string): boolean {
+  if (!_cache) return false;
+  if (_cache.tenantId !== tenantId) return false;
+  return Date.now() - _cache.fetchedAt < CACHE_TTL_MS;
+}
+
+function isDismissedCacheValid(userId: string): boolean {
+  if (!_dismissedCache) return false;
+  if (_dismissedCache.userId !== userId) return false;
+  return Date.now() - _dismissedCache.fetchedAt < CACHE_TTL_MS;
+}
+
+// ══════════════════════════════════════════════════════════════
+// AnnouncementDispatcher — CRUD with tenant cache
 // ══════════════════════════════════════════════════════════════
 
 export const announcementDispatcher = {
-  /** Fetch active announcements visible to the current user's tenant */
+  /** Fetch active announcements visible to the current user's tenant (cached) */
   async listActive(tenantId: string, tenantPlanId?: string | null): Promise<TenantAnnouncement[]> {
+    // Return cached if valid
+    if (isCacheValid(tenantId)) {
+      return filterByPlan(_cache!.data, tenantPlanId);
+    }
+
     const now = new Date().toISOString();
     const { data, error } = await (supabase
       .from('tenant_announcements' as any)
@@ -145,17 +177,13 @@ export const announcementDispatcher = {
     if (error) throw error;
     const all = (data || []) as TenantAnnouncement[];
 
-    // Client-side filtering for plan/feature targeting
-    return all.filter(a => {
-      // Plan targeting: show only if tenant has matching plan
-      if (a.target_plan_id && tenantPlanId && a.target_plan_id !== tenantPlanId) return false;
-      if (a.target_plan_id && !tenantPlanId) return false;
-      // Feature flag targeting is informational — always show
-      return true;
-    });
+    // Store in cache
+    _cache = { data: all, fetchedAt: Date.now(), tenantId };
+
+    return filterByPlan(all, tenantPlanId);
   },
 
-  /** Fetch ALL announcements for platform admin management */
+  /** Fetch ALL announcements for platform admin management (uncached) */
   async listAll(filters?: {
     alert_type?: string;
     severity?: string;
@@ -173,7 +201,7 @@ export const announcementDispatcher = {
     return (data || []) as TenantAnnouncement[];
   },
 
-  /** Create a new announcement */
+  /** Create a new announcement (invalidates cache) */
   async create(input: CreateAnnouncementInput): Promise<TenantAnnouncement> {
     const { data, error } = await (supabase
       .from('tenant_announcements' as any)
@@ -197,10 +225,11 @@ export const announcementDispatcher = {
       .single() as any);
 
     if (error) throw error;
+    announcementDispatcher.invalidateCache();
     return data as TenantAnnouncement;
   },
 
-  /** Update an announcement */
+  /** Update an announcement (invalidates cache) */
   async update(id: string, updates: Partial<CreateAnnouncementInput>): Promise<void> {
     const { error } = await (supabase
       .from('tenant_announcements' as any)
@@ -208,9 +237,10 @@ export const announcementDispatcher = {
       .eq('id', id) as any);
 
     if (error) throw error;
+    announcementDispatcher.invalidateCache();
   },
 
-  /** Delete an announcement */
+  /** Delete an announcement (invalidates cache) */
   async remove(id: string): Promise<void> {
     const { error } = await (supabase
       .from('tenant_announcements' as any)
@@ -218,20 +248,27 @@ export const announcementDispatcher = {
       .eq('id', id) as any);
 
     if (error) throw error;
+    announcementDispatcher.invalidateCache();
   },
 
-  /** Fetch IDs already dismissed by this user */
+  /** Fetch IDs already dismissed by this user (cached) */
   async getDismissedIds(userId: string): Promise<Set<string>> {
+    if (isDismissedCacheValid(userId)) {
+      return _dismissedCache!.ids;
+    }
+
     const { data, error } = await supabase
       .from('announcement_dismissals')
       .select('announcement_id')
       .eq('user_id', userId);
 
     if (error) throw error;
-    return new Set((data || []).map(d => (d as any).announcement_id));
+    const ids = new Set((data || []).map(d => (d as any).announcement_id));
+    _dismissedCache = { userId, ids, fetchedAt: Date.now() };
+    return ids;
   },
 
-  /** Dismiss an announcement for this user */
+  /** Dismiss an announcement for this user (invalidates dismissed cache) */
   async dismiss(announcementId: string, userId: string): Promise<void> {
     const { error } = await supabase
       .from('announcement_dismissals')
@@ -241,5 +278,25 @@ export const announcementDispatcher = {
       } as any, { onConflict: 'announcement_id,user_id' });
 
     if (error) throw error;
+    // Optimistic: add to dismissed cache immediately
+    if (_dismissedCache && _dismissedCache.userId === userId) {
+      _dismissedCache.ids.add(announcementId);
+    }
+  },
+
+  /** Invalidate all caches — called by Event Bus on realtime changes */
+  invalidateCache(): void {
+    _cache = null;
+    _dismissedCache = null;
   },
 };
+
+// ── Helper ──────────────────────────────────────────────────
+
+function filterByPlan(all: TenantAnnouncement[], tenantPlanId?: string | null): TenantAnnouncement[] {
+  return all.filter(a => {
+    if (a.target_plan_id && tenantPlanId && a.target_plan_id !== tenantPlanId) return false;
+    if (a.target_plan_id && !tenantPlanId) return false;
+    return true;
+  });
+}

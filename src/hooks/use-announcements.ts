@@ -96,7 +96,7 @@ export function useAnnouncements() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Realtime subscription
+  // Realtime subscription — invalidates cache + refreshes
   useEffect(() => {
     if (!tenantId) return;
     const channel = supabase
@@ -106,6 +106,7 @@ export function useAnnouncements() {
         schema: 'public',
         table: 'tenant_announcements',
       }, () => {
+        announcementDispatcher.invalidateCache();
         refresh();
       })
       .subscribe();
