@@ -3,11 +3,23 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import type { InvoiceEngineAPI, Invoice, CreateInvoiceDTO, InvoiceStatus } from './types';
+import type { InvoiceEngineAPI, Invoice, CreateInvoiceDTO, InvoiceStatus, InvoiceLine } from './types';
+
+function mapRowToInvoice(row: any): Invoice {
+  const metadata = (row.metadata ?? {}) as Record<string, unknown>;
+  return {
+    ...row,
+    lines: (metadata.lines as InvoiceLine[] | undefined) ?? [],
+    metadata,
+  };
+}
 
 export function createInvoiceEngine(): InvoiceEngineAPI {
   return {
     async generate(tenantId, dto) {
+      const metadata: Record<string, unknown> = { ...(dto.metadata ?? {}) };
+      if (dto.lines?.length) metadata.lines = dto.lines;
+
       const { data, error } = await supabase
         .from('invoices')
         .insert([{
@@ -22,13 +34,13 @@ export function createInvoiceEngine(): InvoiceEngineAPI {
           payment_method: dto.payment_method ?? null,
           notes: dto.notes ?? null,
           status: 'pending' as const,
-          metadata: (dto.metadata ?? {}) as any,
+          metadata: metadata as any,
         }])
         .select()
         .single();
 
       if (error) throw new Error(`InvoiceEngine.generate: ${error.message}`);
-      return data as unknown as Invoice;
+      return mapRowToInvoice(data);
     },
 
     async getById(invoiceId) {
@@ -39,7 +51,7 @@ export function createInvoiceEngine(): InvoiceEngineAPI {
         .maybeSingle();
 
       if (error) throw new Error(`InvoiceEngine.getById: ${error.message}`);
-      return data as unknown as Invoice | null;
+      return data ? mapRowToInvoice(data) : null;
     },
 
     async listByTenant(tenantId, opts) {
@@ -54,7 +66,7 @@ export function createInvoiceEngine(): InvoiceEngineAPI {
 
       const { data, error } = await query;
       if (error) throw new Error(`InvoiceEngine.listByTenant: ${error.message}`);
-      return (data ?? []) as unknown as Invoice[];
+      return (data ?? []).map(mapRowToInvoice);
     },
 
     async listAll(opts) {
@@ -69,7 +81,7 @@ export function createInvoiceEngine(): InvoiceEngineAPI {
 
       const { data, error } = await query;
       if (error) throw new Error(`InvoiceEngine.listAll: ${error.message}`);
-      return (data ?? []) as unknown as Invoice[];
+      return (data ?? []).map(mapRowToInvoice);
     },
 
     async markPaid(invoiceId, paidAt, method) {
@@ -87,7 +99,7 @@ export function createInvoiceEngine(): InvoiceEngineAPI {
         .single();
 
       if (error) throw new Error(`InvoiceEngine.markPaid: ${error.message}`);
-      return data as unknown as Invoice;
+      return mapRowToInvoice(data);
     },
 
     async cancel(invoiceId) {
@@ -99,7 +111,7 @@ export function createInvoiceEngine(): InvoiceEngineAPI {
         .single();
 
       if (error) throw new Error(`InvoiceEngine.cancel: ${error.message}`);
-      return data as unknown as Invoice;
+      return mapRowToInvoice(data);
     },
 
     async markOverdueInvoices() {

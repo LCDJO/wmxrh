@@ -79,6 +79,8 @@ export type {
   FinancialLedgerAdapterAPI,
 
   // Invoice Engine
+  InvoiceLine,
+  InvoiceLineSource,
   InvoiceEngineAPI,
 
   // Subscription Lifecycle
