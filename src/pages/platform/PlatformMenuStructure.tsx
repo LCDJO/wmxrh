@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Building2, Puzzle, ShieldCheck, ScrollText,
   Zap, Users, Package, Megaphone, KeyRound, Activity, Monitor,
   TrendingUp, RefreshCw, HelpCircle, X, GripVertical, Lock,
-  ChevronRight,
+  ChevronRight, Save,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useCallback, useRef, useState, useMemo, type DragEvent } from 'react';
 import { toast } from 'sonner';
+import { saveMenuOrder, getSavedMenuOrder, applyOrder, type SavedMenuOrder } from '@/lib/platform-menu-order';
 
 /* ─── Types ─── */
 interface MenuChild {
@@ -31,7 +32,7 @@ interface MenuNode {
 }
 
 /* ─── Initial data ─── */
-const createInitialTree = (): MenuNode[] => [
+const createDefaultTree = (): MenuNode[] => [
   { id: 'dashboard', label: 'Dashboard', path: '/platform/dashboard', icon: LayoutDashboard },
   { id: 'tenants', label: 'Tenants', path: '/platform/tenants', icon: Building2 },
   { id: 'modules', label: 'Módulos', path: '/platform/modules', icon: Puzzle },
@@ -91,11 +92,27 @@ const createInitialTree = (): MenuNode[] => [
   },
 ];
 
+/* ─── Load saved order or use defaults ─── */
+function createInitialTree(): MenuNode[] {
+  const defaults = createDefaultTree();
+  const saved = getSavedMenuOrder();
+  if (!saved) return defaults;
+
+  // Apply root order
+  const reordered = applyOrder(defaults, saved.rootOrder, n => n.path);
+
+  // Apply children order
+  return reordered.map(node => {
+    if (!node.children || !saved.childrenOrder[node.path]) return node;
+    return {
+      ...node,
+      children: applyOrder(node.children, saved.childrenOrder[node.path], c => c.path),
+    };
+  });
+}
+
 /* ─── Simulated permission check ─── */
 const useCanManageMenuStructure = () => {
-  // In production this would check permission_definitions code 'platform.menu_structure.manage'
-  // via the user's custom_roles → role_permissions chain.
-  // For now, platform super admins always have access.
   return true;
 };
 
@@ -105,6 +122,8 @@ export default function PlatformMenuStructure() {
   const [menuTree, setMenuTree] = useState<MenuNode[]>(createInitialTree);
   const [showHelp, setShowHelp] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Drag state
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -122,9 +141,34 @@ export default function PlatformMenuStructure() {
     setTimeout(() => {
       setMenuTree(createInitialTree());
       setIsRefreshing(false);
-      toast.success(`Estrutura atualizada — ${createInitialTree().length} menus raiz, ${createInitialTree().reduce((a, m) => a + (m.children?.length ?? 0), 0)} sub-itens`);
+      setHasChanges(false);
+      toast.success(`Estrutura atualizada — ${createInitialTree().length} menus raiz`);
     }, 400);
   }, []);
+
+  const handleSave = useCallback(() => {
+    setIsSaving(true);
+
+    const order: SavedMenuOrder = {
+      rootOrder: menuTree.map(n => n.path),
+      childrenOrder: menuTree.reduce((acc, n) => {
+        if (n.children && n.children.length > 0) {
+          acc[n.path] = n.children.map(c => c.path);
+        }
+        return acc;
+      }, {} as Record<string, string[]>),
+      savedAt: new Date().toISOString(),
+    };
+
+    saveMenuOrder(order);
+
+    setTimeout(() => {
+      toast.success('Estrutura salva com sucesso! Recarregando...');
+      setTimeout(() => {
+        window.location.reload();
+      }, 600);
+    }, 300);
+  }, [menuTree]);
 
   /* ── Root-level drag handlers ── */
   const handleRootDragStart = (e: DragEvent, id: string) => {
@@ -168,6 +212,7 @@ export default function PlatformMenuStructure() {
       items.splice(toIdx, 0, moved);
       return items;
     });
+    setHasChanges(true);
     toast.success('Menu reordenado');
     resetDrag();
   };
@@ -209,6 +254,7 @@ export default function PlatformMenuStructure() {
         return { ...node, children };
       });
     });
+    setHasChanges(true);
     toast.success('Sub-item reordenado');
     resetDrag();
   };
@@ -259,16 +305,29 @@ export default function PlatformMenuStructure() {
               </div>
             )}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="shrink-0 border-platform hover:bg-accent/50 transition-all duration-200"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            {canEdit && hasChanges && (
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="gradient-platform-accent text-white hover:opacity-90 transition-all duration-200"
+              >
+                <Save className={`h-4 w-4 mr-2 ${isSaving ? 'animate-spin' : ''}`} />
+                Salvar
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="border-platform hover:bg-accent/50 transition-all duration-200"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
         </div>
       </div>
 
