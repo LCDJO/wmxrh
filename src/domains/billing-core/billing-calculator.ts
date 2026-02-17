@@ -6,7 +6,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { PlanRegistryAPI, TenantPlanResolverAPI, BillingCycle } from '@/domains/platform-experience/types';
-import type { BillingCalculatorAPI, BillingCalculation, BillingLineItem } from './types';
+import type { BillingCalculatorAPI, BillingCalculation, BillingLineItem, PlanChangeBreakdown } from './types';
 
 function addMonths(date: Date, months: number): Date {
   const d = new Date(date);
@@ -183,22 +183,71 @@ export function createBillingCalculator(
       const snap = tenantPlan.resolve(tenantId);
       const fromCalc = buildCalculationSync(tenantId, fromPlanId, snap.billing_cycle, []);
       const toCalc = buildCalculationSync(tenantId, toPlanId, snap.billing_cycle, []);
-      const diff = toCalc.total_brl - fromCalc.total_brl;
+
+      // Real prorata: calculate based on remaining days in cycle
+      const now = new Date();
+      const periodEnd = snap.next_billing_at ? new Date(snap.next_billing_at) : addMonths(now, cycleMonths(snap.billing_cycle));
+      const totalDays = Math.ceil((periodEnd.getTime() - addMonths(periodEnd, -cycleMonths(snap.billing_cycle)).getTime()) / (1000 * 60 * 60 * 24));
+      const remainingDays = Math.max(0, Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      const dailyDiff = (toCalc.total_brl - fromCalc.total_brl) / totalDays;
+      const prorationAmount = Math.round(dailyDiff * remainingDays * 100) / 100;
 
       return {
         ...toCalc,
         line_items: [
           {
-            description: `Proration: upgrade ${fromPlanId} → ${toPlanId}`,
-            quantity: 1,
-            unit_price_brl: diff,
-            total_brl: diff,
+            description: `Prorata: ${fromPlanId} → ${toPlanId} (${remainingDays}/${totalDays} dias)`,
+            quantity: remainingDays,
+            unit_price_brl: Math.round(dailyDiff * 100) / 100,
+            total_brl: prorationAmount,
             type: 'proration' as const,
           },
         ],
-        subtotal_brl: Math.max(0, diff),
+        subtotal_brl: Math.max(0, prorationAmount),
         discount_brl: 0,
-        total_brl: Math.max(0, diff),
+        total_brl: Math.max(0, prorationAmount),
+      };
+    },
+
+    calculatePlanChange(tenantId, fromPlanId, toPlanId, opts) {
+      const snap = tenantPlan.resolve(tenantId);
+      const cycle = snap.billing_cycle;
+      const previewCycles = opts?.preview_cycles ?? 3;
+
+      // 1. Prorata do ciclo atual
+      const proration = this.calculateProration(tenantId, fromPlanId, toPlanId);
+
+      // 2. Valor recorrente do novo plano (ciclo cheio)
+      const recurring = this.calculateForPlan(tenantId, toPlanId, cycle);
+
+      // 3. Dias restantes / totais
+      const now = new Date();
+      const months = cycleMonths(cycle);
+      const periodEnd = snap.next_billing_at ? new Date(snap.next_billing_at) : addMonths(now, months);
+      const periodStart = addMonths(periodEnd, -months);
+      const totalCycleDays = Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
+      const remainingDays = Math.max(0, Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+
+      // 4. Projeção dos próximos N ciclos
+      const nextCycles: PlanChangeBreakdown['next_cycles'] = [];
+      let cycleStart = periodEnd;
+      for (let i = 1; i <= previewCycles; i++) {
+        const cycleEnd = addMonths(cycleStart, months);
+        nextCycles.push({
+          cycle_number: i,
+          period_start: cycleStart.toISOString().slice(0, 10),
+          period_end: cycleEnd.toISOString().slice(0, 10),
+          total_brl: recurring.total_brl,
+        });
+        cycleStart = cycleEnd;
+      }
+
+      return {
+        proration,
+        recurring,
+        next_cycles: nextCycles,
+        remaining_days: remainingDays,
+        total_cycle_days: totalCycleDays,
       };
     },
   };
