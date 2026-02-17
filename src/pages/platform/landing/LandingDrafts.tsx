@@ -270,7 +270,7 @@ export default function LandingDrafts() {
                         onClick={() => setDeleteTarget(page)}
                       >
                         <Trash2 className="h-3 w-3" />
-                        Excluir
+                        Excluir Rascunho
                       </Button>
                     )}
                   </div>

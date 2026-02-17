@@ -9,6 +9,7 @@
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import LandingVersionHistoryPanel from '@/components/platform/landing/LandingVersionHistoryPanel';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import { landingPageGovernance } from '@/domains/platform-growth/landing-page-governance';
@@ -66,8 +67,6 @@ export default function LandingPublished() {
 
   // Version history dialog
   const [historyTarget, setHistoryTarget] = useState<LandingPage | null>(null);
-  const [versionHistory, setVersionHistory] = useState<any[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const fetchPages = async () => {
     setLoading(true);
@@ -184,17 +183,8 @@ export default function LandingPublished() {
   /**
    * Load version history (approval requests) for a page.
    */
-  const handleViewHistory = async (page: LandingPage) => {
+  const handleViewHistory = (page: LandingPage) => {
     setHistoryTarget(page);
-    setLoadingHistory(true);
-    try {
-      const requests = await landingPageGovernance.listByPage(page.id);
-      setVersionHistory(requests);
-    } catch {
-      setVersionHistory([]);
-    } finally {
-      setLoadingHistory(false);
-    }
   };
 
   if (loading) {
@@ -284,7 +274,7 @@ export default function LandingPublished() {
                         onClick={() => setNewVersionTarget(page)}
                       >
                         <GitBranch className="h-3 w-3" />
-                        Nova Versão
+                        Editar Nova Versão
                       </Button>
                     )}
                     <Button
@@ -374,7 +364,7 @@ export default function LandingPublished() {
         </DialogContent>
       </Dialog>
 
-      {/* Version History Dialog */}
+      {/* Version History Dialog — powered by LandingVersionHistoryPanel */}
       <Dialog open={!!historyTarget} onOpenChange={(open) => !open && setHistoryTarget(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -383,71 +373,15 @@ export default function LandingPublished() {
               Histórico de Versões
             </DialogTitle>
             <DialogDescription>
-              {historyTarget?.name} — Registro completo de aprovações e publicações.
+              Registro completo de versões, aprovações e publicações.
             </DialogDescription>
           </DialogHeader>
 
-          {loadingHistory ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : versionHistory.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <History className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              <p className="text-sm">Nenhum registro de governança encontrado.</p>
-            </div>
-          ) : (
-            <ScrollArea className="max-h-80">
-              <div className="space-y-3 pr-2">
-                {versionHistory.map((req: any, idx: number) => (
-                  <div key={req.id} className="flex gap-3 items-start">
-                    <div className="flex flex-col items-center gap-1 pt-1">
-                      <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                        idx === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                      }`}>
-                        v{req.version_number}
-                      </div>
-                      {idx < versionHistory.length - 1 && (
-                        <div className="w-px h-6 bg-border/60" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0 pb-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={
-                          req.status === 'published' ? 'default' :
-                          req.status === 'approved' ? 'default' :
-                          req.status === 'rejected' ? 'destructive' :
-                          'secondary'
-                        } className="text-[10px]">
-                          {req.status}
-                        </Badge>
-                        <span className="text-[10px] text-muted-foreground">
-                          {new Date(req.created_at).toLocaleDateString('pt-BR')}
-                        </span>
-                      </div>
-                      <div className="mt-1 space-y-0.5">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <User className="h-3 w-3" /> Submetido por: {req.submitted_by}
-                        </p>
-                        {req.reviewed_by && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3" /> Revisado por: {req.reviewed_by}
-                          </p>
-                        )}
-                        {req.review_notes && (
-                          <p className="text-[11px] text-foreground italic mt-1">"{req.review_notes}"</p>
-                        )}
-                        {req.published_by && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Rocket className="h-3 w-3" /> Publicado por: {req.published_by}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
+          {historyTarget && (
+            <LandingVersionHistoryPanel
+              landingPageId={historyTarget.id}
+              pageName={historyTarget.name}
+            />
           )}
         </DialogContent>
       </Dialog>
