@@ -180,10 +180,10 @@ export interface InvoiceEngineAPI {
 // ══════════════════════════════════════════════════════════════════
 
 export interface SubscriptionLifecycleManagerAPI {
-  /** Activate a subscription (generate first invoice) */
-  activate(tenantId: string, planId: string, cycle: BillingCycle): Promise<void>;
-  /** Upgrade plan (prorate + new invoice) */
-  upgrade(tenantId: string, toPlanId: string): Promise<void>;
+  /** Activate a subscription (generate first invoice, optionally apply coupon) */
+  activate(tenantId: string, planId: string, cycle: BillingCycle, couponCode?: string): Promise<void>;
+  /** Upgrade plan (prorate + new invoice, optionally apply coupon) */
+  upgrade(tenantId: string, toPlanId: string, couponCode?: string): Promise<void>;
   /** Downgrade plan (effective next cycle) */
   downgrade(tenantId: string, toPlanId: string): Promise<void>;
   /** Suspend for non-payment */
@@ -192,8 +192,8 @@ export interface SubscriptionLifecycleManagerAPI {
   cancel(tenantId: string, reason: string): Promise<void>;
   /** Reactivate */
   reactivate(tenantId: string): Promise<void>;
-  /** Process renewal (generate next invoice) */
-  processRenewal(tenantId: string): Promise<Invoice>;
+  /** Process renewal (generate next invoice, auto-apply active discounts) */
+  processRenewal(tenantId: string, couponCode?: string): Promise<Invoice>;
 }
 
 // ══════════════════════════════════════════════════════════════════
