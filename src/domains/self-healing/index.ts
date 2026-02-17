@@ -16,5 +16,5 @@ export { RecoveryOrchestrator } from './recovery-orchestrator';
 export { ModuleAutoRecoveryService } from './module-auto-recovery-service';
 export { CircuitBreakerManager } from './circuit-breaker-manager';
 export { AccessSafetyGuard, type SafetyBlockRule } from './access-safety-guard';
-export { HealingAuditLogger } from './healing-audit-logger';
+export { HealingAuditLogger, type TriggerSource } from './healing-audit-logger';
 export type * from './types';
