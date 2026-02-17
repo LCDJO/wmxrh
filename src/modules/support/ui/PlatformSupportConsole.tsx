@@ -21,6 +21,7 @@ import { TicketService } from '@/domains/support/ticket-service';
 import { WikiService } from '@/domains/support/wiki-service';
 import { EvaluationService } from '@/domains/support/evaluation-service';
 import LiveChatWindow from './LiveChatWindow';
+import AgentChatConsole from './chat/AgentChatConsole';
 import type {
   SupportTicket, TicketMessage, WikiArticle, WikiCategory,
   SupportEvaluation, TicketStatus,
@@ -73,6 +74,7 @@ const PlatformSupportConsole = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="dashboard" className="gap-2"><BarChart3 className="h-4 w-4" /> Dashboard</TabsTrigger>
+          <TabsTrigger value="livechat" className="gap-2"><Radio className="h-4 w-4" /> Chat ao Vivo</TabsTrigger>
           <TabsTrigger value="queue" className="gap-2"><Inbox className="h-4 w-4" /> Fila</TabsTrigger>
           <TabsTrigger value="wiki" className="gap-2"><BookOpen className="h-4 w-4" /> Wiki</TabsTrigger>
           <TabsTrigger value="evaluations" className="gap-2"><Star className="h-4 w-4" /> Avaliações</TabsTrigger>
@@ -81,6 +83,9 @@ const PlatformSupportConsole = () => {
 
         <TabsContent value="dashboard" className="mt-4">
           <AgentDashboard userId={user.id} onNavigate={setActiveTab} />
+        </TabsContent>
+        <TabsContent value="livechat" className="mt-4">
+          <AgentChatConsole userId={user.id} />
         </TabsContent>
         <TabsContent value="queue" className="mt-4">
           <TicketQueue userId={user.id} />

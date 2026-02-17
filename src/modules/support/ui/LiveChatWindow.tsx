@@ -14,6 +14,7 @@ interface LiveChatWindowProps {
   assignedAgentId?: string | null;
   ticketSubject?: string;
   onBack?: () => void;
+  embedded?: boolean;
 }
 
 export default function LiveChatWindow({
@@ -24,6 +25,7 @@ export default function LiveChatWindow({
   assignedAgentId,
   ticketSubject,
   onBack,
+  embedded = false,
 }: LiveChatWindowProps) {
   const [session, setSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -121,7 +123,7 @@ export default function LiveChatWindow({
   const isClosed = session?.status === 'closed';
 
   return (
-    <div className="flex flex-col h-[600px] max-h-[80vh] border border-border rounded-xl overflow-hidden bg-background shadow-lg">
+    <div className={`flex flex-col ${embedded ? 'h-full' : 'h-[600px] max-h-[80vh] border border-border rounded-xl shadow-lg'} overflow-hidden bg-background`}>
       <ChatHeader
         session={session}
         senderType={senderType}
