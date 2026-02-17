@@ -11,6 +11,7 @@
 import { useCallback, useMemo } from 'react';
 import { usePlatformCognitive } from '@/domains/platform/use-platform-cognitive';
 import { unifiedGraphEngine } from '@/domains/security/kernel/unified-graph-engine';
+import type { UnifiedNode } from '@/domains/security/kernel/unified-graph-engine';
 import type { CognitiveIntent, CognitiveResponse } from '@/domains/platform-cognitive/types';
 
 export interface UGEGraphData {
@@ -47,7 +48,8 @@ function collectUGEData(): UGEGraphData {
     }));
 
     // Roles with permission counts
-    const roleNodes = Array.from(snapshot.nodes.values()).filter(n => n.type === 'role');
+    const allNodes: UnifiedNode[] = Array.from(snapshot.nodes.values());
+    const roleNodes = allNodes.filter(n => n.type === 'role');
     const roles = roleNodes.map(r => {
       const permCount = snapshot.edges.filter(
         e => e.from === r.uid && ['GRANTS_PERMISSION', 'PLATFORM_GRANTS', 'TENANT_GRANTS'].includes(e.relation),
@@ -56,7 +58,7 @@ function collectUGEData(): UGEGraphData {
     });
 
     // Permission usage summary (top 20)
-    const permNodes = Array.from(snapshot.nodes.values()).filter(n => n.type === 'permission');
+    const permNodes = allNodes.filter(n => n.type === 'permission');
     const permissionUsage = permNodes.slice(0, 20).map(p => {
       const grantedByCount = snapshot.edges.filter(
         e => e.to === p.uid && ['GRANTS_PERMISSION', 'PLATFORM_GRANTS', 'TENANT_GRANTS'].includes(e.relation),
@@ -89,7 +91,7 @@ function collectUGEData(): UGEGraphData {
       totalEdges: snapshot.edges.length,
       totalRoles: roleNodes.length,
       totalPermissions: permNodes.length,
-      totalUsers: Array.from(snapshot.nodes.values()).filter(
+      totalUsers: allNodes.filter(
         n => n.type === 'platform_user' || n.type === 'tenant_user',
       ).length,
     };
