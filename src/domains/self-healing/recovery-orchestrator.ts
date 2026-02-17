@@ -27,6 +27,7 @@ import { HealingAuditLogger } from './healing-audit-logger';
 import { ModuleAutoRecoveryService } from './module-auto-recovery-service';
 import type { GlobalEventKernelAPI, ModuleOrchestratorAPI } from '@/domains/platform-os/types';
 import { assertAllowedAction } from './security-boundary';
+import { emitSelfHealingTriggered } from './self-healing-events';
 
 let _actionCounter = 0;
 
@@ -47,6 +48,10 @@ export class RecoveryOrchestrator {
     this.events.emit('self_healing:recovery_started', 'SelfHealingEngine', {
       incident_id: incident.id, severity: incident.severity,
     }, { priority: 'high' });
+
+    // Domain event: SelfHealingTriggered
+    const allPlannedActions = incident.affected_modules.flatMap(m => this.planActions(incident, m));
+    emitSelfHealingTriggered(incident.id, incident.severity, allPlannedActions);
 
     try {
       for (const moduleId of incident.affected_modules) {

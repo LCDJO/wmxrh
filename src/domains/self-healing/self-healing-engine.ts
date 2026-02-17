@@ -33,6 +33,7 @@ import { CircuitBreakerManager } from './circuit-breaker-manager';
 import { HealingAuditLogger } from './healing-audit-logger';
 import { AccessSafetyGuard } from './access-safety-guard';
 import { GovernanceHealingBridge } from './governance-healing-bridge';
+import { emitIncidentDetected, emitModuleRecovered } from './self-healing-events';
 import { getHealthMonitor } from '@/domains/observability/health-monitor';
 import { getErrorTracker } from '@/domains/observability/error-tracker';
 import { getGatewayPerformanceTracker } from '@/domains/observability/gateway-performance-tracker';
@@ -206,6 +207,9 @@ export class SelfHealingEngine {
         id: incident.id, title: incident.title, severity: incident.severity,
       }, { priority: 'critical' });
 
+      // Domain event: IncidentDetected
+      emitIncidentDetected(incident.id, incident.title, incident.severity, incident.affected_modules);
+
       // GovernanceAI: suggest permission review for high-risk modules
       this.governanceBridge.evaluate(incident);
 
@@ -220,6 +224,15 @@ export class SelfHealingEngine {
           this.resolvedIncidents.splice(0, this.resolvedIncidents.length - MAX_RESOLVED);
         }
         this.incidentDetector.clearIncidentKey(`${signal.type}:${sourceModule}`);
+
+        // Domain event: ModuleRecovered (for each affected module)
+        if (incident.auto_recovered) {
+          const duration = (incident.resolved_at ?? Date.now()) - incident.detected_at;
+          for (const mod of incident.affected_modules) {
+            emitModuleRecovered(incident.id, mod, incident.recovery_actions.length, duration, true);
+          }
+        }
+
         this.notify();
       });
     }
