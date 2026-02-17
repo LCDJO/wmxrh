@@ -25,7 +25,7 @@ export type { MarketingHubStatus, MarketingAssetSummary } from './marketing-hub-
 
 // ── FunnelOrchestrator ──
 export { funnelOrchestrator, FunnelOrchestrator } from './funnel-orchestrator';
-export type { AcquisitionFunnel, FunnelStage, FunnelHealth } from './funnel-orchestrator';
+export type { MarketingFunnel, FunnelStage, FunnelHealth, FunnelEntryPoint } from './funnel-orchestrator';
 
 // ── CampaignLifecycleManager ──
 export { campaignLifecycleManager, CampaignLifecycleManager } from './campaign-lifecycle-manager';

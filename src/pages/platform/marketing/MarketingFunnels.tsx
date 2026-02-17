@@ -4,14 +4,14 @@
  * Visualizes end-to-end acquisition funnels powered by FunnelOrchestrator.
  */
 import { useState, useEffect } from 'react';
-import { Filter, TrendingDown, ArrowRight, BarChart3, AlertTriangle } from 'lucide-react';
+import { Filter, TrendingDown, ArrowRight, BarChart3, AlertTriangle, Globe, FileText, FlaskConical, Share2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { funnelOrchestrator, type AcquisitionFunnel, type FunnelHealth } from '@/domains/marketing-digital-os';
+import { funnelOrchestrator, type MarketingFunnel, type FunnelHealth } from '@/domains/marketing-digital-os';
 
 export default function MarketingFunnels() {
-  const [funnels, setFunnels] = useState<AcquisitionFunnel[]>([]);
+  const [funnels, setFunnels] = useState<MarketingFunnel[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function MarketingFunnels() {
   );
 }
 
-function FunnelCard({ funnel, health }: { funnel: AcquisitionFunnel; health: FunnelHealth }) {
+function FunnelCard({ funnel, health }: { funnel: MarketingFunnel; health: FunnelHealth }) {
   const maxCount = Math.max(...funnel.stages.map(s => s.count), 1);
 
   return (
@@ -78,6 +78,27 @@ function FunnelCard({ funnel, health }: { funnel: AcquisitionFunnel; health: Fun
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Metadata row */}
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className="text-[10px] gap-1">
+            {funnel.entryPoint === 'website' ? <Globe className="h-2.5 w-2.5" /> : <FileText className="h-2.5 w-2.5" />}
+            {funnel.entryPoint === 'website' ? 'Website' : 'Landing Page'}
+          </Badge>
+          {funnel.targetPlan && (
+            <Badge variant="secondary" className="text-[10px]">Plano: {funnel.targetPlan}</Badge>
+          )}
+          {funnel.referralProgramId && (
+            <Badge variant="secondary" className="text-[10px] gap-1">
+              <Share2 className="h-2.5 w-2.5" />Referral
+            </Badge>
+          )}
+          {funnel.activeExperiments.length > 0 && (
+            <Badge variant="secondary" className="text-[10px] gap-1">
+              <FlaskConical className="h-2.5 w-2.5" />{funnel.activeExperiments.length} experimento(s)
+            </Badge>
+          )}
+        </div>
+
         {/* Funnel stages */}
         <div className="space-y-2">
           {funnel.stages.map((stage, i) => (
