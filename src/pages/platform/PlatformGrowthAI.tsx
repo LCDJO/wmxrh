@@ -323,7 +323,9 @@ export default function PlatformGrowthAI() {
                 { label: 'Page Views', value: funnel.views, color: 'hsl(265 80% 55%)' },
                 { label: 'Signups', value: funnel.signups, color: 'hsl(200 70% 50%)' },
                 { label: 'Trials', value: funnel.trials, color: 'hsl(145 60% 42%)' },
-                { label: 'Purchases', value: funnel.purchases, color: 'hsl(30 90% 55%)' },
+                { label: 'Tenants Created', value: funnel.tenantsCreated, color: 'hsl(30 90% 55%)' },
+                { label: 'Plans Selected', value: funnel.plansSelected, color: 'hsl(340 75% 55%)' },
+                { label: 'Revenue', value: funnel.revenueEvents, color: 'hsl(50 90% 50%)' },
               ].map((step, idx) => {
                 const width = Math.max(8, (step.value / funnel.views) * 100);
                 return (
