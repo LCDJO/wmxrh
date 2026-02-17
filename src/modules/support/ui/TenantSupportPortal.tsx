@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   Plus, MessageSquare, Clock, CheckCircle2, AlertCircle, Send,
-  BookOpen, Search, Star, ArrowLeft, Loader2,
+  BookOpen, Search, Star, ArrowLeft, Loader2, Filter,
+  Circle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -98,6 +99,8 @@ function TicketPanel({ tenantId, userId }: { tenantId: string; userId: string })
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [showNewTicket, setShowNewTicket] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const loadTickets = useCallback(async () => {
     try {
@@ -110,6 +113,14 @@ function TicketPanel({ tenantId, userId }: { tenantId: string; userId: string })
 
   useEffect(() => { loadTickets(); }, [loadTickets]);
 
+  const filtered = useMemo(() => {
+    return tickets.filter(t => {
+      if (statusFilter !== 'all' && t.status !== statusFilter) return false;
+      if (searchQuery && !t.subject.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    });
+  }, [tickets, statusFilter, searchQuery]);
+
   if (selectedTicket) {
     return (
       <TicketDetail
@@ -121,10 +132,48 @@ function TicketPanel({ tenantId, userId }: { tenantId: string; userId: string })
     );
   }
 
+  // Quick status counts
+  const openCount = tickets.filter(t => ['open', 'awaiting_agent', 'in_progress'].includes(t.status)).length;
+  const resolvedCount = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{tickets.length} ticket(s)</p>
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card>
+          <CardContent className="py-3 px-4 text-center">
+            <p className="text-2xl font-bold text-foreground">{tickets.length}</p>
+            <p className="text-[10px] text-muted-foreground">Total</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-3 px-4 text-center">
+            <p className="text-2xl font-bold" style={{ color: 'hsl(35 80% 50%)' }}>{openCount}</p>
+            <p className="text-[10px] text-muted-foreground">Em Aberto</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-3 px-4 text-center">
+            <p className="text-2xl font-bold" style={{ color: 'hsl(145 60% 42%)' }}>{resolvedCount}</p>
+            <p className="text-[10px] text-muted-foreground">Resolvidos</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar tickets..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-44"><Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" /><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os Status</SelectItem>
+            {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+              <SelectItem key={k} value={k}>{v.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Dialog open={showNewTicket} onOpenChange={setShowNewTicket}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-2">
@@ -148,17 +197,17 @@ function TicketPanel({ tenantId, userId }: { tenantId: string; userId: string })
         <div className="flex justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      ) : tickets.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
-            <p>Nenhum ticket aberto.</p>
+            <p>Nenhum ticket encontrado.</p>
             <p className="text-xs mt-1">Clique em "Novo Ticket" para solicitar suporte.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-2">
-          {tickets.map(ticket => {
+          {filtered.map(ticket => {
             const st = STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.open;
             const pr = PRIORITY_CONFIG[ticket.priority] ?? PRIORITY_CONFIG.medium;
             const StatusIcon = st.icon;
@@ -193,6 +242,65 @@ function TicketPanel({ tenantId, userId }: { tenantId: string; userId: string })
 }
 
 // ── New Ticket Form ──
+
+// ── Visual Timeline ──
+
+function TicketTimeline({ ticket }: { ticket: SupportTicket }) {
+  const LIFECYCLE: Array<{ key: string; label: string; color: string; dateField?: keyof SupportTicket }> = [
+    { key: 'created', label: 'Criado', color: 'hsl(210 65% 50%)', dateField: 'created_at' },
+    { key: 'first_response', label: 'Primeira Resposta', color: 'hsl(200 70% 50%)', dateField: 'first_response_at' },
+    { key: 'resolved', label: 'Resolvido', color: 'hsl(145 60% 42%)', dateField: 'resolved_at' },
+  ];
+
+  // Determine which steps are done
+  const steps = LIFECYCLE.map(step => {
+    const dateVal = step.dateField ? (ticket as any)[step.dateField] : null;
+    const done = !!dateVal;
+    return { ...step, done, date: dateVal ? new Date(dateVal as string) : null };
+  });
+
+  return (
+    <div className="flex items-center gap-0">
+      {steps.map((step, i) => (
+        <div key={step.key} className="flex items-center">
+          <div className="flex flex-col items-center">
+            <div
+              className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-colors ${
+                step.done
+                  ? 'border-transparent'
+                  : 'border-muted bg-background'
+              }`}
+              style={step.done ? { backgroundColor: step.color } : undefined}
+            >
+              {step.done ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+              ) : (
+                <Circle className="h-3 w-3 text-muted-foreground" />
+              )}
+            </div>
+            <p className={`text-[10px] mt-1.5 text-center leading-tight max-w-[70px] ${step.done ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+              {step.label}
+            </p>
+            {step.date && (
+              <p className="text-[9px] text-muted-foreground mt-0.5">
+                {step.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                {' '}
+                {step.date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            )}
+          </div>
+          {i < steps.length - 1 && (
+            <div
+              className={`h-0.5 w-10 mx-1 rounded-full transition-colors ${
+                steps[i + 1].done ? 'bg-primary' : 'bg-muted'
+              }`}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function NewTicketForm({ tenantId, userId, onCreated }: { tenantId: string; userId: string; onCreated: () => void }) {
   const [subject, setSubject] = useState('');
@@ -319,8 +427,14 @@ function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTic
             <Badge style={{ backgroundColor: `${st.color}15`, color: st.color }}>{st.label}</Badge>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground whitespace-pre-wrap">{ticket.description}</p>
+
+          {/* ── Visual Timeline ── */}
+          <div className="pt-3 border-t">
+            <p className="text-xs font-medium text-foreground mb-3">Linha do Tempo</p>
+            <TicketTimeline ticket={ticket} />
+          </div>
         </CardContent>
       </Card>
 
