@@ -1,11 +1,11 @@
 /**
- * AnnouncementHub — Domain service for Platform Institutional Announcements.
+ * AnnouncementHub — Domain service for TenantAnnouncements.
  *
- * TenantCommunicationCenter: Separates SaaS-level institutional communications
- * from operational notifications. Supports targeting: Global (tenant_id=null) or Tenant-specific.
- *
- * Categories: billing, fiscal, system, security, compliance, general
- * Source: manual | automatic | system
+ * Entity: TenantAnnouncement
+ * alert_type: billing | fiscal | system | security
+ * severity: info | warning | critical
+ * blocking_level: none | banner | restricted_access
+ * source: saas_management
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -14,60 +14,23 @@ import { supabase } from '@/integrations/supabase/client';
 // Types
 // ══════════════════════════════════════════════════════════════
 
-export type AnnouncementCategory =
-  | 'billing'
-  | 'fiscal'
-  | 'system'
-  | 'security'
-  | 'compliance'
-  | 'general'
-  // legacy compat
-  | 'maintenance'
-  | 'update';
+export type AlertType = 'billing' | 'fiscal' | 'system' | 'security';
+export type Severity = 'info' | 'warning' | 'critical';
+export type BlockingLevel = 'none' | 'banner' | 'restricted_access';
 
-export type AnnouncementSubcategory =
-  // Billing
-  | 'plan_expiring'
-  | 'payment_due'
-  | 'payment_overdue'
-  | 'plan_change'
-  // Fiscal
-  | 'nf_available'
-  | 'nf_pending'
-  | 'fiscal_failure'
-  // System
-  | 'scheduled_maintenance'
-  | 'module_update'
-  | 'policy_change'
-  | 'feature_disabled'
-  // Security
-  | 'partial_suspension'
-  | 'usage_limitation'
-  | null;
-
-export type AnnouncementPriority = 'low' | 'medium' | 'high' | 'critical';
-export type AnnouncementSource = 'manual' | 'automatic' | 'system';
-
-export interface PlatformAnnouncement {
+export interface TenantAnnouncement {
   id: string;
   tenant_id: string | null;
   title: string;
-  description: string;
-  category: AnnouncementCategory;
-  subcategory: AnnouncementSubcategory;
-  priority: AnnouncementPriority;
-  source: AnnouncementSource;
+  message: string;
+  alert_type: AlertType;
+  severity: Severity;
+  source: string;
   action_url: string | null;
-  action_label: string | null;
+  blocking_level: BlockingLevel;
+  start_at: string;
+  end_at: string | null;
   is_dismissible: boolean;
-  show_banner: boolean;
-  starts_at: string;
-  expires_at: string | null;
-  is_active: boolean;
-  metadata: Record<string, any>;
-  target_roles: string[];
-  resolved_at: string | null;
-  auto_resolve_on: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -83,87 +46,46 @@ export interface AnnouncementDismissal {
 export interface CreateAnnouncementInput {
   tenant_id?: string | null;
   title: string;
-  description: string;
-  category: AnnouncementCategory;
-  subcategory?: AnnouncementSubcategory;
-  priority: AnnouncementPriority;
-  source?: AnnouncementSource;
+  message: string;
+  alert_type: AlertType;
+  severity: Severity;
   action_url?: string | null;
-  action_label?: string | null;
+  blocking_level?: BlockingLevel;
+  start_at?: string;
+  end_at?: string | null;
   is_dismissible?: boolean;
-  show_banner?: boolean;
-  starts_at?: string;
-  expires_at?: string | null;
-  target_roles?: string[];
-  metadata?: Record<string, any>;
 }
 
 // ══════════════════════════════════════════════════════════════
-// UI Config — Categories
+// UI Config
 // ══════════════════════════════════════════════════════════════
 
-export const CATEGORY_CONFIG: Record<string, {
+export const ALERT_TYPE_CONFIG: Record<AlertType, {
   label: string;
   icon: string;
   color: string;
   bgColor: string;
 }> = {
-  billing:     { label: 'Faturamento', icon: 'CreditCard', color: 'text-orange-600', bgColor: 'bg-orange-500/10' },
-  fiscal:      { label: 'Fiscal', icon: 'FileText', color: 'text-amber-600', bgColor: 'bg-amber-500/10' },
-  system:      { label: 'Sistema', icon: 'Settings', color: 'text-primary', bgColor: 'bg-primary/10' },
-  security:    { label: 'Segurança', icon: 'ShieldAlert', color: 'text-destructive', bgColor: 'bg-destructive/10' },
-  compliance:  { label: 'Compliance', icon: 'Scale', color: 'text-purple-600', bgColor: 'bg-purple-500/10' },
-  general:     { label: 'Geral', icon: 'Megaphone', color: 'text-muted-foreground', bgColor: 'bg-muted' },
-  // legacy compat
-  maintenance: { label: 'Manutenção', icon: 'Wrench', color: 'text-warning', bgColor: 'bg-warning/10' },
-  update:      { label: 'Atualização', icon: 'Sparkles', color: 'text-primary', bgColor: 'bg-primary/10' },
+  billing:  { label: 'Faturamento', icon: 'CreditCard', color: 'text-orange-600', bgColor: 'bg-orange-500/10' },
+  fiscal:   { label: 'Fiscal', icon: 'FileText', color: 'text-amber-600', bgColor: 'bg-amber-500/10' },
+  system:   { label: 'Sistema', icon: 'Settings', color: 'text-primary', bgColor: 'bg-primary/10' },
+  security: { label: 'Segurança', icon: 'ShieldAlert', color: 'text-destructive', bgColor: 'bg-destructive/10' },
 };
 
-export const SUBCATEGORY_CONFIG: Record<string, { label: string; icon: string }> = {
-  // Billing
-  plan_expiring:         { label: 'Vencimento do Plano', icon: 'Clock' },
-  payment_due:           { label: 'Mensalidade Próxima', icon: 'CalendarClock' },
-  payment_overdue:       { label: 'Pagamento em Atraso', icon: 'AlertTriangle' },
-  plan_change:           { label: 'Alteração de Plano', icon: 'RefreshCw' },
-  // Fiscal
-  nf_available:          { label: 'NF Disponível', icon: 'FileCheck' },
-  nf_pending:            { label: 'NF Pendente', icon: 'FileClock' },
-  fiscal_failure:        { label: 'Falha Fiscal', icon: 'FileWarning' },
-  // System
-  scheduled_maintenance: { label: 'Manutenção Programada', icon: 'Wrench' },
-  module_update:         { label: 'Atualização de Módulo', icon: 'Sparkles' },
-  policy_change:         { label: 'Mudança de Política', icon: 'BookOpen' },
-  feature_disabled:      { label: 'Feature Desativada', icon: 'Ban' },
-  // Security
-  partial_suspension:    { label: 'Suspensão Parcial', icon: 'ShieldOff' },
-  usage_limitation:      { label: 'Limitação de Uso', icon: 'Lock' },
-};
-
-export const PRIORITY_CONFIG: Record<AnnouncementPriority, {
+export const SEVERITY_CONFIG: Record<Severity, {
   label: string;
   color: string;
   bannerClass: string;
 }> = {
-  low:      { label: 'Baixa', color: 'text-muted-foreground', bannerClass: 'bg-muted border-border' },
-  medium:   { label: 'Média', color: 'text-primary', bannerClass: 'bg-primary/5 border-primary/20' },
-  high:     { label: 'Alta', color: 'text-warning', bannerClass: 'bg-warning/10 border-warning/30' },
-  critical: { label: 'Crítica', color: 'text-destructive', bannerClass: 'bg-destructive/10 border-destructive/30' },
+  info:     { label: 'Informativo', color: 'text-primary', bannerClass: 'bg-primary/5 border-primary/20' },
+  warning:  { label: 'Atenção', color: 'text-warning', bannerClass: 'bg-warning/10 border-warning/30' },
+  critical: { label: 'Crítico', color: 'text-destructive', bannerClass: 'bg-destructive/10 border-destructive/30' },
 };
 
-export const SOURCE_CONFIG: Record<AnnouncementSource, { label: string; icon: string }> = {
-  manual:    { label: 'Manual', icon: 'PenLine' },
-  automatic: { label: 'Automático', icon: 'Bot' },
-  system:    { label: 'Sistema', icon: 'Server' },
-};
-
-// Subcategories per category for form selectors
-export const SUBCATEGORIES_BY_CATEGORY: Record<string, AnnouncementSubcategory[]> = {
-  billing:  ['plan_expiring', 'payment_due', 'payment_overdue', 'plan_change'],
-  fiscal:   ['nf_available', 'nf_pending', 'fiscal_failure'],
-  system:   ['scheduled_maintenance', 'module_update', 'policy_change', 'feature_disabled'],
-  security: ['partial_suspension', 'usage_limitation'],
-  compliance: [],
-  general:  [],
+export const BLOCKING_LEVEL_CONFIG: Record<BlockingLevel, { label: string; icon: string }> = {
+  none:              { label: 'Nenhum', icon: 'Circle' },
+  banner:            { label: 'Banner', icon: 'Flag' },
+  restricted_access: { label: 'Acesso Restrito', icon: 'Lock' },
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -172,84 +94,80 @@ export const SUBCATEGORIES_BY_CATEGORY: Record<string, AnnouncementSubcategory[]
 
 export const announcementDispatcher = {
   /** Fetch active announcements visible to the current user's tenant */
-  async listActive(tenantId: string): Promise<PlatformAnnouncement[]> {
-    const { data, error } = await supabase
-      .from('platform_announcements')
+  async listActive(tenantId: string): Promise<TenantAnnouncement[]> {
+    const now = new Date().toISOString();
+    const { data, error } = await (supabase
+      .from('tenant_announcements' as any)
       .select('*')
-      .eq('is_active', true)
-      .lte('starts_at', new Date().toISOString())
+      .lte('start_at', now)
+      .or(`end_at.is.null,end_at.gte.${now}`)
       .or(`tenant_id.is.null,tenant_id.eq.${tenantId}`)
-      .order('priority', { ascending: false })
-      .order('created_at', { ascending: false });
+      .order('severity', { ascending: true })
+      .order('created_at', { ascending: false }) as any);
 
     if (error) throw error;
-    return (data || []) as unknown as PlatformAnnouncement[];
+    return (data || []) as TenantAnnouncement[];
   },
 
   /** Fetch ALL announcements for platform admin management */
   async listAll(filters?: {
-    category?: string;
-    source?: string;
-    isActive?: boolean;
-  }): Promise<PlatformAnnouncement[]> {
+    alert_type?: string;
+    severity?: string;
+  }): Promise<TenantAnnouncement[]> {
     let query = supabase
-      .from('platform_announcements')
+      .from('tenant_announcements' as any)
       .select('*')
       .order('created_at', { ascending: false }) as any;
 
-    if (filters?.category) query = query.eq('category', filters.category);
-    if (filters?.source) query = query.eq('source', filters.source);
-    if (filters?.isActive !== undefined) query = query.eq('is_active', filters.isActive);
+    if (filters?.alert_type) query = query.eq('alert_type', filters.alert_type);
+    if (filters?.severity) query = query.eq('severity', filters.severity);
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []) as PlatformAnnouncement[];
+    return (data || []) as TenantAnnouncement[];
   },
 
   /** Create a new announcement */
-  async create(input: CreateAnnouncementInput): Promise<PlatformAnnouncement> {
-    const { data, error } = await supabase
-      .from('platform_announcements')
+  async create(input: CreateAnnouncementInput): Promise<TenantAnnouncement> {
+    const { data, error } = await (supabase
+      .from('tenant_announcements' as any)
       .insert({
         tenant_id: input.tenant_id ?? null,
         title: input.title,
-        description: input.description,
-        category: input.category,
-        subcategory: input.subcategory ?? null,
-        priority: input.priority,
-        source: input.source ?? 'manual',
+        message: input.message,
+        alert_type: input.alert_type,
+        severity: input.severity,
+        source: 'saas_management',
         action_url: input.action_url ?? null,
-        action_label: input.action_label ?? null,
+        blocking_level: input.blocking_level ?? 'none',
+        start_at: input.start_at ?? new Date().toISOString(),
+        end_at: input.end_at ?? null,
         is_dismissible: input.is_dismissible ?? true,
-        show_banner: input.show_banner ?? false,
-        starts_at: input.starts_at ?? new Date().toISOString(),
-        expires_at: input.expires_at ?? null,
-        target_roles: input.target_roles ?? [],
-        metadata: input.metadata ?? {},
-      } as any)
+        created_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+      })
       .select()
-      .single();
+      .single() as any);
 
     if (error) throw error;
-    return data as unknown as PlatformAnnouncement;
+    return data as TenantAnnouncement;
   },
 
   /** Update an announcement */
-  async update(id: string, updates: Partial<CreateAnnouncementInput> & { is_active?: boolean }): Promise<void> {
-    const { error } = await supabase
-      .from('platform_announcements')
-      .update(updates as any)
-      .eq('id', id);
+  async update(id: string, updates: Partial<CreateAnnouncementInput>): Promise<void> {
+    const { error } = await (supabase
+      .from('tenant_announcements' as any)
+      .update(updates)
+      .eq('id', id) as any);
 
     if (error) throw error;
   },
 
-  /** Deactivate an announcement */
-  async deactivate(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('platform_announcements')
-      .update({ is_active: false, resolved_at: new Date().toISOString() } as any)
-      .eq('id', id);
+  /** Delete an announcement */
+  async remove(id: string): Promise<void> {
+    const { error } = await (supabase
+      .from('tenant_announcements' as any)
+      .delete()
+      .eq('id', id) as any);
 
     if (error) throw error;
   },

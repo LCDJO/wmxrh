@@ -1,5 +1,5 @@
 /**
- * useAnnouncements — React hook for Platform Announcements.
+ * useAnnouncements — React hook for TenantAnnouncements.
  * Fetches active announcements, filters dismissed, provides dismiss action.
  * Subscribes to Realtime for live updates.
  */
@@ -10,13 +10,13 @@ import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   announcementDispatcher,
-  type PlatformAnnouncement,
+  type TenantAnnouncement,
 } from '@/domains/announcements/announcement-hub';
 
 export function useAnnouncements() {
   const { user } = useAuth();
   const { currentTenant } = useTenant();
-  const [announcements, setAnnouncements] = useState<PlatformAnnouncement[]>([]);
+  const [announcements, setAnnouncements] = useState<TenantAnnouncement[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
@@ -30,11 +30,7 @@ export function useAnnouncements() {
         announcementDispatcher.listActive(tenantId),
         announcementDispatcher.getDismissedIds(userId),
       ]);
-      // Filter expired client-side as extra safety
-      const now = new Date().getTime();
-      setAnnouncements(items.filter(a =>
-        !a.expires_at || new Date(a.expires_at).getTime() > now
-      ));
+      setAnnouncements(items);
       setDismissedIds(dismissed);
     } catch {
       // silently fail
@@ -49,11 +45,11 @@ export function useAnnouncements() {
   useEffect(() => {
     if (!tenantId) return;
     const channel = supabase
-      .channel(`announcements-${tenantId}`)
+      .channel(`tenant-announcements-${tenantId}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'platform_announcements',
+        table: 'tenant_announcements',
       }, () => {
         refresh();
       })
@@ -67,15 +63,15 @@ export function useAnnouncements() {
     await announcementDispatcher.dismiss(id, userId);
   }, [userId]);
 
-  // Active = not dismissed and not expired
+  // Active = not dismissed
   const activeAnnouncements = useMemo(
     () => announcements.filter(a => !dismissedIds.has(a.id)),
     [announcements, dismissedIds],
   );
 
-  // Banner announcements = active + show_banner
+  // Banner announcements = active + blocking_level is 'banner' or 'restricted_access'
   const bannerAnnouncements = useMemo(
-    () => activeAnnouncements.filter(a => a.show_banner),
+    () => activeAnnouncements.filter(a => a.blocking_level !== 'none'),
     [activeAnnouncements],
   );
 
