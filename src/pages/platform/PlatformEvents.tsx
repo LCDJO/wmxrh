@@ -91,6 +91,15 @@ const EVENT_CATALOG: EventCatalogEntry[] = [
   { domain: 'Platform OS', domainColor: 'hsl(265 60% 55%)', eventName: 'ModuleDisabled', description: 'Módulo desabilitado para tenant' },
   { domain: 'Platform OS', domainColor: 'hsl(265 60% 55%)', eventName: 'TenantCreated', description: 'Tenant criado na plataforma' },
   { domain: 'Platform OS', domainColor: 'hsl(265 60% 55%)', eventName: 'TenantSuspended', description: 'Tenant suspenso' },
+
+  // Revenue Intelligence
+  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'ReferralLinkCreated', description: 'Link de referral criado' },
+  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'ReferralSignup', description: 'Signup via referral registrado' },
+  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'ReferralConverted', description: 'Referral convertido em pagante' },
+  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'RewardAwarded', description: 'Recompensa concedida ao referrer' },
+  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'TierUpgraded', description: 'Tier de gamificação elevado' },
+  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'ChurnRiskDetected', description: 'Risco de churn detectado' },
+  { domain: 'Revenue Intelligence', domainColor: 'hsl(160 60% 45%)', eventName: 'UpgradeRecommended', description: 'Upgrade recomendado para tenant' },
 ];
 
 // ── Unique domains ─────────────────────────────────────────────

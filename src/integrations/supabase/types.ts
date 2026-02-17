@@ -2725,6 +2725,69 @@ export type Database = {
           },
         ]
       }
+      gamification_leaderboard: {
+        Row: {
+          current_tier: string
+          total_conversions: number
+          total_points: number
+          total_referrals: number
+          total_reward_brl: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_tier?: string
+          total_conversions?: number
+          total_points?: number
+          total_referrals?: number
+          total_reward_brl?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_tier?: string
+          total_conversions?: number
+          total_points?: number
+          total_referrals?: number
+          total_reward_brl?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      gamification_points: {
+        Row: {
+          action: string
+          created_at: string
+          description: string | null
+          id: string
+          points: number
+          source: string
+          source_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          points?: number
+          source?: string
+          source_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          points?: number
+          source?: string
+          source_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       governance_audit_snapshots: {
         Row: {
           anomalies: Json
@@ -4398,6 +4461,165 @@ export type Database = {
           {
             foreignKeyName: "positions_tenant_id_fkey"
             columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_links: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          referrer_user_id: string
+          total_clicks: number
+          total_conversions: number
+          total_reward_brl: number
+          total_signups: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          referrer_user_id: string
+          total_clicks?: number
+          total_conversions?: number
+          total_reward_brl?: number
+          total_signups?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          referrer_user_id?: string
+          total_clicks?: number
+          total_conversions?: number
+          total_reward_brl?: number
+          total_signups?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      referral_rewards: {
+        Row: {
+          amount_brl: number
+          approved_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          paid_at: string | null
+          referrer_user_id: string
+          reward_type: string
+          status: string
+          tracking_id: string | null
+        }
+        Insert: {
+          amount_brl?: number
+          approved_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          paid_at?: string | null
+          referrer_user_id: string
+          reward_type?: string
+          status?: string
+          tracking_id?: string | null
+        }
+        Update: {
+          amount_brl?: number
+          approved_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          paid_at?: string | null
+          referrer_user_id?: string
+          reward_type?: string
+          status?: string
+          tracking_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_rewards_tracking_id_fkey"
+            columns: ["tracking_id"]
+            isOneToOne: false
+            referencedRelation: "referral_tracking"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_tracking: {
+        Row: {
+          converted_at: string | null
+          created_at: string
+          first_payment_brl: number | null
+          id: string
+          plan_id: string | null
+          referral_link_id: string
+          referred_tenant_id: string
+          referrer_user_id: string
+          reward_brl: number | null
+          reward_paid_at: string | null
+          signed_up_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          converted_at?: string | null
+          created_at?: string
+          first_payment_brl?: number | null
+          id?: string
+          plan_id?: string | null
+          referral_link_id: string
+          referred_tenant_id: string
+          referrer_user_id: string
+          reward_brl?: number | null
+          reward_paid_at?: string | null
+          signed_up_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          converted_at?: string | null
+          created_at?: string
+          first_payment_brl?: number | null
+          id?: string
+          plan_id?: string | null
+          referral_link_id?: string
+          referred_tenant_id?: string
+          referrer_user_id?: string
+          reward_brl?: number | null
+          reward_paid_at?: string | null
+          signed_up_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_tracking_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_tracking_referral_link_id_fkey"
+            columns: ["referral_link_id"]
+            isOneToOne: false
+            referencedRelation: "referral_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_tracking_referred_tenant_id_fkey"
+            columns: ["referred_tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]

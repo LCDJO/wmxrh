@@ -90,7 +90,16 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/billing/control-center', label: 'Control Center' },
     ],
   },
-  { to: '/platform/revenue', label: 'Revenue', icon: TrendingUp, requiredPermission: 'billing.view' },
+  {
+    to: '/platform/revenue',
+    label: 'Revenue',
+    icon: TrendingUp,
+    requiredPermission: 'billing.view',
+    children: [
+      { to: '/platform/revenue', label: 'Visão Geral' },
+      { to: '/platform/revenue/intelligence', label: 'Intelligence & Referrals' },
+    ],
+  },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
   {
     to: '/platform/structure',
