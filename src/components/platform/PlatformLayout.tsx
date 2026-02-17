@@ -110,16 +110,18 @@ const NAV_ITEMS: PlatformNavItem[] = [
     to: '/platform/growth',
     label: 'Growth AI',
     icon: Rocket,
-    requiredPermission: 'billing.view',
+    requiredPermission: 'growth.view',
     children: [
       { to: '/platform/growth', label: 'Visão Geral' },
-      { to: '/platform/growth/insights', label: 'Insights' },
-      { to: '/platform/growth/landing-pages', label: 'Landing Pages' },
-      { to: '/platform/growth/conversions', label: 'Conversões' },
-      { to: '/platform/growth/fab-builder', label: 'FAB Builder' },
-      { to: '/platform/growth/submissions', label: 'Minhas Submissões' },
-      { to: '/platform/growth/approvals', label: 'Fila de Aprovação' },
-      { to: '/platform/growth/version-publish', label: 'Versionamento & Publicação' },
+      { to: '/platform/growth/insights', label: 'Insights', requiredPermission: 'growth.view' },
+      { to: '/platform/growth/landing-pages', label: 'Landing Pages', requiredPermission: 'landing_page.view' },
+      { to: '/platform/growth/conversions', label: 'Conversões', requiredPermission: 'growth.view' },
+      { to: '/platform/growth/fab-builder', label: 'FAB Builder', requiredPermission: 'landing.create' },
+      // Marketing team: drafts & submissions
+      { to: '/platform/growth/submissions', label: 'Meus Rascunhos', requiredPermission: 'landing.view_drafts' },
+      // Director: approvals & published
+      { to: '/platform/growth/approvals', label: 'Aprovações Pendentes', requiredPermission: 'landing.approve' },
+      { to: '/platform/growth/version-publish', label: 'Publicadas', requiredPermission: 'landing.publish' },
     ],
   },
   {
