@@ -20,6 +20,7 @@
  */
 
 import type { TenantRole } from '@/domains/shared/types';
+import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import type { ScopeResolution } from './scope-resolver';
 import type { PermissionAction, PermissionEntity } from '../permissions';
 import type { SecurityContext, SecurityScope } from './identity.service';
@@ -50,8 +51,10 @@ export interface PolicyRule {
   id: string;
   /** What this rule does when matched */
   effect: PolicyEffect;
-  /** Roles this rule applies to (empty = all roles) */
+  /** Tenant-level roles this rule applies to (empty = all roles) */
   roles: TenantRole[];
+  /** Platform-level roles this rule applies to (empty = ignored; checked via real_identity) */
+  platform_roles?: PlatformRoleType[];
   /** Actions this rule governs (empty = all actions) */
   actions: PermissionAction[];
   /** Resources this rule governs (empty = all resources) */
@@ -276,6 +279,59 @@ export const BUILTIN_RULES: PolicyRule[] = [
     priority: 0,
   },
 
+  // ══════════════════════════════════════════════════════════
+  // PLATFORM-LEVEL SECURITY RULES (CRITICAL)
+  // ══════════════════════════════════════════════════════════
+
+  // RULE: Only PlatformSuperAdmin can create system roles
+  {
+    id: 'platform_deny_non_super_admin_system_role_create',
+    effect: 'deny',
+    roles: [],
+    platform_roles: ['platform_operations', 'platform_support', 'platform_finance', 'platform_fiscal', 'platform_read_only'],
+    actions: ['create'],
+    resources: ['platform_roles'],
+    condition: {
+      custom: (ctx) => {
+        // Block when trying to create a system_role (passed via attributes)
+        const isSystemRole = ctx.attributes?.is_system_role === true;
+        return ctx.securityContext.user_type === 'platform' && isSystemRole;
+      },
+    },
+    description: 'Apenas PlatformSuperAdmin pode criar cargos do tipo system_role. Outros cargos plataforma são bloqueados.',
+    priority: 0,
+  },
+
+  // RULE: PlatformSupport CANNOT alter billing
+  {
+    id: 'platform_deny_support_billing_mutation',
+    effect: 'deny',
+    roles: [],
+    platform_roles: ['platform_support'],
+    actions: ['create', 'update', 'delete'],
+    resources: ['platform_billing'],
+    condition: {
+      custom: (ctx) => ctx.securityContext.user_type === 'platform',
+    },
+    description: 'PlatformSupport NÃO pode alterar dados de billing. Apenas visualização é permitida.',
+    priority: 0,
+  },
+
+  // RULE: PlatformFinance CANNOT impersonate
+  {
+    id: 'platform_deny_finance_impersonation',
+    effect: 'deny',
+    roles: [],
+    platform_roles: ['platform_finance'],
+    actions: ['create'],
+    resources: ['platform_impersonation'],
+    condition: {
+      custom: (ctx) => ctx.securityContext.user_type === 'platform',
+    },
+    description: 'PlatformFinance NÃO pode iniciar impersonação de tenants. Política de segurança explícita.',
+    priority: 0,
+  },
+
   // ── IAM-Specific Rules ──
   {
     id: 'iam_admin_manage_roles',
@@ -339,10 +395,16 @@ function ruleMatchesRequest(
   // Check enabled
   if (rule.enabled === false) return false;
 
-  // Check roles (empty = matches all)
+  // Check tenant-level roles (empty = matches all)
   if (rule.roles.length > 0) {
     const hasMatchingRole = ctx.securityContext.roles.some(r => rule.roles.includes(r));
     if (!hasMatchingRole) return false;
+  }
+
+  // Check platform-level roles (if specified, must match via real_identity)
+  if (rule.platform_roles && rule.platform_roles.length > 0) {
+    const platformRole = ctx.securityContext.real_identity?.platformRole as PlatformRoleType | undefined;
+    if (!platformRole || !rule.platform_roles.includes(platformRole)) return false;
   }
 
   // Check actions (empty = matches all)
