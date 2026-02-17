@@ -23,17 +23,32 @@ import {
   type MenuEditorRole,
 } from '@/domains/menu-structure/menu-structure-engine';
 import type { MenuTreeNode, MenuValidationResult, MenuDiff } from '@/domains/menu-structure/types';
+import type { NavigationEntry } from '@/domains/platform-os/types';
+import { usePlatformOS } from '@/domains/platform-os/platform-context';
 import { MenuTreeBuilder } from '@/components/platform/MenuTreeBuilder';
 import { MenuDiffViewer } from '@/components/platform/MenuDiffViewer';
 import { MenuMobilePreview } from '@/components/platform/MenuMobilePreview';
 
-/* ─── Helper ─── */
+/* ─── Helpers ─── */
 const mn = (
   id: string, label: string, slug: string,
   opts?: Partial<Pick<MenuTreeNode, 'icon' | 'role_permissions' | 'locked' | 'children' | 'visibility_rules'>>,
 ): MenuTreeNode => ({
   id, label, slug, parent_id: null, order_index: 0, depth_level: 0, role_permissions: [], ...opts,
 });
+
+/** Convert MenuTreeNode[] → NavigationEntry[] for NavigationOrchestrator */
+function menuTreeToNavigationEntries(nodes: MenuTreeNode[]): NavigationEntry[] {
+  return nodes.map((n, i) => ({
+    path: n.slug,
+    label: n.label,
+    icon: n.icon,
+    source: 'core' as const,
+    required_permissions: n.role_permissions.length > 0 ? n.role_permissions : undefined,
+    priority: i,
+    children: n.children ? menuTreeToNavigationEntries(n.children) : undefined,
+  }));
+}
 
 /* ─── Default tree ─── */
 const createDefaultTree = (): MenuTreeNode[] => [
@@ -134,6 +149,8 @@ const ROLE_OPTIONS: { value: MenuEditorRole; label: string }[] = [
 
 /* ═══════════════ Component ═══════════════ */
 export default function PlatformMenuStructure() {
+  const os = usePlatformOS();
+
   const [engine] = useState<MenuStructureEngineAPI>(() => createMenuStructureEngine(createDefaultTree()));
   const [tree, setTree] = useState<MenuTreeNode[]>(() => engine.tree.getTree());
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -181,6 +198,13 @@ export default function PlatformMenuStructure() {
       savedAt: new Date().toISOString(),
     };
     saveMenuOrder(order);
+
+    // ── Sync with Navigation Intelligence ──
+    try {
+      const navEntries = menuTreeToNavigationEntries(tree);
+      os?.navigation.registerCoreRoutes(navEntries);
+    } catch { /* PlatformOS may not be ready */ }
+
     setTimeout(() => { setIsSaving(false); setHasChanges(false); toast.success('Salvo & Versionado!'); }, 400);
   };
 
