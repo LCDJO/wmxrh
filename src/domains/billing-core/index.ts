@@ -85,6 +85,7 @@ export type {
   UsageRecord,
   UsageAggregate,
   UsagePricingTier,
+  UsagePricingRule,
   UsageCostLineItem,
   UsageCostBreakdown,
   UsageCollectorAPI,

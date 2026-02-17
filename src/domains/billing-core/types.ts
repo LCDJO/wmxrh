@@ -270,14 +270,27 @@ export interface UsageAggregate {
 export interface UsagePricingTier {
   id: string;
   plan_id: string;
+  module_id: string | null;
   metric_key: string;
+  metric_type: UsageMetricType;
   tier_start: number;
   tier_end: number | null;
   unit_price_brl: number;
+  price_per_unit: number;
   flat_fee_brl: number;
   included_quantity: number;
+  overage_price: number;
   pricing_model: 'tiered' | 'volume' | 'graduated' | 'flat';
   is_active: boolean;
+}
+
+/** Simplified pricing rule view (e.g. "HR Module: 50 users included, R$2/extra") */
+export interface UsagePricingRule {
+  module_id: string;
+  metric_type: UsageMetricType;
+  price_per_unit: number;
+  included_quota: number;
+  overage_price: number;
 }
 
 export interface UsageCostLineItem {
@@ -337,13 +350,19 @@ export interface UsagePricingCalculatorAPI {
   getTiers(planId: string, metricKey: string): Promise<UsagePricingTier[]>;
   calculateCost(planId: string, aggregates: UsageAggregate[]): Promise<UsageCostBreakdown>;
   setTiers(planId: string, metricKey: string, tiers: Array<{
+    module_id?: string;
+    metric_type?: UsageMetricType;
     tier_start: number;
     tier_end?: number | null;
     unit_price_brl: number;
+    price_per_unit?: number;
     flat_fee_brl?: number;
     included_quantity?: number;
+    overage_price?: number;
     pricing_model?: string;
   }>): Promise<void>;
+  /** Get simplified pricing rules per module */
+  getRulesForModule(planId: string, moduleId: string): Promise<UsagePricingRule[]>;
 }
 
 export interface UsageBillingEngineAPI {

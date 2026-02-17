@@ -246,11 +246,15 @@ function createUsagePricingCalculator(): UsagePricingCalculatorAPI {
       const rows = tiers.map(t => ({
         plan_id: planId,
         metric_key: metricKey,
+        module_id: t.module_id ?? null,
+        metric_type: t.metric_type ?? 'api_calls',
         tier_start: t.tier_start,
         tier_end: t.tier_end ?? null,
         unit_price_brl: t.unit_price_brl,
+        price_per_unit: t.price_per_unit ?? t.unit_price_brl,
         flat_fee_brl: t.flat_fee_brl ?? 0,
         included_quantity: t.included_quantity ?? 0,
+        overage_price: t.overage_price ?? t.unit_price_brl,
         pricing_model: t.pricing_model ?? 'tiered',
         is_active: true,
       }));
@@ -260,6 +264,24 @@ function createUsagePricingCalculator(): UsagePricingCalculatorAPI {
         .insert(rows);
 
       if (error) throw new Error(`PricingCalculator.setTiers: ${error.message}`);
+    },
+
+    async getRulesForModule(planId, moduleId) {
+      const { data, error } = await supabase
+        .from('usage_pricing_tiers')
+        .select('*')
+        .eq('plan_id', planId)
+        .eq('module_id', moduleId)
+        .eq('is_active', true);
+
+      if (error) throw new Error(`PricingCalculator.getRulesForModule: ${error.message}`);
+      return (data ?? []).map((t: any) => ({
+        module_id: t.module_id,
+        metric_type: t.metric_type,
+        price_per_unit: Number(t.price_per_unit),
+        included_quota: Number(t.included_quantity),
+        overage_price: Number(t.overage_price),
+      }));
     },
   };
 }

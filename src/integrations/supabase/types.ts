@@ -5796,7 +5796,11 @@ export type Database = {
           included_quantity: number
           is_active: boolean
           metric_key: string
+          metric_type: string
+          module_id: string | null
+          overage_price: number
           plan_id: string
+          price_per_unit: number
           pricing_model: string
           tier_end: number | null
           tier_start: number
@@ -5810,7 +5814,11 @@ export type Database = {
           included_quantity?: number
           is_active?: boolean
           metric_key: string
+          metric_type?: string
+          module_id?: string | null
+          overage_price?: number
           plan_id: string
+          price_per_unit?: number
           pricing_model?: string
           tier_end?: number | null
           tier_start?: number
@@ -5824,7 +5832,11 @@ export type Database = {
           included_quantity?: number
           is_active?: boolean
           metric_key?: string
+          metric_type?: string
+          module_id?: string | null
+          overage_price?: number
           plan_id?: string
+          price_per_unit?: number
           pricing_model?: string
           tier_end?: number | null
           tier_start?: number
