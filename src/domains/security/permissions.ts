@@ -43,6 +43,7 @@ export type PermissionEntity =
   | 'platform_roles'
   | 'platform_permissions'
   | 'platform_billing'
+  | 'platform_coupons'
   | 'platform_impersonation';
 
 // ========================
@@ -235,6 +236,12 @@ export const PERMISSION_MATRIX: PermissionMatrix = {
   platform_billing: {
     view: ALL_MEMBERS,
     create: [],
+    update: [],
+    delete: [],
+  },
+  platform_coupons: {
+    view: ALL_MEMBERS,
+    create: [], // enforced by PolicyEngine (platform_super_admin + platform_finance only)
     update: [],
     delete: [],
   },
