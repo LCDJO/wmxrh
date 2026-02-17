@@ -32,14 +32,20 @@ export type GTMAutoEvent =
   | 'cta_click'
   | 'trial_start'
   | 'plan_selected'
-  | 'referral_signup';
+  | 'referral_signup'
+  | 'ab_variant_assigned'
+  | 'ab_conversion'
+  | 'ab_winner_selected';
 
 const AUTO_EVENTS: TagManagerEvent[] = [
-  { name: 'page_view',       trigger: 'on_load',   category: 'engagement',  label: 'landing_page' },
-  { name: 'cta_click',       trigger: 'on_click',  category: 'conversion',  label: 'primary_cta' },
-  { name: 'trial_start',     trigger: 'on_submit', category: 'conversion',  label: 'free_trial' },
-  { name: 'plan_selected',   trigger: 'on_click',  category: 'conversion',  label: 'pricing_plan' },
-  { name: 'referral_signup', trigger: 'on_click',  category: 'acquisition', label: 'referral_program' },
+  { name: 'page_view',            trigger: 'on_load',   category: 'engagement',    label: 'landing_page' },
+  { name: 'cta_click',            trigger: 'on_click',  category: 'conversion',    label: 'primary_cta' },
+  { name: 'trial_start',          trigger: 'on_submit', category: 'conversion',    label: 'free_trial' },
+  { name: 'plan_selected',        trigger: 'on_click',  category: 'conversion',    label: 'pricing_plan' },
+  { name: 'referral_signup',      trigger: 'on_click',  category: 'acquisition',   label: 'referral_program' },
+  { name: 'ab_variant_assigned',  trigger: 'on_load',   category: 'experiment',    label: 'ab_test' },
+  { name: 'ab_conversion',        trigger: 'on_submit', category: 'experiment',    label: 'ab_test' },
+  { name: 'ab_winner_selected',   trigger: 'on_submit', category: 'experiment',    label: 'ab_test' },
 ];
 
 // ── Service ──────────────────────────────────────────────────
@@ -209,6 +215,62 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       page_id: params.page_id,
       referral_code: params.referral_code,
       referral_action: params.action,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // ── A/B Testing Events ─────────────────────────────────────
+
+  /**
+   * Push ab_variant_assigned — when a visitor is bucketed into a variant.
+   */
+  trackVariantAssigned(params: {
+    experiment_id: string;
+    experiment_name: string;
+    variant_id: string;
+    variant_name: string;
+    is_control: boolean;
+    page_id?: string;
+  }): void {
+    this.pushEvent('ab_variant_assigned', {
+      ...params,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Push ab_conversion — when a visitor in an experiment converts.
+   */
+  trackABConversion(params: {
+    experiment_id: string;
+    experiment_name: string;
+    variant_id: string;
+    variant_name: string;
+    conversion_metric: string;
+    conversion_value?: number;
+    page_id?: string;
+  }): void {
+    this.pushEvent('ab_conversion', {
+      ...params,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Push ab_winner_selected — when an experiment is completed and a winner declared.
+   */
+  trackWinnerSelected(params: {
+    experiment_id: string;
+    experiment_name: string;
+    winner_variant_id: string;
+    winner_variant_name: string;
+    confidence_level: number;
+    total_impressions: number;
+    winning_conversion_rate: number;
+    page_id?: string;
+  }): void {
+    this.pushEvent('ab_winner_selected', {
+      ...params,
       timestamp: new Date().toISOString(),
     });
   }

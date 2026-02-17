@@ -1,11 +1,13 @@
 /**
  * ABTestingManager — Manages the lifecycle of A/B experiments.
  * Create, start, pause, stop, and declare winners for landing page experiments.
+ * Integrates with GTM to push ab_variant_assigned, ab_conversion, ab_winner_selected.
  */
 import type {
   ABExperiment, ABVariant, ExperimentId, ExperimentStatus,
   VariantAllocationStrategy, ConversionMetricType,
 } from './types';
+import { tagManagerIntegration } from '../tag-manager-integration';
 
 class ABTestingManager {
   private experiments: Map<ExperimentId, ABExperiment> = new Map();
@@ -75,6 +77,48 @@ class ABTestingManager {
     return exp;
   }
 
+  /** Assign a visitor to a variant and push GTM event */
+  assignVariant(experimentId: ExperimentId, variantId: string): ABVariant {
+    const exp = this.getExperiment(experimentId);
+    if (exp.status !== 'running') throw new Error('Experiment is not running');
+    const variant = exp.variants.find(v => v.id === variantId);
+    if (!variant) throw new Error('Variant not found');
+
+    variant.metrics.impressions++;
+    tagManagerIntegration.trackVariantAssigned({
+      experiment_id: exp.id,
+      experiment_name: exp.name,
+      variant_id: variant.id,
+      variant_name: variant.name,
+      is_control: variant.isControl,
+      page_id: exp.landingPageId,
+    });
+    return variant;
+  }
+
+  /** Record a conversion for a variant and push GTM event */
+  recordConversion(experimentId: ExperimentId, variantId: string, metric: ConversionMetricType, value?: number): void {
+    const exp = this.getExperiment(experimentId);
+    const variant = exp.variants.find(v => v.id === variantId);
+    if (!variant) throw new Error('Variant not found');
+
+    variant.metrics.conversions++;
+    variant.metrics.conversionRate = variant.metrics.impressions > 0
+      ? Math.round((variant.metrics.conversions / variant.metrics.impressions) * 10000) / 100
+      : 0;
+    if (value) variant.metrics.revenue += value;
+
+    tagManagerIntegration.trackABConversion({
+      experiment_id: exp.id,
+      experiment_name: exp.name,
+      variant_id: variant.id,
+      variant_name: variant.name,
+      conversion_metric: metric,
+      conversion_value: value,
+      page_id: exp.landingPageId,
+    });
+  }
+
   /** Pause a running experiment */
   pauseExperiment(experimentId: ExperimentId): ABExperiment {
     const exp = this.getExperiment(experimentId);
@@ -84,7 +128,7 @@ class ABTestingManager {
     return exp;
   }
 
-  /** Complete an experiment and declare winner */
+  /** Complete an experiment, declare winner, and push GTM event */
   completeExperiment(experimentId: ExperimentId, winnerVariantId: string): ABExperiment {
     const exp = this.getExperiment(experimentId);
     const winner = exp.variants.find(v => v.id === winnerVariantId);
@@ -94,6 +138,19 @@ class ABTestingManager {
     exp.winnerVariantId = winnerVariantId;
     exp.endedAt = new Date().toISOString();
     exp.updatedAt = new Date().toISOString();
+
+    const totalImpressions = exp.variants.reduce((s, v) => s + v.metrics.impressions, 0);
+    tagManagerIntegration.trackWinnerSelected({
+      experiment_id: exp.id,
+      experiment_name: exp.name,
+      winner_variant_id: winner.id,
+      winner_variant_name: winner.name,
+      confidence_level: exp.confidenceLevel,
+      total_impressions: totalImpressions,
+      winning_conversion_rate: winner.metrics.conversionRate,
+      page_id: exp.landingPageId,
+    });
+
     return exp;
   }
 
