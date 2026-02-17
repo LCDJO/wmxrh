@@ -22,7 +22,7 @@
 export { createPlatformBillingCore } from './billing-core';
 
 // ── Individual factories ─────────────────────────────────────
-export { createBillingCalculator } from './billing-calculator';
+export { createBillingCalculator, calculateInvoiceTotal, calculateTenantTotal } from './billing-calculator';
 export { createFinancialLedgerAdapter } from './financial-ledger-adapter';
 export { createInvoiceEngine } from './invoice-engine';
 export { createRevenueMetricsService } from './revenue-metrics-service';

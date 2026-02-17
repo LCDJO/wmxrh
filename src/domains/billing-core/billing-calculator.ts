@@ -57,7 +57,9 @@ export function createBillingCalculator(
         billing_cycle: cycle,
         line_items: [],
         subtotal_brl: 0,
+        usage_overage_brl: 0,
         discount_brl: 0,
+        coupon_discount_brl: 0,
         total_brl: 0,
         period_start: new Date().toISOString().slice(0, 10),
         period_end: new Date().toISOString().slice(0, 10),
@@ -153,7 +155,9 @@ export function createBillingCalculator(
       billing_cycle: cycle,
       line_items: items,
       subtotal_brl: Math.round(subtotal * 100) / 100,
+      usage_overage_brl: 0,
       discount_brl: Math.round(discount * 100) / 100,
+      coupon_discount_brl: 0,
       total_brl: Math.round((subtotal - discount) * 100) / 100,
       period_start: periodStart,
       period_end: periodEnd,
@@ -204,7 +208,9 @@ export function createBillingCalculator(
           },
         ],
         subtotal_brl: Math.max(0, prorationAmount),
+        usage_overage_brl: 0,
         discount_brl: 0,
+        coupon_discount_brl: 0,
         total_brl: Math.max(0, prorationAmount),
       };
     },
@@ -254,21 +260,25 @@ export function createBillingCalculator(
 }
 
 /**
- * Async version — fetches plan_modules from DB for accurate calculation
- * Use this for invoice generation where accuracy matters.
+ * Async version — Full invoice calculation with usage + discounts.
  *
- * tenant_total = base_price + soma(modules adicionais com price_override)
+ * invoice_total = base_plan_price + usage_overage - discounts
+ *
+ * Use this for invoice generation where accuracy matters.
  */
-export async function calculateTenantTotal(
+export async function calculateInvoiceTotal(
   planRegistry: PlanRegistryAPI,
   tenantPlan: TenantPlanResolverAPI,
-  tenantId: string
+  tenantId: string,
+  opts?: {
+    usageCost?: import('./types').UsageCostBreakdown;
+    couponDiscountBrl?: number;
+  }
 ): Promise<BillingCalculation> {
   const snap = tenantPlan.resolve(tenantId);
   const modules = await fetchPlanModules(snap.plan_id);
 
   const calc = createBillingCalculator(planRegistry, tenantPlan);
-  // We need to rebuild with modules — use the internal builder via a fresh instance
   const plan = planRegistry.get(snap.plan_id);
   if (!plan) return calc.calculate(tenantId);
 
@@ -277,16 +287,17 @@ export async function calculateTenantTotal(
   const isAnnual = snap.billing_cycle === 'annual';
   const monthlyRate = isAnnual ? plan.pricing.annual_brl / 12 : plan.pricing.monthly_brl;
 
-  // Base
+  // ── 1. Base plan price ──────────────────────────────────────
+  const basePlanPrice = monthlyRate * months;
   items.push({
     description: `${plan.name} — ${snap.billing_cycle}`,
     quantity: months,
     unit_price_brl: monthlyRate,
-    total_brl: monthlyRate * months,
+    total_brl: basePlanPrice,
     type: 'plan_base',
   });
 
-  // Addon modules
+  // ── 2. Addon modules ───────────────────────────────────────
   for (const mod of modules) {
     if (mod.module_price_override != null && mod.module_price_override > 0) {
       items.push({
@@ -300,10 +311,49 @@ export async function calculateTenantTotal(
   }
 
   const subtotal = items.reduce((sum, i) => sum + i.total_brl, 0);
+
+  // ── 3. Usage overage ───────────────────────────────────────
+  let usageOverageBrl = 0;
+  if (opts?.usageCost) {
+    usageOverageBrl = opts.usageCost.total_usage_brl;
+    for (const line of opts.usageCost.line_items) {
+      items.push({
+        description: `Uso: ${line.metric_key} (${line.quantity} ${line.unit})`,
+        quantity: line.quantity,
+        unit_price_brl: line.unit_price_brl,
+        total_brl: line.total_brl,
+        type: 'usage',
+      });
+    }
+  }
+
+  // ── 4. Plan discount (annual) ──────────────────────────────
   let discount = 0;
   if (isAnnual && plan.pricing.discount_annual_pct) {
     discount = subtotal * (plan.pricing.discount_annual_pct / 100);
+    items.push({
+      description: `Desconto anual (${plan.pricing.discount_annual_pct}%)`,
+      quantity: 1,
+      unit_price_brl: -discount,
+      total_brl: -discount,
+      type: 'discount',
+    });
   }
+
+  // ── 5. Coupon discount ─────────────────────────────────────
+  const couponDiscountBrl = opts?.couponDiscountBrl ?? 0;
+  if (couponDiscountBrl > 0) {
+    items.push({
+      description: `Desconto de cupom`,
+      quantity: 1,
+      unit_price_brl: -couponDiscountBrl,
+      total_brl: -couponDiscountBrl,
+      type: 'coupon_discount',
+    });
+  }
+
+  // ── TOTAL = base + usage - discounts ───────────────────────
+  const totalBrl = subtotal + usageOverageBrl - discount - couponDiscountBrl;
 
   const now = new Date();
   return {
@@ -312,10 +362,15 @@ export async function calculateTenantTotal(
     billing_cycle: snap.billing_cycle,
     line_items: items,
     subtotal_brl: Math.round(subtotal * 100) / 100,
+    usage_overage_brl: Math.round(usageOverageBrl * 100) / 100,
     discount_brl: Math.round(discount * 100) / 100,
-    total_brl: Math.round((subtotal - discount) * 100) / 100,
+    coupon_discount_brl: Math.round(couponDiscountBrl * 100) / 100,
+    total_brl: Math.round(Math.max(0, totalBrl) * 100) / 100,
     period_start: now.toISOString().slice(0, 10),
     period_end: addMonths(now, months).toISOString().slice(0, 10),
     calculated_at: Date.now(),
   };
 }
+
+/** @deprecated Use calculateInvoiceTotal instead */
+export const calculateTenantTotal = calculateInvoiceTotal;
