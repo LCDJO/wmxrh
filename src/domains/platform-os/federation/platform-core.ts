@@ -10,8 +10,9 @@
  */
 
 import type { GlobalEventKernelAPI, ModuleRegistration, ModuleDescriptor } from '../types';
+import { MODULE_FEDERATION_MAP } from './module-definitions';
 import { createModuleRegistry, type ModuleRegistryAPI } from './module-registry';
-import { createModuleLoader, type ModuleLoaderAPI, type ModuleManifest } from './module-loader';
+import { createModuleLoader, type ModuleLoaderAPI, type ModuleManifest, type ModuleWidget, type ModuleNavigationEntry, type ModuleLoadContext } from './module-loader';
 import { createModuleSandbox, type ModuleSandboxAPI, type SandboxContext } from './module-sandbox';
 import { createModuleLifecycleManager, type ModuleLifecycleManagerAPI } from './module-lifecycle-manager';
 import { createModulePermissionAdapter, type ModulePermissionAdapterAPI, type PermissionContext } from './module-permission-adapter';
@@ -36,6 +37,15 @@ export interface PlatformCoreAPI {
   // ── Loader ─────────────────────────────────────────────────
   getComponent(key: string): React.LazyExoticComponent<React.ComponentType<any>> | null;
   preloadModule(key: string): Promise<void>;
+  getManifest(key: string): ModuleManifest | null;
+  /** Resolve modules eligible for a given runtime context */
+  resolveForContext(ctx: ModuleLoadContext): ModuleManifest[];
+  /** Resolve widgets for a shell slot given a context */
+  resolveWidgets(slot: ModuleWidget['slot'], ctx: ModuleLoadContext): ModuleWidget[];
+  /** Resolve navigation entries given a context */
+  resolveNavigation(ctx: ModuleLoadContext): ModuleNavigationEntry[];
+  /** Bulk-register all modules from MODULE_FEDERATION_MAP */
+  registerAll(): void;
 
   // ── Sandbox ────────────────────────────────────────────────
   sandbox(key: string): SandboxContext;
@@ -110,6 +120,19 @@ export function createPlatformCore(events: GlobalEventKernelAPI): PlatformCoreAP
 
     getComponent: (key) => loader.getComponent(key),
     preloadModule: (key) => loader.preload(key),
+    getManifest: (key) => loader.getManifest(key),
+    resolveForContext: (ctx) => loader.resolveForContext(ctx, (k, t) => permissions.isEnabledForTenant(k, t)),
+    resolveWidgets: (slot, ctx) => loader.resolveWidgets(slot, ctx, (k, t) => permissions.isEnabledForTenant(k, t)),
+    resolveNavigation: (ctx) => loader.resolveNavigation(ctx, (k, t) => permissions.isEnabledForTenant(k, t)),
+    registerAll() {
+      for (const { registration, manifest } of MODULE_FEDERATION_MAP) {
+        register(registration, manifest);
+      }
+      events.emit('platform:all_modules_registered', 'PlatformCore', {
+        count: MODULE_FEDERATION_MAP.length,
+        keys: MODULE_FEDERATION_MAP.map(m => m.registration.key),
+      });
+    },
 
     sandbox: (key) => sandboxManager.create(key),
     destroySandbox: (key) => sandboxManager.destroy(key),
