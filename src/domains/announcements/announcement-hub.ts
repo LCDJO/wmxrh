@@ -6,6 +6,8 @@
  * severity: info | warning | critical
  * blocking_level: none | banner | restricted_access
  * source: saas_management
+ *
+ * Targeting: global | tenant_id | target_plan_id | target_feature_flag
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -32,6 +34,8 @@ export interface TenantAnnouncement {
   end_at: string | null;
   is_dismissible: boolean;
   created_by: string | null;
+  target_plan_id: string | null;
+  target_feature_flag: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -54,6 +58,31 @@ export interface CreateAnnouncementInput {
   start_at?: string;
   end_at?: string | null;
   is_dismissible?: boolean;
+  target_plan_id?: string | null;
+  target_feature_flag?: string | null;
+}
+
+// ══════════════════════════════════════════════════════════════
+// Targeting helpers
+// ══════════════════════════════════════════════════════════════
+
+export type TargetingMode = 'global' | 'tenant' | 'plan' | 'feature_flag';
+
+export function resolveTargetingMode(a: TenantAnnouncement | CreateAnnouncementInput): TargetingMode {
+  if (a.target_feature_flag) return 'feature_flag';
+  if (a.target_plan_id) return 'plan';
+  if (a.tenant_id) return 'tenant';
+  return 'global';
+}
+
+export function getTargetingLabel(a: TenantAnnouncement): string {
+  const mode = resolveTargetingMode(a);
+  switch (mode) {
+    case 'global': return '🌐 Global';
+    case 'tenant': return '🏢 Tenant específico';
+    case 'plan': return '📋 Por plano';
+    case 'feature_flag': return '🚩 Por feature flag';
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -89,12 +118,20 @@ export const BLOCKING_LEVEL_CONFIG: Record<BlockingLevel, { label: string; icon:
 };
 
 // ══════════════════════════════════════════════════════════════
+// Severity → NotificationType mapping
+// ══════════════════════════════════════════════════════════════
+
+export function severityToNotificationType(severity: Severity): 'info' | 'warning' | 'critical' {
+  return severity; // direct mapping
+}
+
+// ══════════════════════════════════════════════════════════════
 // AnnouncementDispatcher — CRUD
 // ══════════════════════════════════════════════════════════════
 
 export const announcementDispatcher = {
   /** Fetch active announcements visible to the current user's tenant */
-  async listActive(tenantId: string): Promise<TenantAnnouncement[]> {
+  async listActive(tenantId: string, tenantPlanId?: string | null): Promise<TenantAnnouncement[]> {
     const now = new Date().toISOString();
     const { data, error } = await (supabase
       .from('tenant_announcements' as any)
@@ -106,7 +143,16 @@ export const announcementDispatcher = {
       .order('created_at', { ascending: false }) as any);
 
     if (error) throw error;
-    return (data || []) as TenantAnnouncement[];
+    const all = (data || []) as TenantAnnouncement[];
+
+    // Client-side filtering for plan/feature targeting
+    return all.filter(a => {
+      // Plan targeting: show only if tenant has matching plan
+      if (a.target_plan_id && tenantPlanId && a.target_plan_id !== tenantPlanId) return false;
+      if (a.target_plan_id && !tenantPlanId) return false;
+      // Feature flag targeting is informational — always show
+      return true;
+    });
   },
 
   /** Fetch ALL announcements for platform admin management */
@@ -143,6 +189,8 @@ export const announcementDispatcher = {
         start_at: input.start_at ?? new Date().toISOString(),
         end_at: input.end_at ?? null,
         is_dismissible: input.is_dismissible ?? true,
+        target_plan_id: input.target_plan_id ?? null,
+        target_feature_flag: input.target_feature_flag ?? null,
         created_by: (await supabase.auth.getUser()).data.user?.id ?? null,
       })
       .select()
