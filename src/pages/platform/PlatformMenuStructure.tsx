@@ -40,96 +40,112 @@ const ICON_MAP: Record<string, typeof LayoutDashboard> = {
 
 const getIcon = (key?: string) => ICON_MAP[key ?? ''] ?? Puzzle;
 
+/* ─── Helper to create a MenuTreeNode ─── */
+const mn = (
+  id: string,
+  label: string,
+  slug: string,
+  opts?: Partial<Pick<MenuTreeNode, 'icon' | 'role_permissions' | 'locked' | 'children' | 'visibility_rules'>>,
+): MenuTreeNode => ({
+  id,
+  label,
+  slug,
+  parent_id: null,
+  order_index: 0,
+  depth_level: 0,
+  role_permissions: [],
+  ...opts,
+});
+
 /* ─── Default tree ─── */
 const createDefaultTree = (): MenuTreeNode[] => [
-  { id: 'dashboard', label: 'Dashboard', path: '/platform/dashboard', icon: 'LayoutDashboard' },
-  { id: 'tenants', label: 'Tenants', path: '/platform/tenants', icon: 'Building2', allowedRoles: ['platform_super_admin', 'platform_operations'] },
-  { id: 'modules', label: 'Módulos', path: '/platform/modules', icon: 'Puzzle', allowedRoles: ['platform_super_admin', 'platform_operations'] },
-  { id: 'plans', label: 'Planos', path: '/platform/plans', icon: 'Package', allowedRoles: ['platform_super_admin', 'platform_finance'] },
-  { id: 'users', label: 'Usuários', path: '/platform/users', icon: 'Users', allowedRoles: ['platform_super_admin', 'platform_operations'] },
-  {
-    id: 'security', label: 'Segurança', path: '/platform/security', icon: 'ShieldCheck',
-    allowedRoles: ['platform_super_admin', 'platform_operations'],
+  mn('dashboard', 'Dashboard', '/platform/dashboard', { icon: 'LayoutDashboard' }),
+  mn('tenants', 'Tenants', '/platform/tenants', { icon: 'Building2', role_permissions: ['platform_super_admin', 'platform_operations'] }),
+  mn('modules', 'Módulos', '/platform/modules', { icon: 'Puzzle', role_permissions: ['platform_super_admin', 'platform_operations'] }),
+  mn('plans', 'Planos', '/platform/plans', { icon: 'Package', role_permissions: ['platform_super_admin', 'platform_finance'] }),
+  mn('users', 'Usuários', '/platform/users', { icon: 'Users', role_permissions: ['platform_super_admin', 'platform_operations'] }),
+  mn('security', 'Segurança', '/platform/security', {
+    icon: 'ShieldCheck',
+    role_permissions: ['platform_super_admin', 'platform_operations'],
     children: [
-      { id: 'sec-roles', label: 'Cargos', path: '/platform/security/roles' },
-      { id: 'sec-perms', label: 'Permissões', path: '/platform/security/permissions' },
-      { id: 'sec-graph', label: 'Access Graph', path: '/platform/security/access-graph' },
-      { id: 'sec-unified', label: 'Unified Graph', path: '/platform/security/unified-graph' },
-      { id: 'sec-gov', label: 'Governança', path: '/platform/security/governance' },
-      { id: 'sec-govai', label: 'Governance AI', path: '/platform/security/governance-ai' },
+      mn('sec-roles', 'Cargos', '/platform/security/roles'),
+      mn('sec-perms', 'Permissões', '/platform/security/permissions'),
+      mn('sec-graph', 'Access Graph', '/platform/security/access-graph'),
+      mn('sec-unified', 'Unified Graph', '/platform/security/unified-graph'),
+      mn('sec-gov', 'Governança', '/platform/security/governance'),
+      mn('sec-govai', 'Governance AI', '/platform/security/governance-ai'),
     ],
-  },
-  { id: 'iam', label: 'IAM', path: '/platform/iam', icon: 'KeyRound', allowedRoles: ['platform_super_admin'] },
-  { id: 'automation', label: 'Automação', path: '/platform/automation', icon: 'Zap', allowedRoles: ['platform_super_admin'] },
-  {
-    id: 'monitoring', label: 'Monitoramento', path: '/platform/monitoring', icon: 'Monitor',
+  }),
+  mn('iam', 'IAM', '/platform/iam', { icon: 'KeyRound', role_permissions: ['platform_super_admin'] }),
+  mn('automation', 'Automação', '/platform/automation', { icon: 'Zap', role_permissions: ['platform_super_admin'] }),
+  mn('monitoring', 'Monitoramento', '/platform/monitoring', {
+    icon: 'Monitor',
     children: [
-      { id: 'mon-status', label: 'Status', path: '/platform/monitoring' },
-      { id: 'mon-mods', label: 'Módulos', path: '/platform/monitoring/modules' },
-      { id: 'mon-err', label: 'Erros', path: '/platform/monitoring/errors' },
-      { id: 'mon-perf', label: 'Performance', path: '/platform/monitoring/performance' },
-      { id: 'mon-inc', label: 'Incidentes', path: '/platform/monitoring/incidents' },
+      mn('mon-status', 'Status', '/platform/monitoring'),
+      mn('mon-mods', 'Módulos', '/platform/monitoring/modules'),
+      mn('mon-err', 'Erros', '/platform/monitoring/errors'),
+      mn('mon-perf', 'Performance', '/platform/monitoring/performance'),
+      mn('mon-inc', 'Incidentes', '/platform/monitoring/incidents'),
     ],
-  },
-  { id: 'observability', label: 'Observability', path: '/platform/observability', icon: 'Activity' },
-  { id: 'comms', label: 'Comunicação', path: '/platform/communications', icon: 'Megaphone' },
-  { id: 'audit', label: 'Auditoria', path: '/platform/audit', icon: 'ScrollText' },
-  {
-    id: 'billing', label: 'Financeiro', path: '/platform/billing', icon: 'Package',
-    allowedRoles: ['platform_super_admin', 'platform_finance'],
+  }),
+  mn('observability', 'Observability', '/platform/observability', { icon: 'Activity' }),
+  mn('comms', 'Comunicação', '/platform/communications', { icon: 'Megaphone' }),
+  mn('audit', 'Auditoria', '/platform/audit', { icon: 'ScrollText' }),
+  mn('billing', 'Financeiro', '/platform/billing', {
+    icon: 'Package',
+    role_permissions: ['platform_super_admin', 'platform_finance'],
     children: [
-      { id: 'bill-overview', label: 'Visão Geral', path: '/platform/billing' },
-      { id: 'bill-coupons', label: 'Cupons', path: '/platform/billing/coupons' },
-      { id: 'bill-cc', label: 'Control Center', path: '/platform/billing/control-center' },
+      mn('bill-overview', 'Visão Geral', '/platform/billing'),
+      mn('bill-coupons', 'Cupons', '/platform/billing/coupons'),
+      mn('bill-cc', 'Control Center', '/platform/billing/control-center'),
     ],
-  },
-  {
-    id: 'revenue', label: 'Revenue', path: '/platform/revenue', icon: 'TrendingUp',
+  }),
+  mn('revenue', 'Revenue', '/platform/revenue', {
+    icon: 'TrendingUp',
     children: [
-      { id: 'rev-overview', label: 'Visão Geral', path: '/platform/revenue' },
-      { id: 'rev-ref', label: 'Referrals', path: '/platform/referrals' },
-      { id: 'rev-gam', label: 'Gamificação', path: '/platform/gamification' },
-      { id: 'rev-intel', label: 'Intelligence', path: '/platform/revenue/intelligence' },
+      mn('rev-overview', 'Visão Geral', '/platform/revenue'),
+      mn('rev-ref', 'Referrals', '/platform/referrals'),
+      mn('rev-gam', 'Gamificação', '/platform/gamification'),
+      mn('rev-intel', 'Intelligence', '/platform/revenue/intelligence'),
     ],
-  },
-  {
-    id: 'growth-ai', label: 'Growth AI', path: '/platform/growth', icon: 'Rocket',
+  }),
+  mn('growth-ai', 'Growth AI', '/platform/growth', {
+    icon: 'Rocket',
     children: [
-      { id: 'growth-overview', label: 'Visão Geral', path: '/platform/growth' },
-      { id: 'growth-insights', label: 'Insights', path: '/platform/growth/insights' },
-      { id: 'growth-landing', label: 'Landing Pages', path: '/platform/growth/landing-pages' },
-      { id: 'growth-conversions', label: 'Conversões', path: '/platform/growth/conversions' },
-      { id: 'growth-fab', label: 'FAB Builder', path: '/platform/growth/fab-builder' },
-      { id: 'growth-submissions', label: 'Meus Rascunhos', path: '/platform/growth/submissions' },
-      { id: 'growth-approvals', label: 'Aprovações', path: '/platform/growth/approvals' },
-      { id: 'growth-versions', label: 'Versionamento & Publicação', path: '/platform/growth/version-publish' },
-      { id: 'growth-mkt', label: 'Marketing Analytics', path: '/platform/marketing/analytics' },
+      mn('growth-overview', 'Visão Geral', '/platform/growth'),
+      mn('growth-insights', 'Insights', '/platform/growth/insights'),
+      mn('growth-landing', 'Landing Pages', '/platform/growth/landing-pages'),
+      mn('growth-conversions', 'Conversões', '/platform/growth/conversions'),
+      mn('growth-fab', 'FAB Builder', '/platform/growth/fab-builder'),
+      mn('growth-submissions', 'Meus Rascunhos', '/platform/growth/submissions'),
+      mn('growth-approvals', 'Aprovações', '/platform/growth/approvals'),
+      mn('growth-versions', 'Versionamento & Publicação', '/platform/growth/version-publish'),
+      mn('growth-mkt', 'Marketing Analytics', '/platform/marketing/analytics'),
     ],
-  },
-  {
-    id: 'website', label: 'Website', path: '/platform/website', icon: 'Globe',
+  }),
+  mn('website', 'Website', '/platform/website', {
+    icon: 'Globe',
     children: [
-      { id: 'web-dash', label: 'Dashboard', path: '/platform/website' },
-      { id: 'web-ai', label: 'AI Designer', path: '/platform/website/ai-designer' },
-      { id: 'web-tpl', label: 'Templates', path: '/platform/website/templates' },
-      { id: 'web-ver', label: 'Versionamento', path: '/platform/website/versions' },
+      mn('web-dash', 'Dashboard', '/platform/website'),
+      mn('web-ai', 'AI Designer', '/platform/website/ai-designer'),
+      mn('web-tpl', 'Templates', '/platform/website/templates'),
+      mn('web-ver', 'Versionamento', '/platform/website/versions'),
     ],
-  },
-  { id: 'fiscal', label: 'Fiscal', path: '/platform/fiscal', icon: 'ScrollText' },
-  {
-    id: 'settings', label: 'Settings', path: '/platform/settings', icon: 'Settings',
+  }),
+  mn('fiscal', 'Fiscal', '/platform/fiscal', { icon: 'ScrollText' }),
+  mn('settings', 'Settings', '/platform/settings', {
+    icon: 'Settings',
     children: [
-      { id: 'set-ver', label: 'Versionamento', path: '/platform/settings/versioning' },
-      {
-        id: 'structure', label: 'Estrutura', path: '/platform/structure',
+      mn('set-ver', 'Versionamento', '/platform/settings/versioning'),
+      mn('structure', 'Estrutura', '/platform/structure', {
         children: [
-          { id: 'str-events', label: 'Eventos', path: '/platform/structure/events' },
-          { id: 'str-menus', label: 'Menus', path: '/platform/structure/menus' },
-          { id: 'str-modules', label: 'Módulos', path: '/platform/structure/modules' },
+          mn('str-events', 'Eventos', '/platform/structure/events'),
+          mn('str-menus', 'Menus', '/platform/structure/menus'),
+          mn('str-modules', 'Módulos', '/platform/structure/modules'),
         ],
-      },
+      }),
     ],
-  },
+  }),
 ];
 
 /* ─── Component ─── */
@@ -164,7 +180,7 @@ export default function PlatformMenuStructure() {
   const flatNodes = useMemo(() => engine.tree.flattenAll(tree), [tree]);
   const totalRoots = tree.length;
   const totalNodes = flatNodes.length;
-  const withRoles = flatNodes.filter(n => n.allowedRoles && n.allowedRoles.length > 0).length;
+  const withRoles = flatNodes.filter(n => n.role_permissions && n.role_permissions.length > 0).length;
 
   const versions = engine.versions.getVersions();
 
@@ -236,10 +252,10 @@ export default function PlatformMenuStructure() {
 
     // Persist for sidebar
     const order: SavedMenuOrder = {
-      rootOrder: tree.map(n => n.path),
+      rootOrder: tree.map(n => n.slug),
       childrenOrder: tree.reduce((acc, n) => {
         if (n.children && n.children.length > 0) {
-          acc[n.path] = n.children.map(c => c.path);
+          acc[n.slug] = n.children.map(c => c.slug);
         }
         return acc;
       }, {} as Record<string, string[]>),
@@ -294,7 +310,6 @@ export default function PlatformMenuStructure() {
       return;
     }
 
-    const targetNode = engine.tree.findNode(targetId);
     const targetParent = engine.tree.findParent(targetId);
     const targetSiblings = targetParent?.children ?? engine.tree.getTree();
     const targetIdx = targetSiblings.findIndex(n => n.id === targetId);
@@ -386,7 +401,7 @@ export default function PlatformMenuStructure() {
             <Icon className={cn('h-3.5 w-3.5', depth === 0 ? 'text-primary' : 'text-muted-foreground')} />
           </div>
 
-          {/* Label & path */}
+          {/* Label & slug */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className={cn('text-sm font-medium truncate', depth === 0 ? 'font-semibold text-foreground' : 'text-foreground/80')}>
@@ -397,14 +412,14 @@ export default function PlatformMenuStructure() {
                   locked
                 </Badge>
               )}
-              {node.allowedRoles && node.allowedRoles.length > 0 && (
+              {node.role_permissions && node.role_permissions.length > 0 && (
                 <Badge variant="outline" className="text-[9px] border-primary/30 text-primary/70 gap-0.5">
                   <Shield className="h-2.5 w-2.5" />
-                  {node.allowedRoles.length}
+                  {node.role_permissions.length}
                 </Badge>
               )}
             </div>
-            <span className="text-[10px] text-muted-foreground font-mono block truncate">{node.path}</span>
+            <span className="text-[10px] text-muted-foreground font-mono block truncate">{node.slug}</span>
           </div>
 
           {/* Depth badge */}
