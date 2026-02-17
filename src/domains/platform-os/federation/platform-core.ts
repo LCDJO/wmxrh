@@ -2,20 +2,24 @@
  * PlatformCore — Unified facade composing all Module Federation services.
  *
  * PlatformCore
- *  ├── ModuleRegistry        (catalog & storage)
- *  ├── ModuleLoader          (dynamic lazy-loading)
- *  ├── ModuleSandbox         (isolated execution contexts)
- *  ├── ModuleLifecycleManager(state machine, dependency graph)
- *  └── ModulePermissionAdapter(security bridge, tenant scoping)
+ *  ├── ModuleRegistry          (catalog & storage)
+ *  ├── ModuleLoader            (dynamic lazy-loading)
+ *  ├── ModuleSandbox           (isolated execution contexts)
+ *  ├── ModuleLifecycleManager  (state machine, dependency graph)
+ *  ├── ModulePermissionAdapter (security bridge, tenant scoping)
+ *  ├── WidgetRegistry          (dashboard widget system)
+ *  └── FeatureFlagBridge       (module → feature flag sync)
  */
 
-import type { GlobalEventKernelAPI, ModuleRegistration, ModuleDescriptor } from '../types';
+import type { GlobalEventKernelAPI, ModuleRegistration, ModuleDescriptor, FeatureLifecycleAPI } from '../types';
 import { MODULE_FEDERATION_MAP } from './module-definitions';
 import { createModuleRegistry, type ModuleRegistryAPI } from './module-registry';
 import { createModuleLoader, type ModuleLoaderAPI, type ModuleManifest, type ModuleWidget, type ModuleNavigationEntry, type ModuleLoadContext } from './module-loader';
 import { createModuleSandbox, type ModuleSandboxAPI, type SandboxContext } from './module-sandbox';
 import { createModuleLifecycleManager, type ModuleLifecycleManagerAPI } from './module-lifecycle-manager';
 import { createModulePermissionAdapter, type ModulePermissionAdapterAPI, type PermissionContext } from './module-permission-adapter';
+import { createWidgetRegistry, type WidgetRegistryAPI, type WidgetRegistration, type WidgetRenderContext, type WidgetContext, type ResolvedWidget } from './widget-registry';
+import { createModuleFeatureFlagBridge, type ModuleFeatureFlagBridgeAPI, type ModuleFeatureFlagDeclaration } from './module-feature-flag-bridge';
 
 export interface PlatformCoreAPI {
   // ── Registry ───────────────────────────────────────────────
@@ -38,13 +42,9 @@ export interface PlatformCoreAPI {
   getComponent(key: string): React.LazyExoticComponent<React.ComponentType<any>> | null;
   preloadModule(key: string): Promise<void>;
   getManifest(key: string): ModuleManifest | null;
-  /** Resolve modules eligible for a given runtime context */
   resolveForContext(ctx: ModuleLoadContext): ModuleManifest[];
-  /** Resolve widgets for a shell slot given a context */
   resolveWidgets(slot: ModuleWidget['slot'], ctx: ModuleLoadContext): ModuleWidget[];
-  /** Resolve navigation entries given a context */
   resolveNavigation(ctx: ModuleLoadContext): ModuleNavigationEntry[];
-  /** Bulk-register all modules from MODULE_FEDERATION_MAP */
   registerAll(): void;
 
   // ── Sandbox ────────────────────────────────────────────────
@@ -63,20 +63,49 @@ export interface PlatformCoreAPI {
   disableForTenant(key: string, tenantId: string): void;
   listForTenant(tenantId: string): ModuleDescriptor[];
 
+  // ── Widgets ────────────────────────────────────────────────
+  registerWidget(widget: WidgetRegistration): void;
+  resolveWidgetsForContext(context: WidgetContext, renderCtx: WidgetRenderContext): ResolvedWidget[];
+
+  // ── Feature Flags ──────────────────────────────────────────
+  registerModuleFlags(moduleId: string, declarations: ModuleFeatureFlagDeclaration[]): void;
+  isFeatureEnabled(flag: string, ctx?: { tenantId?: string }): boolean;
+
   // ── Sub-systems (for advanced usage) ───────────────────────
   readonly registry: ModuleRegistryAPI;
   readonly loader: ModuleLoaderAPI;
   readonly sandboxManager: ModuleSandboxAPI;
   readonly lifecycle: ModuleLifecycleManagerAPI;
   readonly permissions: ModulePermissionAdapterAPI;
+  readonly widgets: WidgetRegistryAPI;
+  readonly featureFlags: ModuleFeatureFlagBridgeAPI;
 }
 
-export function createPlatformCore(events: GlobalEventKernelAPI): PlatformCoreAPI {
+export function createPlatformCore(
+  events: GlobalEventKernelAPI,
+  featureLifecycle?: FeatureLifecycleAPI,
+): PlatformCoreAPI {
   const registry = createModuleRegistry(events);
   const loader = createModuleLoader(events);
   const sandboxManager = createModuleSandbox(events);
   const lifecycle = createModuleLifecycleManager(registry, events);
   const permissions = createModulePermissionAdapter(registry, events);
+  const widgetRegistry = createWidgetRegistry(events);
+
+  // FeatureFlagBridge needs a FeatureLifecycleAPI — use provided or stub
+  const featureStub: FeatureLifecycleAPI = featureLifecycle ?? {
+    register: () => {},
+    isEnabled: () => false,
+    toggle: () => {},
+    transitionPhase: () => {},
+    list: () => [],
+    getPhase: () => null,
+    get: () => null,
+    listSunsetting: () => [],
+    enableForTenant: () => {},
+    disableForTenant: () => {},
+  };
+  const featureFlagBridge = createModuleFeatureFlagBridge(featureStub, events);
 
   // ── Composed API ─────────────────────────────────────────────
 
@@ -84,15 +113,18 @@ export function createPlatformCore(events: GlobalEventKernelAPI): PlatformCoreAP
     registry.register(mod);
     if (manifest) {
       loader.registerManifest(manifest);
-      // Auto-register module permissions in the PermissionEngine
       permissions.registerModulePermissions(manifest);
+      widgetRegistry.registerFromManifest(manifest);
+      featureFlagBridge.registerFromManifest(manifest);
     }
-    // Auto-create sandbox on registration
     sandboxManager.create(mod.key as string);
     events.emit('platform:module_federated', 'PlatformCore', { key: mod.key });
   }
 
   function unregister(key: string): void {
+    // Remove widgets for this module
+    const moduleWidgets = widgetRegistry.listWidgetsForModule(key);
+    for (const w of moduleWidgets) widgetRegistry.unregisterWidget(w.widget_id);
     sandboxManager.destroy(key);
     registry.unregister(key);
   }
@@ -103,7 +135,6 @@ export function createPlatformCore(events: GlobalEventKernelAPI): PlatformCoreAP
 
   async function deactivate(key: string): Promise<void> {
     await lifecycle.deactivate(key);
-    // Destroy sandbox on deactivation to free resources
     sandboxManager.destroy(key);
   }
 
@@ -151,10 +182,20 @@ export function createPlatformCore(events: GlobalEventKernelAPI): PlatformCoreAP
     disableForTenant: (key, tid) => permissions.disableForTenant(key, tid),
     listForTenant: (tid) => permissions.listForTenant(tid),
 
+    // Widgets
+    registerWidget: (w) => widgetRegistry.registerWidget(w),
+    resolveWidgetsForContext: (ctx, renderCtx) => widgetRegistry.resolveWidgets(ctx, renderCtx),
+
+    // Feature Flags
+    registerModuleFlags: (moduleId, decls) => featureFlagBridge.registerModuleFlags(moduleId, decls),
+    isFeatureEnabled: (flag, ctx) => featureFlagBridge.isEnabled(flag, ctx),
+
     registry,
     loader,
     sandboxManager,
     lifecycle,
     permissions,
+    widgets: widgetRegistry,
+    featureFlags: featureFlagBridge,
   };
 }
