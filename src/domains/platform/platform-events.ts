@@ -32,7 +32,13 @@ export type PlatformEventType =
   | 'PlanAssignedToTenant'
   | 'PlanUpgraded'
   | 'PlanDowngraded'
-  | 'PaymentMethodRestricted';
+  | 'PaymentMethodRestricted'
+  // Marketing / A/B Testing events
+  | 'ABExperimentStarted'
+  | 'ABVariantAssigned'
+  | 'ConversionTracked'
+  | 'LandingRankUpdated'
+  | 'AIExperimentSuggestionGenerated';
 
 export interface PlatformEventPayload {
   type: PlatformEventType;
@@ -41,7 +47,7 @@ export interface PlatformEventPayload {
   actorId: string;
   actorEmail?: string;
   /** Target entity */
-  targetType: 'platform_user' | 'tenant' | 'platform_role' | 'cognitive_layer' | 'billing';
+  targetType: 'platform_user' | 'tenant' | 'platform_role' | 'cognitive_layer' | 'billing' | 'marketing';
   targetId: string;
   /** Extra context */
   metadata?: Record<string, unknown>;
@@ -277,6 +283,70 @@ export const platformEvents = {
       actorId,
       targetType: 'billing',
       targetId: tenantId,
+      metadata: opts,
+    });
+  },
+
+  // ═══════════════════════════════════
+  // Marketing / A/B Testing Events
+  // ═══════════════════════════════════
+
+  /** Emitted when an A/B experiment is started. */
+  abExperimentStarted(actorId: string, opts: { experimentId: string; experimentName: string; landingPageId: string; variantCount: number }) {
+    emit({
+      type: 'ABExperimentStarted',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'marketing',
+      targetId: opts.experimentId,
+      metadata: opts,
+    });
+  },
+
+  /** Emitted when a visitor is assigned to an A/B variant. */
+  abVariantAssigned(actorId: string, opts: { experimentId: string; variantId: string; variantName: string; isControl: boolean }) {
+    emit({
+      type: 'ABVariantAssigned',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'marketing',
+      targetId: opts.variantId,
+      metadata: opts,
+    });
+  },
+
+  /** Emitted when a conversion is recorded for an experiment variant. */
+  conversionTracked(actorId: string, opts: { experimentId: string; variantId: string; metric: string; value?: number }) {
+    emit({
+      type: 'ConversionTracked',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'marketing',
+      targetId: opts.experimentId,
+      metadata: opts,
+    });
+  },
+
+  /** Emitted when the landing page ranking is recalculated. */
+  landingRankUpdated(actorId: string, opts: { landingPageId: string; previousRank?: number; newRank: number; metric: string }) {
+    emit({
+      type: 'LandingRankUpdated',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'marketing',
+      targetId: opts.landingPageId,
+      metadata: opts,
+    });
+  },
+
+  /** Emitted when AI generates a suggestion for an experiment (new variant, early stop, etc.). */
+  aiExperimentSuggestionGenerated(actorId: string, opts: { experimentId: string; suggestionType: string; suggestion: string; confidence: number }) {
+    emit({
+      type: 'AIExperimentSuggestionGenerated',
+      timestamp: new Date().toISOString(),
+      actorId,
+      targetType: 'marketing',
+      targetId: opts.experimentId,
       metadata: opts,
     });
   },
