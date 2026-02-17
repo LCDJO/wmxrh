@@ -3629,6 +3629,89 @@ export type Database = {
           },
         ]
       }
+      landing_traffic_allocations: {
+        Row: {
+          allocated_at: string
+          experiment_id: string
+          id: string
+          variant_id: string
+          visitor_id: string
+        }
+        Insert: {
+          allocated_at?: string
+          experiment_id: string
+          id?: string
+          variant_id: string
+          visitor_id: string
+        }
+        Update: {
+          allocated_at?: string
+          experiment_id?: string
+          id?: string
+          variant_id?: string
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_traffic_allocations_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "landing_experiments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_traffic_allocations_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "landing_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_variants: {
+        Row: {
+          created_at: string
+          cta_variant: string | null
+          experiment_id: string
+          fab_structure_snapshot: Json | null
+          headline_variant: string | null
+          id: string
+          updated_at: string
+          version_id: string | null
+          weight_percentage: number
+        }
+        Insert: {
+          created_at?: string
+          cta_variant?: string | null
+          experiment_id: string
+          fab_structure_snapshot?: Json | null
+          headline_variant?: string | null
+          id?: string
+          updated_at?: string
+          version_id?: string | null
+          weight_percentage?: number
+        }
+        Update: {
+          created_at?: string
+          cta_variant?: string | null
+          experiment_id?: string
+          fab_structure_snapshot?: Json | null
+          headline_variant?: string | null
+          id?: string
+          updated_at?: string
+          version_id?: string | null
+          weight_percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_variants_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "landing_experiments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_command: string | null
