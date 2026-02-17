@@ -20,6 +20,7 @@ import { getMetricsCollector } from '@/domains/observability/metrics-collector';
 export type LandingAuditActionType =
   | 'draft_deleted'
   | 'version_created'
+  | 'version_approved'
   | 'version_published'
   | 'version_superseded';
 
@@ -153,6 +154,27 @@ class LandingAuditLogService {
     });
   }
 
+  async versionApproved(opts: {
+    landingPageId: string;
+    versionId: string;
+    versionNumber: number;
+    actorId: string;
+    actorEmail: string;
+    actorRole: string;
+  }): Promise<void> {
+    await this.record({
+      action_type: 'version_approved',
+      landing_page_id: opts.landingPageId,
+      version_id: opts.versionId,
+      version_number: opts.versionNumber,
+      actor_id: opts.actorId,
+      actor_email: opts.actorEmail,
+      actor_role: opts.actorRole,
+      old_value: { status: 'submitted' },
+      new_value: { status: 'approved' },
+    });
+  }
+
   async versionPublished(opts: {
     landingPageId: string;
     versionId: string;
@@ -209,7 +231,7 @@ class LandingAuditLogService {
       .select('*')
       .eq('entity_type', 'landing_page')
       .eq('entity_id', landingPageId)
-      .in('action', ['draft_deleted', 'version_created', 'version_published', 'version_superseded'])
+      .in('action', ['draft_deleted', 'version_created', 'version_approved', 'version_published', 'version_superseded'])
       .order('created_at', { ascending: false });
 
     // Also fetch version-level entries
@@ -217,7 +239,7 @@ class LandingAuditLogService {
       .from('audit_logs')
       .select('*')
       .eq('entity_type', 'landing_page_version')
-      .in('action', ['draft_deleted', 'version_created', 'version_published', 'version_superseded'])
+      .in('action', ['draft_deleted', 'version_created', 'version_approved', 'version_published', 'version_superseded'])
       .order('created_at', { ascending: false });
 
     // Filter version entries by landing_page_id in metadata
@@ -247,6 +269,14 @@ class LandingAuditLogService {
           landingPageId: entry.landing_page_id,
           versionId: entry.version_id!,
           versionNumber: entry.version_number!,
+        });
+        break;
+      case 'version_approved':
+        platformEvents.landingVersionApproved(entry.actor_id, {
+          landingPageId: entry.landing_page_id,
+          versionId: entry.version_id!,
+          versionNumber: entry.version_number!,
+          approvedBy: entry.actor_email,
         });
         break;
       case 'version_published':

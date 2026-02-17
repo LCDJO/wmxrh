@@ -241,6 +241,15 @@ export const landingVersionService = {
         actorEmail: actor.email,
         actorRole: actor.role,
       });
+    } else if (targetStatus === 'approved') {
+      await landingAuditLog.versionApproved({
+        landingPageId: version.landing_page_id,
+        versionId,
+        versionNumber: version.version_number,
+        actorId: actor.userId,
+        actorEmail: actor.email,
+        actorRole: actor.role,
+      });
     } else {
       await (supabase.from('audit_logs') as any).insert({
         tenant_id: '00000000-0000-0000-0000-000000000000',
