@@ -36,6 +36,14 @@ export const PLATFORM_PERMISSIONS = [
   'platform_user.delete',
   'security.view',
   'security.manage',
+  // ── Support Tickets ──
+  'ticket.view',
+  'ticket.assign_self',
+  'ticket.assign_any',
+  'ticket.reply',
+  'ticket.close',
+  'ticket.reopen',
+  'support.analytics.view',
   // ── Future: Delegated Support ──
   'support.delegate',
   'support.escalate',
@@ -247,6 +255,30 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing.approve',
     'landing.reject',
     'landing.publish',
+  ],
+
+  // ── Support granular roles ──
+  platform_support_agent: [
+    'tenant.view',
+    'ticket.view',
+    'ticket.assign_self',
+    'ticket.reply',
+    'ticket.close',
+    'audit.view',
+  ],
+
+  platform_support_manager: [
+    'tenant.view',
+    'ticket.view',
+    'ticket.assign_self',
+    'ticket.assign_any',
+    'ticket.reply',
+    'ticket.close',
+    'ticket.reopen',
+    'support.analytics.view',
+    'support.impersonate',
+    'audit.view',
+    'platform_user.view',
   ],
 };
 

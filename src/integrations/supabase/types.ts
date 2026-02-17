@@ -7852,6 +7852,8 @@ export type Database = {
         | "platform_fiscal"
         | "platform_marketing_team"
         | "platform_marketing_director"
+        | "platform_support_agent"
+        | "platform_support_manager"
       risk_category:
         | "fisico"
         | "quimico"
@@ -8139,6 +8141,8 @@ export const Constants = {
         "platform_fiscal",
         "platform_marketing_team",
         "platform_marketing_director",
+        "platform_support_agent",
+        "platform_support_manager",
       ],
       risk_category: [
         "fisico",

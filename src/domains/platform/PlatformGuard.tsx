@@ -17,6 +17,9 @@ export type PlatformRoleType =
   | 'platform_marketing'
   | 'platform_marketing_team'
   | 'platform_marketing_director'
+  // ── Support granular roles ──
+  | 'platform_support_agent'
+  | 'platform_support_manager'
   // ── Future roles (prepared, not yet active) ──
   | 'platform_delegated_support'
   | 'platform_marketplace_admin'
