@@ -41,6 +41,20 @@ export interface ApprovalRequest {
   updated_at: string;
 }
 
+/**
+ * LandingApproval — Simplified entity view matching the spec:
+ * id, landing_page_id, submitted_by, reviewed_by, status, review_notes, reviewed_at
+ */
+export interface LandingApproval {
+  id: string;
+  landing_page_id: string;
+  submitted_by: string;
+  reviewed_by: string | null;
+  status: 'approved' | 'rejected';
+  review_notes: string | null;
+  reviewed_at: string | null;
+}
+
 export interface GovernanceLog {
   id: string;
   approval_request_id: string;

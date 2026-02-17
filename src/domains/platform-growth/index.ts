@@ -74,7 +74,7 @@ export type {
 
 // ── Landing Page Governance ──
 export { landingPageGovernance, LandingPageGovernanceEngine } from './landing-page-governance';
-export type { ApprovalRequest, GovernanceLog, GovernanceStatus } from './landing-page-governance';
+export type { ApprovalRequest, GovernanceLog, GovernanceStatus, LandingApproval } from './landing-page-governance';
 
 // ── Landing Page Status Machine ──
 export {
