@@ -15,6 +15,7 @@ import { getErrorTracker } from './error-tracker';
 import { getPerformanceProfiler } from './performance-profiler';
 import { getLogStreamAdapter, type LogEntry } from './log-stream-adapter';
 import { getSecurityEventCollector } from './security-event-collector';
+import { getGatewayPerformanceTracker } from './gateway-performance-tracker';
 import type { PrometheusMetric } from './types';
 
 // ═══════════════════════════════════════════════════════════════
@@ -85,6 +86,21 @@ export function exportPrometheus(): PrometheusExportResult {
   collector.gauge('traces_total', traceStats.total);
   collector.gauge('traces_active', traceStats.active);
   collector.gauge('traces_avg_duration_ms', traceStats.avg_duration_ms);
+
+  // Gateway / Module / AccessGraph performance
+  const gwPerf = getGatewayPerformanceTracker().getSummary();
+  collector.gauge('gateway_response_avg_ms', gwPerf.gateway.avg);
+  collector.gauge('gateway_response_p95_ms', gwPerf.gateway.p95);
+  collector.gauge('gateway_response_p99_ms', gwPerf.gateway.p99);
+  collector.gauge('module_latency_avg_ms', gwPerf.module.avg);
+  collector.gauge('module_latency_p95_ms', gwPerf.module.p95);
+  collector.gauge('access_graph_recomposition_avg_ms', gwPerf.access_graph.avg);
+  collector.gauge('access_graph_recomposition_p95_ms', gwPerf.access_graph.p95);
+
+  for (const [mod, stats] of Object.entries(gwPerf.by_module)) {
+    collector.gauge('module_latency_avg_ms', stats.avg, { module: mod });
+    collector.gauge('module_latency_p95_ms', stats.p95, { module: mod });
+  }
 
   const metrics = collector.toPrometheus();
   const text = collector.toPrometheusText();

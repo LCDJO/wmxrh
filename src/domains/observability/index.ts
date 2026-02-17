@@ -9,6 +9,7 @@
  *   ├── PerformanceProfiler      → Web Vitals, memory, DOM stats
  *   ├── SecurityEventCollector   → access events, anomalies, impersonation
  *   ├── LogStreamAdapter         → structured log buffer with real-time streaming
+ *   ├── GatewayPerformanceTracker→ gateway/module/AccessGraph latency
  *   └── GrafanaIntegrationAdapter
  *       ├── Prometheus  → metrics text export
  *       ├── Loki        → structured log streams
@@ -20,6 +21,7 @@ export { getErrorTracker, ErrorTracker } from './error-tracker';
 export { getPerformanceProfiler, PerformanceProfiler } from './performance-profiler';
 export { getSecurityEventCollector, SecurityEventCollector } from './security-event-collector';
 export { getLogStreamAdapter, LogStreamAdapter } from './log-stream-adapter';
+export { getGatewayPerformanceTracker, GatewayPerformanceTracker } from './gateway-performance-tracker';
 export {
   exportPrometheus,
   exportLogsAsLoki,
