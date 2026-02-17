@@ -3902,6 +3902,67 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_financial_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          description: string | null
+          entry_type: string
+          id: string
+          invoice_id: string | null
+          metadata: Json | null
+          source_plan_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          entry_type: string
+          id?: string
+          invoice_id?: string | null
+          metadata?: Json | null
+          source_plan_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          entry_type?: string
+          id?: string
+          invoice_id?: string | null
+          metadata?: Json | null
+          source_plan_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_financial_entries_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_financial_entries_source_plan_id_fkey"
+            columns: ["source_plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_financial_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_permission_definitions: {
         Row: {
           action: string
