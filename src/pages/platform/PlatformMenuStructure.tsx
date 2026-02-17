@@ -242,6 +242,16 @@ export default function PlatformMenuStructure() {
     toast.success(`${fixes.length} correção(ões) aplicada(s)`);
   };
 
+  const handleAutoFixWarnings = () => {
+    const { fixed, fixes } = engine.validator.autoFix(tree, true);
+    if (fixes.length === 0) { toast.info('Nenhum aviso corrigível'); return; }
+    engine.tree.setTree(fixed);
+    syncTree();
+    const result = engine.validator.validate(engine.tree.getTree());
+    setValidation(result);
+    toast.success(`${fixes.length} aviso(s) corrigido(s)`);
+  };
+
   const canSave = engine.permissions.canEditTree(editorRole);
 
   const handleCompareDiff = () => {
@@ -465,7 +475,13 @@ export default function PlatformMenuStructure() {
                   )}
                   {validation.warnings.length > 0 && (
                     <div className="space-y-1.5">
-                      <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Avisos ({validation.warnings.length})</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Avisos ({validation.warnings.length})</p>
+                        <Button variant="outline" size="sm" className="text-xs gap-1.5 border-amber-500/30 text-amber-400 hover:bg-amber-500/10" onClick={handleAutoFixWarnings}>
+                          <Zap className="h-3 w-3" />
+                          Corrigir Avisos
+                        </Button>
+                      </div>
                       <ScrollArea className="h-[200px]">
                         {validation.warnings.map((warn, i) => (
                           <div key={i} className="flex items-center gap-2 rounded border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-400 mb-1">
