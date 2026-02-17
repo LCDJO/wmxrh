@@ -5833,6 +5833,10 @@ export type Database = {
         Returns: boolean
       }
       is_active_platform_user: { Args: { _user_id: string }; Returns: boolean }
+      is_platform_billing_admin: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       is_platform_user: { Args: { _user_id: string }; Returns: boolean }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
