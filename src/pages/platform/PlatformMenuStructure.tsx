@@ -93,6 +93,7 @@ const createDefaultTree = (): MenuNode[] => [
       { id: 'growth-submissions', label: 'Minhas Submissões', path: '/platform/growth/submissions' },
       { id: 'growth-approvals', label: 'Fila de Aprovação', path: '/platform/growth/approvals' },
       { id: 'growth-versions', label: 'Versionamento & Publicação', path: '/platform/growth/version-publish' },
+      { id: 'growth-mkt-analytics', label: 'Marketing Analytics', path: '/platform/marketing/analytics' },
     ],
   },
   { id: 'fiscal', label: 'Fiscal', path: '/platform/fiscal', icon: ScrollText },
