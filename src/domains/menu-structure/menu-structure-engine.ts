@@ -328,20 +328,79 @@ export class MenuLayoutValidator {
     const errors: MenuValidationError[] = [];
     const warnings: MenuValidationWarning[] = [];
     const slugs = new Set<string>();
+    const allIds = new Set<string>();
 
-    this.walk(tree, 0, slugs, errors, warnings);
+    // 1. Walk tree for basic checks + collect all IDs
+    this.walk(tree, 0, slugs, allIds, errors, warnings);
+
+    // 2. Circular reference detection (parent_id pointing to descendant)
+    this.detectCircularRefs(tree, errors);
+
+    // 3. Orphan detection (parent_id references a non-existent node)
+    this.detectOrphans(tree, allIds, errors);
 
     return { valid: errors.length === 0, errors, warnings };
+  }
+
+  /** Detect circular loops: a node whose parent_id is one of its own descendants */
+  private detectCircularRefs(tree: MenuTreeNode[], errors: MenuValidationError[]): void {
+    const flat = this.flatten(tree);
+    const childrenMap = new Map<string, string[]>();
+    for (const n of flat) {
+      if (n.parent_id) {
+        const list = childrenMap.get(n.parent_id) ?? [];
+        list.push(n.id);
+        childrenMap.set(n.parent_id, list);
+      }
+    }
+
+    const getDescendants = (id: string, visited: Set<string>): boolean => {
+      if (visited.has(id)) return true; // loop detected
+      visited.add(id);
+      for (const childId of childrenMap.get(id) ?? []) {
+        if (getDescendants(childId, visited)) return true;
+      }
+      return false;
+    };
+
+    for (const n of flat) {
+      if (n.parent_id) {
+        const visited = new Set<string>();
+        visited.add(n.id);
+        // Check if parent_id eventually leads back to this node
+        const parentChildren = childrenMap.get(n.id) ?? [];
+        for (const childId of parentChildren) {
+          const path = new Set<string>([n.id]);
+          if (getDescendants(childId, path) && path.has(n.parent_id)) {
+            errors.push({ nodeId: n.id, message: `Loop circular detectado: "${n.label}" referencia um ancestral como pai`, type: 'circular' });
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  /** Detect orphan nodes: parent_id points to a node that doesn't exist in the tree */
+  private detectOrphans(tree: MenuTreeNode[], allIds: Set<string>, errors: MenuValidationError[]): void {
+    const flat = this.flatten(tree);
+    for (const n of flat) {
+      if (n.parent_id && !allIds.has(n.parent_id)) {
+        errors.push({ nodeId: n.id, message: `Nó órfão: parent_id "${n.parent_id}" não existe na árvore`, type: 'orphan' });
+      }
+    }
   }
 
   private walk(
     nodes: MenuTreeNode[],
     depth: number,
     slugs: Set<string>,
+    allIds: Set<string>,
     errors: MenuValidationError[],
     warnings: MenuValidationWarning[],
   ): void {
     for (const n of nodes) {
+      allIds.add(n.id);
+
       // Duplicate slug
       if (slugs.has(n.slug)) {
         errors.push({ nodeId: n.id, message: `Slug duplicado: ${n.slug}`, type: 'duplicate_path' });
@@ -372,9 +431,18 @@ export class MenuLayoutValidator {
       }
 
       if (n.children) {
-        this.walk(n.children, depth + 1, slugs, errors, warnings);
+        this.walk(n.children, depth + 1, slugs, allIds, errors, warnings);
       }
     }
+  }
+
+  private flatten(nodes: MenuTreeNode[]): MenuTreeNode[] {
+    const result: MenuTreeNode[] = [];
+    for (const n of nodes) {
+      result.push(n);
+      if (n.children) result.push(...this.flatten(n.children));
+    }
+    return result;
   }
 }
 
