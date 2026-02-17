@@ -3,26 +3,23 @@
  *
  * Integrates with:
  *  - FABContentEngine (copy blueprint)
+ *  - GTMInjectionService (5 automatic events)
  *  - ConversionTrackingService (event tracking)
- *  - NavigationIntelligence (route registration)
- *  - Design System (automatic token application)
+ *  - ReferralTrackingService (referral attribution)
  *
- * Mandatory section order:
- *   1. HeroSection
- *   2. FABSection (Features + Advantages + Benefits)
- *   3. PricingSection
- *   4. ReferralCTA
- *   5. TestimonialsSection
- *   6. FAQSection
- *   7. FooterSection
+ * GTM Automatic Events:
+ *  1. page_view       → on mount
+ *  2. cta_click       → on any CTA button click
+ *  3. trial_start     → on free trial CTA click
+ *  4. plan_selected   → on pricing plan selection
+ *  5. referral_signup → on referral share/signup
  */
 import { useEffect, useMemo, useRef } from 'react';
 import type { LPCopyBlueprint, LandingPage } from '@/domains/platform-growth/types';
 import { fabContentEngine } from '@/domains/platform-growth/landing-page-builder';
 import { conversionTrackingService } from '@/domains/platform-growth/conversion-tracking-service';
-import { tagManagerIntegration } from '@/domains/platform-growth/tag-manager-integration';
+import { gtmInjectionService } from '@/domains/platform-growth/tag-manager-integration';
 import { referralTrackingService } from '@/domains/platform-growth/referral-tracking-service';
-import { siteStructureManager } from '@/domains/platform-growth/site-structure-manager';
 import { useAuth } from '@/contexts/AuthContext';
 import { HeroSection } from './HeroSection';
 import { FABSection } from './FABSection';
@@ -34,14 +31,10 @@ import { FooterSection } from './FooterSection';
 import { SiteNavbar } from './SiteNavbar';
 
 interface LandingPageRendererProps {
-  /** Pre-built blueprint (takes precedence) */
   blueprint?: LPCopyBlueprint;
-  /** Or auto-generate from industry + modules */
   industry?: string;
   modules?: string[];
-  /** Landing page entity for tracking */
   page?: LandingPage;
-  /** Referral code to display */
   referralCode?: string;
 }
 
@@ -61,25 +54,34 @@ export function LandingPageRenderer({
     return fabContentEngine.generateBlueprint(industry, modules);
   }, [externalBlueprint, industry, modules]);
 
-  // ── Resolve referral code from URL or prop ──
+  // ── Resolve referral code ──
   const resolvedRef = referralCode ?? referralTrackingService.extractCodeFromURL() ?? undefined;
 
-  // ── Inject GTM snippet + track page view + referral attribution on mount ──
+  // ── GTM Injection + page_view on mount ──
   useEffect(() => {
-    if (page && !viewTracked.current) {
-      viewTracked.current = true;
+    if (viewTracked.current) return;
+    viewTracked.current = true;
 
-      // Inject GTM script if container ID is configured
-      if (page.gtm_container_id) {
-        injectGTM(page.gtm_container_id);
-        pushDataLayer('landing_page_view', { page_id: page.id, slug: page.slug });
-      }
+    // 1. Inject GTM script if container ID configured
+    if (page?.gtm_container_id) {
+      gtmInjectionService.inject(page.gtm_container_id);
+    }
 
-      // If referral code present, attribute this visit to the referrer
-      if (resolvedRef) {
-        referralTrackingService.trackReferralEvent(page.id, resolvedRef, 'referral_click');
-      }
+    // 2. GTM: page_view
+    gtmInjectionService.trackPageView({
+      page_id: page?.id,
+      slug: page?.slug,
+      industry,
+      referral_code: resolvedRef,
+    });
 
+    // 3. Referral attribution
+    if (resolvedRef && page) {
+      referralTrackingService.trackReferralEvent(page.id, resolvedRef, 'referral_click');
+    }
+
+    // 4. Conversion tracking: page_view
+    if (page) {
       conversionTrackingService.track({
         landingPageId: page.id,
         type: 'signup',
@@ -88,49 +90,120 @@ export function LandingPageRenderer({
         metadata: { event: 'page_view', url: window.location.href },
       });
     }
-  }, [page, resolvedRef]);
+  }, [page, resolvedRef, industry]);
 
-  // ── Track CTA clicks (conversion tracking + GTM dataLayer) ──
-  const handleCTAClick = (section: string) => {
-    if (!page) return;
-    pushDataLayer('cta_click', { page_id: page.id, section });
-    conversionTrackingService.track({
-      landingPageId: page.id,
-      type: 'signup',
-      source: detectSource(),
-      referralCode: resolvedRef,
-      metadata: { event: 'cta_click', section },
+  // ── GTM: cta_click handler ──
+  const handleCTAClick = (section: string, ctaText?: string) => {
+    gtmInjectionService.trackCTAClick({
+      page_id: page?.id,
+      section,
+      cta_text: ctaText,
     });
+
+    if (page) {
+      conversionTrackingService.track({
+        landingPageId: page.id,
+        type: 'signup',
+        source: detectSource(),
+        referralCode: resolvedRef,
+        metadata: { event: 'cta_click', section },
+      });
+    }
+  };
+
+  // ── GTM: trial_start handler ──
+  const handleTrialStart = (planName?: string) => {
+    gtmInjectionService.trackTrialStart({
+      page_id: page?.id,
+      plan_name: planName,
+      source: detectSource(),
+    });
+
+    if (page) {
+      conversionTrackingService.track({
+        landingPageId: page.id,
+        type: 'trial_start',
+        source: detectSource(),
+        referralCode: resolvedRef,
+        metadata: { event: 'trial_start', plan: planName },
+      });
+    }
+  };
+
+  // ── GTM: plan_selected handler ──
+  const handlePlanSelected = (planName: string, planPrice?: string) => {
+    gtmInjectionService.trackPlanSelected({
+      page_id: page?.id,
+      plan_name: planName,
+      plan_price: planPrice,
+    });
+
+    if (page) {
+      conversionTrackingService.track({
+        landingPageId: page.id,
+        type: 'plan_selected',
+        source: detectSource(),
+        referralCode: resolvedRef,
+        metadata: { event: 'plan_selected', plan: planName, price: planPrice },
+      });
+    }
+  };
+
+  // ── GTM: referral_signup handler ──
+  const handleReferralAction = (action: 'share' | 'signup' | 'click') => {
+    gtmInjectionService.trackReferralSignup({
+      page_id: page?.id,
+      referral_code: resolvedRef,
+      action,
+    });
+
+    if (page) {
+      conversionTrackingService.track({
+        landingPageId: page.id,
+        type: 'referral_click',
+        source: detectSource(),
+        referralCode: resolvedRef,
+        metadata: { event: 'referral_signup', action },
+      });
+    }
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground" onClick={captureCtaClicks(handleCTAClick)}>
-      {/* Navigation — Identity-aware + Navigation Intelligence */}
       <SiteNavbar domain={page?.slug ?? 'default'} />
 
       {/* 1. Hero */}
-      <HeroSection data={blueprint.hero} />
+      <HeroSection
+        data={blueprint.hero}
+        onCTAClick={() => handleTrialStart()}
+      />
 
-      {/* 2. FAB (Features + Advantages + Benefits) */}
+      {/* 2. FAB */}
       <FABSection
         features={blueprint.features}
         advantages={blueprint.advantages}
         benefits={blueprint.benefits}
       />
 
-      {/* 3. Pricing */}
-      <PricingSection />
+      {/* 3. Pricing — fires plan_selected + trial_start */}
+      <PricingSection
+        onPlanSelect={handlePlanSelected}
+        onTrialStart={handleTrialStart}
+      />
 
-      {/* 4. Referral CTA */}
-      <ReferralCTA referralCode={resolvedRef} />
+      {/* 4. Referral CTA — fires referral_signup */}
+      <ReferralCTA
+        referralCode={resolvedRef}
+        onReferralAction={handleReferralAction}
+      />
 
-      {/* 5. Testimonials + Proof */}
+      {/* 5. Testimonials */}
       <TestimonialsSection data={blueprint.proof} />
 
       {/* 6. FAQ */}
       <FAQSection />
 
-      {/* 7. Footer (with final CTA) — identity-aware */}
+      {/* 7. Footer */}
       <FooterSection cta={blueprint.cta} />
     </div>
   );
@@ -138,54 +211,24 @@ export function LandingPageRenderer({
 
 // ── Utilities ────────────────────────────────────────────────
 
-/** Detect traffic source from URL params or referrer */
 function detectSource(): string {
   const params = new URLSearchParams(window.location.search);
   const utmSource = params.get('utm_source');
   if (utmSource) return utmSource;
   if (document.referrer) {
-    try {
-      return new URL(document.referrer).hostname;
-    } catch {
-      return 'direct';
-    }
+    try { return new URL(document.referrer).hostname; } catch { return 'direct'; }
   }
   return 'direct';
 }
 
-/** Delegate click handler for CTA buttons */
-function captureCtaClicks(handler: (section: string) => void) {
+function captureCtaClicks(handler: (section: string, ctaText?: string) => void) {
   return (e: React.MouseEvent) => {
     const target = (e.target as HTMLElement).closest('button, a');
     if (!target) return;
     const section = target.closest('section, footer');
     if (section) {
       const heading = section.querySelector('h1, h2');
-      handler(heading?.textContent ?? 'unknown');
+      handler(heading?.textContent ?? 'unknown', target.textContent?.trim());
     }
   };
-}
-
-// ── GTM Helpers ──────────────────────────────────────────────
-
-declare global {
-  interface Window { dataLayer: Record<string, unknown>[]; }
-}
-
-/** Inject the GTM <script> tag once */
-function injectGTM(containerId: string) {
-  if (document.querySelector(`script[data-gtm="${containerId}"]`)) return;
-  const snippet = tagManagerIntegration.generateSnippet(containerId);
-  const wrapper = document.createRange().createContextualFragment(snippet);
-  const script = wrapper.querySelector('script');
-  if (script) {
-    script.setAttribute('data-gtm', containerId);
-    document.head.appendChild(script);
-  }
-}
-
-/** Push a custom event to the GTM dataLayer */
-function pushDataLayer(event: string, params: Record<string, unknown> = {}) {
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push({ event, ...params });
 }

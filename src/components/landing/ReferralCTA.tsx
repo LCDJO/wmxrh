@@ -4,9 +4,14 @@ import { Gift, ArrowRight } from 'lucide-react';
 interface Props {
   referralCode?: string;
   reward?: string;
+  onReferralAction?: (action: 'share' | 'signup' | 'click') => void;
 }
 
-export function ReferralCTA({ referralCode, reward = 'R$ 100 de crédito' }: Props) {
+export function ReferralCTA({ referralCode, reward = 'R$ 100 de crédito', onReferralAction }: Props) {
+  const handleShare = () => {
+    onReferralAction?.('share');
+  };
+
   return (
     <section className="py-12 px-6">
       <div className="max-w-3xl mx-auto rounded-2xl border border-primary/20 bg-primary/5 p-8 text-center space-y-4">
@@ -26,7 +31,7 @@ export function ReferralCTA({ referralCode, reward = 'R$ 100 de crédito' }: Pro
         )}
 
         <div>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={handleShare}>
             Compartilhar link <ArrowRight className="h-4 w-4" />
           </Button>
         </div>

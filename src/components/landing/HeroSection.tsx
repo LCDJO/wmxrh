@@ -4,12 +4,12 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 
 interface Props {
   data: LPCopyBlueprint['hero'];
+  onCTAClick?: () => void;
 }
 
-export function HeroSection({ data }: Props) {
+export function HeroSection({ data, onCTAClick }: Props) {
   return (
     <section className="relative py-20 px-6 text-center overflow-hidden">
-      {/* Background glow */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
 
       <div className="relative max-w-3xl mx-auto space-y-6">
@@ -27,7 +27,7 @@ export function HeroSection({ data }: Props) {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-          <Button size="lg" className="gap-2 text-base px-8">
+          <Button size="lg" className="gap-2 text-base px-8" onClick={onCTAClick}>
             {data.ctaText} <ArrowRight className="h-4 w-4" />
           </Button>
           <p className="text-xs text-muted-foreground">Sem cartão de crédito</p>
