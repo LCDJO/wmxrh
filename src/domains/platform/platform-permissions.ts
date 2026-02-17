@@ -47,6 +47,14 @@ export const PLATFORM_PERMISSIONS = [
   'landing_page.reject',
   'landing_page.publish',
   'landing_page.delete',
+  // ── Landing Governance (granular) ──
+  'landing.create',
+  'landing.edit',
+  'landing.submit_for_review',
+  'landing.view_drafts',
+  'landing.approve',
+  'landing.reject',
+  'landing.publish',
   // ── Growth AI / Marketing ──
   'growth.view',
   'growth.create',
@@ -179,12 +187,14 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing_page.view',
     'landing_page.create',
     'landing_page.submit',
-    'landing_page.approve',
-    'landing_page.reject',
-    'landing_page.publish',
     'landing_page.delete',
     'audit.view',
     'ab_experiment.start',
+    // Landing governance (granular)
+    'landing.create',
+    'landing.edit',
+    'landing.submit_for_review',
+    'landing.view_drafts',
   ],
 
   platform_marketing_team: [
@@ -195,8 +205,13 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'growth.version_view',
     'landing_page.view',
     'landing_page.create',
-    'landing_page.submit',      // can submit for review, NOT approve/publish
+    'landing_page.submit',
     'audit.view',
+    // Landing governance (granular)
+    'landing.create',
+    'landing.edit',
+    'landing.submit_for_review',
+    'landing.view_drafts',
   ],
 
   platform_marketing_director: [
@@ -211,11 +226,19 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'landing_page.view',
     'landing_page.create',
     'landing_page.submit',
-    'landing_page.approve',     // can approve submissions
-    'landing_page.reject',      // can reject submissions
+    'landing_page.approve',
+    'landing_page.reject',
     'landing_page.publish',
     'landing_page.delete',
     'audit.view',
+    // Landing governance (granular)
+    'landing.create',
+    'landing.edit',
+    'landing.submit_for_review',
+    'landing.view_drafts',
+    'landing.approve',
+    'landing.reject',
+    'landing.publish',
   ],
 };
 
