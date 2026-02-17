@@ -81,6 +81,7 @@ export type {
   RevenueMetricsServiceAPI,
 
   // Usage-Based Billing
+  UsageMetricType,
   UsageRecord,
   UsageAggregate,
   UsagePricingTier,

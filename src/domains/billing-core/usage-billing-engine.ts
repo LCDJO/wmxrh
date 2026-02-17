@@ -37,6 +37,8 @@ function createUsageCollector(): UsageCollectorAPI {
         .insert([{
           tenant_id: tenantId,
           metric_key: metricKey,
+          metric_type: opts?.metric_type ?? 'api_calls',
+          module_id: opts?.module_id ?? null,
           quantity,
           unit: opts?.unit ?? 'unit',
           billing_period_start: periodStart,
@@ -55,6 +57,8 @@ function createUsageCollector(): UsageCollectorAPI {
       const rows = records.map(r => ({
         tenant_id: tenantId,
         metric_key: r.metric_key,
+        metric_type: r.metric_type ?? 'api_calls',
+        module_id: r.module_id ?? null,
         quantity: r.quantity,
         unit: r.unit ?? 'unit',
         billing_period_start: r.billing_period_start,
@@ -80,6 +84,8 @@ function createUsageCollector(): UsageCollectorAPI {
         .order('recorded_at', { ascending: false });
 
       if (opts?.metric_key) query = query.eq('metric_key', opts.metric_key);
+      if (opts?.metric_type) query = query.eq('metric_type', opts.metric_type);
+      if (opts?.module_id) query = query.eq('module_id', opts.module_id);
       if (opts?.period_start) query = query.gte('billing_period_start', opts.period_start);
       if (opts?.period_end) query = query.lte('billing_period_end', opts.period_end);
       if (opts?.limit) query = query.limit(opts.limit);
