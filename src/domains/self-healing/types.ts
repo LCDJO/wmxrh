@@ -34,7 +34,7 @@ export interface HealthSignal {
 // ── Incidents ───────────────────────────────────────────────────
 
 export type IncidentStatus = 'detected' | 'recovering' | 'recovered' | 'failed' | 'escalated';
-export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type IncidentSeverity = 'minor' | 'major' | 'critical';
 
 export interface Incident {
   id: string;

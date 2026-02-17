@@ -59,10 +59,9 @@ export class RecoveryOrchestrator {
 
   private planActions(incident: Incident, _moduleId: string): RecoveryActionType[] {
     switch (incident.severity) {
-      case 'low':
-      case 'medium':
+      case 'minor':
         return ['module_restart', 'cache_clear'];
-      case 'high':
+      case 'major':
         return ['circuit_break', 'sandbox_reset', 'module_restart'];
       case 'critical':
         return ['circuit_break', 'module_deactivate', 'escalate'];
