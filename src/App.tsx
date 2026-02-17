@@ -54,6 +54,7 @@ import PlatformCommunications from "./pages/platform/PlatformCommunications";
 import PlatformAudit from "./pages/platform/PlatformAudit";
 import PlatformUsers from "./pages/platform/PlatformUsers";
 import PlatformPlans from "./pages/platform/PlatformPlans";
+import PlatformIAM from "./pages/platform/PlatformIAM";
 
 const queryClient = new QueryClient();
 
@@ -104,6 +105,7 @@ function AppRoutes() {
         <Route path="plans" element={<PlatformPlans />} />
         <Route path="audit" element={<PlatformAudit />} />
         <Route path="communications" element={<PlatformCommunications />} />
+        <Route path="iam" element={<PlatformIAM />} />
       </Route>
 
       <Route path="/auth/login" element={<Navigate to="/" replace />} />
