@@ -22,4 +22,6 @@ export { landingPageBuilder, LandingPageBuilder, fabContentEngine, FABContentEng
 export { tagManagerIntegration, TagManagerIntegration } from './tag-manager-integration';
 export { conversionTrackingService, ConversionTrackingService } from './conversion-tracking-service';
 export { referralTrackingService, ReferralTrackingService } from './referral-tracking-service';
+export { growthGovernanceAnalyzer, GrowthGovernanceAnalyzer } from './growth-governance-analyzer';
+export type { GrowthGovernanceFinding } from './growth-governance-analyzer';
 export type * from './types';
