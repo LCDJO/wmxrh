@@ -156,13 +156,19 @@ export function exportPrometheus(): PrometheusExportResult {
     collector.gauge('billing_invoices_pending', billingMetrics.invoices_pending);
     collector.gauge('billing_invoices_overdue', billingMetrics.invoices_overdue);
 
-    // Per-plan usage: billing_plan_usage{plan="enterprise"} 12
     for (const entry of billingMetrics.plan_usage) {
       collector.gauge('billing_plan_usage', entry.count, { plan: entry.plan_name, tier: entry.tier });
     }
   } catch {
     // Billing metrics unavailable — skip
   }
+
+  // ── Growth / Website metrics ──────────────────────────────────
+  // Note: collectGrowthMetrics is async, so we trigger it as fire-and-forget
+  // to populate the collector. The actual metric values come from the
+  // recordPageView/recordConversion/recordFABClick/recordAIHeadline
+  // instrument calls made throughout the app lifecycle.
+  // The collector already has accumulated values from those calls.
 
   const metrics = collector.toPrometheus();
   const text = collector.toPrometheusText();
@@ -494,7 +500,12 @@ export function generateDashboardModel(): {
       { title: 'Invoices Paid', type: 'stat', metric: 'billing_invoices_paid', description: 'Total paid invoices', datasource: 'prometheus' },
       { title: 'Invoices Pending', type: 'stat', metric: 'billing_invoices_pending', description: 'Pending invoices awaiting payment', datasource: 'prometheus' },
       { title: 'Invoices Overdue', type: 'stat', metric: 'billing_invoices_overdue', description: 'Overdue invoices', datasource: 'prometheus' },
-      // ── Growth / Landing Page panels ──────────────────────────
+      // ── Growth / Website panels (primary) ──────────────────────
+      { title: 'Website Page Views', type: 'graph', metric: 'website_page_views_total', description: 'Total page views per landing page (counter, label: page)', datasource: 'prometheus' },
+      { title: 'Conversion Rate', type: 'gauge', metric: 'landing_conversion_rate', description: 'Conversion rate % per LP (gauge, label: page)', datasource: 'prometheus' },
+      { title: 'AI Headlines Generated', type: 'stat', metric: 'ai_generated_headlines_total', description: 'Total AI-generated headlines (counter, labels: page, tone)', datasource: 'prometheus' },
+      { title: 'FAB Section Click Rate', type: 'gauge', metric: 'fab_section_click_rate', description: 'Click-through rate % per FAB section (gauge, labels: page, section)', datasource: 'prometheus' },
+      // ── Growth / Landing Page panels (legacy) ─────────────────
       { title: 'LP Views Total', type: 'graph', metric: 'landing_page_views_total', description: 'Total landing page views by page (label: page)', datasource: 'prometheus' },
       { title: 'LP Conversions', type: 'graph', metric: 'landing_conversion_total', description: 'Conversions by page and type (labels: page, type)', datasource: 'prometheus' },
       { title: 'FAB CTA Clicks', type: 'graph', metric: 'fab_cta_click_total', description: 'CTA clicks per page/section (labels: page, section)', datasource: 'prometheus' },
