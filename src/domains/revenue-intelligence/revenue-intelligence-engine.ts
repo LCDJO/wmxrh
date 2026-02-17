@@ -93,6 +93,16 @@ export function createRewardCalculator(): RewardCalculatorAPI {
           amount_brl: commission,
           points: 0,
         });
+        emitRevenueIntelligenceEvent({
+          type: 'RewardGranted',
+          timestamp: Date.now(),
+          user_id: referrerUserId,
+          tenant_id: tenantId,
+          reward_type: 'credit',
+          amount_brl: commission,
+          points: 0,
+          referrer_user_id: referrerUserId,
+        });
 
       } else if (mode === 'coupon') {
         // ── Cupom automático ──
@@ -121,6 +131,16 @@ export function createRewardCalculator(): RewardCalculatorAPI {
           amount_brl: commission,
           points: 0,
         });
+        emitRevenueIntelligenceEvent({
+          type: 'RewardGranted',
+          timestamp: Date.now(),
+          user_id: referrerUserId,
+          tenant_id: tenantId,
+          reward_type: 'coupon',
+          amount_brl: commission,
+          points: 0,
+          referrer_user_id: referrerUserId,
+        });
 
       } else if (mode === 'points') {
         // ── Pontos extras ──
@@ -145,6 +165,16 @@ export function createRewardCalculator(): RewardCalculatorAPI {
           reward_type: 'points',
           amount_brl: 0,
           points: pointsAwarded,
+        });
+        emitRevenueIntelligenceEvent({
+          type: 'RewardGranted',
+          timestamp: Date.now(),
+          user_id: referrerUserId,
+          tenant_id: tenantId,
+          reward_type: 'points',
+          amount_brl: 0,
+          points: pointsAwarded,
+          referrer_user_id: referrerUserId,
         });
       }
 
@@ -284,6 +314,20 @@ export function createRevenueAnalyzer(): RevenueAnalyzerAPI {
           growth_scenario: 'base',
         });
       }
+
+      // Emit forecast event with final month projection
+      if (forecasts.length > 0) {
+        const last = forecasts[forecasts.length - 1];
+        emitRevenueIntelligenceEvent({
+          type: 'RevenueForecastUpdated',
+          timestamp: Date.now(),
+          mrr_current: metrics.mrr,
+          mrr_forecast: last.projected_mrr,
+          growth_rate_pct: metrics.growth_rate_pct,
+          forecast_horizon_months: months,
+        });
+      }
+
       return forecasts;
     },
 
@@ -651,6 +695,15 @@ export function createReferralManager(): ReferralManagerAPI {
         .single();
 
       if (error) throw new Error(`ReferralManager.generateLink: ${error.message}`);
+
+      emitRevenueIntelligenceEvent({
+        type: 'ReferralLinkCreated',
+        timestamp: Date.now(),
+        user_id: userId,
+        code,
+        link_id: (data as any).id,
+      });
+
       return data as unknown as ReferralLink;
     },
 
@@ -870,6 +923,14 @@ export function createGamificationEngine(): GamificationEngineAPI {
     },
 
     async recalculateTier(userId): Promise<GamificationTier> {
+      // Get current tier before recalc
+      const { data: currentLeaderboard } = await supabase
+        .from('gamification_leaderboard')
+        .select('current_tier')
+        .eq('user_id', userId)
+        .maybeSingle();
+      const previousTier = (currentLeaderboard as any)?.current_tier ?? 'bronze';
+
       const { data: profile } = await supabase
         .from('gamification_profiles' as any)
         .select('total_points')
@@ -906,6 +967,18 @@ export function createGamificationEngine(): GamificationEngineAPI {
         .from('gamification_leaderboard')
         .update({ current_tier: tier, updated_at: new Date().toISOString() })
         .eq('user_id', userId);
+
+      // Emit GamificationLevelUp if tier changed
+      if (tier !== previousTier) {
+        emitRevenueIntelligenceEvent({
+          type: 'GamificationLevelUp',
+          timestamp: Date.now(),
+          user_id: userId,
+          from_tier: previousTier,
+          to_tier: tier,
+          total_points: pts,
+        });
+      }
 
       return tier;
     },
