@@ -81,7 +81,7 @@ const createDefaultTree = (): MenuTreeNode[] => [
       mn('mon-inc', 'Incidentes', '/platform/monitoring/incidents'),
     ],
   }),
-  mn('observability', 'Observability', '/platform/observability', { icon: 'Activity' }),
+  
   mn('comms', 'Comunicação', '/platform/communications', { icon: 'Megaphone' }),
   mn('audit', 'Auditoria', '/platform/audit', { icon: 'ScrollText' }),
   mn('billing', 'Financeiro', '/platform/billing', {
