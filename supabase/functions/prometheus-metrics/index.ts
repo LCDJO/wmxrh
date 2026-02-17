@@ -78,6 +78,37 @@ serve(async (req) => {
     lines.push("# TYPE perf_ttfb_ms gauge");
     lines.push(`perf_ttfb_ms 0`);
 
+    // ── gateway_response_ms ──────────────────────────────────
+    lines.push("# HELP gateway_response_avg_ms Average Gateway response time");
+    lines.push("# TYPE gateway_response_avg_ms gauge");
+    lines.push(`gateway_response_avg_ms 0`);
+    lines.push("# HELP gateway_response_p95_ms Gateway response time p95");
+    lines.push("# TYPE gateway_response_p95_ms gauge");
+    lines.push(`gateway_response_p95_ms 0`);
+    lines.push("# HELP gateway_response_p99_ms Gateway response time p99");
+    lines.push("# TYPE gateway_response_p99_ms gauge");
+    lines.push(`gateway_response_p99_ms 0`);
+
+    // ── module_latency_ms ────────────────────────────────────
+    lines.push("# HELP module_latency_avg_ms Average module latency");
+    lines.push("# TYPE module_latency_avg_ms gauge");
+    for (const mod of modules) {
+      lines.push(`module_latency_avg_ms{module="${mod.id}"} 0`);
+    }
+    lines.push("# HELP module_latency_p95_ms Module latency p95");
+    lines.push("# TYPE module_latency_p95_ms gauge");
+    for (const mod of modules) {
+      lines.push(`module_latency_p95_ms{module="${mod.id}"} 0`);
+    }
+
+    // ── access_graph_recomposition_ms ────────────────────────
+    lines.push("# HELP access_graph_recomposition_avg_ms Average AccessGraph recomposition time");
+    lines.push("# TYPE access_graph_recomposition_avg_ms gauge");
+    lines.push(`access_graph_recomposition_avg_ms 0`);
+    lines.push("# HELP access_graph_recomposition_p95_ms AccessGraph recomposition p95");
+    lines.push("# TYPE access_graph_recomposition_p95_ms gauge");
+    lines.push(`access_graph_recomposition_p95_ms 0`);
+
     // Trailing newline required by Prometheus spec
     return new Response(lines.join("\n") + "\n", {
       headers: {
