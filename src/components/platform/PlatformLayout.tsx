@@ -117,6 +117,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/growth/conversions', label: 'Conversões' },
       { to: '/platform/growth/fab-builder', label: 'FAB Builder' },
       { to: '/platform/growth/template-engine', label: 'Template Engine' },
+      { to: '/platform/growth/version-publish', label: 'Versionamento & Publicação' },
     ],
   },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
