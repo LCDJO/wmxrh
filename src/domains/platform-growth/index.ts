@@ -9,7 +9,9 @@
  *   ├── LandingPageBuilder          (CRUD + page management)
  *   ├── FABContentEngine            (Features-Advantages-Benefits copy)
  *   ├── TagManagerIntegration       (GTM bridge)
- *   └── ConversionTrackingService   (event tracking + funnel)
+ *   ├── TagManagerIntegration       (GTM bridge)
+ *   ├── ConversionTrackingService   (event tracking + funnel)
+ *   └── ReferralTrackingService     (referral attribution + ?ref=CODE)
  */
 
 export { growthInsightEngine, GrowthInsightEngine } from './growth-insight-engine';
@@ -19,4 +21,5 @@ export { conversionPredictionService, ConversionPredictionService } from './conv
 export { landingPageBuilder, LandingPageBuilder, fabContentEngine, FABContentEngine } from './landing-page-builder';
 export { tagManagerIntegration, TagManagerIntegration } from './tag-manager-integration';
 export { conversionTrackingService, ConversionTrackingService } from './conversion-tracking-service';
+export { referralTrackingService, ReferralTrackingService } from './referral-tracking-service';
 export type * from './types';
