@@ -11,8 +11,10 @@ import {
   TrendingUp, GripVertical, Lock,
   ChevronRight, ChevronDown, ChevronUp, ArrowRight, ArrowLeft,
   Shield, Rocket, Globe, Settings, GitBranch, LockKeyhole,
+  ChevronsDownUp, ChevronsUpDown,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useCallback, useRef, useState, useMemo } from 'react';
 import { toast } from 'sonner';
@@ -96,6 +98,21 @@ export function MenuTreeBuilder({
 
   const toggleExpand = (id: string) => {
     setExpandedIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  };
+
+  const expandAll = () => {
+    const all = new Set<string>();
+    const walk = (nodes: MenuTreeNode[]) => {
+      for (const n of nodes) {
+        if (n.children && n.children.length > 0) { all.add(n.id); walk(n.children); }
+      }
+    };
+    walk(tree);
+    setExpandedIds(all);
+  };
+
+  const collapseAll = () => {
+    setExpandedIds(new Set());
   };
 
   // ─── Button actions ───
@@ -391,6 +408,15 @@ export function MenuTreeBuilder({
           <span>Escopo de edição: <strong>{permissionResolver.getEditScopeLabel(editorRole)}</strong>. Itens fora do escopo estão marcados como restritos.</span>
         </div>
       )}
+
+      <div className="flex items-center gap-2 mb-3">
+        <Button variant="outline" size="sm" onClick={expandAll} className="gap-1.5 text-xs">
+          <ChevronsUpDown className="h-3.5 w-3.5" />Expandir Todos
+        </Button>
+        <Button variant="outline" size="sm" onClick={collapseAll} className="gap-1.5 text-xs">
+          <ChevronsDownUp className="h-3.5 w-3.5" />Recolher Todos
+        </Button>
+      </div>
 
       <div ref={treeContainerRef} className="space-y-0.5">
         {tree.map((node, idx) => renderNode(node, 0, idx, tree))}
