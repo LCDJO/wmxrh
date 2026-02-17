@@ -1,32 +1,23 @@
 /**
  * AnnouncementBanner — Persistent banner at the top of the layout.
- * Shows the highest-priority active announcements with dismiss action.
- * Supports subcategory display from TenantCommunicationCenter.
+ * Shows announcements with blocking_level 'banner' or 'restricted_access'.
  */
 
 import { useAnnouncements } from '@/hooks/use-announcements';
 import {
-  CATEGORY_CONFIG,
-  PRIORITY_CONFIG,
-  SUBCATEGORY_CONFIG,
-  type PlatformAnnouncement,
+  ALERT_TYPE_CONFIG,
+  SEVERITY_CONFIG,
+  type TenantAnnouncement,
 } from '@/domains/announcements/announcement-hub';
 import { Button } from '@/components/ui/button';
 import {
-  X, Wrench, Sparkles, CreditCard, ShieldAlert, Scale, Megaphone,
-  ArrowRight, Settings, FileText, ShieldOff, Lock, Ban, BookOpen,
-  Clock, AlertTriangle, RefreshCw, FileCheck,
+  X, CreditCard, ShieldAlert, Megaphone,
+  ArrowRight, Settings, FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  Wrench, Sparkles, CreditCard, ShieldAlert, Scale, Megaphone,
-  Settings, FileText, ShieldOff, Lock, Ban, BookOpen,
-  Clock, AlertTriangle, RefreshCw, FileCheck,
-  // fallback aliases
-  CalendarClock: Clock,
-  FileClock: Clock,
-  FileWarning: AlertTriangle,
+  CreditCard, ShieldAlert, Megaphone, Settings, FileText,
 };
 
 function BannerItem({
@@ -34,40 +25,37 @@ function BannerItem({
   onDismiss,
   onAction,
 }: {
-  announcement: PlatformAnnouncement;
+  announcement: TenantAnnouncement;
   onDismiss: (id: string) => void;
   onAction?: (url: string) => void;
 }) {
-  const cat = CATEGORY_CONFIG[a.category] ?? CATEGORY_CONFIG.general;
-  const pri = PRIORITY_CONFIG[a.priority];
-  const sub = a.subcategory ? SUBCATEGORY_CONFIG[a.subcategory] : null;
-  const Icon = (sub ? ICON_MAP[sub.icon] : null) ?? ICON_MAP[cat.icon] ?? Megaphone;
+  const type = ALERT_TYPE_CONFIG[a.alert_type];
+  const sev = SEVERITY_CONFIG[a.severity];
+  const Icon = ICON_MAP[type.icon] ?? Megaphone;
 
   return (
     <div className={cn(
       'flex items-center gap-3 px-4 py-2.5 border-b text-sm transition-all',
-      pri.bannerClass,
+      sev.bannerClass,
     )}>
-      <div className={cn('shrink-0 flex items-center gap-2', cat.color)}>
+      <div className={cn('shrink-0 flex items-center gap-2', type.color)}>
         <Icon className="h-4 w-4" />
-        <span className="font-semibold text-xs uppercase tracking-wider">
-          {sub?.label ?? cat.label}
-        </span>
+        <span className="font-semibold text-xs uppercase tracking-wider">{type.label}</span>
       </div>
 
       <div className="flex-1 min-w-0">
         <span className="font-medium text-foreground">{a.title}</span>
-        <span className="text-muted-foreground ml-2">{a.description}</span>
+        <span className="text-muted-foreground ml-2">{a.message}</span>
       </div>
 
       {a.action_url && (
         <Button
           variant="ghost"
           size="sm"
-          className={cn('h-7 text-xs gap-1 shrink-0', cat.color)}
+          className={cn('h-7 text-xs gap-1 shrink-0', type.color)}
           onClick={() => onAction?.(a.action_url!)}
         >
-          {a.action_label || 'Ver mais'} <ArrowRight className="h-3 w-3" />
+          Ver mais <ArrowRight className="h-3 w-3" />
         </Button>
       )}
 

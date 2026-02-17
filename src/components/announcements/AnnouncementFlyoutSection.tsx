@@ -1,15 +1,13 @@
 /**
  * AnnouncementFlyoutSection — Section within the NotificationFlyout
- * that shows active institutional announcements separately from operational notifications.
- * Supports subcategory display from TenantCommunicationCenter.
+ * for TenantAnnouncements (institutional alerts).
  */
 
 import { useAnnouncements } from '@/hooks/use-announcements';
 import {
-  CATEGORY_CONFIG,
-  PRIORITY_CONFIG,
-  SUBCATEGORY_CONFIG,
-  type PlatformAnnouncement,
+  ALERT_TYPE_CONFIG,
+  SEVERITY_CONFIG,
+  type TenantAnnouncement,
 } from '@/domains/announcements/announcement-hub';
 import { cn } from '@/lib/utils';
 import { Megaphone, X } from 'lucide-react';
@@ -20,29 +18,28 @@ function AnnouncementFlyoutItem({
   announcement: a,
   onDismiss,
 }: {
-  announcement: PlatformAnnouncement;
+  announcement: TenantAnnouncement;
   onDismiss: (id: string) => void;
 }) {
-  const cat = CATEGORY_CONFIG[a.category] ?? CATEGORY_CONFIG.general;
-  const pri = PRIORITY_CONFIG[a.priority];
-  const sub = a.subcategory ? SUBCATEGORY_CONFIG[a.subcategory] : null;
+  const type = ALERT_TYPE_CONFIG[a.alert_type];
+  const sev = SEVERITY_CONFIG[a.severity];
 
   return (
     <div className={cn(
       'group flex gap-2.5 px-4 py-2.5 transition-colors',
-      pri.bannerClass,
+      sev.bannerClass,
     )}>
-      <div className={cn('h-7 w-7 rounded-md flex items-center justify-center shrink-0', cat.bgColor, cat.color)}>
+      <div className={cn('h-7 w-7 rounded-md flex items-center justify-center shrink-0', type.bgColor, type.color)}>
         <Megaphone className="h-3.5 w-3.5" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <p className="text-xs font-semibold text-foreground truncate">{a.title}</p>
-          <Badge variant="outline" className={cn('text-[8px] shrink-0', pri.color)}>
-            {sub?.label ?? cat.label}
+          <Badge variant="outline" className={cn('text-[8px] shrink-0', sev.color)}>
+            {type.label}
           </Badge>
         </div>
-        <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{a.description}</p>
+        <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{a.message}</p>
       </div>
       {a.is_dismissible && (
         <Button

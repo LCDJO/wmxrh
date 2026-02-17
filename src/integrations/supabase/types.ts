@@ -199,7 +199,7 @@ export type Database = {
             foreignKeyName: "announcement_dismissals_announcement_id_fkey"
             columns: ["announcement_id"]
             isOneToOne: false
-            referencedRelation: "platform_announcements"
+            referencedRelation: "tenant_announcements"
             referencedColumns: ["id"]
           },
         ]
@@ -3455,89 +3455,6 @@ export type Database = {
           },
         ]
       }
-      platform_announcements: {
-        Row: {
-          action_label: string | null
-          action_url: string | null
-          auto_resolve_on: string | null
-          category: Database["public"]["Enums"]["announcement_category"]
-          created_at: string
-          created_by: string | null
-          description: string
-          expires_at: string | null
-          id: string
-          is_active: boolean
-          is_dismissible: boolean
-          metadata: Json | null
-          priority: Database["public"]["Enums"]["announcement_priority"]
-          resolved_at: string | null
-          show_banner: boolean
-          source: string
-          starts_at: string
-          subcategory: string | null
-          target_roles: string[] | null
-          tenant_id: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          action_label?: string | null
-          action_url?: string | null
-          auto_resolve_on?: string | null
-          category?: Database["public"]["Enums"]["announcement_category"]
-          created_at?: string
-          created_by?: string | null
-          description: string
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean
-          is_dismissible?: boolean
-          metadata?: Json | null
-          priority?: Database["public"]["Enums"]["announcement_priority"]
-          resolved_at?: string | null
-          show_banner?: boolean
-          source?: string
-          starts_at?: string
-          subcategory?: string | null
-          target_roles?: string[] | null
-          tenant_id?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          action_label?: string | null
-          action_url?: string | null
-          auto_resolve_on?: string | null
-          category?: Database["public"]["Enums"]["announcement_category"]
-          created_at?: string
-          created_by?: string | null
-          description?: string
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean
-          is_dismissible?: boolean
-          metadata?: Json | null
-          priority?: Database["public"]["Enums"]["announcement_priority"]
-          resolved_at?: string | null
-          show_banner?: boolean
-          source?: string
-          starts_at?: string
-          subcategory?: string | null
-          target_roles?: string[] | null
-          tenant_id?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "platform_announcements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       platform_cognitive_events: {
         Row: {
           created_at: string
@@ -4553,6 +4470,68 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tax_brackets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_announcements: {
+        Row: {
+          action_url: string | null
+          alert_type: string
+          blocking_level: string
+          created_at: string
+          created_by: string | null
+          end_at: string | null
+          id: string
+          is_dismissible: boolean
+          message: string
+          severity: string
+          source: string
+          start_at: string
+          tenant_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          action_url?: string | null
+          alert_type?: string
+          blocking_level?: string
+          created_at?: string
+          created_by?: string | null
+          end_at?: string | null
+          id?: string
+          is_dismissible?: boolean
+          message: string
+          severity?: string
+          source?: string
+          start_at?: string
+          tenant_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          action_url?: string | null
+          alert_type?: string
+          blocking_level?: string
+          created_at?: string
+          created_by?: string | null
+          end_at?: string | null
+          id?: string
+          is_dismissible?: boolean
+          message?: string
+          severity?: string
+          source?: string
+          start_at?: string
+          tenant_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_announcements_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
