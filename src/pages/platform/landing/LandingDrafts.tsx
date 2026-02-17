@@ -38,6 +38,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Loader2, FileEdit, Send, Trash2, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { LandingPreSubmitAlert } from '@/components/platform/landing/LandingPreSubmitAlert';
+import type { LandingPage as LandingPageType } from '@/domains/platform-growth/types';
 
 interface LandingPage {
   id: string;
@@ -58,6 +60,7 @@ export default function LandingDrafts() {
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LandingPage | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [preSubmitPage, setPreSubmitPage] = useState<LandingPage | null>(null);
 
   const fetchDrafts = async () => {
     setLoading(true);
@@ -252,7 +255,7 @@ export default function LandingDrafts() {
                         size="sm"
                         className="gap-1.5"
                         disabled={submitting === page.id}
-                        onClick={() => handleSubmit(page.id)}
+                        onClick={() => setPreSubmitPage(page)}
                       >
                         {submitting === page.id ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
@@ -280,6 +283,47 @@ export default function LandingDrafts() {
           })}
         </div>
       )}
+
+      {/* Pre-Submit Governance AI Alert */}
+      <AlertDialog open={!!preSubmitPage} onOpenChange={(open) => !open && setPreSubmitPage(null)}>
+        <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5 text-primary" />
+              Submeter "{preSubmitPage?.name}" para Aprovação
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              A Governance AI analisou esta página antes da submissão.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {preSubmitPage && (
+            <LandingPreSubmitAlert
+              page={preSubmitPage as unknown as LandingPageType}
+              onDismiss={() => setPreSubmitPage(null)}
+              onProceed={() => {
+                const pageId = preSubmitPage.id;
+                setPreSubmitPage(null);
+                handleSubmit(pageId);
+              }}
+            />
+          )}
+
+          {/* If no alerts are found, show a simple proceed button */}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (preSubmitPage) {
+                const pageId = preSubmitPage.id;
+                setPreSubmitPage(null);
+                handleSubmit(pageId);
+              }
+            }}>
+              Submeter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Safe Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
