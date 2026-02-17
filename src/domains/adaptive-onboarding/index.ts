@@ -20,6 +20,18 @@ export { createOnboardingProgressTracker, initializeProgress } from './onboardin
 export { createExperienceHintsService } from './experience-hints.service';
 export { createAdaptiveOnboardingEngine } from './adaptive-onboarding-engine';
 export { createOnboardingAwareExperience } from './onboarding-experience-bridge';
+export { createGuardedProgressTracker, isOnboardingAdmin, assertOnboardingAdmin, OnboardingAuthorizationError } from './onboarding-security-guard';
+export {
+  emitTenantOnboardingStarted,
+  emitOnboardingStepCompleted,
+  emitOnboardingStepSkipped,
+  emitOnboardingFinished,
+  emitRoleBootstrapCompleted,
+  onOnboardingEvent,
+  onOnboardingEventType,
+  getOnboardingEventLog,
+  clearOnboardingEventLog,
+} from './onboarding.events';
 
 export type {
   OnboardingPhase,
@@ -41,3 +53,18 @@ export type {
   OnboardingAwareExperienceAPI,
   OnboardingGateResult,
 } from './onboarding-experience-bridge';
+
+export type {
+  OnboardingSecurityContext,
+  OnboardingAdminRole,
+} from './onboarding-security-guard';
+
+export type {
+  OnboardingEventType,
+  OnboardingDomainEvent,
+  TenantOnboardingStartedEvent,
+  OnboardingStepCompletedEvent,
+  OnboardingStepSkippedEvent,
+  OnboardingFinishedEvent,
+  RoleBootstrapCompletedEvent,
+} from './onboarding.events';
