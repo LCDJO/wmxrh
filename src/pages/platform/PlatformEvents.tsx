@@ -12,25 +12,33 @@ import {
   Search, Zap, RefreshCw, Activity, Layers, Eye, Box,
   Shield, Wallet, HeartPulse, AlertTriangle, Wrench, Brain,
   UserPlus, Calculator, Users, GraduationCap, Cpu, TrendingUp,
-  ChevronDown, ChevronRight,
+  ChevronDown, ChevronRight, Fingerprint, Network, GitMerge,
+  FileSignature, Sparkles, KeyRound, ShoppingCart,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { EVENT_CATALOG, ALL_DOMAINS, type EventCatalogEntry } from './event-catalog-data';
+import { buildCatalog, getEventCatalog, getAllDomains, type EventCatalogEntry } from './event-catalog-data';
 
 // ── Domain visual metadata ─────────────────────────────────────
 
-const DOMAIN_META: Record<string, { icon: typeof Shield; label?: string }> = {
+const DOMAIN_META: Record<string, { icon: typeof Shield }> = {
   'IAM':                  { icon: Shield },
   'Billing':              { icon: Wallet },
+  'Billing Marketplace':  { icon: ShoppingCart },
   'Observability':        { icon: HeartPulse },
   'Security':             { icon: AlertTriangle },
+  'Identity Boundary':    { icon: Fingerprint },
+  'Access Graph':         { icon: Network },
+  'Unified Graph':        { icon: GitMerge },
   'Self-Healing':         { icon: Wrench },
   'Governance AI':        { icon: Brain },
   'Onboarding':           { icon: UserPlus },
   'Payroll':              { icon: Calculator },
   'Workforce':            { icon: Users },
   'NR Training':          { icon: GraduationCap },
+  'Agreements':           { icon: FileSignature },
   'Platform OS':          { icon: Cpu },
+  'Platform IAM':         { icon: KeyRound },
+  'Platform Cognitive':   { icon: Sparkles },
   'Revenue Intelligence': { icon: TrendingUp },
 };
 
@@ -48,9 +56,10 @@ export default function PlatformEvents() {
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     setTimeout(() => {
+      buildCatalog(); // rebuild from all domain registries
       setRefreshKey(k => k + 1);
       setIsRefreshing(false);
-      toast.success(`Catálogo atualizado — ${EVENT_CATALOG.length} eventos carregados`);
+      toast.success(`Catálogo atualizado — ${getEventCatalog().length} eventos carregados`);
     }, 400);
   }, []);
 
@@ -61,7 +70,8 @@ export default function PlatformEvents() {
 
   const filtered = useMemo(() => {
     void refreshKey;
-    return EVENT_CATALOG.filter(e => {
+    const catalog = getEventCatalog();
+    return catalog.filter(e => {
       const matchesDomain = !selectedDomain || e.domain === selectedDomain;
       const matchesSearch =
         !search ||
@@ -82,16 +92,18 @@ export default function PlatformEvents() {
     return map;
   }, [filtered]);
 
-  // Count events per domain (unfiltered)
+  const catalog = getEventCatalog();
+  const domains = getAllDomains();
+
   const domainCounts = useMemo(() => {
     const map = new Map<string, number>();
-    EVENT_CATALOG.forEach(e => map.set(e.domain, (map.get(e.domain) ?? 0) + 1));
+    catalog.forEach(e => map.set(e.domain, (map.get(e.domain) ?? 0) + 1));
     return map;
-  }, []);
+  }, [catalog]);
 
   const statCards = [
-    { label: 'Total de Eventos', value: EVENT_CATALOG.length, icon: Zap, accent: 'hsl(265 80% 55%)' },
-    { label: 'Domínios', value: ALL_DOMAINS.length, icon: Layers, accent: 'hsl(280 75% 60%)' },
+    { label: 'Total de Eventos', value: catalog.length, icon: Zap, accent: 'hsl(265 80% 55%)' },
+    { label: 'Domínios', value: domains.length, icon: Layers, accent: 'hsl(280 75% 60%)' },
     { label: 'Filtrados', value: filtered.length, icon: Eye, accent: 'hsl(250 70% 58%)' },
     { label: 'Domínios Visíveis', value: groupedByDomain.size, icon: Box, accent: 'hsl(290 65% 55%)' },
   ];
@@ -156,12 +168,12 @@ export default function PlatformEvents() {
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Selecionar Domínio</p>
         <div className="flex flex-wrap gap-2">
-          {ALL_DOMAINS.map(domain => {
+          {domains.map(domain => {
             const meta = DOMAIN_META[domain] ?? DEFAULT_DOMAIN_META;
             const Icon = meta.icon;
             const count = domainCounts.get(domain) ?? 0;
             const isActive = selectedDomain === domain;
-            const color = EVENT_CATALOG.find(e => e.domain === domain)?.domainColor ?? 'hsl(0 0% 50%)';
+            const color = catalog.find(e => e.domain === domain)?.domainColor ?? 'hsl(0 0% 50%)';
 
             return (
               <button
