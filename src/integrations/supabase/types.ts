@@ -6498,6 +6498,101 @@ export type Database = {
           },
         ]
       }
+      support_chat_messages: {
+        Row: {
+          attachments: Json
+          created_at: string
+          id: string
+          message_text: string
+          read_at: string | null
+          sender_id: string | null
+          sender_type: string
+          session_id: string
+        }
+        Insert: {
+          attachments?: Json
+          created_at?: string
+          id?: string
+          message_text: string
+          read_at?: string | null
+          sender_id?: string | null
+          sender_type: string
+          session_id: string
+        }
+        Update: {
+          attachments?: Json
+          created_at?: string
+          id?: string
+          message_text?: string
+          read_at?: string | null
+          sender_id?: string | null
+          sender_type?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "support_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_chat_sessions: {
+        Row: {
+          assigned_agent_id: string | null
+          created_at: string
+          ended_at: string | null
+          id: string
+          protocol_number: string
+          started_at: string
+          status: string
+          tenant_id: string
+          ticket_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_agent_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          protocol_number?: string
+          started_at?: string
+          status?: string
+          tenant_id: string
+          ticket_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_agent_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          protocol_number?: string
+          started_at?: string
+          status?: string
+          tenant_id?: string
+          ticket_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_chat_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_chat_sessions_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_evaluations: {
         Row: {
           agent_id: string | null

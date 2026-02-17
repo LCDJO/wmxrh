@@ -109,3 +109,45 @@ export interface CreateMessageDTO {
   is_internal?: boolean;
   attachments?: unknown[];
 }
+
+// ── Chat Session & Messages ──
+
+export type ChatSessionStatus = 'active' | 'paused' | 'closed';
+export type ChatSenderType = 'tenant' | 'agent' | 'system';
+
+export interface ChatSession {
+  id: string;
+  ticket_id: string;
+  tenant_id: string;
+  assigned_agent_id: string | null;
+  protocol_number: string;
+  status: ChatSessionStatus;
+  started_at: string;
+  ended_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  session_id: string;
+  sender_type: ChatSenderType;
+  sender_id: string | null;
+  message_text: string;
+  attachments: unknown[];
+  created_at: string;
+  read_at: string | null;
+}
+
+export interface CreateChatSessionDTO {
+  ticket_id: string;
+  tenant_id: string;
+  assigned_agent_id?: string;
+}
+
+export interface SendChatMessageDTO {
+  session_id: string;
+  sender_type: ChatSenderType;
+  message_text: string;
+  attachments?: unknown[];
+}
