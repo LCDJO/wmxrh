@@ -250,32 +250,56 @@ function buildUserPrompt(action: ActionType, ctx: Record<string, unknown>): stri
   const modules = (ctx.modules as string[]) || [];
   const currentContent = ctx.currentContent ? JSON.stringify(ctx.currentContent) : "";
 
+  // ── AI Inputs: Real ecosystem data ──
+  const revenueBlock = ctx.revenueIntelligence
+    ? `\n\n📊 REVENUE INTELLIGENCE:\n${JSON.stringify(ctx.revenueIntelligence)}`
+    : "";
+  const referralBlock = ctx.referralData
+    ? `\n\n🔗 REFERRAL CONVERSION DATA:\n${JSON.stringify(ctx.referralData)}`
+    : "";
+  const fabBlock = ctx.fabPerformance
+    ? `\n\n⚡ FAB PERFORMANCE:\n${JSON.stringify(ctx.fabPerformance)}`
+    : "";
+  const analyticsBlock = ctx.landingAnalytics
+    ? `\n\n📈 LANDING ANALYTICS:\n${JSON.stringify(ctx.landingAnalytics)}`
+    : "";
+
+  const dataContext = `${revenueBlock}${referralBlock}${fabBlock}${analyticsBlock}`;
+
   switch (action) {
     case "suggest_headlines":
       return `Industry: ${industry}
 Modules: ${modules.join(", ") || "general"}
 Current headline: ${ctx.currentHeadline || "none"}
 Target audience: ${ctx.audience || "HR directors, People Ops managers"}
-${currentContent ? `Current page content:\n${currentContent}` : ""}
+${currentContent ? `Current page content:\n${currentContent}` : ""}${dataContext}
+
+Use the data above to craft headlines that address real conversion gaps and leverage proven revenue patterns.
 Generate 5 high-converting headline variants in Portuguese (Brazil).`;
 
     case "organize_fab":
       return `Industry: ${industry}
 Raw features to organize:\n${JSON.stringify(ctx.features || modules)}
-Target audience: ${ctx.audience || "HR directors"}
+Target audience: ${ctx.audience || "HR directors"}${dataContext}
+
+Prioritize FAB blocks based on actual conversion performance and revenue impact data.
 Organize into FAB blocks in Portuguese (Brazil), sorted by conversion impact.`;
 
     case "optimize_cta":
       return `Industry: ${industry}
 Current CTA: ${ctx.currentCTA || "Começar grátis"}
 Page goal: ${ctx.goal || "free trial signup"}
-Target audience: ${ctx.audience || "HR directors"}
+Target audience: ${ctx.audience || "HR directors"}${dataContext}
+
+Use funnel drop-off data and referral performance to craft CTAs that address the biggest conversion gaps.
 Generate 4 optimized CTA variants in Portuguese (Brazil).`;
 
     case "suggest_layout":
       return `Industry: ${industry}
 Available sections: ${JSON.stringify(ctx.sections || ["hero", "features", "pricing", "testimonials", "cta", "faq"])}
-Page goal: ${ctx.goal || "conversion to free trial"}
+Page goal: ${ctx.goal || "conversion to free trial"}${dataContext}
+
+Use landing analytics (bounce rate, avg time, conversion rate) and FAB performance to determine optimal section ordering.
 Suggest optimal section order for maximum conversion. Respond in Portuguese (Brazil).`;
 
     default:
