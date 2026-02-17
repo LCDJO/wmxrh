@@ -114,7 +114,8 @@ const NAV_ITEMS: PlatformNavItem[] = [
     children: [
       { to: '/platform/website', label: 'Website', requiredPermission: 'website.view' },
       { to: '/platform/landing', label: 'Landing Pages', requiredPermission: 'landing_page.view' },
-      { to: '/platform/growth', label: 'Insights de Crescimento' },
+      { to: '/platform/marketing/insights', label: 'Insights de Crescimento' },
+      { to: '/platform/growth', label: 'Growth AI' },
     ],
   },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
