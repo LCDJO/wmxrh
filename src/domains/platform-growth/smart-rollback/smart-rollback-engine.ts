@@ -21,6 +21,7 @@ import { rollbackDecisionEngine } from './rollback-decision-engine';
 import { rollbackExecutor } from './rollback-executor';
 import { rollbackAuditService } from './rollback-audit-service';
 import { experimentSafetyGuard } from './experiment-safety-guard';
+import { emitGrowthEvent } from '../growth.events';
 import type { RollbackDecision, RollbackExecution, RollbackThresholds } from './types';
 import { DEFAULT_ROLLBACK_THRESHOLDS } from './types';
 
@@ -130,6 +131,18 @@ class SmartRollbackEngine {
           ? ` Requer aprovação de: ${safety.authorizedRoles.join(', ')}`
           : ''),
       );
+
+      // Emit RollbackPreventedByExperiment event
+      emitGrowthEvent({
+        type: 'RollbackPreventedByExperiment',
+        timestamp: Date.now(),
+        landingPageId,
+        experimentId: safety.experimentId ?? '',
+        experimentName: '',
+        reason: safety.reason,
+        requiredApprovalRoles: [...(safety.authorizedRoles ?? [])],
+      });
+
       return null;
     }
 

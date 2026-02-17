@@ -9,6 +9,10 @@
  * ║  3. FABContentUpdated         → FAB block content changed      ║
  * ║  4. ConversionTracked         → conversion event recorded      ║
  * ║  5. GrowthInsightGenerated    → governance finding created     ║
+ * ║  6. RollbackSuggested         → auto-rollback suggested        ║
+ * ║  7. RollbackExecuted          → rollback completed             ║
+ * ║  8. RollbackPreventedByExperiment → blocked by A/B test        ║
+ * ║  9. RollbackAuditLogged       → audit entry recorded           ║
  * ║                                                                ║
  * ║  Pure data — NO UI, NO side-effects inside this file.          ║
  * ╚════════════════════════════════════════════════════════════════╝
@@ -28,7 +32,11 @@ export type GrowthEventType =
   | 'LandingVersionCreated'
   | 'AIConversionSuggested'
   | 'FABSectionGenerated'
-  | 'GTMInjected';
+  | 'GTMInjected'
+  | 'RollbackSuggested'
+  | 'RollbackExecuted'
+  | 'RollbackPreventedByExperiment'
+  | 'RollbackAuditLogged';
 
 // ── Payloads ──
 
@@ -140,6 +148,53 @@ export interface GTMInjectedEventPayload {
   injectedBy: string;
 }
 
+// ── Smart Rollback Payloads ──
+
+export interface RollbackSuggestedPayload {
+  type: 'RollbackSuggested';
+  timestamp: number;
+  landingPageId: string;
+  currentVersion: number;
+  targetVersion: number;
+  reason: string;
+  conversionDelta: number;
+  confidence: number;
+  decisionId: string;
+}
+
+export interface RollbackExecutedPayload {
+  type: 'RollbackExecuted';
+  timestamp: number;
+  landingPageId: string;
+  fromVersion: number;
+  toVersion: number;
+  mode: 'automatic' | 'manual';
+  reason: string;
+  executedBy: string;
+  executionId: string;
+}
+
+export interface RollbackPreventedByExperimentPayload {
+  type: 'RollbackPreventedByExperiment';
+  timestamp: number;
+  landingPageId: string;
+  experimentId: string;
+  experimentName: string;
+  reason: string;
+  requiredApprovalRoles: string[];
+}
+
+export interface RollbackAuditLoggedPayload {
+  type: 'RollbackAuditLogged';
+  timestamp: number;
+  landingPageId: string;
+  action: 'rollback_initiated' | 'rollback_completed' | 'rollback_failed' | 'rollback_suggested';
+  fromVersion: number;
+  toVersion: number;
+  actorId: string;
+  auditEntryId: string;
+}
+
 // ── Union ──
 
 export type GrowthDomainEvent =
@@ -152,7 +207,11 @@ export type GrowthDomainEvent =
   | LandingVersionCreatedEventPayload
   | AIConversionSuggestedEventPayload
   | FABSectionGeneratedEventPayload
-  | GTMInjectedEventPayload;
+  | GTMInjectedEventPayload
+  | RollbackSuggestedPayload
+  | RollbackExecutedPayload
+  | RollbackPreventedByExperimentPayload
+  | RollbackAuditLoggedPayload;
 
 // ════════════════════════════════════
 // EVENT BUS (synchronous, in-memory)

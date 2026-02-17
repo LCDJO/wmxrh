@@ -47,7 +47,19 @@ class RollbackAuditService {
 
     // Prometheus-compatible rollback metrics
     recordRollbackTriggered(execution.landingPageId, execution.mode as 'automatic' | 'manual');
-    recordPerformanceDropScore(execution.landingPageId, 0); // Will be updated by comparator
+    recordPerformanceDropScore(execution.landingPageId, 0);
+
+    // Domain event: RollbackAuditLogged
+    emitGrowthEvent({
+      type: 'RollbackAuditLogged',
+      timestamp: Date.now(),
+      landingPageId: execution.landingPageId,
+      action: 'rollback_initiated',
+      fromVersion: execution.fromVersionNumber,
+      toVersion: execution.toVersionNumber,
+      actorId,
+      auditEntryId: entry.id,
+    });
   }
 
   /**
@@ -57,7 +69,20 @@ class RollbackAuditService {
     const entry = this.createEntry(execution, 'rollback_completed', actorId);
     this.entries.push(entry);
 
-    // Emit growth event
+    // Emit RollbackExecuted event
+    emitGrowthEvent({
+      type: 'RollbackExecuted',
+      timestamp: Date.now(),
+      landingPageId: execution.landingPageId,
+      fromVersion: execution.fromVersionNumber,
+      toVersion: execution.toVersionNumber,
+      mode: execution.mode as 'automatic' | 'manual',
+      reason: execution.reason,
+      executedBy: actorId,
+      executionId: execution.id,
+    });
+
+    // Also emit legacy LandingPagePublished for cross-domain compat
     emitGrowthEvent({
       type: 'LandingPagePublished',
       timestamp: Date.now(),
@@ -78,8 +103,20 @@ class RollbackAuditService {
     // Update success rate
     const all = this.entries;
     const triggered = all.filter(e => e.action === 'rollback_initiated').length;
-    const completed = all.filter(e => e.action === 'rollback_completed').length + 1;
+    const completed = all.filter(e => e.action === 'rollback_completed').length;
     updateRollbackSuccessRate(completed, triggered);
+
+    // Domain event: RollbackAuditLogged
+    emitGrowthEvent({
+      type: 'RollbackAuditLogged',
+      timestamp: Date.now(),
+      landingPageId: execution.landingPageId,
+      action: 'rollback_completed',
+      fromVersion: execution.fromVersionNumber,
+      toVersion: execution.toVersionNumber,
+      actorId,
+      auditEntryId: entry.id,
+    });
   }
 
   /**
@@ -121,6 +158,19 @@ class RollbackAuditService {
       createdAt: new Date().toISOString(),
     };
     this.entries.push(entry);
+
+    // Domain event: RollbackSuggested
+    emitGrowthEvent({
+      type: 'RollbackSuggested',
+      timestamp: Date.now(),
+      landingPageId: decision.landingPageId,
+      currentVersion: decision.currentVersionNumber,
+      targetVersion: decision.targetVersionNumber,
+      reason: decision.reason,
+      conversionDelta: decision.comparison.conversionRateDelta,
+      confidence: decision.comparison.confidence,
+      decisionId: decision.id,
+    });
   }
 
   /**
