@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { scanForNewItems, getNewItemIds } from '@/lib/new-items-tracker';
 
 /* ─── Module catalog definition ─── */
 interface ModuleEvent {
@@ -148,12 +149,21 @@ export default function PlatformModulesCatalog() {
   const [expandedModule, setExpandedModule] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [newModuleIds, setNewModuleIds] = useState<Set<string>>(() => getNewItemIds('modules'));
 
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
+      const allModuleIds = MODULES.map(m => m.id);
+      const newFound = scanForNewItems('modules', allModuleIds);
+      setNewModuleIds(getNewItemIds('modules'));
       setIsRefreshing(false);
-      toast.success(`Catálogo atualizado — ${MODULES.length} módulos carregados`);
+
+      if (newFound.length > 0) {
+        toast.success(`Varredura completa — ${newFound.length} novo(s) módulo(s) encontrado(s)!`);
+      } else {
+        toast.success(`Varredura completa — ${MODULES.length} módulos, nenhum novo detectado`);
+      }
     }, 400);
   };
 
@@ -289,6 +299,11 @@ export default function PlatformModulesCatalog() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="text-base font-semibold text-foreground">{mod.name}</span>
+                      {newModuleIds.has(mod.id) && (
+                        <Badge className="bg-emerald-500 text-white text-[9px] px-1.5 py-0 rounded-full font-bold animate-pulse shadow-sm shadow-emerald-500/30">
+                          NOVO
+                        </Badge>
+                      )}
                       <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 border', st.className)}>
                         {st.label}
                       </Badge>
