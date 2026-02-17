@@ -2,11 +2,24 @@
  * Governance AI Layer — Barrel export.
  *
  * Architecture:
- *  GovernanceAILayer
- *   ├── HeuristicEngine     → local deterministic analysis
- *   ├── GovernanceAIService  → orchestrator (heuristic + AI)
- *   └── Types                → shared type definitions
+ *  GovernanceAI
+ *   ├── AccessRiskAnalyzer           → high-risk user detection
+ *   ├── PermissionAnomalyDetector    → excessive permissions & operational risks
+ *   ├── RoleOptimizationAdvisor      → role overlap & consolidation
+ *   ├── SegregationOfDutiesChecker   → SoD conflict detection
+ *   ├── GovernanceInsightsService    → orchestrator for all analyzers
+ *   └── GovernanceAIService          → hybrid orchestrator (heuristic + AI)
  */
-export { runHeuristicScan } from './heuristic-engine';
+
+// Individual analyzers
+export { analyzeAccessRisk } from './access-risk-analyzer';
+export { detectExcessivePermissions, detectOperationalRisks } from './permission-anomaly-detector';
+export { detectRoleOverlaps } from './role-optimization-advisor';
+export { detectSoDConflicts } from './segregation-of-duties-checker';
+
+// Orchestrators
+export { runHeuristicScan } from './governance-insights.service';
 export { GovernanceAIService, getGovernanceAIService } from './governance-ai.service';
+
+// Types
 export type * from './types';
