@@ -90,3 +90,13 @@ export {
   getStatusVariant,
 } from './landing-page-status-machine';
 export type { LandingPageStatus } from './landing-page-status-machine';
+
+// ── GrowthAI Support Layer (transversal façade) ──
+export { growthAISupportLayer, GrowthAISupportLayer } from './growth-ai-support-layer';
+export type {
+  HeadlineSuggestion,
+  FABStructureSuggestion,
+  LayoutChangeSuggestion,
+  ConversionRiskAnalysis,
+  RevenueImpactPrediction,
+} from './growth-ai-support-layer';
