@@ -79,7 +79,7 @@ export function ModuleVersionTimeline() {
     }
   };
 
-  // Group versions by module
+  // Group versions by module — always show ALL modules from catalog
   const groups: ModuleGroup[] = useMemo(() => {
     const map = new Map<string, ModuleVersion[]>();
     for (const v of versions) {
@@ -88,19 +88,34 @@ export function ModuleVersionTimeline() {
       map.set(v.module_id, list);
     }
 
-    const result: ModuleGroup[] = [];
-    for (const [moduleId, mvs] of map) {
+    // Start from catalog so every module appears even without DB entries
+    const result: ModuleGroup[] = MODULE_CATALOG.map(cat => {
+      const mvs = map.get(cat.module_id) ?? [];
       const sorted = [...mvs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      const catalogEntry = MODULE_CATALOG.find(m => m.module_id === moduleId);
       const current = sorted.find(v => v.status === 'released') ?? null;
-      result.push({
-        module_id: moduleId,
-        name: catalogEntry?.name ?? moduleId,
-        description: catalogEntry?.description ?? '',
+      return {
+        module_id: cat.module_id,
+        name: cat.name,
+        description: cat.description,
         current,
         versions: sorted,
         totalVersions: sorted.length,
-      });
+      };
+    });
+
+    // Also add any DB modules not in catalog (safety)
+    for (const [moduleId, mvs] of map) {
+      if (!MODULE_CATALOG.find(m => m.module_id === moduleId)) {
+        const sorted = [...mvs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        result.push({
+          module_id: moduleId,
+          name: moduleId,
+          description: '',
+          current: sorted.find(v => v.status === 'released') ?? null,
+          versions: sorted,
+          totalVersions: sorted.length,
+        });
+      }
     }
 
     return result.sort((a, b) => a.name.localeCompare(b.name));
