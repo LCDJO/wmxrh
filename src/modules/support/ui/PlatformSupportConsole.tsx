@@ -27,6 +27,7 @@ import { useAgentAlerts, AgentAlertBanner } from './agent/AgentAlertService';
 import AgentPerformancePanel from './agent/AgentPerformancePanel';
 import ConversationInsights from './agent/ConversationInsights';
 import LiveChatGovernance from './agent/LiveChatGovernance';
+import TenantInfoSidebar from './agent/TenantInfoSidebar';
 import type {
   SupportTicket, TicketMessage, WikiArticle, WikiCategory,
   SupportEvaluation, TicketStatus,
@@ -528,11 +529,12 @@ function AgentChatConsoleV2({ userId }: { userId: string }) {
 
       {/* RIGHT: Insights Sidebar */}
       {selected && (
-        <div className="w-[280px] shrink-0 border-l border-border bg-card overflow-y-auto">
-          <div className="p-3 space-y-3">
-            <ConversationInsights ticket={selected} />
-            <TenantInfoCard tenantId={selected.tenant_id} />
-          </div>
+        <div className="w-[300px] shrink-0 border-l border-border bg-card overflow-hidden flex flex-col">
+          <TenantInfoSidebar
+            tenantId={selected.tenant_id}
+            createdBy={selected.created_by}
+            currentTicketId={selected.id}
+          />
         </div>
       )}
     </div>
@@ -736,91 +738,14 @@ function AgentTicketView({ ticket, userId, onBack }: { ticket: SupportTicket; us
 
         <div className="space-y-4">
           <ConversationInsights ticket={ticket} />
-          <TenantInfoCard tenantId={ticket.tenant_id} />
+          <TenantInfoSidebar tenantId={ticket.tenant_id} createdBy={ticket.created_by} currentTicketId={ticket.id} />
         </div>
       </div>
     </div>
   );
 }
 
-// ── Tenant Info Card (kept from V1) ──
-
-function TenantInfoCard({ tenantId }: { tenantId: string }) {
-  const [info, setInfo] = useState<{
-    name: string; plan: string; status: string; modules: string[];
-    ticketHistory: { total: number; open: number; resolved: number };
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const [tenantRes, subRes, modulesRes, ticketsRes] = await Promise.all([
-          supabase.from('tenants').select('name, status').eq('id', tenantId).maybeSingle(),
-          supabase.from('tenant_subscriptions').select('plan, status').eq('tenant_id', tenantId).maybeSingle(),
-          supabase.from('tenant_modules').select('module_key').eq('tenant_id', tenantId).eq('is_active', true),
-          supabase.from('support_tickets').select('id, status').eq('tenant_id', tenantId),
-        ]);
-        const tickets = ticketsRes.data ?? [];
-        setInfo({
-          name: tenantRes.data?.name ?? 'Desconhecido',
-          plan: (subRes.data?.plan as string) ?? 'Sem plano',
-          status: (subRes.data?.status as string) ?? tenantRes.data?.status ?? '—',
-          modules: (modulesRes.data ?? []).map(m => m.module_key),
-          ticketHistory: {
-            total: tickets.length,
-            open: tickets.filter(t => !['resolved', 'closed', 'cancelled'].includes(t.status)).length,
-            resolved: tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length,
-          },
-        });
-      } catch { toast.error('Erro ao carregar tenant'); }
-      finally { setLoading(false); }
-    }
-    load();
-  }, [tenantId]);
-
-  if (loading) return <Card><CardContent className="py-8 flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></CardContent></Card>;
-  if (!info) return null;
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" /> Cliente</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div><p className="text-xs text-muted-foreground">Empresa</p><p className="text-sm font-semibold text-foreground">{info.name}</p></div>
-        <div>
-          <p className="text-xs text-muted-foreground flex items-center gap-1"><Package className="h-3 w-3" /> Plano</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <Badge variant="secondary" className="text-xs capitalize">{info.plan}</Badge>
-            <Badge variant="outline" className="text-[10px] capitalize">{info.status}</Badge>
-          </div>
-        </div>
-        {info.modules.length > 0 && (
-          <div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1"><Layers className="h-3 w-3" /> Módulos</p>
-            <div className="flex flex-wrap gap-1 mt-1">{info.modules.map(m => <Badge key={m} variant="outline" className="text-[10px]">{m}</Badge>)}</div>
-          </div>
-        )}
-        <div>
-          <p className="text-xs text-muted-foreground flex items-center gap-1"><MessageSquare className="h-3 w-3" /> Histórico</p>
-          <div className="grid grid-cols-3 gap-2 mt-1">
-            {[
-              { label: 'Total', value: info.ticketHistory.total, color: 'hsl(210 65% 50%)' },
-              { label: 'Abertos', value: info.ticketHistory.open, color: 'hsl(35 80% 50%)' },
-              { label: 'Resolv.', value: info.ticketHistory.resolved, color: 'hsl(145 60% 42%)' },
-            ].map(s => (
-              <div key={s.label} className="text-center py-1.5 bg-muted/50 rounded">
-                <p className="text-base font-bold" style={{ color: s.color }}>{s.value}</p>
-                <p className="text-[9px] text-muted-foreground">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+// TenantInfoCard removed — replaced by TenantInfoSidebar component
 
 // ── Wiki Manager (kept from V1) ──
 
