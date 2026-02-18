@@ -14,7 +14,7 @@ import {
   MessageSquare, Clock, CheckCircle2, AlertCircle, Send, Users,
   BookOpen, Search, Star, ArrowLeft, Loader2, Eye, Lock, BarChart3,
   Plus, Inbox, UserCheck, Building2, Package, Layers, Radio,
-  Shield, Zap,
+  Shield, Zap, Trophy, TrendingUp, XCircle, Timer,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -144,16 +144,57 @@ function ConsoleV2({ userId, activeTab, setActiveTab }: { userId: string; active
   );
 }
 
-// ── Agent Dashboard V2 ──
+// ── Agent Dashboard V2 — Enhanced with full metrics + ranking ──
+
+interface AgentRankEntry {
+  agent_id: string;
+  name: string;
+  resolved: number;
+  avgScore: number;
+  avgResponseMin: number | null;
+}
 
 function AgentDashboardV2({ userId, onNavigate }: { userId: string; onNavigate: (tab: string) => void }) {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [evaluations, setEvaluations] = useState<SupportEvaluation[]>([]);
+  const [allEvaluations, setAllEvaluations] = useState<SupportEvaluation[]>([]);
+  const [ranking, setRanking] = useState<AgentRankEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([TicketService.listAll(), EvaluationService.listAll()])
-      .then(([t, e]) => { setTickets(t); setEvaluations(e.filter(ev => ev.agent_id === userId)); })
+      .then(async ([t, allEvals]) => {
+        setTickets(t);
+        setAllEvaluations(allEvals);
+        setEvaluations(allEvals.filter(ev => ev.agent_id === userId));
+
+        // Build ranking from all agents
+        const agentIds = [...new Set(t.filter(tk => tk.assigned_to).map(tk => tk.assigned_to!))];
+        const { data: platformUsers } = await supabase
+          .from('platform_users')
+          .select('user_id, display_name')
+          .in('user_id', agentIds);
+        const nameMap = new Map((platformUsers ?? []).map(u => [u.user_id, u.display_name ?? 'Agente']));
+
+        const rankEntries: AgentRankEntry[] = agentIds.map(aid => {
+          const agentTickets = t.filter(tk => tk.assigned_to === aid);
+          const resolved = agentTickets.filter(tk => tk.status === 'resolved' || tk.status === 'closed').length;
+          const agentEvals = allEvals.filter(e => e.agent_id === aid);
+          const avgScore = agentEvals.length > 0
+            ? Math.round((agentEvals.reduce((s, e) => s + (e.agent_score ?? 0), 0) / agentEvals.length) * 10) / 10
+            : 0;
+          const respTimes = agentTickets
+            .filter(tk => tk.first_response_at)
+            .map(tk => (new Date(tk.first_response_at!).getTime() - new Date(tk.created_at).getTime()) / 60000);
+          const avgResp = respTimes.length > 0
+            ? Math.round(respTimes.reduce((a, b) => a + b, 0) / respTimes.length)
+            : null;
+          return { agent_id: aid, name: (nameMap.get(aid) as string) ?? 'Agente', resolved, avgScore, avgResponseMin: avgResp };
+        });
+        // Sort by score desc, then resolved desc
+        rankEntries.sort((a, b) => b.avgScore - a.avgScore || b.resolved - a.resolved);
+        setRanking(rankEntries);
+      })
       .catch(() => toast.error('Erro ao carregar dashboard'))
       .finally(() => setLoading(false));
   }, [userId]);
@@ -163,20 +204,16 @@ function AgentDashboardV2({ userId, onNavigate }: { userId: string; onNavigate: 
   }
 
   const myTickets = tickets.filter(t => t.assigned_to === userId);
+  const resolved = myTickets.filter(t => t.status === 'resolved' || t.status === 'closed');
+  const unresolved = myTickets.filter(t => !['resolved', 'closed', 'cancelled'].includes(t.status));
+  const activeChats = myTickets.filter(t => t.status === 'in_progress').length;
   const openCount = tickets.filter(t => t.status === 'open' || t.status === 'awaiting_agent').length;
-  const inProgressCount = myTickets.filter(t => t.status === 'in_progress').length;
-  const resolvedByMe = myTickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
+
   const avgScore = evaluations.length > 0
     ? (evaluations.reduce((s, e) => s + (e.agent_score ?? 0), 0) / evaluations.length).toFixed(1)
     : '—';
 
-  // SLA: tickets without response > 15min
-  const slaAtRisk = tickets.filter(t =>
-    ['open', 'awaiting_agent'].includes(t.status) &&
-    !t.first_response_at &&
-    (Date.now() - new Date(t.created_at).getTime()) > 15 * 60000
-  ).length;
-
+  // Avg first response time
   const responseTimesMs = myTickets
     .filter(t => t.first_response_at)
     .map(t => new Date(t.first_response_at!).getTime() - new Date(t.created_at).getTime());
@@ -186,6 +223,27 @@ function AgentDashboardV2({ userId, onNavigate }: { userId: string; onNavigate: 
   const avgResponseLabel = avgResponseMin != null
     ? avgResponseMin < 60 ? `${avgResponseMin}min` : `${(avgResponseMin / 60).toFixed(1)}h`
     : '—';
+
+  // Avg resolution time
+  const resolutionTimesMs = resolved
+    .filter(t => t.resolved_at)
+    .map(t => new Date(t.resolved_at!).getTime() - new Date(t.created_at).getTime());
+  const avgResolutionMin = resolutionTimesMs.length > 0
+    ? Math.round(resolutionTimesMs.reduce((a, b) => a + b, 0) / resolutionTimesMs.length / 60000)
+    : null;
+  const avgResolutionLabel = avgResolutionMin != null
+    ? avgResolutionMin < 60 ? `${avgResolutionMin}min` : avgResolutionMin < 1440 ? `${(avgResolutionMin / 60).toFixed(1)}h` : `${(avgResolutionMin / 1440).toFixed(1)}d`
+    : '—';
+
+  // SLA at risk
+  const slaAtRisk = tickets.filter(t =>
+    ['open', 'awaiting_agent'].includes(t.status) &&
+    !t.first_response_at &&
+    (Date.now() - new Date(t.created_at).getTime()) > 15 * 60000
+  ).length;
+
+  // My ranking position
+  const myRankPos = ranking.findIndex(r => r.agent_id === userId) + 1;
 
   return (
     <div className="space-y-5">
@@ -203,14 +261,17 @@ function AgentDashboardV2({ userId, onNavigate }: { userId: string; onNavigate: 
         </div>
       )}
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      {/* KPIs — 8 metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Aguardando', value: openCount, icon: AlertCircle, color: 'hsl(35 80% 50%)', tab: 'queue' },
-          { label: 'Em Atendimento', value: inProgressCount, icon: Loader2, color: 'hsl(200 70% 50%)', tab: 'livechat' },
-          { label: 'Resolvidos', value: resolvedByMe, icon: CheckCircle2, color: 'hsl(145 60% 42%)', tab: 'metrics' },
+          { label: 'Chats Ativos', value: activeChats, icon: Radio, color: 'hsl(200 70% 50%)', tab: 'livechat' },
+          { label: 'Resolvidos', value: resolved.length, icon: CheckCircle2, color: 'hsl(145 60% 42%)', tab: 'metrics' },
+          { label: 'Não Resolvidos', value: unresolved.length, icon: XCircle, color: 'hsl(35 80% 50%)', tab: 'queue' },
           { label: 'Nota Média', value: avgScore, icon: Star, color: 'hsl(45 90% 55%)', tab: 'evaluations' },
-          { label: 'Tempo Resposta', value: avgResponseLabel, icon: Clock, color: 'hsl(210 65% 50%)', tab: 'performance' },
+          { label: 'Tempo Resposta', value: avgResponseLabel, icon: Timer, color: 'hsl(210 65% 50%)', tab: 'performance' },
+          { label: 'Tempo Resolução', value: avgResolutionLabel, icon: Clock, color: 'hsl(280 60% 55%)', tab: 'performance' },
+          { label: 'Aguardando', value: openCount, icon: AlertCircle, color: 'hsl(20 80% 50%)', tab: 'queue' },
+          { label: 'Ranking', value: myRankPos > 0 ? `#${myRankPos}` : '—', icon: Trophy, color: 'hsl(45 90% 55%)', tab: 'performance' },
         ].map(k => {
           const Icon = k.icon;
           return (
@@ -218,7 +279,7 @@ function AgentDashboardV2({ userId, onNavigate }: { userId: string; onNavigate: 
               <CardContent className="py-3 px-4">
                 <div className="flex items-center gap-2 mb-1">
                   <Icon className="h-4 w-4" style={{ color: k.color }} />
-                  <span className="text-[10px] text-muted-foreground">{k.label}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{k.label}</span>
                 </div>
                 <p className="text-2xl font-bold text-foreground">{k.value}</p>
               </CardContent>
@@ -227,8 +288,46 @@ function AgentDashboardV2({ userId, onNavigate }: { userId: string; onNavigate: 
         })}
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Bottom panels */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Ranking Interno */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-[hsl(45_90%_55%)]" /> Ranking Interno
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {ranking.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Sem dados de ranking.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {ranking.slice(0, 5).map((r, i) => {
+                  const isMe = r.agent_id === userId;
+                  return (
+                    <div
+                      key={r.agent_id}
+                      className={`flex items-center gap-2 py-1.5 px-2 rounded-md text-xs ${
+                        isMe ? 'bg-primary/10 font-semibold' : ''
+                      }`}
+                    >
+                      <span className="w-5 text-center font-bold text-muted-foreground">
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                      </span>
+                      <span className="flex-1 truncate text-foreground">{r.name}{isMe ? ' (Você)' : ''}</span>
+                      <div className="flex items-center gap-1">
+                        <Star className="h-3 w-3" fill="hsl(45 90% 55%)" stroke="hsl(45 90% 55%)" />
+                        <span className="text-foreground">{r.avgScore || '—'}</span>
+                      </div>
+                      <span className="text-muted-foreground">{r.resolved} res.</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Recent Evaluations */}
         <Card>
           <CardHeader className="pb-2">
