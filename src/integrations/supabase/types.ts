@@ -6654,6 +6654,50 @@ export type Database = {
           },
         ]
       }
+      support_module_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          feature_flags: Json
+          id: string
+          module_id: string
+          module_version_id: string | null
+          platform_ui_schema: Json
+          released_at: string | null
+          tenant_ui_schema: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          feature_flags?: Json
+          id?: string
+          module_id?: string
+          module_version_id?: string | null
+          platform_ui_schema?: Json
+          released_at?: string | null
+          tenant_ui_schema?: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          feature_flags?: Json
+          id?: string
+          module_id?: string
+          module_version_id?: string | null
+          platform_ui_schema?: Json
+          released_at?: string | null
+          tenant_ui_schema?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_module_versions_module_version_id_fkey"
+            columns: ["module_version_id"]
+            isOneToOne: false
+            referencedRelation: "module_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_system_ratings: {
         Row: {
           category: string
