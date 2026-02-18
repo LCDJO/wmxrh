@@ -2,7 +2,7 @@
  * AutoChangeTracker — Automatically logs changes to key platform entities
  * into the PlatformChangeLog via the ChangeLogger.
  */
-import type { ChangeType } from './types';
+import type { ChangeType, EntityScope } from './types';
 import type { ChangeLogger } from './change-logger';
 
 export type TrackedEntityType =
@@ -14,12 +14,14 @@ export type TrackedEntityType =
   | 'permission'
   | 'automation_rule'
   | 'growth_experiment'
-  | 'module';
+  | 'module'
+  | 'support_module';
 
 interface TrackOpts {
   module_id?: string;
   entity_type: TrackedEntityType;
   entity_id: string;
+  entity_scope?: EntityScope;
   change_type: ChangeType;
   version_tag: string;
   before?: Record<string, unknown>;
@@ -35,6 +37,7 @@ export class AutoChangeTracker {
       module_id: opts.module_id,
       entity_type: opts.entity_type,
       entity_id: opts.entity_id,
+      entity_scope: opts.entity_scope ?? null,
       change_type: opts.change_type,
       version_tag: opts.version_tag,
       payload_diff: {
@@ -44,6 +47,26 @@ export class AutoChangeTracker {
       changed_by: opts.changed_by,
     });
   }
+
+  // ── Support Module convenience methods ──
+
+  async trackSupportChatLayout(changeType: ChangeType, changedBy: string, versionTag: string, scope: EntityScope, before?: Record<string, unknown>, after?: Record<string, unknown>) {
+    await this.track({ module_id: 'support_module', entity_type: 'support_module', entity_id: 'chat_layout', entity_scope: scope, change_type: changeType, version_tag: versionTag, before, after, changed_by: changedBy });
+  }
+
+  async trackSupportTicketWorkflow(changeType: ChangeType, changedBy: string, versionTag: string, scope: EntityScope, before?: Record<string, unknown>, after?: Record<string, unknown>) {
+    await this.track({ module_id: 'support_module', entity_type: 'support_module', entity_id: 'ticket_workflow', entity_scope: scope, change_type: changeType, version_tag: versionTag, before, after, changed_by: changedBy });
+  }
+
+  async trackSupportAnalytics(changeType: ChangeType, changedBy: string, versionTag: string, scope: EntityScope, before?: Record<string, unknown>, after?: Record<string, unknown>) {
+    await this.track({ module_id: 'support_module', entity_type: 'support_module', entity_id: 'analytics', entity_scope: scope, change_type: changeType, version_tag: versionTag, before, after, changed_by: changedBy });
+  }
+
+  async trackSupportEvaluation(changeType: ChangeType, changedBy: string, versionTag: string, scope: EntityScope, before?: Record<string, unknown>, after?: Record<string, unknown>) {
+    await this.track({ module_id: 'support_module', entity_type: 'support_module', entity_id: 'evaluation', entity_scope: scope, change_type: changeType, version_tag: versionTag, before, after, changed_by: changedBy });
+  }
+
+  // ── Existing convenience methods ──
 
   async trackLandingPage(entityId: string, changeType: ChangeType, changedBy: string, versionTag: string, before?: Record<string, unknown>, after?: Record<string, unknown>) {
     await this.track({ module_id: 'landing_engine', entity_type: 'landing_page', entity_id: entityId, change_type: changeType, version_tag: versionTag, before, after, changed_by: changedBy });

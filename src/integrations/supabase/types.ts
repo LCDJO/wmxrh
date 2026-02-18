@@ -4950,6 +4950,7 @@ export type Database = {
           changed_by: string
           description: string | null
           entity_id: string
+          entity_scope: string | null
           entity_type: string
           id: string
           linked_release_id: string | null
@@ -4970,6 +4971,7 @@ export type Database = {
           changed_by: string
           description?: string | null
           entity_id: string
+          entity_scope?: string | null
           entity_type: string
           id?: string
           linked_release_id?: string | null
@@ -4990,6 +4992,7 @@ export type Database = {
           changed_by?: string
           description?: string | null
           entity_id?: string
+          entity_scope?: string | null
           entity_type?: string
           id?: string
           linked_release_id?: string | null

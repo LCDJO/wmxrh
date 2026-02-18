@@ -64,12 +64,14 @@ export interface ModuleDependency {
 // ── Changelog ──
 export type ChangeCategory = 'feature' | 'fix' | 'improvement' | 'breaking' | 'deprecation' | 'security' | 'performance' | 'docs';
 export type ChangeType = 'created' | 'updated' | 'deleted' | 'published' | 'rolled_back' | 'deprecated' | 'activated' | 'deactivated';
+export type EntityScope = 'tenant_side' | 'platform_side' | null;
 
 export interface PlatformChangeLog {
   id: string;
   module_id?: string;          // optional — null = platform-level change
-  entity_type: string;         // e.g. 'landing_page', 'module', 'release', 'feature_flag'
+  entity_type: string;         // e.g. 'landing_page', 'module', 'release', 'support_module'
   entity_id: string;
+  entity_scope?: EntityScope;  // tenant_side | platform_side (for two-layer modules)
   change_type: ChangeType;
   version_tag: string;         // "vMAJOR.MINOR.PATCH" at time of change
   payload_diff: Record<string, unknown>;  // { before: ..., after: ... }
