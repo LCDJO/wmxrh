@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Filter } from 'lucide-react';
+import { Search, Plus, Filter, Pencil, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
@@ -131,6 +131,7 @@ export default function Employees() {
               <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Empresa</th>
               <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Salário</th>
               <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+              {canManageEmployees && <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ações</th>}
             </tr>
           </thead>
           <tbody>
@@ -149,6 +150,18 @@ export default function Employees() {
                 <td className="py-3.5 px-5 hidden lg:table-cell text-sm text-muted-foreground">{emp.companies?.name || '—'}</td>
                 <td className="py-3.5 px-5 hidden lg:table-cell text-sm font-medium text-card-foreground">R$ {(emp.current_salary || 0).toLocaleString('pt-BR')}</td>
                 <td className="py-3.5 px-5"><StatusBadge status={emp.status} /></td>
+                {canManageEmployees && (
+                  <td className="py-3.5 px-5">
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); navigate(`/employees/${emp.id}`); }}>
+                        <Pencil className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); /* TODO: delete handler */ }}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
