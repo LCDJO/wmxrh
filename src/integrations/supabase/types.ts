@@ -6589,6 +6589,9 @@ export type Database = {
       support_chat_sessions: {
         Row: {
           assigned_agent_id: string | null
+          closure_category: string | null
+          closure_resolved: boolean | null
+          closure_summary: string | null
           created_at: string
           ended_at: string | null
           id: string
@@ -6604,6 +6607,9 @@ export type Database = {
         }
         Insert: {
           assigned_agent_id?: string | null
+          closure_category?: string | null
+          closure_resolved?: boolean | null
+          closure_summary?: string | null
           created_at?: string
           ended_at?: string | null
           id?: string
@@ -6619,6 +6625,9 @@ export type Database = {
         }
         Update: {
           assigned_agent_id?: string | null
+          closure_category?: string | null
+          closure_resolved?: boolean | null
+          closure_summary?: string | null
           created_at?: string
           ended_at?: string | null
           id?: string
