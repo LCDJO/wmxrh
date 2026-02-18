@@ -23,7 +23,10 @@ export async function seedAllModuleVersions(createdBy: string): Promise<{
         continue;
       }
 
-      const opts: Record<string, any> = { changelog_summary: entry.changelog_summary };
+      const opts: Record<string, any> = {
+        changelog_summary: entry.changelog_summary,
+        dependencies: entry.dependencies.length > 0 ? entry.dependencies : undefined,
+      };
 
       // Two-layer modules get layer-specific versions
       if (entry.module_id === 'support_module') {

@@ -3,6 +3,7 @@
  * Used by the versioning engine to seed and track module versions.
  */
 import { PLATFORM_MODULES } from '@/domains/platform/platform-modules';
+import type { ModuleDependency } from './types';
 
 export interface ModuleCatalogEntry {
   module_id: string;
@@ -11,7 +12,28 @@ export interface ModuleCatalogEntry {
   category: 'platform' | 'domain';
   initial_version: { major: number; minor: number; patch: number };
   changelog_summary: string;
+  dependencies: ModuleDependency[];
 }
+
+/** Declared module dependencies */
+const MODULE_DEPENDENCIES: Record<string, ModuleDependency[]> = {
+  support_module: [
+    {
+      module_id: 'support_module',
+      required_module_id: 'iam',
+      required_version: { major: 1, minor: 0, patch: 0 },
+      is_mandatory: true,
+      compatibility_note: 'SupportModule requer IAM >= v1.0 para autenticação e permissões de agentes',
+    },
+    {
+      module_id: 'support_module',
+      required_module_id: 'tenant_module',
+      required_version: { major: 1, minor: 0, patch: 0 },
+      is_mandatory: true,
+      compatibility_note: 'SupportModule requer TenantModule >= v1.0 para resolução de contexto multi-tenant',
+    },
+  ],
+};
 
 /**
  * Build the catalog from the unified module list.
@@ -28,4 +50,5 @@ export const MODULE_CATALOG: ModuleCatalogEntry[] = PLATFORM_MODULES.map((mod) =
   changelog_summary: mod.key === 'support_module'
     ? 'v2.0.0 — Refactor: módulo versionado com duas camadas (Tenant App + Platform Console), LiveSupportEngine, ConversationAnalytics.'
     : `Versão inicial — ${mod.description}.`,
+  dependencies: MODULE_DEPENDENCIES[mod.key] ?? [],
 }));
