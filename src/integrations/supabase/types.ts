@@ -595,6 +595,51 @@ export type Database = {
           },
         ]
       }
+      chat_assist_sessions: {
+        Row: {
+          assist_mode: Database["public"]["Enums"]["assist_mode"]
+          coordinator_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          session_id: string
+          started_at: string
+        }
+        Insert: {
+          assist_mode?: Database["public"]["Enums"]["assist_mode"]
+          coordinator_id: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          session_id: string
+          started_at?: string
+        }
+        Update: {
+          assist_mode?: Database["public"]["Enums"]["assist_mode"]
+          coordinator_id?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          session_id?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_assist_sessions_coordinator_id_fkey"
+            columns: ["coordinator_id"]
+            isOneToOne: false
+            referencedRelation: "platform_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_assist_sessions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "support_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cnae_cbo_mappings: {
         Row: {
           approved: boolean
@@ -8432,6 +8477,7 @@ export type Database = {
         | "compliance"
         | "general"
       announcement_priority: "low" | "medium" | "high" | "critical"
+      assist_mode: "silent" | "visible"
       benefit_type: "va" | "vr" | "vt" | "health" | "dental" | "cesta" | "flex"
       compliance_rule_severity: "info" | "warning" | "critical"
       compliance_rule_status: "active" | "disabled" | "archived"
@@ -8715,6 +8761,7 @@ export const Constants = {
         "general",
       ],
       announcement_priority: ["low", "medium", "high", "critical"],
+      assist_mode: ["silent", "visible"],
       benefit_type: ["va", "vr", "vt", "health", "dental", "cesta", "flex"],
       compliance_rule_severity: ["info", "warning", "critical"],
       compliance_rule_status: ["active", "disabled", "archived"],
