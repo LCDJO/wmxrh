@@ -30,6 +30,7 @@ export const PLATFORM_MODULES: readonly PlatformModule[] = [
   { key: 'labor_rules',     label: 'Regras Trabalhistas',   description: 'CCT, pisos, jornadas e regras sindicais',                                icon: 'Scale',          category: 'domain' },
   { key: 'nr_training',     label: 'Treinamentos NR',       description: 'Gestão de treinamentos normativos',                                     icon: 'GraduationCap',  category: 'domain' },
   { key: 'compensation_engine', label: 'Motor de Compensação', description: 'Simulações salariais, reajustes em massa e tabelas de compensação', icon: 'TrendingUp',     category: 'domain' },
+  { key: 'customer_support', label: 'Atendimento',          description: 'Tickets, chat ao vivo e base de conhecimento — modo agente (SaaS) e modo cliente (tenant)', icon: 'Headphones', category: 'domain' },
 
   // ── Platform: Infraestrutura SaaS ───────────────────────────
   { key: 'iam',              label: 'IAM',                  description: 'Gestão de usuários, roles, permissões e políticas de acesso',            icon: 'Key',            category: 'platform' },
@@ -38,7 +39,6 @@ export const PLATFORM_MODULES: readonly PlatformModule[] = [
   { key: 'automation',       label: 'Automação',            description: 'Regras de automação baseadas em eventos com condições e ações',          icon: 'Zap',            category: 'platform' },
   { key: 'observability',    label: 'Observabilidade',      description: 'Monitoramento de saúde, rastreamento de erros e métricas',               icon: 'Monitor',        category: 'platform' },
   { key: 'analytics',        label: 'Analytics',            description: 'Dashboards, relatórios e detecção de anomalias',                        icon: 'BarChart3',      category: 'platform' },
-  { key: 'customer_support', label: 'Suporte ao Cliente',   description: 'Tickets, chat ao vivo, base de conhecimento e avaliações',              icon: 'Headphones',     category: 'platform' },
   { key: 'ads',              label: 'Ads & Campanhas',      description: 'Gestão de campanhas publicitárias e relatórios de performance',          icon: 'Megaphone',      category: 'platform' },
   { key: 'growth',           label: 'Growth Engine',        description: 'Experimentos de crescimento, A/B testing e métricas de conversão',      icon: 'Rocket',         category: 'platform' },
   { key: 'landing_engine',   label: 'Landing Engine',       description: 'Construtor de landing pages com versionamento e A/B testing',            icon: 'Layout',         category: 'platform' },
