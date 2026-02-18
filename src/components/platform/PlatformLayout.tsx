@@ -38,6 +38,7 @@ import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useMemo } from 'react';
+import { useAgentAlerts } from '@/modules/support/ui/agent/AgentAlertService';
 
 interface NavLeaf {
   to: string;
@@ -270,7 +271,7 @@ function GrandchildNavItem({ gc, currentPath }: { gc: NavGrandChild; currentPath
 }
 
 export default function PlatformLayout() {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { identity } = usePlatformIdentity();
   const { can } = usePlatformPermissions();
   const navigate = useNavigate();
@@ -278,6 +279,7 @@ export default function PlatformLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [expandedNav, setExpandedNav] = useState<string | null>(null);
   const [expandedChild, setExpandedChild] = useState<string | null>(null);
+  const alertService = useAgentAlerts(user?.id ?? '');
 
   // Apply saved menu order, then filter by permissions
   const savedOrder = useMemo(() => getSavedMenuOrder(), []);
@@ -395,10 +397,23 @@ export default function PlatformLayout() {
                         : 'text-[hsl(250_15%_65%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
                     )}
                   >
-                    <Icon className="h-4.5 w-4.5 shrink-0" />
+                    <div className="relative">
+                      <Icon className="h-4.5 w-4.5 shrink-0" />
+                      {collapsed && to === '/platform/support' && alertService.unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-3.5 min-w-3.5 rounded-full bg-[hsl(0_70%_50%)] text-[7px] font-bold text-white flex items-center justify-center px-0.5">
+                          {alertService.unreadCount > 9 ? '9+' : alertService.unreadCount}
+                        </span>
+                      )}
+                    </div>
                     {!collapsed && (
                       <>
                         <span className="truncate flex-1 text-left">{label}</span>
+                        {/* Support alert badge */}
+                        {to === '/platform/support' && alertService.unreadCount > 0 && (
+                          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[hsl(0_70%_50%)] text-[9px] font-bold text-white px-1">
+                            {alertService.unreadCount > 9 ? '9+' : alertService.unreadCount}
+                          </span>
+                        )}
                         <ChevronRight className={cn('h-3.5 w-3.5 shrink-0 transition-transform', isExpanded && 'rotate-90')} />
                       </>
                     )}
