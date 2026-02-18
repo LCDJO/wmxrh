@@ -48,6 +48,7 @@ import IAMManagement from "./pages/IAMManagement";
 import SettingsUsers from "./pages/SettingsUsers";
 import SettingsRoles from "./pages/SettingsRoles";
 import SettingsGamification from "./pages/SettingsGamification";
+import WebhookSettings from "./pages/WebhookSettings";
 import PlatformDashboard from "./pages/platform/PlatformDashboard";
 import PlatformTenants from "./pages/platform/PlatformTenants";
 import PlatformModules from "./pages/platform/PlatformModules";
@@ -298,6 +299,9 @@ function AppRoutes() {
           } />
           <Route path="/settings/roles" element={
             <ProtectedRoute navKey="iam_roles"><SettingsRoles /></ProtectedRoute>
+          } />
+          <Route path="/settings/webhooks" element={
+            <ProtectedRoute navKey="iam_users"><WebhookSettings /></ProtectedRoute>
           } />
           <Route path="/referral" element={
             <ProtectedRoute navKey="dashboard"><ReferralPage /></ProtectedRoute>
