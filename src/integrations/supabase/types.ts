@@ -6814,6 +6814,80 @@ export type Database = {
           },
         ]
       }
+      support_squad_members: {
+        Row: {
+          agent_id: string
+          id: string
+          joined_at: string
+          squad_id: string
+        }
+        Insert: {
+          agent_id: string
+          id?: string
+          joined_at?: string
+          squad_id: string
+        }
+        Update: {
+          agent_id?: string
+          id?: string
+          joined_at?: string
+          squad_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_squad_members_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "platform_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_squad_members_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "support_squads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_squads: {
+        Row: {
+          coordinator_agent_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          coordinator_agent_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          coordinator_agent_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_squads_coordinator_agent_id_fkey"
+            columns: ["coordinator_agent_id"]
+            isOneToOne: false
+            referencedRelation: "platform_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_system_ratings: {
         Row: {
           category: string
@@ -8199,6 +8273,10 @@ export type Database = {
       generate_billing_alerts: { Args: never; Returns: undefined }
       generate_support_protocol: { Args: never; Returns: string }
       get_cognitive_event_stats: { Args: { days_back?: number }; Returns: Json }
+      get_coordinator_squad_ids: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
       get_platform_metrics: { Args: never; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_type_from_jwt: { Args: never; Returns: string }
@@ -8231,6 +8309,10 @@ export type Database = {
         Returns: boolean
       }
       is_platform_user: { Args: { _user_id: string }; Returns: boolean }
+      is_squad_coordinator: {
+        Args: { _squad_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
