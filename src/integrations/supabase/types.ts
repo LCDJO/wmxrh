@@ -8440,6 +8440,7 @@ export type Database = {
         | "platform_marketing_director"
         | "platform_support_agent"
         | "platform_support_manager"
+        | "platform_support_coordinator"
       risk_category:
         | "fisico"
         | "quimico"
@@ -8729,6 +8730,7 @@ export const Constants = {
         "platform_marketing_director",
         "platform_support_agent",
         "platform_support_manager",
+        "platform_support_coordinator",
       ],
       risk_category: [
         "fisico",

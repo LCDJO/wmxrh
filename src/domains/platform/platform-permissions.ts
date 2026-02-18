@@ -267,6 +267,20 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'audit.view',
   ],
 
+  platform_support_coordinator: [
+    'tenant.view',
+    'ticket.view',
+    'ticket.assign_self',
+    'ticket.assign_any',
+    'ticket.reply',
+    'ticket.close',
+    'ticket.reopen',
+    'support.analytics.view',
+    'audit.view',
+    'platform_user.view',
+    'security.view',
+  ],
+
   platform_support_manager: [
     'tenant.view',
     'ticket.view',
