@@ -81,3 +81,5 @@ export { SupportModuleVersionRegistry } from './support-module-version';
 export type { SupportModuleVersion } from './support-module-version';
 export { SupportModuleSandboxPreview } from './support-sandbox-preview';
 export type { SandboxPreviewSession } from './support-sandbox-preview';
+export { SupportModuleRollback } from './support-module-rollback';
+export type { TenantRollbackResult } from './support-module-rollback';
