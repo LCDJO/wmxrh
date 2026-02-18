@@ -147,14 +147,18 @@ const RICH_META: Record<string, ModuleRichMeta> = {
     usedIn: ['SST', 'Compliance', 'Admissão'],
     status: 'active',
   },
-  customer_support: {
-    purpose: 'Sistema de atendimento com modo agente (SaaS) e modo cliente (tenant). Inclui tickets, chat ao vivo estilo WhatsApp, base de conhecimento e protocolos automáticos.',
+  support_module: {
+    purpose: 'Módulo versionado de atendimento com duas camadas: SupportTenantApp (portal do cliente) e SupportPlatformConsole (console SaaS). Inclui LiveSupportEngine, TicketService, SupportWikiService, SupportEvaluationEngine e ConversationAnalytics.',
     events: [
       { key: 'ticket_created', label: 'Ticket Created', description: 'Novo ticket de suporte criado.' },
+      { key: 'ticket_assigned', label: 'Ticket Assigned', description: 'Ticket atribuído a um agente.' },
       { key: 'chat_session_started', label: 'Chat Session Started', description: 'Sessão de chat ao vivo iniciada.' },
+      { key: 'chat_transcript_archived', label: 'Chat Transcript Archived', description: 'Transcrição de chat arquivada.' },
       { key: 'ticket_resolved', label: 'Ticket Resolved', description: 'Ticket resolvido pelo atendente.' },
+      { key: 'agent_evaluated', label: 'Agent Evaluated', description: 'Avaliação de agente registrada.' },
+      { key: 'wiki_published', label: 'Wiki Published', description: 'Artigo da base de conhecimento publicado.' },
     ],
-    usedIn: ['Portal do Cliente', 'Console de Suporte', 'Chat ao Vivo'],
+    usedIn: ['SupportTenantApp', 'SupportPlatformConsole', 'LiveSupportEngine', 'ConversationAnalytics'],
     status: 'active',
   },
   analytics: {
@@ -271,7 +275,7 @@ const MODULE_COLORS: Record<string, string> = {
   benefits: 'hsl(340 75% 55%)', compliance: 'hsl(220 70% 55%)', health: 'hsl(170 60% 45%)',
   esocial: 'hsl(200 70% 50%)', payroll_sim: 'hsl(35 90% 55%)', agreements: 'hsl(280 75% 60%)',
   workforce_intel: 'hsl(300 60% 50%)', labor_rules: 'hsl(25 85% 55%)', nr_training: 'hsl(190 70% 45%)',
-  customer_support: 'hsl(210 80% 55%)', iam: 'hsl(45 80% 50%)', tenant_admin: 'hsl(220 70% 55%)',
+  support_module: 'hsl(210 80% 55%)', iam: 'hsl(45 80% 50%)', tenant_admin: 'hsl(220 70% 55%)',
   billing: 'hsl(160 60% 45%)', automation: 'hsl(270 70% 55%)', analytics: 'hsl(200 70% 50%)',
   observability: 'hsl(35 90% 55%)', ads: 'hsl(340 75% 55%)', growth: 'hsl(340 75% 55%)',
   landing_engine: 'hsl(260 65% 55%)', website_engine: 'hsl(180 60% 45%)',

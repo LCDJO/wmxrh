@@ -30,7 +30,7 @@ export const PLATFORM_MODULES: readonly PlatformModule[] = [
   { key: 'labor_rules',     label: 'Regras Trabalhistas',   description: 'CCT, pisos, jornadas e regras sindicais',                                icon: 'Scale',          category: 'domain' },
   { key: 'nr_training',     label: 'Treinamentos NR',       description: 'Gestão de treinamentos normativos',                                     icon: 'GraduationCap',  category: 'domain' },
   { key: 'compensation_engine', label: 'Motor de Compensação', description: 'Simulações salariais, reajustes em massa e tabelas de compensação', icon: 'TrendingUp',     category: 'domain' },
-  { key: 'customer_support', label: 'Atendimento',          description: 'Tickets, chat ao vivo e base de conhecimento — modo agente (SaaS) e modo cliente (tenant)', icon: 'Headphones', category: 'domain' },
+  { key: 'support_module', label: 'Suporte',               description: 'Módulo versionado de atendimento — Tenant Experience + Platform Console + Chat ao Vivo + Wiki + Analytics', icon: 'Headphones', category: 'domain' },
 
   // ── Platform: Infraestrutura SaaS ───────────────────────────
   { key: 'iam',              label: 'IAM',                  description: 'Gestão de usuários, roles, permissões e políticas de acesso',            icon: 'Key',            category: 'platform' },
