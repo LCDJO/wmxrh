@@ -44,6 +44,12 @@ export const PLATFORM_PERMISSIONS = [
   'ticket.close',
   'ticket.reopen',
   'support.analytics.view',
+  // ── Support Coordinator (Squad Leadership) ──
+  'support.chat.view_squad',
+  'support.chat.join_assist',
+  'support.chat.add_internal_note',
+  'support.metrics.view_squad',
+  'support.agent.monitor',
   // ── Future: Delegated Support ──
   'support.delegate',
   'support.escalate',
@@ -276,6 +282,12 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'ticket.close',
     'ticket.reopen',
     'support.analytics.view',
+    // ── Squad Leadership ──
+    'support.chat.view_squad',
+    'support.chat.join_assist',
+    'support.chat.add_internal_note',
+    'support.metrics.view_squad',
+    'support.agent.monitor',
     'audit.view',
     'platform_user.view',
     'security.view',
