@@ -4032,8 +4032,10 @@ export type Database = {
           dependencies: Json
           id: string
           module_id: string
+          platform_console_version: string | null
           released_at: string | null
           status: string
+          tenant_app_version: string | null
           version_major: number
           version_minor: number
           version_patch: number
@@ -4048,8 +4050,10 @@ export type Database = {
           dependencies?: Json
           id?: string
           module_id: string
+          platform_console_version?: string | null
           released_at?: string | null
           status?: string
+          tenant_app_version?: string | null
           version_major?: number
           version_minor?: number
           version_patch?: number
@@ -4064,8 +4068,10 @@ export type Database = {
           dependencies?: Json
           id?: string
           module_id?: string
+          platform_console_version?: string | null
           released_at?: string | null
           status?: string
+          tenant_app_version?: string | null
           version_major?: number
           version_minor?: number
           version_patch?: number

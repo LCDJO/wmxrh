@@ -45,6 +45,9 @@ export interface ModuleVersion {
   breaking_changes: boolean;
   dependencies: ModuleDependency[];
   changelog_summary: string;
+  /** Layer-specific versions for two-layer modules (e.g. support_module) */
+  tenant_app_version: string | null;
+  platform_console_version: string | null;
   released_at: string | null;
   created_at: string;
   created_by: string;
