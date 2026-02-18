@@ -8,7 +8,7 @@ import {
   useSalaryContracts, useSalaryAdjustments, useSalaryAdditionals,
   useCreateSalaryContract, useCreateSalaryAdjustment, useCreateSalaryAdditional,
   useEmployeeBenefits, useHealthExams, useEmployeeRiskExposures,
-  useNrTrainingByEmployee,
+  useNrTrainingByEmployee, useUpdateEmployee,
 } from '@/domains/hooks';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, Mail, Phone, Calendar, TrendingUp, Building2, FileText,
-  Plus, Clock, Heart, ShieldAlert, Gift, Activity, Calculator, GraduationCap,
+  Plus, Clock, Heart, ShieldAlert, Gift, Activity, Calculator, GraduationCap, Pencil,
 } from 'lucide-react';
 import { SimulacaoTrabalhistaTab } from '@/components/employee/SimulacaoTrabalhistaTab';
 import { DocumentosTab } from '@/components/employee/DocumentosTab';
@@ -85,7 +85,8 @@ export default function EmployeeDetail() {
   const createContract = useCreateSalaryContract();
   const createAdjustment = useCreateSalaryAdjustment();
   const createAdditional = useCreateSalaryAdditional();
-  const { canManageCompensation } = usePermissions();
+  const updateEmployee = useUpdateEmployee();
+  const { canManageEmployees, canManageCompensation } = usePermissions();
 
   // Forms
   const [contractOpen, setContractOpen] = useState(false);
@@ -99,6 +100,42 @@ export default function EmployeeDetail() {
   const [addAmount, setAddAmount] = useState('');
   const [addDesc, setAddDesc] = useState('');
   const [addRecurring, setAddRecurring] = useState('false');
+
+  // Edit employee state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editCpf, setEditCpf] = useState('');
+  const [editHireDate, setEditHireDate] = useState('');
+  const [editStatus, setEditStatus] = useState('');
+
+  const openEditDialog = () => {
+    if (!employee) return;
+    setEditName(employee.name || '');
+    setEditEmail(employee.email || '');
+    setEditPhone(employee.phone || '');
+    setEditCpf(employee.cpf || '');
+    setEditHireDate(employee.hire_date ? employee.hire_date.split('T')[0] : '');
+    setEditStatus(employee.status || 'active');
+    setEditOpen(true);
+  };
+
+  const handleUpdateEmployee = () => {
+    if (!id) return;
+    updateEmployee.mutate({
+      id,
+      name: editName,
+      email: editEmail || null,
+      phone: editPhone || null,
+      cpf: editCpf || null,
+      hire_date: editHireDate || null,
+      status: editStatus,
+    }, {
+      onSuccess: () => { toast({ title: 'Colaborador atualizado!' }); setEditOpen(false); },
+      onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+    });
+  };
 
   // ── Unified timeline merging compensation + exams ──
   const unifiedTimeline = useMemo(() => {
@@ -231,7 +268,14 @@ export default function EmployeeDetail() {
             {/* ── TAB: Dados Trabalhistas ── */}
             <TabsContent value="trabalhista">
               <div className="bg-card rounded-xl shadow-card p-6 space-y-5">
-                <h3 className="text-lg font-semibold font-display text-card-foreground">Dados Trabalhistas</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold font-display text-card-foreground">Dados Trabalhistas</h3>
+                  {canManageEmployees && (
+                    <Button variant="outline" size="sm" className="gap-1" onClick={openEditDialog}>
+                      <Pencil className="h-3.5 w-3.5" /> Editar
+                    </Button>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <InfoField label="Nome" value={employee.name} />
                   <InfoField label="CPF" value={employee.cpf} />
@@ -243,6 +287,37 @@ export default function EmployeeDetail() {
                   <InfoField label="E-mail" value={employee.email} />
                   <InfoField label="Telefone" value={employee.phone} />
                 </div>
+
+                {/* Edit Employee Dialog */}
+                <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                  <DialogContent className="sm:max-w-lg">
+                    <DialogHeader><DialogTitle>Editar Colaborador — {employee.name}</DialogTitle></DialogHeader>
+                    <form onSubmit={e => { e.preventDefault(); handleUpdateEmployee(); }} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Nome *</Label><Input value={editName} onChange={e => setEditName(e.target.value)} required /></div>
+                        <div className="space-y-2"><Label>CPF</Label><Input value={editCpf} onChange={e => setEditCpf(e.target.value)} /></div>
+                        <div className="space-y-2"><Label>E-mail</Label><Input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} /></div>
+                        <div className="space-y-2"><Label>Telefone</Label><Input value={editPhone} onChange={e => setEditPhone(e.target.value)} /></div>
+                        <div className="space-y-2"><Label>Data Admissão</Label><Input type="date" value={editHireDate} onChange={e => setEditHireDate(e.target.value)} /></div>
+                        <div className="space-y-2">
+                          <Label>Status</Label>
+                          <Select value={editStatus} onValueChange={setEditStatus}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">Ativo</SelectItem>
+                              <SelectItem value="inactive">Inativo</SelectItem>
+                              <SelectItem value="on_leave">Afastado</SelectItem>
+                              <SelectItem value="terminated">Desligado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <Button type="submit" className="w-full" disabled={updateEmployee.isPending}>
+                        {updateEmployee.isPending ? 'Salvando...' : 'Salvar Alterações'}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
 
                 {/* Events */}
                 <div className="border-t border-border pt-5">
