@@ -74,3 +74,6 @@ export { RollbackOrchestrator } from './rollback-orchestrator';
 export { ChangelogRenderer } from './changelog-renderer';
 export { AutoChangeTracker } from './auto-change-tracker';
 export { formatVersion, parseVersion, compareVersions, bumpVersion, satisfiesRange } from './version-utils';
+export { MODULE_CATALOG } from './module-catalog';
+export { seedAllModuleVersions } from './module-version-seeder';
+export { useModuleVersioning } from './use-module-versioning';
