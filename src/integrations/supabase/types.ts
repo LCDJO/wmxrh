@@ -6548,15 +6548,56 @@ export type Database = {
           },
         ]
       }
+      support_chat_notes: {
+        Row: {
+          agent_id: string
+          created_at: string
+          id: string
+          is_internal: boolean
+          note_text: string
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          note_text: string
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          note_text?: string
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_chat_notes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "support_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_chat_sessions: {
         Row: {
           assigned_agent_id: string | null
           created_at: string
           ended_at: string | null
           id: string
+          module_reference: string | null
+          priority: string
           protocol_number: string
           started_at: string
           status: string
+          tags: string[]
           tenant_id: string
           ticket_id: string
           updated_at: string
@@ -6566,9 +6607,12 @@ export type Database = {
           created_at?: string
           ended_at?: string | null
           id?: string
+          module_reference?: string | null
+          priority?: string
           protocol_number?: string
           started_at?: string
           status?: string
+          tags?: string[]
           tenant_id: string
           ticket_id: string
           updated_at?: string
@@ -6578,9 +6622,12 @@ export type Database = {
           created_at?: string
           ended_at?: string | null
           id?: string
+          module_reference?: string | null
+          priority?: string
           protocol_number?: string
           started_at?: string
           status?: string
+          tags?: string[]
           tenant_id?: string
           ticket_id?: string
           updated_at?: string
