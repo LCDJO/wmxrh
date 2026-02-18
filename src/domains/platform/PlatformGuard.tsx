@@ -20,6 +20,7 @@ export type PlatformRoleType =
   // ── Support granular roles ──
   | 'platform_support_agent'
   | 'platform_support_manager'
+  | 'platform_support_coordinator'
   // ── Future roles (prepared, not yet active) ──
   | 'platform_delegated_support'
   | 'platform_marketplace_admin'
