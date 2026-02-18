@@ -17,6 +17,8 @@ import { ModuleVersionRegistry } from './module-version-registry';
 import { ROLLBACK_PROTECTED_MODULES } from './types';
 import type { EntityScope } from './types';
 import { getAdvancedVersioningEngine } from './index';
+import { hasPlatformPermission } from '@/domains/platform/platform-permissions';
+import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 
 export interface TenantRollbackResult {
   success: boolean;
@@ -59,9 +61,24 @@ export class SupportModuleRollback {
     tenant_id: string;
     target_version_id: string;
     rolled_back_by: string;
+    role: PlatformRoleType;
     reason?: string;
   }): Promise<TenantRollbackResult> {
     const MODULE_ID = 'support_module';
+
+    // 0. Permission gate — only PlatformSuperAdmin / PlatformOperations
+    if (!hasPlatformPermission(opts.role, 'versioning.rollback')) {
+      return {
+        success: false,
+        tenant_id: opts.tenant_id,
+        module_id: MODULE_ID,
+        from_version_tag: null,
+        to_version_tag: null,
+        preview_session_id: null,
+        modules_untouched: [...ISOLATION_GUARANTEED],
+        error: `Role "${opts.role}" não possui permissão versioning.rollback`,
+      };
+    }
 
     // 1. Safety check — support_module must NOT be in protected list
     if (ROLLBACK_PROTECTED_MODULES.includes(MODULE_ID)) {

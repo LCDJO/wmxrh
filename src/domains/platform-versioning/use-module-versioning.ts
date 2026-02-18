@@ -12,11 +12,13 @@ import { bumpVersion } from './version-utils';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ChangeType } from './types';
 import { MODULE_CATALOG } from './module-catalog';
+import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 
 type BumpLevel = 'major' | 'minor' | 'patch';
 
 export function useModuleVersioning() {
   const { user } = useAuth();
+  const { can } = usePlatformPermissions();
 
   const bumpModule = useCallback(async (
     moduleId: string,
@@ -24,6 +26,11 @@ export function useModuleVersioning() {
     changelogSummary: string,
     opts?: { breaking_changes?: boolean },
   ) => {
+    // Permission gate — only versioning.publish holders
+    if (!can('versioning.publish')) {
+      throw new Error('Permissão negada: apenas PlatformSuperAdmin e PlatformOperations podem atualizar versões de módulo.');
+    }
+
     const engine = getAdvancedVersioningEngine();
     const userId = user?.id ?? 'system';
 
