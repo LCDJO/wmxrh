@@ -39,11 +39,24 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useMemo } from 'react';
 
+interface NavLeaf {
+  to: string;
+  label: string;
+  requiredPermission?: PlatformPermission;
+}
+
+interface NavGrandChild {
+  to: string;
+  label: string;
+  requiredPermission?: PlatformPermission;
+  children?: NavLeaf[];
+}
+
 interface NavChild {
   to: string;
   label: string;
   requiredPermission?: PlatformPermission;
-  children?: Array<{ to: string; label: string; requiredPermission?: PlatformPermission }>;
+  children?: NavGrandChild[];
 }
 
 interface PlatformNavItem {
@@ -170,11 +183,91 @@ const NAV_ITEMS: PlatformNavItem[] = [
           { to: '/platform/structure/events', label: 'Eventos' },
           { to: '/platform/structure/menus', label: 'Menus' },
           { to: '/platform/structure/modules', label: 'Módulos' },
+          {
+            to: '/platform/structure/dashboards',
+            label: 'Dashboards',
+            children: [
+              { to: '/platform/dashboard', label: 'Platform Dashboard' },
+              { to: '/dashboard', label: 'Tenant Dashboard' },
+              { to: '/platform/website', label: 'Website Dashboard' },
+              { to: '/platform/monitoring', label: 'Monitoramento Status' },
+              { to: '/platform/billing', label: 'Financeiro Overview' },
+              { to: '/platform/revenue', label: 'Revenue Overview' },
+              { to: '/platform/growth', label: 'Growth AI Overview' },
+              { to: '/platform/marketing/analytics', label: 'Marketing Analytics' },
+              { to: '/platform/settings/gamification', label: 'Gamificação' },
+              { to: '/labor-dashboard', label: 'Labor Compliance' },
+              { to: '/workforce-intelligence', label: 'Workforce Intelligence' },
+              { to: '/strategic-intelligence', label: 'Strategic Intelligence' },
+            ],
+          },
         ],
       },
     ],
   },
 ];
+
+function GrandchildNavItem({ gc, currentPath }: { gc: NavGrandChild; currentPath: string }) {
+  const hasLeaves = gc.children && gc.children.length > 0;
+  const isGcActive = currentPath.startsWith(gc.to);
+  const [expanded, setExpanded] = useState(isGcActive);
+
+  if (hasLeaves) {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setExpanded(prev => !prev)}
+          className={cn(
+            'flex items-center w-full px-3 py-1.5 rounded-md text-[11px] font-medium transition-all duration-200',
+            isGcActive
+              ? 'bg-[hsl(265_60%_50%/0.18)] text-[hsl(265_80%_75%)]'
+              : 'text-[hsl(250_15%_55%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
+          )}
+        >
+          <span className="flex-1 text-left">{gc.label}</span>
+          <ChevronRight className={cn('h-3 w-3 shrink-0 transition-transform', expanded && 'rotate-90')} />
+        </button>
+        {expanded && (
+          <div className="ml-3 mt-0.5 space-y-0.5 border-l border-[hsl(250_25%_26%)] pl-3">
+            {gc.children!.map(leaf => (
+              <NavLink
+                key={leaf.to}
+                to={leaf.to}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center px-3 py-1.5 rounded-md text-[10px] font-medium transition-all duration-200',
+                    isActive
+                      ? 'bg-[hsl(265_60%_50%/0.18)] text-[hsl(265_80%_75%)]'
+                      : 'text-[hsl(250_15%_50%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
+                  )
+                }
+              >
+                {leaf.label}
+              </NavLink>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <NavLink
+      to={gc.to}
+      className={({ isActive }) =>
+        cn(
+          'flex items-center px-3 py-1.5 rounded-md text-[11px] font-medium transition-all duration-200',
+          isActive
+            ? 'bg-[hsl(265_60%_50%/0.18)] text-[hsl(265_80%_75%)]'
+            : 'text-[hsl(250_15%_55%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
+        )
+      }
+    >
+      {gc.label}
+    </NavLink>
+  );
+}
 
 export default function PlatformLayout() {
   const { signOut } = useAuth();
@@ -373,20 +466,7 @@ export default function PlatformLayout() {
                           {hasGrandchildren && isChildExpanded && (
                             <div className="ml-4 mt-0.5 space-y-0.5 border-l border-[hsl(250_25%_24%)] pl-3">
                               {child.children!.map(gc => (
-                                <NavLink
-                                  key={gc.to}
-                                  to={gc.to}
-                                  className={({ isActive }) =>
-                                    cn(
-                                      'flex items-center px-3 py-1.5 rounded-md text-[11px] font-medium transition-all duration-200',
-                                      isActive
-                                        ? 'bg-[hsl(265_60%_50%/0.18)] text-[hsl(265_80%_75%)]'
-                                        : 'text-[hsl(250_15%_55%)] hover:text-[hsl(250_15%_85%)] hover:bg-[hsl(250_25%_18%)]'
-                                    )
-                                  }
-                                >
-                                  {gc.label}
-                                </NavLink>
+                                <GrandchildNavItem key={gc.to} gc={gc} currentPath={location.pathname} />
                               ))}
                             </div>
                           )}
