@@ -27,6 +27,27 @@ export const benefitPlanService = {
     return data as BenefitPlan;
   },
 
+  async updatePlan(id: string, dto: Partial<Omit<BenefitPlan, 'id' | 'tenant_id' | 'created_at'>>, scope: QueryScope) {
+    const { data, error } = await supabase
+      .from('benefit_plans')
+      .update(dto)
+      .eq('id', id)
+      .eq('tenant_id', scope.tenantId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as BenefitPlan;
+  },
+
+  async softDeletePlan(id: string, scope: QueryScope) {
+    const { error } = await supabase
+      .from('benefit_plans')
+      .update({ deleted_at: new Date().toISOString(), is_active: false })
+      .eq('id', id)
+      .eq('tenant_id', scope.tenantId);
+    if (error) throw error;
+  },
+
   async listEmployeeBenefits(employeeId: string, scope: QueryScope) {
     const q = applyScope(
       supabase.from('employee_benefits').select('*, benefit_plans(*)'),

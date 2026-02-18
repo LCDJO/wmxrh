@@ -17,4 +17,25 @@ export const departmentService = {
     if (error) throw error;
     return data as Department;
   },
+
+  async update(id: string, dto: Partial<Omit<Department, 'id' | 'tenant_id' | 'created_at'>>, scope: QueryScope) {
+    const { data, error } = await supabase
+      .from('departments')
+      .update(dto)
+      .eq('id', id)
+      .eq('tenant_id', scope.tenantId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as Department;
+  },
+
+  async softDelete(id: string, scope: QueryScope) {
+    const { error } = await supabase
+      .from('departments')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('tenant_id', scope.tenantId);
+    if (error) throw error;
+  },
 };

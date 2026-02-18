@@ -31,6 +31,27 @@ export const healthProgramService = {
     return data as HealthProgram;
   },
 
+  async updateProgram(id: string, dto: Partial<Omit<HealthProgram, 'id' | 'tenant_id' | 'created_at'>>, scope: QueryScope) {
+    const { data, error } = await supabase
+      .from('health_programs')
+      .update(dto)
+      .eq('id', id)
+      .eq('tenant_id', scope.tenantId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as HealthProgram;
+  },
+
+  async deleteProgram(id: string, scope: QueryScope) {
+    const { error } = await supabase
+      .from('health_programs')
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', scope.tenantId);
+    if (error) throw error;
+  },
+
   // ── Exams (ASO) ──
   async listExams(scope: QueryScope, employeeId?: string) {
     let q = applyScope(
@@ -48,6 +69,15 @@ export const healthProgramService = {
     const { data, error } = await supabase.from('employee_health_exams').insert(secured).select().single();
     if (error) throw error;
     return data as EmployeeHealthExam;
+  },
+
+  async deleteExam(id: string, scope: QueryScope) {
+    const { error } = await supabase
+      .from('employee_health_exams')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('tenant_id', scope.tenantId);
+    if (error) throw error;
   },
 
   // ── Risk Factors ──

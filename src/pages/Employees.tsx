@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
-import { useEmployees, useCompaniesSimple, useCreateEmployee } from '@/domains/hooks';
+import { useEmployees, useCompaniesSimple, useCreateEmployee, useDeleteEmployee } from '@/domains/hooks';
 import { usePermissions } from '@/domains/security';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Search, Plus, Filter, Pencil, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
@@ -27,10 +28,12 @@ export default function Employees() {
   const [formPhone, setFormPhone] = useState('');
   const [formCompany, setFormCompany] = useState('');
   const [formSalary, setFormSalary] = useState('');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: employees = [] } = useEmployees();
   const { data: companies = [] } = useCompaniesSimple();
   const createMutation = useCreateEmployee();
+  const deleteMutation = useDeleteEmployee();
   const { canManageEmployees } = usePermissions();
 
   const handleCreate = () => {
@@ -50,6 +53,17 @@ export default function Employees() {
         toast({ title: 'Funcionário cadastrado!' });
         setOpen(false);
         setFormName(''); setFormEmail(''); setFormPhone(''); setFormCompany(''); setFormSalary('');
+      },
+      onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+    });
+  };
+
+  const handleDelete = () => {
+    if (!deleteId) return;
+    deleteMutation.mutate(deleteId, {
+      onSuccess: () => {
+        toast({ title: 'Funcionário removido!' });
+        setDeleteId(null);
       },
       onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
     });
@@ -156,7 +170,7 @@ export default function Employees() {
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); navigate(`/employees/${emp.id}`); }}>
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); /* TODO: delete handler */ }}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(emp.id); }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -168,6 +182,21 @@ export default function Employees() {
         </table>
         {filtered.length === 0 && <div className="py-12 text-center text-muted-foreground">Nenhum funcionário encontrado.</div>}
       </div>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(v) => !v && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza que deseja desativar este funcionário? Esta ação pode ser revertida.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteMutation.isPending ? 'Removendo...' : 'Confirmar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -17,4 +17,25 @@ export const companyGroupService = {
     if (error) throw error;
     return data as CompanyGroup;
   },
+
+  async update(id: string, dto: Partial<Omit<CompanyGroup, 'id' | 'tenant_id' | 'created_at'>>, scope: QueryScope) {
+    const { data, error } = await supabase
+      .from('company_groups')
+      .update(dto)
+      .eq('id', id)
+      .eq('tenant_id', scope.tenantId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as CompanyGroup;
+  },
+
+  async softDelete(id: string, scope: QueryScope) {
+    const { error } = await supabase
+      .from('company_groups')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('tenant_id', scope.tenantId);
+    if (error) throw error;
+  },
 };

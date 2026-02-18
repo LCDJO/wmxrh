@@ -82,4 +82,25 @@ export const employeeService = {
     if (error) throw error;
     return data as Employee;
   },
+
+  async update(id: string, dto: Partial<Omit<Employee, 'id' | 'tenant_id' | 'created_at'>>, scope: QueryScope) {
+    const { data, error } = await supabase
+      .from('employees')
+      .update(dto)
+      .eq('id', id)
+      .eq('tenant_id', scope.tenantId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as Employee;
+  },
+
+  async softDelete(id: string, scope: QueryScope) {
+    const { error } = await supabase
+      .from('employees')
+      .update({ deleted_at: new Date().toISOString(), status: 'inactive' as any })
+      .eq('id', id)
+      .eq('tenant_id', scope.tenantId);
+    if (error) throw error;
+  },
 };

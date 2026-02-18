@@ -155,6 +155,24 @@ export function useCreateCompanyGroup() {
   });
 }
 
+export function useUpdateCompanyGroup() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...dto }: { id: string } & Record<string, unknown>) => companyGroupService.update(id, dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.companyGroups(qs?.tenantId) }),
+  });
+}
+
+export function useDeleteCompanyGroup() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => companyGroupService.softDelete(id, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.companyGroups(qs?.tenantId) }),
+  });
+}
+
 // ========================
 // COMPANY HOOKS
 // ========================
@@ -186,6 +204,30 @@ export function useCreateCompany() {
   });
 }
 
+export function useUpdateCompany() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...dto }: { id: string } & Record<string, unknown>) => companyService.update(id, dto, qs!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.companies(qs?.tenantId) });
+      qc.invalidateQueries({ queryKey: queryKeys.companiesSimple(qs?.tenantId) });
+    },
+  });
+}
+
+export function useDeleteCompany() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => companyService.softDelete(id, qs!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.companies(qs?.tenantId) });
+      qc.invalidateQueries({ queryKey: queryKeys.companiesSimple(qs?.tenantId) });
+    },
+  });
+}
+
 // ========================
 // DEPARTMENT HOOKS
 // ========================
@@ -208,6 +250,24 @@ export function useCreateDepartment() {
   });
 }
 
+export function useUpdateDepartment() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...dto }: { id: string } & Record<string, unknown>) => departmentService.update(id, dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.departments(qs?.tenantId) }),
+  });
+}
+
+export function useDeleteDepartment() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => departmentService.softDelete(id, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.departments(qs?.tenantId) }),
+  });
+}
+
 // ========================
 // POSITION HOOKS
 // ========================
@@ -226,6 +286,24 @@ export function useCreatePosition() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (dto: CreatePositionDTO) => positionService.create(dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.positions(qs?.tenantId) }),
+  });
+}
+
+export function useUpdatePosition() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...dto }: { id: string } & Record<string, unknown>) => positionService.update(id, dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.positions(qs?.tenantId) }),
+  });
+}
+
+export function useDeletePosition() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => positionService.softDelete(id, qs!),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.positions(qs?.tenantId) }),
   });
 }
@@ -267,6 +345,67 @@ export function useCreateEmployee() {
   return useMutation({
     mutationFn: (dto: CreateEmployeeDTO) => employeeService.create(dto, qs!),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.employees(qs?.tenantId) }),
+  });
+}
+
+export function useUpdateEmployee() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...dto }: { id: string } & Record<string, unknown>) => employeeService.update(id, dto, qs!),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: queryKeys.employee(vars.id) });
+      qc.invalidateQueries({ queryKey: queryKeys.employees(qs?.tenantId) });
+      qc.invalidateQueries({ queryKey: queryKeys.employeesSimple(qs?.tenantId) });
+    },
+  });
+}
+
+export function useDeleteEmployee() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => employeeService.softDelete(id, qs!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.employees(qs?.tenantId) });
+      qc.invalidateQueries({ queryKey: queryKeys.employeesSimple(qs?.tenantId) });
+    },
+  });
+}
+
+export function useUpdateBenefitPlan() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...dto }: { id: string } & Record<string, unknown>) => benefitPlanService.updatePlan(id, dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.benefitPlans(qs?.tenantId) }),
+  });
+}
+
+export function useDeleteBenefitPlan() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => benefitPlanService.softDeletePlan(id, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.benefitPlans(qs?.tenantId) }),
+  });
+}
+
+export function useUpdateHealthProgram() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...dto }: { id: string } & Record<string, unknown>) => healthProgramService.updateProgram(id, dto, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.healthPrograms(qs?.tenantId) }),
+  });
+}
+
+export function useDeleteHealthProgram() {
+  const qs = useQueryScope();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => healthProgramService.deleteProgram(id, qs!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.healthPrograms(qs?.tenantId) }),
   });
 }
 

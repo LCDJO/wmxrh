@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
-import { useDepartments, useCompaniesSimple, useEmployeesSimple, useCreateDepartment } from '@/domains/hooks';
+import { useDepartments, useCompaniesSimple, useEmployeesSimple, useCreateDepartment, useUpdateDepartment, useDeleteDepartment } from '@/domains/hooks';
 import { usePermissions } from '@/domains/security';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Building2 } from 'lucide-react';
+import { Plus, Building2, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Departments() {
@@ -18,11 +19,17 @@ export default function Departments() {
   const [name, setName] = useState('');
   const [budget, setBudget] = useState('');
   const [companyId, setCompanyId] = useState('');
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editBudget, setEditBudget] = useState('');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: departments = [] } = useDepartments();
   const { data: companies = [] } = useCompaniesSimple();
   const { data: employees = [] } = useEmployeesSimple();
   const createMutation = useCreateDepartment();
+  const updateMutation = useUpdateDepartment();
+  const deleteMutation = useDeleteDepartment();
   const { canManageEmployees } = usePermissions();
 
   const handleCreate = () => {
@@ -31,6 +38,26 @@ export default function Departments() {
       onSuccess: () => { toast({ title: 'Departamento criado!' }); setOpen(false); setName(''); setBudget(''); setCompanyId(''); },
       onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
     });
+  };
+
+  const handleUpdate = () => {
+    if (!editId) return;
+    updateMutation.mutate({ id: editId, name: editName, budget: parseFloat(editBudget) || 0 }, {
+      onSuccess: () => { toast({ title: 'Departamento atualizado!' }); setEditId(null); },
+      onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+    });
+  };
+
+  const handleDelete = () => {
+    if (!deleteId) return;
+    deleteMutation.mutate(deleteId, {
+      onSuccess: () => { toast({ title: 'Departamento removido!' }); setDeleteId(null); },
+      onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+    });
+  };
+
+  const openEdit = (dept: typeof departments[0]) => {
+    setEditId(dept.id); setEditName(dept.name); setEditBudget(String(dept.budget || ''));
   };
 
   return (
@@ -67,15 +94,20 @@ export default function Departments() {
           const deptEmployees = employees.filter(e => e.department_id === dept.id && e.status === 'active');
           const totalSalary = deptEmployees.reduce((sum, e) => sum + (e.current_salary || 0), 0);
           const budgetUsed = (dept.budget || 0) > 0 ? ((totalSalary / (dept.budget || 1)) * 100).toFixed(0) : '0';
-
           return (
             <div key={dept.id} className="bg-card rounded-xl shadow-card p-6 hover:shadow-card-hover transition-all duration-300 animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent"><Building2 className="h-5 w-5 text-accent-foreground" /></div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-card-foreground">{dept.name}</h3>
                   <p className="text-xs text-muted-foreground">{dept.companies?.name} · {deptEmployees.length} func.</p>
                 </div>
+                {canManageEmployees && (
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(dept)}><Pencil className="h-3.5 w-3.5 text-muted-foreground" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(dept.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </div>
+                )}
               </div>
               <div className="space-y-2 border-t border-border pt-4">
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Orçamento</span><span className="font-medium text-card-foreground">R$ {(dept.budget || 0).toLocaleString('pt-BR')}</span></div>
@@ -92,6 +124,32 @@ export default function Departments() {
         })}
         {departments.length === 0 && <div className="col-span-full text-center py-12 text-muted-foreground">Nenhum departamento cadastrado.</div>}
       </div>
+
+      <Dialog open={!!editId} onOpenChange={(v) => !v && setEditId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Departamento</DialogTitle></DialogHeader>
+          <form onSubmit={e => { e.preventDefault(); handleUpdate(); }} className="space-y-4">
+            <div className="space-y-2"><Label>Nome *</Label><Input value={editName} onChange={e => setEditName(e.target.value)} required /></div>
+            <div className="space-y-2"><Label>Orçamento</Label><Input type="number" value={editBudget} onChange={e => setEditBudget(e.target.value)} /></div>
+            <Button type="submit" className="w-full" disabled={updateMutation.isPending}>{updateMutation.isPending ? 'Salvando...' : 'Salvar'}</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(v) => !v && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza que deseja remover este departamento?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteMutation.isPending ? 'Removendo...' : 'Confirmar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
