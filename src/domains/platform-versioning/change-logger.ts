@@ -2,7 +2,7 @@
  * ChangeLogger — DB-backed immutable audit log for platform/module changes.
  */
 import { supabase } from '@/integrations/supabase/client';
-import type { PlatformChangeLog, ChangeType, ChangeLogEntry, ChangeCategory } from './types';
+import type { PlatformChangeLog, ChangeType, ChangeLogEntry, ChangeCategory, EntityScope } from './types';
 
 function rowToChangeLog(row: Record<string, any>): PlatformChangeLog {
   return {
@@ -10,6 +10,7 @@ function rowToChangeLog(row: Record<string, any>): PlatformChangeLog {
     module_id: row.module_id ?? undefined,
     entity_type: row.entity_type,
     entity_id: row.entity_id,
+    entity_scope: (row.entity_scope as EntityScope) ?? null,
     change_type: row.change_type as ChangeType,
     version_tag: row.version_tag,
     payload_diff: row.payload_diff ?? {},
@@ -41,6 +42,7 @@ export class ChangeLogger {
     module_id?: string;
     entity_type: string;
     entity_id: string;
+    entity_scope?: EntityScope;
     change_type: ChangeType;
     version_tag: string;
     payload_diff: Record<string, unknown>;
@@ -51,6 +53,7 @@ export class ChangeLogger {
         module_id: opts.module_id ?? null,
         entity_type: opts.entity_type,
         entity_id: opts.entity_id,
+        entity_scope: opts.entity_scope ?? null,
         change_type: opts.change_type,
         version_tag: opts.version_tag,
         payload_diff: opts.payload_diff,
