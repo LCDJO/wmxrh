@@ -122,8 +122,21 @@ export interface ChatSession {
   assigned_agent_id: string | null;
   protocol_number: string;
   status: ChatSessionStatus;
+  tags: string[];
+  module_reference: string | null;
+  priority: string;
   started_at: string;
   ended_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatNote {
+  id: string;
+  session_id: string;
+  agent_id: string;
+  note_text: string;
+  is_internal: boolean;
   created_at: string;
   updated_at: string;
 }
