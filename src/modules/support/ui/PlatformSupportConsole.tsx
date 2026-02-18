@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
 import {
   MessageSquare, Clock, CheckCircle2, AlertCircle, Send, Users,
   BookOpen, Search, Star, ArrowLeft, Loader2, Eye, Lock, BarChart3,
@@ -57,340 +58,161 @@ const CATEGORY_LABELS: Record<string, string> = {
   bug_report: 'Bug', account: 'Conta', general: 'Geral',
 };
 
-// ── Main Component (V2) ──
+// ── Nav items (Intercom-style sidebar rail) ──
+
+const NAV_ITEMS = [
+  { id: 'livechat', icon: Radio, label: 'Conversas', accent: true },
+  { id: 'queue', icon: Inbox, label: 'Fila' },
+  { id: 'dashboard', icon: BarChart3, label: 'Dashboard' },
+  { id: 'performance', icon: Trophy, label: 'Performance' },
+  { id: 'wiki', icon: BookOpen, label: 'Wiki' },
+  { id: 'evaluations', icon: Star, label: 'Avaliações' },
+  { id: 'metrics', icon: TrendingUp, label: 'Métricas' },
+] as const;
+
+// ── Main Component ──
 
 const PlatformSupportConsole = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('livechat');
 
-  if (!user) return <div className="p-6 text-muted-foreground">Carregando...</div>;
+  if (!user) return <div className="h-screen flex items-center justify-center text-muted-foreground">Carregando...</div>;
 
-  return <ConsoleV2 userId={user.id} activeTab={activeTab} setActiveTab={setActiveTab} />;
+  return <ConsoleShell userId={user.id} activeTab={activeTab} setActiveTab={setActiveTab} />;
 };
 
-function ConsoleV2({ userId, activeTab, setActiveTab }: { userId: string; activeTab: string; setActiveTab: (t: string) => void }) {
+function ConsoleShell({ userId, activeTab, setActiveTab }: { userId: string; activeTab: string; setActiveTab: (t: string) => void }) {
   const alertService = useAgentAlerts(userId);
 
   const handleAlertClick = (alert: { ticketId?: string }) => {
-    if (alert.ticketId) {
-      setActiveTab('livechat');
-    }
+    if (alert.ticketId) setActiveTab('livechat');
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-          <Shield className="h-5 w-5 text-primary" />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-foreground">Console de Suporte</h1>
-            <Badge variant="secondary" className="text-[10px] gap-1">
-              <Zap className="h-3 w-3" /> V2
-            </Badge>
+    <TooltipProvider delayDuration={200}>
+      <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-background">
+        {/* ═══ LEFT RAIL — Intercom-style icon sidebar ═══ */}
+        <div className="w-[56px] shrink-0 border-r border-border bg-card flex flex-col items-center py-3 gap-1">
+          {/* Logo / Brand */}
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
+            <Shield className="h-4.5 w-4.5 text-primary" />
           </div>
-          <p className="text-sm text-muted-foreground">Atendimento governado com alertas em tempo real</p>
+
+          <Separator className="w-8 mb-2" />
+
+          {/* Nav icons */}
+          {NAV_ITEMS.map(item => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <Tooltip key={item.id}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    }`}
+                  >
+                    <Icon className="h-[18px] w-[18px]" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+
+          {/* Alert indicator */}
+          {alertService.unreadCount > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setActiveTab('livechat')}
+                  className="w-10 h-10 rounded-lg flex items-center justify-center text-destructive hover:bg-destructive/10 transition-all relative mt-auto"
+                >
+                  <AlertCircle className="h-[18px] w-[18px]" />
+                  <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
+                    {alertService.unreadCount > 9 ? '9+' : alertService.unreadCount}
+                  </span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">
+                {alertService.unreadCount} alerta(s)
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+
+        {/* ═══ MAIN CONTENT ═══ */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Alert banner (only when there are alerts) */}
+          {alertService.unreadCount > 0 && (
+            <div className="shrink-0">
+              <AgentAlertBanner
+                alerts={alertService.alerts}
+                unreadCount={alertService.unreadCount}
+                soundEnabled={alertService.soundEnabled}
+                onToggleSound={() => alertService.setSoundEnabled(!alertService.soundEnabled)}
+                onMarkRead={alertService.markRead}
+                onMarkAllRead={alertService.markAllRead}
+                onClearAll={alertService.clearAll}
+                onAlertClick={handleAlertClick}
+              />
+            </div>
+          )}
+
+          {/* Active panel */}
+          <div className="flex-1 overflow-hidden">
+            {activeTab === 'livechat' && <AgentInbox userId={userId} />}
+            {activeTab === 'dashboard' && (
+              <div className="p-5 overflow-y-auto h-full">
+                <AgentDashboardV2 userId={userId} onNavigate={setActiveTab} />
+              </div>
+            )}
+            {activeTab === 'performance' && (
+              <div className="p-5 overflow-y-auto h-full">
+                <AgentPerformancePanel userId={userId} />
+              </div>
+            )}
+            {activeTab === 'queue' && (
+              <div className="p-5 overflow-y-auto h-full">
+                <TicketQueue userId={userId} />
+              </div>
+            )}
+            {activeTab === 'wiki' && (
+              <div className="p-5 overflow-y-auto h-full">
+                <WikiManager userId={userId} />
+              </div>
+            )}
+            {activeTab === 'evaluations' && (
+              <div className="p-5 overflow-y-auto h-full">
+                <EvaluationsPanel />
+              </div>
+            )}
+            {activeTab === 'metrics' && (
+              <div className="p-5 overflow-y-auto h-full">
+                <MetricsDashboard />
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Alert Banner */}
-      <AgentAlertBanner
-        alerts={alertService.alerts}
-        unreadCount={alertService.unreadCount}
-        soundEnabled={alertService.soundEnabled}
-        onToggleSound={() => alertService.setSoundEnabled(!alertService.soundEnabled)}
-        onMarkRead={alertService.markRead}
-        onMarkAllRead={alertService.markAllRead}
-        onClearAll={alertService.clearAll}
-        onAlertClick={handleAlertClick}
-      />
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="dashboard" className="gap-2"><BarChart3 className="h-4 w-4" /> Dashboard</TabsTrigger>
-          <TabsTrigger value="livechat" className="gap-2"><Radio className="h-4 w-4" /> Chat ao Vivo</TabsTrigger>
-          <TabsTrigger value="performance" className="gap-2"><Star className="h-4 w-4" /> Performance</TabsTrigger>
-          <TabsTrigger value="queue" className="gap-2"><Inbox className="h-4 w-4" /> Fila</TabsTrigger>
-          <TabsTrigger value="wiki" className="gap-2"><BookOpen className="h-4 w-4" /> Wiki</TabsTrigger>
-          <TabsTrigger value="evaluations" className="gap-2"><Star className="h-4 w-4" /> Avaliações</TabsTrigger>
-          <TabsTrigger value="metrics" className="gap-2"><BarChart3 className="h-4 w-4" /> Métricas</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dashboard" className="mt-4">
-          <AgentDashboardV2 userId={userId} onNavigate={setActiveTab} />
-        </TabsContent>
-        <TabsContent value="livechat" className="mt-4">
-          <AgentChatConsoleV2 userId={userId} />
-        </TabsContent>
-        <TabsContent value="performance" className="mt-4">
-          <AgentPerformancePanel userId={userId} />
-        </TabsContent>
-        <TabsContent value="queue" className="mt-4">
-          <TicketQueue userId={userId} />
-        </TabsContent>
-        <TabsContent value="wiki" className="mt-4">
-          <WikiManager userId={userId} />
-        </TabsContent>
-        <TabsContent value="evaluations" className="mt-4">
-          <EvaluationsPanel />
-        </TabsContent>
-        <TabsContent value="metrics" className="mt-4">
-          <MetricsDashboard />
-        </TabsContent>
-      </Tabs>
-    </div>
+    </TooltipProvider>
   );
 }
 
-// ── Agent Dashboard V2 — Enhanced with full metrics + ranking ──
+// ═══════════════════════════════════════════════════════════════
+// ═══ AGENT INBOX — WhatsApp Web / Intercom Inbox Layout ═══
+// ═══════════════════════════════════════════════════════════════
 
-interface AgentRankEntry {
-  agent_id: string;
-  name: string;
-  resolved: number;
-  avgScore: number;
-  avgResponseMin: number | null;
+interface TicketWithTenant extends SupportTicket {
+  tenant_name?: string;
 }
 
-function AgentDashboardV2({ userId, onNavigate }: { userId: string; onNavigate: (tab: string) => void }) {
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [evaluations, setEvaluations] = useState<SupportEvaluation[]>([]);
-  const [allEvaluations, setAllEvaluations] = useState<SupportEvaluation[]>([]);
-  const [ranking, setRanking] = useState<AgentRankEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    Promise.all([TicketService.listAll(), EvaluationService.listAll()])
-      .then(async ([t, allEvals]) => {
-        setTickets(t);
-        setAllEvaluations(allEvals);
-        setEvaluations(allEvals.filter(ev => ev.agent_id === userId));
-
-        // Build ranking from all agents
-        const agentIds = [...new Set(t.filter(tk => tk.assigned_to).map(tk => tk.assigned_to!))];
-        const { data: platformUsers } = await supabase
-          .from('platform_users')
-          .select('user_id, display_name')
-          .in('user_id', agentIds);
-        const nameMap = new Map((platformUsers ?? []).map(u => [u.user_id, u.display_name ?? 'Agente']));
-
-        const rankEntries: AgentRankEntry[] = agentIds.map(aid => {
-          const agentTickets = t.filter(tk => tk.assigned_to === aid);
-          const resolved = agentTickets.filter(tk => tk.status === 'resolved' || tk.status === 'closed').length;
-          const agentEvals = allEvals.filter(e => e.agent_id === aid);
-          const avgScore = agentEvals.length > 0
-            ? Math.round((agentEvals.reduce((s, e) => s + (e.agent_score ?? 0), 0) / agentEvals.length) * 10) / 10
-            : 0;
-          const respTimes = agentTickets
-            .filter(tk => tk.first_response_at)
-            .map(tk => (new Date(tk.first_response_at!).getTime() - new Date(tk.created_at).getTime()) / 60000);
-          const avgResp = respTimes.length > 0
-            ? Math.round(respTimes.reduce((a, b) => a + b, 0) / respTimes.length)
-            : null;
-          return { agent_id: aid, name: (nameMap.get(aid) as string) ?? 'Agente', resolved, avgScore, avgResponseMin: avgResp };
-        });
-        // Sort by score desc, then resolved desc
-        rankEntries.sort((a, b) => b.avgScore - a.avgScore || b.resolved - a.resolved);
-        setRanking(rankEntries);
-      })
-      .catch(() => toast.error('Erro ao carregar dashboard'))
-      .finally(() => setLoading(false));
-  }, [userId]);
-
-  if (loading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
-  }
-
-  const myTickets = tickets.filter(t => t.assigned_to === userId);
-  const resolved = myTickets.filter(t => t.status === 'resolved' || t.status === 'closed');
-  const unresolved = myTickets.filter(t => !['resolved', 'closed', 'cancelled'].includes(t.status));
-  const activeChats = myTickets.filter(t => t.status === 'in_progress').length;
-  const openCount = tickets.filter(t => t.status === 'open' || t.status === 'awaiting_agent').length;
-
-  const avgScore = evaluations.length > 0
-    ? (evaluations.reduce((s, e) => s + (e.agent_score ?? 0), 0) / evaluations.length).toFixed(1)
-    : '—';
-
-  // Avg first response time
-  const responseTimesMs = myTickets
-    .filter(t => t.first_response_at)
-    .map(t => new Date(t.first_response_at!).getTime() - new Date(t.created_at).getTime());
-  const avgResponseMin = responseTimesMs.length > 0
-    ? Math.round(responseTimesMs.reduce((a, b) => a + b, 0) / responseTimesMs.length / 60000)
-    : null;
-  const avgResponseLabel = avgResponseMin != null
-    ? avgResponseMin < 60 ? `${avgResponseMin}min` : `${(avgResponseMin / 60).toFixed(1)}h`
-    : '—';
-
-  // Avg resolution time
-  const resolutionTimesMs = resolved
-    .filter(t => t.resolved_at)
-    .map(t => new Date(t.resolved_at!).getTime() - new Date(t.created_at).getTime());
-  const avgResolutionMin = resolutionTimesMs.length > 0
-    ? Math.round(resolutionTimesMs.reduce((a, b) => a + b, 0) / resolutionTimesMs.length / 60000)
-    : null;
-  const avgResolutionLabel = avgResolutionMin != null
-    ? avgResolutionMin < 60 ? `${avgResolutionMin}min` : avgResolutionMin < 1440 ? `${(avgResolutionMin / 60).toFixed(1)}h` : `${(avgResolutionMin / 1440).toFixed(1)}d`
-    : '—';
-
-  // SLA at risk
-  const slaAtRisk = tickets.filter(t =>
-    ['open', 'awaiting_agent'].includes(t.status) &&
-    !t.first_response_at &&
-    (Date.now() - new Date(t.created_at).getTime()) > 15 * 60000
-  ).length;
-
-  // My ranking position
-  const myRankPos = ranking.findIndex(r => r.agent_id === userId) + 1;
-
-  return (
-    <div className="space-y-5">
-      {/* SLA Warning */}
-      {slaAtRisk > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-[hsl(0_70%_50%/0.3)] bg-[hsl(0_70%_50%/0.05)]">
-          <AlertCircle className="h-5 w-5 text-[hsl(0_70%_50%)] shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-foreground">{slaAtRisk} ticket(s) com SLA em risco</p>
-            <p className="text-xs text-muted-foreground">Sem resposta há mais de 15 minutos</p>
-          </div>
-          <Button variant="outline" size="sm" className="shrink-0 gap-1 text-xs" onClick={() => onNavigate('queue')}>
-            <Inbox className="h-3.5 w-3.5" /> Ver Fila
-          </Button>
-        </div>
-      )}
-
-      {/* KPIs — 8 metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: 'Chats Ativos', value: activeChats, icon: Radio, color: 'hsl(200 70% 50%)', tab: 'livechat' },
-          { label: 'Resolvidos', value: resolved.length, icon: CheckCircle2, color: 'hsl(145 60% 42%)', tab: 'metrics' },
-          { label: 'Não Resolvidos', value: unresolved.length, icon: XCircle, color: 'hsl(35 80% 50%)', tab: 'queue' },
-          { label: 'Nota Média', value: avgScore, icon: Star, color: 'hsl(45 90% 55%)', tab: 'evaluations' },
-          { label: 'Tempo Resposta', value: avgResponseLabel, icon: Timer, color: 'hsl(210 65% 50%)', tab: 'performance' },
-          { label: 'Tempo Resolução', value: avgResolutionLabel, icon: Clock, color: 'hsl(280 60% 55%)', tab: 'performance' },
-          { label: 'Aguardando', value: openCount, icon: AlertCircle, color: 'hsl(20 80% 50%)', tab: 'queue' },
-          { label: 'Ranking', value: myRankPos > 0 ? `#${myRankPos}` : '—', icon: Trophy, color: 'hsl(45 90% 55%)', tab: 'performance' },
-        ].map(k => {
-          const Icon = k.icon;
-          return (
-            <Card key={k.label} className="cursor-pointer hover:shadow-sm transition-shadow" onClick={() => onNavigate(k.tab)}>
-              <CardContent className="py-3 px-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Icon className="h-4 w-4" style={{ color: k.color }} />
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{k.label}</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{k.value}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Bottom panels */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Ranking Interno */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-[hsl(45_90%_55%)]" /> Ranking Interno
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {ranking.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">Sem dados de ranking.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {ranking.slice(0, 5).map((r, i) => {
-                  const isMe = r.agent_id === userId;
-                  return (
-                    <div
-                      key={r.agent_id}
-                      className={`flex items-center gap-2 py-1.5 px-2 rounded-md text-xs ${
-                        isMe ? 'bg-primary/10 font-semibold' : ''
-                      }`}
-                    >
-                      <span className="w-5 text-center font-bold text-muted-foreground">
-                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
-                      </span>
-                      <span className="flex-1 truncate text-foreground">{r.name}{isMe ? ' (Você)' : ''}</span>
-                      <div className="flex items-center gap-1">
-                        <Star className="h-3 w-3" fill="hsl(45 90% 55%)" stroke="hsl(45 90% 55%)" />
-                        <span className="text-foreground">{r.avgScore || '—'}</span>
-                      </div>
-                      <span className="text-muted-foreground">{r.resolved} res.</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent Evaluations */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Star className="h-4 w-4 text-primary" /> Avaliações Recentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {evaluations.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">Nenhuma avaliação recebida.</p>
-            ) : (
-              <div className="space-y-2">
-                {evaluations.slice(0, 4).map(ev => (
-                  <div key={ev.id} className="flex items-center gap-3 py-1.5 border-b border-border last:border-0">
-                    <div className="flex gap-0.5">
-                      {[1, 2, 3, 4, 5].map(n => (
-                        <Star key={n} className="h-3 w-3" fill={(ev.agent_score ?? 0) >= n ? 'hsl(45 90% 55%)' : 'transparent'} stroke="hsl(45 90% 55%)" />
-                      ))}
-                    </div>
-                    <p className="text-xs text-foreground flex-1 truncate">{ev.comment || 'Sem comentário'}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Urgent Tickets */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-[hsl(0_70%_50%)]" /> Tickets Urgentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {(() => {
-              const urgent = tickets.filter(t => t.priority === 'urgent' && !['resolved', 'closed', 'cancelled'].includes(t.status));
-              if (urgent.length === 0) return <p className="text-xs text-muted-foreground text-center py-4">Nenhum ticket urgente.</p>;
-              return (
-                <div className="space-y-2">
-                  {urgent.slice(0, 4).map(t => (
-                    <div key={t.id} className="flex items-center gap-2 py-1.5 border-b border-border last:border-0">
-                      <Badge variant="secondary" className="text-[9px]" style={{ backgroundColor: 'hsl(0 70% 50%/0.1)', color: 'hsl(0 70% 50%)' }}>
-                        Urgente
-                      </Badge>
-                      <p className="text-xs text-foreground flex-1 truncate">{t.subject}</p>
-                      <span className="text-[10px] text-muted-foreground">{getTimeOpen(t.created_at)}</span>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-// ── Agent Chat Console V2 (with Governance + Insights) ──
-
-function AgentChatConsoleV2({ userId }: { userId: string }) {
+function AgentInbox({ userId }: { userId: string }) {
   const [tickets, setTickets] = useState<TicketWithTenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<TicketWithTenant | null>(null);
@@ -427,76 +249,119 @@ function AgentChatConsoleV2({ userId }: { userId: string }) {
   const closedCount = tickets.filter(t => ['resolved', 'closed', 'cancelled'].includes(t.status)).length;
 
   return (
-    <div className="flex h-[calc(100vh-220px)] min-h-[500px] border border-border rounded-xl overflow-hidden bg-background shadow-lg">
-      {/* LEFT: Conversation List */}
-      <div className="w-[300px] shrink-0 border-r border-border flex flex-col bg-card">
-        <div className="px-3 py-3 border-b border-border shrink-0">
-          <div className="flex items-center gap-2 mb-2">
-            <Radio className="h-4 w-4 text-primary" />
+    <div className="flex h-full overflow-hidden">
+      {/* ─── LEFT PANEL: Conversation List (WhatsApp-style) ─── */}
+      <div className="w-[320px] shrink-0 border-r border-border flex flex-col bg-card">
+        {/* Header */}
+        <div className="px-4 py-3 border-b border-border shrink-0">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-foreground">Conversas</h2>
-            <Badge variant="secondary" className="ml-auto text-[9px]">{tickets.length}</Badge>
+            <Badge variant="secondary" className="text-[10px] font-mono">
+              {openCount} aberta{openCount !== 1 ? 's' : ''}
+            </Badge>
           </div>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input placeholder="Buscar..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-8 h-8 text-xs" />
+            <Input
+              placeholder="Buscar cliente ou assunto..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-xs bg-muted/50 border-transparent focus:border-border"
+            />
           </div>
         </div>
 
+        {/* Status filter tabs */}
         <div className="flex border-b border-border shrink-0">
           {[
             { key: 'open', label: 'Abertas', count: openCount },
-            { key: 'waiting', label: 'Aguard.', count: waitingCount },
-            { key: 'closed', label: 'Fechadas', count: closedCount },
+            { key: 'waiting', label: 'Aguardando', count: waitingCount },
+            { key: 'closed', label: 'Encerradas', count: closedCount },
           ].map(tab => (
             <button
               key={tab.key}
               onClick={() => setStatusTab(tab.key)}
-              className={`flex-1 py-2 text-[10px] font-medium border-b-2 transition-colors ${
-                statusTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+              className={`flex-1 py-2.5 text-[11px] font-medium border-b-2 transition-colors ${
+                statusTab === tab.key
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
-              {tab.label} ({tab.count})
+              {tab.label}
+              <span className="ml-1 text-[10px] opacity-60">({tab.count})</span>
             </button>
           ))}
         </div>
 
+        {/* Conversation list */}
         <ScrollArea className="flex-1">
           {loading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
           ) : filteredTickets.length === 0 ? (
-            <div className="text-center py-8">
-              <MessageSquare className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+            <div className="text-center py-12">
+              <MessageSquare className="h-10 w-10 mx-auto text-muted-foreground/20 mb-3" />
               <p className="text-xs text-muted-foreground">Nenhuma conversa</p>
             </div>
           ) : (
             filteredTickets.map(ticket => {
               const st = STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.open;
               const pr = PRIORITY_CONFIG[ticket.priority] ?? PRIORITY_CONFIG.medium;
+              const isSelected = selected?.id === ticket.id;
+              const isUrgent = ticket.priority === 'urgent' || ticket.priority === 'high';
+
               return (
                 <button
                   key={ticket.id}
                   onClick={() => setSelected(ticket)}
-                  className={`w-full text-left px-3 py-3 border-b border-border transition-colors hover:bg-muted/50 ${
-                    selected?.id === ticket.id ? 'bg-muted/80' : ''
+                  className={`w-full text-left px-4 py-3 border-b border-border/50 transition-all ${
+                    isSelected
+                      ? 'bg-primary/5 border-l-2 border-l-primary'
+                      : 'hover:bg-muted/30 border-l-2 border-l-transparent'
                   }`}
                 >
-                  <div className="flex items-start gap-2.5">
+                  <div className="flex items-start gap-3">
+                    {/* Avatar with online dot */}
                     <div className="relative shrink-0">
-                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-primary">{(ticket.tenant_name ?? 'T')[0].toUpperCase()}</span>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold ${
+                        isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {(ticket.tenant_name ?? 'T')[0].toUpperCase()}
                       </div>
-                      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background" style={{ backgroundColor: pr.color }} />
+                      {/* Priority indicator */}
+                      {isUrgent && (
+                        <span
+                          className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card animate-pulse"
+                          style={{ backgroundColor: pr.color }}
+                        />
+                      )}
                     </div>
+
+                    {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <p className="text-xs font-semibold text-foreground truncate">{ticket.tenant_name}</p>
-                        <span className="text-[9px] text-muted-foreground shrink-0">{getTimeOpen(ticket.created_at)}</span>
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <p className={`text-[13px] truncate ${isSelected ? 'font-bold text-foreground' : 'font-semibold text-foreground'}`}>
+                          {ticket.tenant_name}
+                        </p>
+                        <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
+                          {getTimeOpen(ticket.created_at)}
+                        </span>
                       </div>
-                      <p className="text-[11px] text-foreground/70 truncate mt-0.5">{ticket.subject}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Badge variant="secondary" className="text-[8px] px-1 py-0" style={{ backgroundColor: `${st.color}15`, color: st.color }}>
+                      <p className="text-xs text-muted-foreground truncate leading-relaxed">
+                        {ticket.subject}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span
+                          className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full"
+                          style={{ backgroundColor: `${st.color}12`, color: st.color }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: st.color }} />
                           {st.label}
-                        </Badge>
+                        </span>
+                        {ticket.assigned_to === userId && (
+                          <span className="text-[9px] text-primary font-medium">• Você</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -507,15 +372,15 @@ function AgentChatConsoleV2({ userId }: { userId: string }) {
         </ScrollArea>
       </div>
 
-      {/* CENTER: Governed Chat */}
+      {/* ─── CENTER PANEL: Governed Chat (Zendesk-style) ─── */}
       <div className="flex-1 flex flex-col min-w-0">
         {!selected ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-muted/20">
-            <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-              <MessageSquare className="h-9 w-9 opacity-30" />
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+            <div className="w-24 h-24 rounded-2xl bg-muted/30 flex items-center justify-center mb-5">
+              <MessageSquare className="h-10 w-10 opacity-20" />
             </div>
-            <p className="text-sm font-medium">Selecione uma conversa</p>
-            <p className="text-xs mt-1">Escolha um ticket para iniciar o atendimento governado</p>
+            <p className="text-base font-medium text-foreground/60">Selecione uma conversa</p>
+            <p className="text-xs mt-1.5 text-muted-foreground">Escolha um atendimento para iniciar</p>
           </div>
         ) : (
           <LiveChatGovernance
@@ -527,14 +392,20 @@ function AgentChatConsoleV2({ userId }: { userId: string }) {
         )}
       </div>
 
-      {/* RIGHT: Insights Sidebar */}
+      {/* ─── RIGHT PANEL: Context Sidebar (Intercom-style) ─── */}
       {selected && (
-        <div className="w-[300px] shrink-0 border-l border-border bg-card overflow-hidden flex flex-col">
-          <TenantInfoSidebar
-            tenantId={selected.tenant_id}
-            createdBy={selected.created_by}
-            currentTicketId={selected.id}
-          />
+        <div className="w-[300px] shrink-0 border-l border-border bg-card flex flex-col overflow-hidden">
+          <ScrollArea className="flex-1">
+            <TenantInfoSidebar
+              tenantId={selected.tenant_id}
+              createdBy={selected.created_by}
+              currentTicketId={selected.id}
+            />
+            <Separator />
+            <div className="p-3">
+              <ConversationInsights ticket={selected} />
+            </div>
+          </ScrollArea>
         </div>
       )}
     </div>
@@ -543,20 +414,247 @@ function AgentChatConsoleV2({ userId }: { userId: string }) {
 
 // ── Shared helpers ──
 
-interface TicketWithTenant extends SupportTicket {
-  tenant_name?: string;
-}
-
 function getTimeOpen(createdAt: string): string {
   const diff = Date.now() - new Date(createdAt).getTime();
   const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'agora';
   if (mins < 60) return `${mins}min`;
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h`;
   return `${Math.floor(hours / 24)}d`;
 }
 
-// ── Ticket Queue (kept from V1) ──
+// ═══════════════════════════════════════════════════════════════
+// ═══ DASHBOARD V2 ═══
+// ═══════════════════════════════════════════════════════════════
+
+interface AgentRankEntry {
+  agent_id: string;
+  name: string;
+  resolved: number;
+  avgScore: number;
+  avgResponseMin: number | null;
+}
+
+function AgentDashboardV2({ userId, onNavigate }: { userId: string; onNavigate: (tab: string) => void }) {
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [evaluations, setEvaluations] = useState<SupportEvaluation[]>([]);
+  const [allEvaluations, setAllEvaluations] = useState<SupportEvaluation[]>([]);
+  const [ranking, setRanking] = useState<AgentRankEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([TicketService.listAll(), EvaluationService.listAll()])
+      .then(async ([t, allEvals]) => {
+        setTickets(t);
+        setAllEvaluations(allEvals);
+        setEvaluations(allEvals.filter(ev => ev.agent_id === userId));
+
+        const agentIds = [...new Set(t.filter(tk => tk.assigned_to).map(tk => tk.assigned_to!))];
+        const { data: platformUsers } = await supabase
+          .from('platform_users')
+          .select('user_id, display_name')
+          .in('user_id', agentIds);
+        const nameMap = new Map((platformUsers ?? []).map(u => [u.user_id, u.display_name ?? 'Agente']));
+
+        const rankEntries: AgentRankEntry[] = agentIds.map(aid => {
+          const agentTickets = t.filter(tk => tk.assigned_to === aid);
+          const resolved = agentTickets.filter(tk => tk.status === 'resolved' || tk.status === 'closed').length;
+          const agentEvals = allEvals.filter(e => e.agent_id === aid);
+          const avgScore = agentEvals.length > 0
+            ? Math.round((agentEvals.reduce((s, e) => s + (e.agent_score ?? 0), 0) / agentEvals.length) * 10) / 10
+            : 0;
+          const respTimes = agentTickets
+            .filter(tk => tk.first_response_at)
+            .map(tk => (new Date(tk.first_response_at!).getTime() - new Date(tk.created_at).getTime()) / 60000);
+          const avgResp = respTimes.length > 0
+            ? Math.round(respTimes.reduce((a, b) => a + b, 0) / respTimes.length)
+            : null;
+          return { agent_id: aid, name: (nameMap.get(aid) as string) ?? 'Agente', resolved, avgScore, avgResponseMin: avgResp };
+        });
+        rankEntries.sort((a, b) => b.avgScore - a.avgScore || b.resolved - a.resolved);
+        setRanking(rankEntries);
+      })
+      .catch(() => toast.error('Erro ao carregar dashboard'))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  const myTickets = tickets.filter(t => t.assigned_to === userId);
+  const resolved = myTickets.filter(t => t.status === 'resolved' || t.status === 'closed');
+  const unresolved = myTickets.filter(t => !['resolved', 'closed', 'cancelled'].includes(t.status));
+  const activeChats = myTickets.filter(t => t.status === 'in_progress').length;
+  const openCount = tickets.filter(t => t.status === 'open' || t.status === 'awaiting_agent').length;
+
+  const avgScore = evaluations.length > 0
+    ? (evaluations.reduce((s, e) => s + (e.agent_score ?? 0), 0) / evaluations.length).toFixed(1)
+    : '—';
+
+  const responseTimesMs = myTickets
+    .filter(t => t.first_response_at)
+    .map(t => new Date(t.first_response_at!).getTime() - new Date(t.created_at).getTime());
+  const avgResponseMin = responseTimesMs.length > 0
+    ? Math.round(responseTimesMs.reduce((a, b) => a + b, 0) / responseTimesMs.length / 60000)
+    : null;
+  const avgResponseLabel = avgResponseMin != null
+    ? avgResponseMin < 60 ? `${avgResponseMin}min` : `${(avgResponseMin / 60).toFixed(1)}h`
+    : '—';
+
+  const resolutionTimesMs = resolved
+    .filter(t => t.resolved_at)
+    .map(t => new Date(t.resolved_at!).getTime() - new Date(t.created_at).getTime());
+  const avgResolutionMin = resolutionTimesMs.length > 0
+    ? Math.round(resolutionTimesMs.reduce((a, b) => a + b, 0) / resolutionTimesMs.length / 60000)
+    : null;
+  const avgResolutionLabel = avgResolutionMin != null
+    ? avgResolutionMin < 60 ? `${avgResolutionMin}min` : avgResolutionMin < 1440 ? `${(avgResolutionMin / 60).toFixed(1)}h` : `${(avgResolutionMin / 1440).toFixed(1)}d`
+    : '—';
+
+  const slaAtRisk = tickets.filter(t =>
+    ['open', 'awaiting_agent'].includes(t.status) &&
+    !t.first_response_at &&
+    (Date.now() - new Date(t.created_at).getTime()) > 15 * 60000
+  ).length;
+
+  const myRankPos = ranking.findIndex(r => r.agent_id === userId) + 1;
+
+  return (
+    <div className="space-y-5">
+      {slaAtRisk > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-destructive/30 bg-destructive/5">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-foreground">{slaAtRisk} ticket(s) com SLA em risco</p>
+            <p className="text-xs text-muted-foreground">Sem resposta há mais de 15 minutos</p>
+          </div>
+          <Button variant="outline" size="sm" className="shrink-0 gap-1 text-xs" onClick={() => onNavigate('queue')}>
+            <Inbox className="h-3.5 w-3.5" /> Ver Fila
+          </Button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'Chats Ativos', value: activeChats, icon: Radio, color: 'hsl(200 70% 50%)', tab: 'livechat' },
+          { label: 'Resolvidos', value: resolved.length, icon: CheckCircle2, color: 'hsl(145 60% 42%)', tab: 'metrics' },
+          { label: 'Não Resolvidos', value: unresolved.length, icon: XCircle, color: 'hsl(35 80% 50%)', tab: 'queue' },
+          { label: 'Nota Média', value: avgScore, icon: Star, color: 'hsl(45 90% 55%)', tab: 'evaluations' },
+          { label: 'Tempo Resposta', value: avgResponseLabel, icon: Timer, color: 'hsl(210 65% 50%)', tab: 'performance' },
+          { label: 'Tempo Resolução', value: avgResolutionLabel, icon: Clock, color: 'hsl(280 60% 55%)', tab: 'performance' },
+          { label: 'Aguardando', value: openCount, icon: AlertCircle, color: 'hsl(20 80% 50%)', tab: 'queue' },
+          { label: 'Ranking', value: myRankPos > 0 ? `#${myRankPos}` : '—', icon: Trophy, color: 'hsl(45 90% 55%)', tab: 'performance' },
+        ].map(k => {
+          const Icon = k.icon;
+          return (
+            <Card key={k.label} className="cursor-pointer hover:shadow-sm transition-shadow" onClick={() => onNavigate(k.tab)}>
+              <CardContent className="py-3 px-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon className="h-4 w-4" style={{ color: k.color }} />
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{k.label}</span>
+                </div>
+                <p className="text-2xl font-bold text-foreground">{k.value}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Trophy className="h-4 w-4" style={{ color: 'hsl(45 90% 55%)' }} /> Ranking Interno
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {ranking.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Sem dados.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {ranking.slice(0, 5).map((r, i) => {
+                  const isMe = r.agent_id === userId;
+                  return (
+                    <div key={r.agent_id} className={`flex items-center gap-2 py-1.5 px-2 rounded-md text-xs ${isMe ? 'bg-primary/10 font-semibold' : ''}`}>
+                      <span className="w-5 text-center font-bold text-muted-foreground">
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                      </span>
+                      <span className="flex-1 truncate text-foreground">{r.name}{isMe ? ' (Você)' : ''}</span>
+                      <div className="flex items-center gap-1">
+                        <Star className="h-3 w-3" fill="hsl(45 90% 55%)" stroke="hsl(45 90% 55%)" />
+                        <span className="text-foreground">{r.avgScore || '—'}</span>
+                      </div>
+                      <span className="text-muted-foreground">{r.resolved} res.</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Star className="h-4 w-4 text-primary" /> Avaliações Recentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {evaluations.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Nenhuma avaliação.</p>
+            ) : (
+              <div className="space-y-2">
+                {evaluations.slice(0, 4).map(ev => (
+                  <div key={ev.id} className="flex items-center gap-3 py-1.5 border-b border-border last:border-0">
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map(n => (
+                        <Star key={n} className="h-3 w-3" fill={(ev.agent_score ?? 0) >= n ? 'hsl(45 90% 55%)' : 'transparent'} stroke="hsl(45 90% 55%)" />
+                      ))}
+                    </div>
+                    <p className="text-xs text-foreground flex-1 truncate">{ev.comment || 'Sem comentário'}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive" /> Tickets Urgentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const urgent = tickets.filter(t => t.priority === 'urgent' && !['resolved', 'closed', 'cancelled'].includes(t.status));
+              if (urgent.length === 0) return <p className="text-xs text-muted-foreground text-center py-4">Nenhum urgente.</p>;
+              return (
+                <div className="space-y-2">
+                  {urgent.slice(0, 4).map(t => (
+                    <div key={t.id} className="flex items-center gap-2 py-1.5 border-b border-border last:border-0">
+                      <Badge variant="secondary" className="text-[9px]" style={{ backgroundColor: 'hsl(0 70% 50% / 0.1)', color: 'hsl(0 70% 50%)' }}>
+                        Urgente
+                      </Badge>
+                      <p className="text-xs text-foreground flex-1 truncate">{t.subject}</p>
+                      <span className="text-[10px] text-muted-foreground">{getTimeOpen(t.created_at)}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ═══ TICKET QUEUE ═══
+// ═══════════════════════════════════════════════════════════════
 
 function TicketQueue({ userId }: { userId: string }) {
   const [tickets, setTickets] = useState<TicketWithTenant[]>([]);
@@ -670,35 +768,11 @@ function TicketQueue({ userId }: { userId: string }) {
   );
 }
 
-// ── Agent Ticket View (kept from V1, now with governance) ──
+// ═══ Agent Ticket View ═══
 
 function AgentTicketView({ ticket, userId, onBack }: { ticket: SupportTicket; userId: string; onBack: () => void }) {
-  const [messages, setMessages] = useState<TicketMessage[]>([]);
   const [newMsg, setNewMsg] = useState('');
-  const [isInternal, setIsInternal] = useState(false);
   const [sending, setSending] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const loadMessages = useCallback(async () => {
-    try {
-      setLoading(true);
-      setMessages(await TicketService.getMessages(ticket.id));
-    } catch { toast.error('Erro ao carregar mensagens'); }
-    finally { setLoading(false); }
-  }, [ticket.id]);
-
-  useEffect(() => { loadMessages(); }, [loadMessages]);
-
-  const handleSend = async () => {
-    if (!newMsg.trim()) return;
-    try {
-      setSending(true);
-      await TicketService.sendMessage({ ticket_id: ticket.id, content: newMsg, sender_type: 'platform_agent', is_internal: isInternal }, userId);
-      setNewMsg(''); setIsInternal(false);
-      await loadMessages();
-    } catch { toast.error('Erro ao enviar'); }
-    finally { setSending(false); }
-  };
 
   const handleAssign = async () => {
     try { await TicketService.assign(ticket.id, userId); toast.success('Atribuído'); } catch { toast.error('Erro'); }
@@ -730,7 +804,6 @@ function AgentTicketView({ ticket, userId, onBack }: { ticket: SupportTicket; us
             </CardContent>
           </Card>
 
-          {/* Governed Chat */}
           <div className="h-[500px] border border-border rounded-lg overflow-hidden">
             <LiveChatGovernance ticket={ticket} userId={userId} />
           </div>
@@ -745,9 +818,7 @@ function AgentTicketView({ ticket, userId, onBack }: { ticket: SupportTicket; us
   );
 }
 
-// TenantInfoCard removed — replaced by TenantInfoSidebar component
-
-// ── Wiki Manager (kept from V1) ──
+// ═══ Wiki Manager ═══
 
 function WikiManager({ userId }: { userId: string }) {
   const [articles, setArticles] = useState<WikiArticle[]>([]);
@@ -830,7 +901,7 @@ function NewArticleForm({ categories, userId, onCreated }: { categories: WikiCat
   );
 }
 
-// ── Evaluations (kept from V1) ──
+// ═══ Evaluations ═══
 
 function EvaluationsPanel() {
   const [evaluations, setEvaluations] = useState<SupportEvaluation[]>([]);
@@ -869,7 +940,7 @@ function EvaluationsPanel() {
   );
 }
 
-// ── Metrics Dashboard (kept from V1) ──
+// ═══ Metrics Dashboard ═══
 
 function MetricsDashboard() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
