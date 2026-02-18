@@ -25,6 +25,10 @@ export function useSecurityMonitor() {
 
   useEffect(() => {
     const unsubSecurity = onSecurityEvent((event: SecurityEventPayload) => {
+      // Skip non-blocking events (successful context switches, identity established, etc.)
+      if ('result' in event && (event as any).result === 'success') return;
+      if ('result' in event && (event as any).result === 'allowed') return;
+
       const label = SECURITY_LABELS[event.type] || { title: 'Evento de Segurança', variant: 'destructive' as const };
       toast({ title: label.title, description: event.reason, variant: label.variant });
     });
