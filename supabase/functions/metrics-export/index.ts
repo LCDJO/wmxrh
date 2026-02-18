@@ -9,14 +9,21 @@ const corsHeaders = {
 /**
  * metrics-export — Prometheus/OpenTelemetry compatible metrics endpoint.
  *
- * GET  → Scrape real billing metrics from DB in Prometheus exposition format.
+ * GET  → Scrape real metrics from DB in Prometheus exposition format.
  * POST → Accept custom metrics payload and return formatted.
  *
  * Exported metrics:
- *   billing_usage_total{module}        — usage entries per module
- *   coupon_redemptions_total{coupon}    — redemptions per coupon code
- *   billing_discount_amount{coupon}     — total discount BRL per coupon
- *   billing_overage_amount              — total usage_overage BRL
+ *   billing_usage_total{module}             — usage entries per module
+ *   coupon_redemptions_total{coupon}         — redemptions per coupon code
+ *   billing_discount_amount{coupon}          — total discount BRL per coupon
+ *   billing_overage_amount                   — total usage_overage BRL
+ *   support_chat_active_total                — active chat sessions
+ *   support_chat_message_rate                — messages in last hour
+ *   support_agent_response_time_seconds      — avg agent response time (seconds)
+ *   support_agent_active_sessions{agent}     — active sessions per agent
+ *   support_alert_triggered_total            — total support alerts triggered
+ *   support_agent_avg_response_time          — avg agent response time (alias)
+ *   support_unresolved_total                 — unresolved tickets count
  */
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -29,17 +36,32 @@ serve(async (req) => {
       const sb = createClient(supabaseUrl, serviceKey);
 
       // Parallel queries — billing + support
-      const [usageRes, redemptionsRes, discountRes, overageRes, activeSessions, recentMessages, closedSessions] = await Promise.all([
+      const [
+        usageRes, redemptionsRes, discountRes, overageRes,
+        activeSessions, recentMessages, closedSessions,
+        // New: per-agent active sessions
+        agentActiveSessions,
+        // New: unresolved tickets
+        unresolvedTickets,
+        // New: alert triggers (support_chat_notes with type 'alert')
+        alertTriggered,
+      ] = await Promise.all([
         sb.from("platform_financial_entries").select("entry_type, description, amount"),
         sb.from("coupon_redemptions").select("coupon_id, discount_applied_brl, coupons(code)"),
         sb.from("platform_financial_entries").select("amount, description").eq("entry_type", "coupon_discount"),
         sb.from("platform_financial_entries").select("amount").eq("entry_type", "usage_overage"),
-        // support: active chat sessions
+        // support: active chat sessions (total)
         sb.from("support_chat_sessions").select("id", { count: "exact", head: true }).eq("status", "active"),
         // support: messages in the last hour for rate calc
         sb.from("support_chat_messages").select("id", { count: "exact", head: true }).gte("created_at", new Date(Date.now() - 3600_000).toISOString()),
-        // support: closed sessions with messages for response time
+        // support: closed sessions for response time calc
         sb.from("support_chat_sessions").select("id").eq("status", "closed").limit(100).order("created_at", { ascending: false }),
+        // support_agent_active_sessions: active sessions grouped by agent
+        sb.from("support_chat_sessions").select("agent_id").eq("status", "active").not("agent_id", "is", null),
+        // support_unresolved_total: open/in_progress tickets
+        sb.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress"]),
+        // support_alert_triggered_total: notes flagged as alerts
+        sb.from("support_chat_notes").select("id", { count: "exact", head: true }).eq("note_type", "alert"),
       ]);
 
       const lines: string[] = [];
@@ -102,6 +124,37 @@ serve(async (req) => {
       lines.push("# TYPE support_agent_response_time_seconds gauge");
       const avgResponseSec = await calcAvgResponseTime(sb, closedSessions.data ?? []);
       lines.push(`support_agent_response_time_seconds ${avgResponseSec.toFixed(1)} ${ts}`);
+
+      // ── support_agent_active_sessions (per agent) ─────────────
+      lines.push("# HELP support_agent_active_sessions Number of active chat sessions per agent");
+      lines.push("# TYPE support_agent_active_sessions gauge");
+      const agentSessionCounts = new Map<string, number>();
+      for (const row of agentActiveSessions.data ?? []) {
+        const aid = (row as any).agent_id ?? "unassigned";
+        agentSessionCounts.set(aid, (agentSessionCounts.get(aid) ?? 0) + 1);
+      }
+      if (agentSessionCounts.size === 0) {
+        lines.push(`support_agent_active_sessions{agent="none"} 0 ${ts}`);
+      } else {
+        for (const [agent, count] of agentSessionCounts) {
+          lines.push(`support_agent_active_sessions{agent="${esc(agent)}"} ${count} ${ts}`);
+        }
+      }
+
+      // ── support_alert_triggered_total ──────────────────────────
+      lines.push("# HELP support_alert_triggered_total Total number of support alerts triggered");
+      lines.push("# TYPE support_alert_triggered_total counter");
+      lines.push(`support_alert_triggered_total ${alertTriggered.count ?? 0} ${ts}`);
+
+      // ── support_agent_avg_response_time ────────────────────────
+      lines.push("# HELP support_agent_avg_response_time Average agent response time in seconds (alias)");
+      lines.push("# TYPE support_agent_avg_response_time gauge");
+      lines.push(`support_agent_avg_response_time ${avgResponseSec.toFixed(1)} ${ts}`);
+
+      // ── support_unresolved_total ───────────────────────────────
+      lines.push("# HELP support_unresolved_total Total unresolved support tickets");
+      lines.push("# TYPE support_unresolved_total gauge");
+      lines.push(`support_unresolved_total ${unresolvedTickets.count ?? 0} ${ts}`);
 
       return new Response(lines.join("\n") + "\n", {
         headers: {
