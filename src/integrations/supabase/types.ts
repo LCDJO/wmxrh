@@ -8005,6 +8005,62 @@ export type Database = {
           },
         ]
       }
+      webhook_configurations: {
+        Row: {
+          created_at: string
+          description: string | null
+          headers: Json | null
+          id: string
+          is_active: boolean
+          provider: string | null
+          retry_count: number | null
+          secret_value: string | null
+          tenant_id: string
+          timeout_seconds: number | null
+          updated_at: string
+          webhook_name: string
+          webhook_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          headers?: Json | null
+          id?: string
+          is_active?: boolean
+          provider?: string | null
+          retry_count?: number | null
+          secret_value?: string | null
+          tenant_id: string
+          timeout_seconds?: number | null
+          updated_at?: string
+          webhook_name: string
+          webhook_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          headers?: Json | null
+          id?: string
+          is_active?: boolean
+          provider?: string | null
+          retry_count?: number | null
+          secret_value?: string | null
+          tenant_id?: string
+          timeout_seconds?: number | null
+          updated_at?: string
+          webhook_name?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_configurations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       website_pages: {
         Row: {
           created_at: string
