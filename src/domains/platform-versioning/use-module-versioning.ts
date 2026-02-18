@@ -3,8 +3,8 @@
  *
  * Usage:
  *   const { bumpModule, trackChange } = useModuleVersioning();
- *   await bumpModule('customer_support', 'minor', 'Adicionado chat ao vivo');
- *   await trackChange('customer_support', 'feature', 'live_chat', 'created', { before: null, after: { enabled: true } });
+ *   await bumpModule('support_module', 'major', 'Refactor para módulo versionado');
+ *   await trackChange('support_module', 'feature', 'live_chat', 'created', { before: null, after: { enabled: true } });
  */
 import { useCallback } from 'react';
 import { getAdvancedVersioningEngine } from './index';

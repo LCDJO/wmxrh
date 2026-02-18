@@ -15,17 +15,17 @@ export interface ModuleCatalogEntry {
 
 /**
  * Build the catalog from the unified module list.
- * customer_support starts at v1.1.0; all others at v1.0.0.
+ * support_module starts at v2.0.0 (refactor para módulo versionado); all others at v1.0.0.
  */
 export const MODULE_CATALOG: ModuleCatalogEntry[] = PLATFORM_MODULES.map((mod) => ({
   module_id: mod.key,
   name: mod.label,
   description: mod.description,
   category: mod.category,
-  initial_version: mod.key === 'customer_support'
-    ? { major: 1, minor: 1, patch: 0 }
+  initial_version: mod.key === 'support_module'
+    ? { major: 2, minor: 0, patch: 0 }
     : { major: 1, minor: 0, patch: 0 },
-  changelog_summary: mod.key === 'customer_support'
-    ? 'v1.1.0 — Chat ao vivo estilo WhatsApp, página dedicada /support/chat.'
+  changelog_summary: mod.key === 'support_module'
+    ? 'v2.0.0 — Refactor: módulo versionado com duas camadas (Tenant App + Platform Console), LiveSupportEngine, ConversationAnalytics.'
     : `Versão inicial — ${mod.description}.`,
 }));

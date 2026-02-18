@@ -136,6 +136,58 @@ export const REPORTING_MANIFEST: ModuleManifest = {
   preload: 'hover',
 };
 
+export const SUPPORT_MODULE_MANIFEST: ModuleManifest = {
+  module_id: 'support_module',
+  module_name: 'Suporte',
+  version: '2.0.0',
+  routes: [
+    '/support', '/support/tickets', '/support/wiki', '/support/chat',
+    '/platform/support', '/platform/support/queue', '/platform/support/wiki',
+    '/platform/support/evaluations', '/platform/support/metrics',
+  ],
+  widgets: [
+    {
+      widget_id: 'support:open_tickets',
+      label: 'Tickets Abertos',
+      slot: 'dashboard',
+      loadComponent: () => import('@/pages/Index').then(m => ({ default: m.default })),
+      required_permission: 'support:read',
+      priority: 4,
+    },
+    {
+      widget_id: 'support:live_sessions',
+      label: 'Sessões ao Vivo',
+      slot: 'sidebar',
+      loadComponent: () => import('@/pages/Index').then(m => ({ default: m.default })),
+      required_permission: 'support:agent',
+      priority: 3,
+    },
+  ],
+  permissions: [
+    'support:read', 'support:write', 'support:agent', 'support:admin',
+    'support:wiki:read', 'support:wiki:write', 'support:eval:read',
+  ],
+  feature_flags: [
+    'ff_support_live_chat', 'ff_support_wiki', 'ff_support_auto_assign',
+    'ff_support_conversation_analytics', 'ff_support_transcript_archive',
+  ],
+  navigation_entries: [
+    // Tenant-side
+    { path: '/support', label: 'Suporte', icon: 'Headphones', order: 8 },
+    { path: '/support/tickets', label: 'Meus Tickets', icon: 'MessageSquare', parent: '/support', order: 1 },
+    { path: '/support/wiki', label: 'Base de Conhecimento', icon: 'BookOpen', parent: '/support', order: 2 },
+    { path: '/support/chat', label: 'Chat ao Vivo', icon: 'Radio', parent: '/support', order: 3 },
+    // Platform-side
+    { path: '/platform/support', label: 'Console Suporte', icon: 'Inbox', order: 9, required_permission: 'support:agent' },
+    { path: '/platform/support/queue', label: 'Fila', icon: 'Inbox', parent: '/platform/support', order: 1 },
+    { path: '/platform/support/wiki', label: 'Wiki Manager', icon: 'BookOpen', parent: '/platform/support', order: 2 },
+    { path: '/platform/support/evaluations', label: 'Avaliações', icon: 'Star', parent: '/platform/support', order: 3 },
+    { path: '/platform/support/metrics', label: 'Métricas', icon: 'BarChart3', parent: '/platform/support', order: 4 },
+  ],
+  loadComponent: () => import('@/pages/Index').then(m => ({ default: m.default })),
+  preload: 'hover',
+};
+
 // ════════════════════════════════════════════════════════════════
 // Module Registrations (lifecycle descriptors)
 // ════════════════════════════════════════════════════════════════
@@ -186,6 +238,18 @@ export const REPORTING_REGISTRATION: ModuleRegistration = {
   cognitive_signals: ['anomaly_detected', 'report_ready'],
 };
 
+export const SUPPORT_MODULE_REGISTRATION: ModuleRegistration = {
+  key: 'support_module',
+  label: 'Suporte',
+  version: '2.0.0',
+  is_core: false,
+  lazy: true,
+  routes: SUPPORT_MODULE_MANIFEST.routes,
+  required_permissions: ['support:read'],
+  dependencies: [],
+  cognitive_signals: ['sla_breach', 'satisfaction_drop', 'queue_overflow'],
+};
+
 // ════════════════════════════════════════════════════════════════
 // All modules — convenience arrays
 // ════════════════════════════════════════════════════════════════
@@ -195,6 +259,7 @@ export const ALL_MODULE_REGISTRATIONS: ModuleRegistration[] = [
   COMPENSATION_REGISTRATION,
   TENANT_ADMIN_REGISTRATION,
   REPORTING_REGISTRATION,
+  SUPPORT_MODULE_REGISTRATION,
 ];
 
 export const ALL_MODULE_MANIFESTS: ModuleManifest[] = [
@@ -202,6 +267,7 @@ export const ALL_MODULE_MANIFESTS: ModuleManifest[] = [
   COMPENSATION_ENGINE_MANIFEST,
   TENANT_ADMIN_MANIFEST,
   REPORTING_MANIFEST,
+  SUPPORT_MODULE_MANIFEST,
 ];
 
 /** Map registration → manifest for bulk federation */
@@ -210,4 +276,5 @@ export const MODULE_FEDERATION_MAP: Array<{ registration: ModuleRegistration; ma
   { registration: COMPENSATION_REGISTRATION, manifest: COMPENSATION_ENGINE_MANIFEST },
   { registration: TENANT_ADMIN_REGISTRATION, manifest: TENANT_ADMIN_MANIFEST },
   { registration: REPORTING_REGISTRATION, manifest: REPORTING_MANIFEST },
+  { registration: SUPPORT_MODULE_REGISTRATION, manifest: SUPPORT_MODULE_MANIFEST },
 ];
