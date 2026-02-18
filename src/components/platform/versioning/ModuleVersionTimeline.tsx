@@ -328,6 +328,22 @@ export function ModuleVersionTimeline() {
                                     )}
                                   </div>
 
+                                  {/* Layer versions for two-layer modules */}
+                                  {(v.tenant_app_version || v.platform_console_version) && (
+                                    <div className="flex items-center gap-2 mt-1.5">
+                                      {v.tenant_app_version && (
+                                        <Badge variant="outline" className="text-[9px] h-4 font-mono border-border/50 text-muted-foreground">
+                                          Tenant: {v.tenant_app_version}
+                                        </Badge>
+                                      )}
+                                      {v.platform_console_version && (
+                                        <Badge variant="outline" className="text-[9px] h-4 font-mono border-border/50 text-muted-foreground">
+                                          Console: {v.platform_console_version}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
+
                                   {v.changelog_summary && (
                                     <p className="text-[11px] text-foreground/70 mt-1.5 leading-relaxed">
                                       {v.changelog_summary}

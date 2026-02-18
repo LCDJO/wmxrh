@@ -20,6 +20,8 @@ function rowToModuleVersion(row: Record<string, any>): ModuleVersion {
     breaking_changes: row.breaking_changes,
     dependencies: (row.dependencies ?? []) as ModuleDependency[],
     changelog_summary: row.changelog_summary ?? '',
+    tenant_app_version: row.tenant_app_version ?? null,
+    platform_console_version: row.platform_console_version ?? null,
     released_at: row.released_at,
     created_at: row.created_at,
     created_by: row.created_by,
@@ -35,6 +37,8 @@ export class ModuleVersionRegistry {
       dependencies?: ModuleDependency[];
       breaking_changes?: boolean;
       changelog_summary?: string;
+      tenant_app_version?: string;
+      platform_console_version?: string;
     },
   ): Promise<ModuleVersion> {
     const { data, error } = await (supabase.from('module_versions') as any)
@@ -49,6 +53,8 @@ export class ModuleVersionRegistry {
         breaking_changes: opts?.breaking_changes ?? false,
         dependencies: opts?.dependencies ?? [],
         changelog_summary: opts?.changelog_summary ?? '',
+        tenant_app_version: opts?.tenant_app_version ?? null,
+        platform_console_version: opts?.platform_console_version ?? null,
         created_by: createdBy,
       })
       .select()

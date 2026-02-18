@@ -23,11 +23,19 @@ export async function seedAllModuleVersions(createdBy: string): Promise<{
         continue;
       }
 
+      const opts: Record<string, any> = { changelog_summary: entry.changelog_summary };
+
+      // Two-layer modules get layer-specific versions
+      if (entry.module_id === 'support_module') {
+        opts.tenant_app_version = `v${entry.initial_version.major}.${entry.initial_version.minor}.${entry.initial_version.patch}`;
+        opts.platform_console_version = `v${entry.initial_version.major}.${entry.initial_version.minor}.${entry.initial_version.patch}`;
+      }
+
       const version = await engine.modules.register(
         entry.module_id,
         entry.initial_version,
         createdBy,
-        { changelog_summary: entry.changelog_summary },
+        opts,
       );
 
       // Auto-release initial version
