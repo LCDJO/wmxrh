@@ -6701,6 +6701,63 @@ export type Database = {
           },
         ]
       }
+      support_sandbox_previews: {
+        Row: {
+          activated_at: string
+          activated_by: string
+          concluded_at: string | null
+          conclusion_notes: string | null
+          feature_flags_override: Json
+          id: string
+          module_id: string
+          promoted: boolean
+          status: string
+          tenant_id: string
+          version_id: string
+        }
+        Insert: {
+          activated_at?: string
+          activated_by: string
+          concluded_at?: string | null
+          conclusion_notes?: string | null
+          feature_flags_override?: Json
+          id?: string
+          module_id?: string
+          promoted?: boolean
+          status?: string
+          tenant_id: string
+          version_id: string
+        }
+        Update: {
+          activated_at?: string
+          activated_by?: string
+          concluded_at?: string | null
+          conclusion_notes?: string | null
+          feature_flags_override?: Json
+          id?: string
+          module_id?: string
+          promoted?: boolean
+          status?: string
+          tenant_id?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_sandbox_previews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_sandbox_previews_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "support_module_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_system_ratings: {
         Row: {
           category: string

@@ -79,3 +79,5 @@ export { seedAllModuleVersions } from './module-version-seeder';
 export { useModuleVersioning } from './use-module-versioning';
 export { SupportModuleVersionRegistry } from './support-module-version';
 export type { SupportModuleVersion } from './support-module-version';
+export { SupportModuleSandboxPreview } from './support-sandbox-preview';
+export type { SandboxPreviewSession } from './support-sandbox-preview';
