@@ -19,6 +19,11 @@ export const SUPPORT_EVENTS = {
   AgentTyping: 'support:agent_typing',
   ChatSessionClosed: 'support:chat_session_closed',
   ChatTranscriptArchived: 'support:chat_transcript_archived',
+  // Versioning lifecycle
+  SupportModuleVersionCreated: 'support:module_version_created',
+  SupportModuleReleased: 'support:module_released',
+  SupportModuleRollbackExecuted: 'support:module_rollback_executed',
+  SupportModulePreviewStarted: 'support:module_preview_started',
 } as const;
 
 export const __DOMAIN_CATALOG = {
@@ -40,5 +45,9 @@ export const __DOMAIN_CATALOG = {
     { name: 'AgentTyping', description: 'Agente está digitando no chat' },
     { name: 'ChatSessionClosed', description: 'Sessão de chat encerrada' },
     { name: 'ChatTranscriptArchived', description: 'Transcrição do chat arquivada permanentemente' },
+    { name: 'SupportModuleVersionCreated', description: 'Nova versão do módulo de suporte criada (draft)' },
+    { name: 'SupportModuleReleased', description: 'Versão do módulo de suporte promovida a released' },
+    { name: 'SupportModuleRollbackExecuted', description: 'Rollback do módulo de suporte executado para tenant' },
+    { name: 'SupportModulePreviewStarted', description: 'Preview de versão anterior do módulo de suporte iniciado' },
   ],
 };
