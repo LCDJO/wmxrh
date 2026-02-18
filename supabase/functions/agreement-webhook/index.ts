@@ -148,8 +148,31 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // ── Webhook Secret Validation ──
-  const expectedSecret = Deno.env.get("AGREEMENT_WEBHOOK_SECRET");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+  // ── Webhook Secret Validation (DB → env var fallback) ──
+  let expectedSecret = Deno.env.get("AGREEMENT_WEBHOOK_SECRET") || null;
+
+  // Try to load from webhook_configurations table (overrides env var)
+  try {
+    const { data: dbConfig } = await supabase
+      .from("webhook_configurations")
+      .select("secret_value, is_active")
+      .eq("webhook_name", "agreement_webhook")
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (dbConfig?.secret_value) {
+      expectedSecret = dbConfig.secret_value;
+    }
+  } catch {
+    // If DB lookup fails, fall back to env var silently
+    console.warn("[agreement-webhook] Could not read webhook_configurations, using env var fallback");
+  }
+
   if (expectedSecret) {
     const providedSecret = req.headers.get("x-webhook-secret");
     if (providedSecret !== expectedSecret) {
@@ -160,10 +183,6 @@ Deno.serve(async (req: Request) => {
       });
     }
   }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   try {
     const body = await req.json();
