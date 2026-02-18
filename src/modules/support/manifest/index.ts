@@ -19,8 +19,10 @@ export const SUPPORT_MODULE_EVENTS = {
   TICKET_CLOSED: `module:${SUPPORT_MODULE_ID}:ticket_closed`,
   // Chat / Live Support Engine
   CHAT_SESSION_STARTED: `module:${SUPPORT_MODULE_ID}:chat_session_started`,
-  CHAT_MESSAGE_SENT: `module:${SUPPORT_MODULE_ID}:chat_message_sent`,
+  CHAT_SESSION_ACCEPTED: `module:${SUPPORT_MODULE_ID}:chat_session_accepted`,
+  CHAT_SESSION_PAUSED: `module:${SUPPORT_MODULE_ID}:chat_session_paused`,
   CHAT_SESSION_CLOSED: `module:${SUPPORT_MODULE_ID}:chat_session_closed`,
+  CHAT_MESSAGE_SENT: `module:${SUPPORT_MODULE_ID}:chat_message_sent`,
   CHAT_TRANSCRIPT_ARCHIVED: `module:${SUPPORT_MODULE_ID}:chat_transcript_archived`,
   // Wiki / Knowledge Base
   WIKI_PUBLISHED: `module:${SUPPORT_MODULE_ID}:wiki_published`,
@@ -28,6 +30,9 @@ export const SUPPORT_MODULE_EVENTS = {
   // Evaluation
   AGENT_EVALUATED: `module:${SUPPORT_MODULE_ID}:agent_evaluated`,
   SYSTEM_RATED: `module:${SUPPORT_MODULE_ID}:system_rated`,
+  // Agent Operations
+  AGENT_ALERT_TRIGGERED: `module:${SUPPORT_MODULE_ID}:agent_alert_triggered`,
+  INTERNAL_NOTE_ADDED: `module:${SUPPORT_MODULE_ID}:internal_note_added`,
 } as const;
 
 /**
