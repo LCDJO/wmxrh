@@ -103,6 +103,7 @@ import PlatformMarketplace from "./pages/platform/PlatformMarketplace";
 import PlatformAppsReview from "./pages/platform/PlatformAppsReview";
 import TenantAppsIntegrations from "./pages/TenantAppsIntegrations";
 import PlatformIntegrationAutomation from "./pages/platform/PlatformIntegrationAutomation";
+import PlatformAIOperations from "./pages/platform/PlatformAIOperations";
 import SupportNewTicket from "./pages/support/SupportNewTicket";
 import SupportTickets from "./pages/support/SupportTickets";
 import SupportWiki from "./pages/support/SupportWiki";
@@ -206,6 +207,7 @@ function AppRoutes() {
         <Route path="developers" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations', 'platform_marketplace_admin']}><PlatformDevelopers /></PlatformGuard>} />
         <Route path="marketplace" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations', 'platform_marketplace_admin']}><PlatformMarketplace /></PlatformGuard>} />
         <Route path="apps-review" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformAppsReview /></PlatformGuard>} />
+        <Route path="ai-operations" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformAIOperations /></PlatformGuard>} />
       </Route>
 
       {/* ═══ LANDING PAGE RENDERER ═══ */}
