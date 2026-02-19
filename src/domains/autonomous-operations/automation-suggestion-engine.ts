@@ -1,10 +1,14 @@
 /**
  * AutomationSuggestionEngine — Generates actionable workflow-style automation suggestions from detected patterns.
  *
+ * SECURITY: ADVISORY-ONLY. This engine produces SUGGESTIONS that require explicit
+ * human approval. No action is auto-executed. Accept/reject flows update status
+ * only — actual execution requires a separate, human-initiated workflow creation.
+ *
  * Produces human-readable suggestions like:
  *   "Sugerimos criar workflow: quando InvoiceGenerated → enviar notificação."
  *
- * Suggestions surface in the Control Plane dashboard.
+ * Suggestions surface in the Control Plane dashboard for human review.
  */
 
 import type { BehaviorPattern, AutomationSuggestion, SuggestedAction, SuggestionPriority } from './types';

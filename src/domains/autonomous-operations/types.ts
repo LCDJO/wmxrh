@@ -1,6 +1,17 @@
 /**
  * Autonomous Operations AI Engine — Type Definitions
  * Platform Intelligence Layer
+ *
+ * SECURITY CONSTRAINT (CRITICAL):
+ * The Autonomous AI Engine is ADVISORY-ONLY. It NEVER executes actions autonomously.
+ * All outputs are suggestions, recommendations, or alerts that REQUIRE explicit
+ * human approval before any action is taken. No automated execution path exists.
+ *
+ * The engine:
+ *  ✅ Suggests — proposes automation workflows and optimizations
+ *  ✅ Recommends — identifies revenue, workflow, and risk opportunities
+ *  ✅ Alerts — predicts risks and surfaces intelligent warnings
+ *  ❌ NEVER executes — no auto-heal, auto-scale, or auto-apply without human confirmation
  */
 
 // ── Signal Types ─────────────────────────────────────────────
@@ -47,9 +58,14 @@ export interface AutomationSuggestion {
   priority: SuggestionPriority;
   status: SuggestionStatus;
   trigger_pattern_id: string;
+  /** Human-readable impact estimate (no auto-execution) */
   estimated_impact: string;
+  /** Proposed actions — NEVER auto-executed, require explicit human approval */
   actions: SuggestedAction[];
   created_at: string;
+  /** Approval tracking */
+  approved_by?: string;
+  approved_at?: string;
 }
 
 export interface SuggestedAction {

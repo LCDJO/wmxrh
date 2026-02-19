@@ -1,5 +1,8 @@
 /**
  * InsightDashboardService — Aggregates all sub-engines into a unified operational dashboard state.
+ *
+ * SECURITY: Read-only aggregation layer. All outputs are informational insights,
+ * alerts, and recommendations. No autonomous execution occurs from this service.
  */
 
 import type { OperationalDashboardState, OperationalInsight } from './types';
