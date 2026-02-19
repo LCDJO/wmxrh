@@ -43,6 +43,7 @@ export const PLATFORM_MODULES: readonly PlatformModule[] = [
   { key: 'growth',           label: 'Growth Engine',        description: 'Experimentos de crescimento, A/B testing e métricas de conversão',      icon: 'Rocket',         category: 'platform' },
   { key: 'landing_engine',   label: 'Landing Engine',       description: 'Construtor de landing pages com versionamento e A/B testing',            icon: 'Layout',         category: 'platform' },
   { key: 'website_engine',   label: 'Website Engine',       description: 'Páginas institucionais, blog e gestão de conteúdo',                     icon: 'Globe',          category: 'platform' },
+  { key: 'autonomous_ops',  label: 'Autonomous Ops AI',    description: 'Inteligência operacional: análise de sinais, predição de riscos, sugestões de automação e otimização de receita', icon: 'Brain', category: 'platform' },
 ] as const;
 
 export type ModuleKey = typeof PLATFORM_MODULES[number]['key'];
