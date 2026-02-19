@@ -9943,6 +9943,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: string[]
       }
+      get_platform_extended_metrics: { Args: never; Returns: Json }
       get_platform_metrics: { Args: never; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_type_from_jwt: { Args: never; Returns: string }
