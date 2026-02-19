@@ -117,6 +117,60 @@ export interface TenantImpactReport {
   last_analyzed: string;
 }
 
+/** Pre-deploy impact assessment for a planned release */
+export interface DeployImpactAssessment {
+  release_id: string;
+  release_label: string;
+  analyzed_at: string;
+  /** Total tenants that will be affected */
+  total_tenants_affected: number;
+  /** Breakdown by impact severity */
+  impact_breakdown: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    none: number;
+  };
+  /** Per-tenant impact details */
+  tenant_impacts: TenantDeployImpact[];
+  /** Automation impact summary */
+  automation_impact: AutomationImpact;
+  /** Billing impact summary */
+  billing_impact: BillingImpact;
+  /** Overall risk verdict */
+  verdict: 'safe' | 'caution' | 'risky' | 'blocked';
+  verdict_reason: string;
+}
+
+export interface TenantDeployImpact {
+  tenant_id: string;
+  tenant_name: string;
+  plan: string;
+  impact_level: 'critical' | 'high' | 'medium' | 'low' | 'none';
+  affected_modules: string[];
+  affected_workflows: number;
+  affected_automations: number;
+  billing_change_brl: number;
+  risk_factors: string[];
+}
+
+export interface AutomationImpact {
+  total_workflows_affected: number;
+  workflows_breaking: number;
+  workflows_degraded: number;
+  workflows_unaffected: number;
+  breaking_details: { workflow_name: string; reason: string }[];
+}
+
+export interface BillingImpact {
+  total_mrr_at_risk: number;
+  tenants_with_price_change: number;
+  tenants_with_plan_change: number;
+  estimated_revenue_delta_brl: number;
+  details: string[];
+}
+
 // ── Insight Dashboard ────────────────────────────────────────
 
 export interface OperationalInsight {
