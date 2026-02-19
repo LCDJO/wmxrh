@@ -78,11 +78,17 @@ interface PlatformNavItem {
 }
 
 const NAV_ITEMS: PlatformNavItem[] = [
+  // ── Overview ────────────────────────────────────────────────
   { to: '/platform/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/platform/control-plane', label: 'Control Plane', icon: Gauge, requiredPermission: 'security.manage' },
+
+  // ── Tenants & Usuários ──────────────────────────────────────
   { to: '/platform/tenants', label: 'Tenants', icon: Building2, requiredPermission: 'tenant.view' },
+  { to: '/platform/users', label: 'Usuários', icon: Users, requiredPermission: 'platform_user.view' },
   { to: '/platform/modules', label: 'Módulos', icon: Puzzle, requiredPermission: 'module.view' },
   { to: '/platform/plans', label: 'Planos', icon: Package, requiredPermission: 'plan.manage' },
-  { to: '/platform/users', label: 'Usuários', icon: Users, requiredPermission: 'platform_user.view' },
+
+  // ── Segurança & Acesso ──────────────────────────────────────
   {
     to: '/platform/security',
     label: 'Segurança',
@@ -98,19 +104,15 @@ const NAV_ITEMS: PlatformNavItem[] = [
     ],
   },
   { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
-  { to: '/platform/automation', label: 'Automação', icon: Zap, requiredPermission: 'security.manage' },
+  { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'audit.view' },
   {
-    to: '/platform/integration-automation',
-    label: 'iPaaS Workflows',
-    icon: Workflow,
-    requiredPermission: 'security.manage',
-    children: [
-      { to: '/platform/integration-automation', label: 'Workflows' },
-      { to: '/platform/integration-automation/templates', label: 'Templates' },
-      { to: '/platform/integration-automation/executions', label: 'Execution Logs' },
-      { to: '/platform/integration-automation/sandbox', label: 'Sandbox Tests' },
-    ],
+    to: '/platform/governance-dashboard',
+    label: 'Governance Dashboard',
+    icon: BarChart3,
+    requiredPermission: 'security.view',
   },
+
+  // ── Operações & Infraestrutura ──────────────────────────────
   {
     to: '/platform/monitoring',
     label: 'Monitoramento',
@@ -124,9 +126,25 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/monitoring/incidents', label: 'Incidentes' },
     ],
   },
-  
-  { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
-  { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'audit.view' },
+  { to: '/platform/observability', label: 'Observabilidade', icon: Eye, requiredPermission: 'security.view' },
+  { to: '/platform/automation', label: 'Automação', icon: Zap, requiredPermission: 'security.manage' },
+  {
+    to: '/platform/integration-automation',
+    label: 'iPaaS Workflows',
+    icon: Workflow,
+    requiredPermission: 'security.manage',
+    children: [
+      { to: '/platform/integration-automation', label: 'Workflows' },
+      { to: '/platform/integration-automation/templates', label: 'Templates' },
+      { to: '/platform/integration-automation/executions', label: 'Execution Logs' },
+      { to: '/platform/integration-automation/sandbox', label: 'Sandbox Tests' },
+    ],
+  },
+
+  // ── Inteligência Artificial ─────────────────────────────────
+  { to: '/platform/ai-operations', label: 'AI Operations', icon: Brain, requiredPermission: 'security.manage' },
+
+  // ── Financeiro & Revenue ────────────────────────────────────
   {
     to: '/platform/billing',
     label: 'Financeiro',
@@ -146,10 +164,12 @@ const NAV_ITEMS: PlatformNavItem[] = [
     children: [
       { to: '/platform/revenue', label: 'Visão Geral' },
       { to: '/platform/referrals', label: 'Referrals' },
-      
       { to: '/platform/revenue/intelligence', label: 'Intelligence' },
     ],
   },
+  { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
+
+  // ── Growth & Marketing ──────────────────────────────────────
   {
     to: '/platform/growth',
     label: 'Growth AI',
@@ -161,13 +181,33 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/growth/landing-pages', label: 'Landing Pages', requiredPermission: 'landing_page.view' },
       { to: '/platform/growth/conversions', label: 'Conversões', requiredPermission: 'growth.view' },
       { to: '/platform/growth/fab-builder', label: 'FAB Builder', requiredPermission: 'landing.create' },
-      // Marketing team: drafts & submissions
       { to: '/platform/growth/submissions', label: 'Meus Rascunhos', requiredPermission: 'landing.view_drafts' },
-      // Director: approvals & published
       { to: '/platform/growth/approvals', label: 'Aprovações Pendentes', requiredPermission: 'landing.approve' },
       { to: '/platform/growth/version-publish', label: 'Publicadas', requiredPermission: 'landing.publish' },
     ],
   },
+  {
+    to: '/platform/marketing',
+    label: 'Marketing',
+    icon: Megaphone,
+    requiredPermission: 'security.view',
+    children: [
+      { to: '/platform/marketing/analytics', label: 'Analytics' },
+    ],
+  },
+  {
+    to: '/platform/landing',
+    label: 'Landing Pages',
+    icon: BookOpen,
+    requiredPermission: 'landing.view_drafts',
+    children: [
+      { to: '/platform/landing/drafts', label: 'Rascunhos' },
+      { to: '/platform/landing/review', label: 'Revisão' },
+      { to: '/platform/landing/published', label: 'Publicadas' },
+    ],
+  },
+
+  // ── Canais & Conteúdo ───────────────────────────────────────
   {
     to: '/platform/website',
     label: 'Website',
@@ -180,6 +220,9 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/website/versions', label: 'Versionamento' },
     ],
   },
+  { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
+
+  // ── Developers & APIs ───────────────────────────────────────
   {
     to: '/platform/apis',
     label: 'APIs',
@@ -204,36 +247,8 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/apps-review', label: 'Revisão de Apps' },
     ],
   },
-  { to: '/platform/ai-operations', label: 'AI Operations', icon: Brain, requiredPermission: 'security.manage' },
-  { to: '/platform/observability', label: 'Observabilidade', icon: Eye, requiredPermission: 'security.view' },
-  { to: '/platform/control-plane', label: 'Control Plane', icon: Gauge, requiredPermission: 'security.manage' },
-  {
-    to: '/platform/governance-dashboard',
-    label: 'Governance Dashboard',
-    icon: BarChart3,
-    requiredPermission: 'security.view',
-  },
-  {
-    to: '/platform/landing',
-    label: 'Landing Pages',
-    icon: BookOpen,
-    requiredPermission: 'landing.view_drafts',
-    children: [
-      { to: '/platform/landing/drafts', label: 'Rascunhos' },
-      { to: '/platform/landing/review', label: 'Revisão' },
-      { to: '/platform/landing/published', label: 'Publicadas' },
-    ],
-  },
-  {
-    to: '/platform/marketing',
-    label: 'Marketing',
-    icon: Megaphone,
-    requiredPermission: 'security.view',
-    children: [
-      { to: '/platform/marketing/analytics', label: 'Analytics' },
-    ],
-  },
-  { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
+
+  // ── Suporte ─────────────────────────────────────────────────
   {
     to: '/platform/support',
     label: 'Suporte',
@@ -243,6 +258,8 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/support/analytics', label: 'Analytics' },
     ],
   },
+
+  // ── Configurações ───────────────────────────────────────────
   {
     to: '/platform/settings',
     label: 'Settings',
