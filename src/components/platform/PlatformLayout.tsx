@@ -198,6 +198,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/apps-review', label: 'Revisão de Apps' },
     ],
   },
+  { to: '/platform/ai-operations', label: 'AI Operations', icon: Brain, requiredPermission: 'security.manage' },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
   {
     to: '/platform/support',
