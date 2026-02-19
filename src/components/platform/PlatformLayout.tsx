@@ -35,6 +35,12 @@ import {
   Headphones,
   Network,
   Workflow,
+  Eye,
+  Gauge,
+  BarChart3,
+  FileEdit,
+  CheckSquare,
+  BookOpen,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -199,6 +205,34 @@ const NAV_ITEMS: PlatformNavItem[] = [
     ],
   },
   { to: '/platform/ai-operations', label: 'AI Operations', icon: Brain, requiredPermission: 'security.manage' },
+  { to: '/platform/observability', label: 'Observabilidade', icon: Eye, requiredPermission: 'security.view' },
+  { to: '/platform/control-plane', label: 'Control Plane', icon: Gauge, requiredPermission: 'security.manage' },
+  {
+    to: '/platform/governance-dashboard',
+    label: 'Governance Dashboard',
+    icon: BarChart3,
+    requiredPermission: 'security.view',
+  },
+  {
+    to: '/platform/landing',
+    label: 'Landing Pages',
+    icon: BookOpen,
+    requiredPermission: 'landing.view_drafts',
+    children: [
+      { to: '/platform/landing/drafts', label: 'Rascunhos' },
+      { to: '/platform/landing/review', label: 'Revisão' },
+      { to: '/platform/landing/published', label: 'Publicadas' },
+    ],
+  },
+  {
+    to: '/platform/marketing',
+    label: 'Marketing',
+    icon: Megaphone,
+    requiredPermission: 'security.view',
+    children: [
+      { to: '/platform/marketing/analytics', label: 'Analytics' },
+    ],
+  },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
   {
     to: '/platform/support',
