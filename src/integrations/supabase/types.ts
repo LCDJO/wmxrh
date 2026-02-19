@@ -1920,6 +1920,170 @@ export type Database = {
           },
         ]
       }
+      developer_accounts: {
+        Row: {
+          accepted_tos_at: string | null
+          accepted_tos_version: string | null
+          company: string | null
+          created_at: string
+          email: string
+          id: string
+          logo_url: string | null
+          metadata: Json | null
+          name: string
+          status: string
+          tier: string
+          updated_at: string
+          user_id: string
+          verification_level: string
+          verified: boolean
+          website_url: string | null
+        }
+        Insert: {
+          accepted_tos_at?: string | null
+          accepted_tos_version?: string | null
+          company?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          logo_url?: string | null
+          metadata?: Json | null
+          name: string
+          status?: string
+          tier?: string
+          updated_at?: string
+          user_id: string
+          verification_level?: string
+          verified?: boolean
+          website_url?: string | null
+        }
+        Update: {
+          accepted_tos_at?: string | null
+          accepted_tos_version?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          logo_url?: string | null
+          metadata?: Json | null
+          name?: string
+          status?: string
+          tier?: string
+          updated_at?: string
+          user_id?: string
+          verification_level?: string
+          verified?: boolean
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      developer_apps: {
+        Row: {
+          app_status: string
+          app_type: string
+          category: string
+          created_at: string
+          description: string | null
+          developer_id: string
+          homepage_url: string | null
+          icon_url: string | null
+          id: string
+          install_count: number
+          long_description: string | null
+          name: string
+          optional_scopes: string[] | null
+          privacy_policy_url: string | null
+          published_at: string | null
+          rating_avg: number | null
+          rating_count: number
+          redirect_urls: string[] | null
+          requested_scopes: string[] | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          screenshots: string[] | null
+          slug: string
+          support_url: string | null
+          tags: string[] | null
+          terms_url: string | null
+          updated_at: string
+          version: string
+          webhook_url: string | null
+        }
+        Insert: {
+          app_status?: string
+          app_type?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          developer_id: string
+          homepage_url?: string | null
+          icon_url?: string | null
+          id?: string
+          install_count?: number
+          long_description?: string | null
+          name: string
+          optional_scopes?: string[] | null
+          privacy_policy_url?: string | null
+          published_at?: string | null
+          rating_avg?: number | null
+          rating_count?: number
+          redirect_urls?: string[] | null
+          requested_scopes?: string[] | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          screenshots?: string[] | null
+          slug: string
+          support_url?: string | null
+          tags?: string[] | null
+          terms_url?: string | null
+          updated_at?: string
+          version?: string
+          webhook_url?: string | null
+        }
+        Update: {
+          app_status?: string
+          app_type?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          developer_id?: string
+          homepage_url?: string | null
+          icon_url?: string | null
+          id?: string
+          install_count?: number
+          long_description?: string | null
+          name?: string
+          optional_scopes?: string[] | null
+          privacy_policy_url?: string | null
+          published_at?: string | null
+          rating_avg?: number | null
+          rating_count?: number
+          redirect_urls?: string[] | null
+          requested_scopes?: string[] | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          screenshots?: string[] | null
+          slug?: string
+          support_url?: string | null
+          tags?: string[] | null
+          terms_url?: string | null
+          updated_at?: string
+          version?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_apps_developer_id_fkey"
+            columns: ["developer_id"]
+            isOneToOne: false
+            referencedRelation: "developer_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_vault: {
         Row: {
           agreement_id: string | null
