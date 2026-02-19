@@ -4,34 +4,37 @@
  * Links to the full /platform/ai-operations dashboard.
  */
 
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Brain, Zap, ShieldAlert, TrendingUp, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Brain, Zap, ShieldAlert, TrendingUp, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BehaviorPatternAnalyzer } from '@/domains/autonomous-operations/behavior-pattern-analyzer';
-import { AutomationSuggestionEngine } from '@/domains/autonomous-operations/automation-suggestion-engine';
-import { RiskPredictionService } from '@/domains/autonomous-operations/risk-prediction-service';
-import { RevenueOptimizationAdvisor } from '@/domains/autonomous-operations/revenue-optimization-advisor';
+import { useAIOperationsData } from '@/hooks/useAIOperationsData';
 import type { AutomationSuggestion, PredictedRisk, RevenueOptimization } from '@/domains/autonomous-operations/types';
 
 export function AIOperationsCenterWidget() {
   const navigate = useNavigate();
+  const { data, isLoading } = useAIOperationsData();
 
-  const patterns = useMemo(() => BehaviorPatternAnalyzer.analyze(24), []);
-  const suggestions = useMemo(() => AutomationSuggestionEngine.generateAll(patterns), [patterns]);
-  const risks = useMemo(() => RiskPredictionService.predictAll(patterns), [patterns]);
-  const revenueOpts = useMemo(() => RevenueOptimizationAdvisor.analyze([
-    { tenant_id: 't1', tenant_name: 'Empresa Alpha', current_plan: 'professional', mrr: 499, usage_pct: 82, active_modules: 8, total_modules: 13, months_active: 6, churn_risk_score: 15 },
-    { tenant_id: 't2', tenant_name: 'Corp Beta', current_plan: 'starter', mrr: 199, usage_pct: 45, active_modules: 3, total_modules: 13, months_active: 8, churn_risk_score: 25 },
-    { tenant_id: 't3', tenant_name: 'Grupo Gamma', current_plan: 'professional', mrr: 799, usage_pct: 30, active_modules: 5, total_modules: 13, months_active: 12, churn_risk_score: 72 },
-  ]), []);
+  const suggestions = data?.suggestions ?? [];
+  const risks = data?.risks ?? [];
+  const revenueOpts = data?.revenueOpts ?? [];
 
   const pending = suggestions.filter(s => s.status === 'pending');
   const criticalRisks = risks.filter(r => r.composite_score >= 60);
+
+  if (isLoading) {
+    return (
+      <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/[0.02]">
+        <CardContent className="flex items-center justify-center h-32">
+          <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+          <span className="text-sm text-muted-foreground">Carregando AI Operations…</span>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/[0.02]">
