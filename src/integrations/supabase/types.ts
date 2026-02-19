@@ -2084,6 +2084,131 @@ export type Database = {
           },
         ]
       }
+      developer_oauth_clients: {
+        Row: {
+          app_id: string
+          client_id_hash: string
+          client_secret_hash: string
+          created_at: string
+          environment: string
+          grant_types: string[]
+          id: string
+          last_used_at: string | null
+          redirect_uris: string[]
+          refresh_token_lifetime_seconds: number
+          rotated_at: string | null
+          scopes: string[]
+          status: string
+          token_lifetime_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          app_id: string
+          client_id_hash: string
+          client_secret_hash: string
+          created_at?: string
+          environment?: string
+          grant_types?: string[]
+          id?: string
+          last_used_at?: string | null
+          redirect_uris?: string[]
+          refresh_token_lifetime_seconds?: number
+          rotated_at?: string | null
+          scopes?: string[]
+          status?: string
+          token_lifetime_seconds?: number
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string
+          client_id_hash?: string
+          client_secret_hash?: string
+          created_at?: string
+          environment?: string
+          grant_types?: string[]
+          id?: string
+          last_used_at?: string | null
+          redirect_uris?: string[]
+          refresh_token_lifetime_seconds?: number
+          rotated_at?: string | null
+          scopes?: string[]
+          status?: string
+          token_lifetime_seconds?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_oauth_clients_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "developer_apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      developer_sandbox_sessions: {
+        Row: {
+          api_base_url: string
+          app_id: string
+          billing_blocked: boolean
+          config: Json | null
+          created_at: string
+          developer_id: string
+          environment_id: string
+          expires_at: string
+          id: string
+          sandbox_api_key_hash: string
+          sandbox_tenant_id: string
+          seed_data_template: string | null
+          status: string
+        }
+        Insert: {
+          api_base_url: string
+          app_id: string
+          billing_blocked?: boolean
+          config?: Json | null
+          created_at?: string
+          developer_id: string
+          environment_id: string
+          expires_at: string
+          id?: string
+          sandbox_api_key_hash: string
+          sandbox_tenant_id: string
+          seed_data_template?: string | null
+          status?: string
+        }
+        Update: {
+          api_base_url?: string
+          app_id?: string
+          billing_blocked?: boolean
+          config?: Json | null
+          created_at?: string
+          developer_id?: string
+          environment_id?: string
+          expires_at?: string
+          id?: string
+          sandbox_api_key_hash?: string
+          sandbox_tenant_id?: string
+          seed_data_template?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_sandbox_sessions_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "developer_apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "developer_sandbox_sessions_developer_id_fkey"
+            columns: ["developer_id"]
+            isOneToOne: false
+            referencedRelation: "developer_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_vault: {
         Row: {
           agreement_id: string | null
