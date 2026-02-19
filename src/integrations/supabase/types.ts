@@ -204,6 +204,405 @@ export type Database = {
           },
         ]
       }
+      api_analytics_aggregates: {
+        Row: {
+          avg_response_time_ms: number | null
+          client_id: string | null
+          created_at: string
+          error_breakdown: Json | null
+          failed_requests: number
+          id: string
+          p95_response_time_ms: number | null
+          p99_response_time_ms: number | null
+          period_start: string
+          period_type: string
+          rate_limited_requests: number
+          successful_requests: number
+          tenant_id: string
+          top_endpoints: Json | null
+          total_requests: number
+          unique_endpoints: number
+        }
+        Insert: {
+          avg_response_time_ms?: number | null
+          client_id?: string | null
+          created_at?: string
+          error_breakdown?: Json | null
+          failed_requests?: number
+          id?: string
+          p95_response_time_ms?: number | null
+          p99_response_time_ms?: number | null
+          period_start: string
+          period_type?: string
+          rate_limited_requests?: number
+          successful_requests?: number
+          tenant_id: string
+          top_endpoints?: Json | null
+          total_requests?: number
+          unique_endpoints?: number
+        }
+        Update: {
+          avg_response_time_ms?: number | null
+          client_id?: string | null
+          created_at?: string
+          error_breakdown?: Json | null
+          failed_requests?: number
+          id?: string
+          p95_response_time_ms?: number | null
+          p99_response_time_ms?: number | null
+          period_start?: string
+          period_type?: string
+          rate_limited_requests?: number
+          successful_requests?: number
+          tenant_id?: string
+          top_endpoints?: Json | null
+          total_requests?: number
+          unique_endpoints?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_analytics_aggregates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "api_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_analytics_aggregates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_clients: {
+        Row: {
+          allowed_origins: string[] | null
+          client_type: string
+          contact_email: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          metadata: Json | null
+          name: string
+          status: string
+          tenant_id: string
+          updated_at: string
+          webhook_url: string | null
+        }
+        Insert: {
+          allowed_origins?: string[] | null
+          client_type?: string
+          contact_email?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          name: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Update: {
+          allowed_origins?: string[] | null
+          client_type?: string
+          contact_email?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_clients_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_keys: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          environment: string
+          expires_at: string | null
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          last_used_ip: string | null
+          name: string
+          rate_limit_override: number | null
+          revoked_at: string | null
+          revoked_by: string | null
+          revoked_reason: string | null
+          scopes: string[]
+          status: string
+          tenant_id: string
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          environment?: string
+          expires_at?: string | null
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          last_used_ip?: string | null
+          name?: string
+          rate_limit_override?: number | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
+          scopes?: string[]
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          environment?: string
+          expires_at?: string | null
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          last_used_ip?: string | null
+          name?: string
+          rate_limit_override?: number | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
+          scopes?: string[]
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "api_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_keys_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_rate_limit_configs: {
+        Row: {
+          burst_limit: number
+          concurrent_limit: number
+          created_at: string
+          id: string
+          is_active: boolean
+          plan_tier: string
+          requests_per_day: number
+          requests_per_hour: number
+          requests_per_minute: number
+          scope_pattern: string
+          updated_at: string
+        }
+        Insert: {
+          burst_limit?: number
+          concurrent_limit?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          plan_tier: string
+          requests_per_day?: number
+          requests_per_hour?: number
+          requests_per_minute?: number
+          scope_pattern?: string
+          updated_at?: string
+        }
+        Update: {
+          burst_limit?: number
+          concurrent_limit?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          plan_tier?: string
+          requests_per_day?: number
+          requests_per_hour?: number
+          requests_per_minute?: number
+          scope_pattern?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      api_scopes: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+          requires_approval: boolean
+          risk_level: string
+        }
+        Insert: {
+          category?: string
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          requires_approval?: boolean
+          risk_level?: string
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          requires_approval?: boolean
+          risk_level?: string
+        }
+        Relationships: []
+      }
+      api_usage_logs: {
+        Row: {
+          api_key_id: string | null
+          client_id: string | null
+          created_at: string
+          endpoint: string
+          error_code: string | null
+          error_message: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          method: string
+          request_scope: string | null
+          response_time_ms: number | null
+          status_code: number
+          tenant_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          endpoint: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          method: string
+          request_scope?: string | null
+          response_time_ms?: number | null
+          status_code: number
+          tenant_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          api_key_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          endpoint?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          method?: string
+          request_scope?: string | null
+          response_time_ms?: number | null
+          status_code?: number
+          tenant_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_usage_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "api_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_usage_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_versions: {
+        Row: {
+          created_at: string
+          deprecated_at: string | null
+          id: string
+          release_notes: string | null
+          status: string
+          sunset_at: string | null
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          deprecated_at?: string | null
+          id?: string
+          release_notes?: string | null
+          status?: string
+          sunset_at?: string | null
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          deprecated_at?: string | null
+          id?: string
+          release_notes?: string | null
+          status?: string
+          sunset_at?: string | null
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
