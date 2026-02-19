@@ -284,6 +284,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          environment: string
           id: string
           metadata: Json | null
           name: string
@@ -299,6 +300,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          environment?: string
           id?: string
           metadata?: Json | null
           name: string
@@ -314,6 +316,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          environment?: string
           id?: string
           metadata?: Json | null
           name?: string
@@ -458,8 +461,10 @@ export type Database = {
           error_message: string | null
           id: string
           ip_address: string | null
+          latency_ms: number | null
           metadata: Json | null
           method: string
+          module: string | null
           request_scope: string | null
           response_time_ms: number | null
           status_code: number
@@ -475,8 +480,10 @@ export type Database = {
           error_message?: string | null
           id?: string
           ip_address?: string | null
+          latency_ms?: number | null
           metadata?: Json | null
           method: string
+          module?: string | null
           request_scope?: string | null
           response_time_ms?: number | null
           status_code: number
@@ -492,8 +499,10 @@ export type Database = {
           error_message?: string | null
           id?: string
           ip_address?: string | null
+          latency_ms?: number | null
           metadata?: Json | null
           method?: string
+          module?: string | null
           request_scope?: string | null
           response_time_ms?: number | null
           status_code?: number

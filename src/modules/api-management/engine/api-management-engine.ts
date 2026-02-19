@@ -5,6 +5,7 @@
  *  - ModuleVersionRegistry  → ApiVersionRouter (resolve /api/v1/, /api/v2/)
  *  - TenantPlanResolver     → ApiRateLimiter (rate limits per TenantPlan)
  *  - UsageBillingRules      → ApiRateLimiter (billing-aware throttling)
+ *  - TenantSandboxEngine    → ApiSandboxRouter (sandbox vs production isolation)
  *
  * Subsystems:
  *  ├── ApiGatewayController   — Routes/validates API requests
@@ -14,6 +15,7 @@
  *  ├── ApiRateLimiter         — Enforces rate limits per TenantPlan + UsageBillingRules
  *  ├── ApiUsageTracker        — Logs and aggregates API usage
  *  ├── ApiVersionRouter       — Routes via ModuleVersionRegistry (/api/v1/, /api/v2/)
+ *  ├── ApiSandboxRouter       — Sandbox environment isolation via TenantSandboxEngine
  *  └── ApiAnalyticsService    — Dashboards, metrics, and alerting
  */
 
@@ -22,6 +24,8 @@ import type { ModuleVersion } from '@/domains/platform-versioning/types';
 import type { PlanTier, TenantPlanSnapshot, TenantPlanResolverAPI } from '@/domains/platform-experience/types';
 
 // ── Types ──
+
+export type ApiEnvironment = 'production' | 'sandbox';
 
 export interface ApiGatewayRequest {
   apiKeyPrefix: string;
@@ -32,6 +36,7 @@ export interface ApiGatewayRequest {
   scopes: string[];
   ip: string;
   userAgent?: string;
+  environment?: ApiEnvironment;
 }
 
 export interface ApiGatewayResponse {
@@ -42,6 +47,22 @@ export interface ApiGatewayResponse {
   resolvedVersion?: string;
   rateLimitRemaining?: number;
   rateLimitReset?: number;
+  environment?: ApiEnvironment;
+  sandboxWarning?: string;
+}
+
+/** Structured API request log for analytics */
+export interface ApiRequestLog {
+  endpoint: string;
+  module: string;
+  tenant_id: string;
+  latency_ms: number;
+  status_code: number;
+  timestamp: string;
+  environment?: ApiEnvironment;
+  client_id?: string;
+  method?: string;
+  scope?: string;
 }
 
 export interface KeyGenerationResult {
@@ -90,7 +111,7 @@ export const ApiGatewayController = {
 // ── ApiClientRegistry ──
 
 export const ApiClientRegistry = {
-  validateClientData(data: { name?: string; client_type?: string }): string[] {
+  validateClientData(data: { name?: string; client_type?: string; environment?: string }): string[] {
     const errors: string[] = [];
     if (!data.name || data.name.trim().length < 3) {
       errors.push('Client name must be at least 3 characters');
@@ -98,9 +119,13 @@ export const ApiClientRegistry = {
     if (data.name && data.name.length > 100) {
       errors.push('Client name must be at most 100 characters');
     }
-    const validTypes = ['external', 'internal', 'partner', 'sandbox'];
+    const validTypes = ['tenant', 'partner', 'internal'];
     if (data.client_type && !validTypes.includes(data.client_type)) {
       errors.push(`Invalid client type. Must be one of: ${validTypes.join(', ')}`);
+    }
+    const validEnvs: ApiEnvironment[] = ['production', 'sandbox'];
+    if (data.environment && !validEnvs.includes(data.environment as ApiEnvironment)) {
+      errors.push(`Invalid environment. Must be one of: ${validEnvs.join(', ')}`);
     }
     return errors;
   },
@@ -565,6 +590,107 @@ export const ApiVersionRouter = {
   },
 };
 
+// ── ApiSandboxRouter (integrates TenantSandboxEngine) ──
+
+/**
+ * TenantSandboxEngine contract — defines the isolation boundary
+ * that sandbox-mode API clients operate within.
+ *
+ * In sandbox mode:
+ *  - Data is isolated (reads/writes go to a sandboxed dataset)
+ *  - Rate limits are relaxed (testing-friendly)
+ *  - Billing is not triggered
+ *  - Responses are tagged with sandbox metadata
+ */
+export interface TenantSandboxEngineAPI {
+  /** Check if a tenant has an active sandbox */
+  hasSandbox(tenantId: string): boolean;
+  /** Get sandbox config for a tenant */
+  getSandboxConfig(tenantId: string): SandboxConfig | null;
+  /** Create a sandbox for testing */
+  createSandbox(tenantId: string, options?: SandboxOptions): SandboxConfig;
+  /** Destroy a tenant sandbox */
+  destroySandbox(tenantId: string): void;
+}
+
+export interface SandboxConfig {
+  tenantId: string;
+  createdAt: string;
+  expiresAt?: string;
+  /** Isolated data prefix for sandbox queries */
+  dataPrefix: string;
+  /** Whether sandbox has seeded test data */
+  hasTestData: boolean;
+  /** Max requests allowed in sandbox (generous for testing) */
+  maxRequests: number;
+}
+
+export interface SandboxOptions {
+  seedTestData?: boolean;
+  expiresInHours?: number;
+  maxRequests?: number;
+}
+
+/** Default sandbox rate limits — more generous than free tier */
+const SANDBOX_RATE_LIMITS = {
+  perMinute: 60,
+  perHour: 1000,
+  burst: 20,
+  concurrent: 10,
+  maxDailyRequests: 10_000,
+};
+
+export const ApiSandboxRouter = {
+  /**
+   * Determine if a request should be routed to sandbox.
+   */
+  isSandboxRequest(
+    clientEnvironment: ApiEnvironment,
+    sandboxEngine?: TenantSandboxEngineAPI | null,
+    tenantId?: string,
+  ): boolean {
+    if (clientEnvironment !== 'sandbox') return false;
+    if (!sandboxEngine || !tenantId) return true; // treat as sandbox even without engine
+    return sandboxEngine.hasSandbox(tenantId);
+  },
+
+  /**
+   * Apply sandbox constraints to a gateway response.
+   */
+  applySandboxContext(
+    response: ApiGatewayResponse,
+    sandboxEngine?: TenantSandboxEngineAPI | null,
+    tenantId?: string,
+  ): ApiGatewayResponse {
+    const config = tenantId && sandboxEngine
+      ? sandboxEngine.getSandboxConfig(tenantId)
+      : null;
+
+    return {
+      ...response,
+      environment: 'sandbox',
+      sandboxWarning: 'This request was processed in SANDBOX mode. Data is isolated and not persisted to production.',
+      rateLimitRemaining: SANDBOX_RATE_LIMITS.perMinute,
+      rateLimitReset: Date.now() + 60_000,
+    };
+  },
+
+  /**
+   * Get sandbox-specific rate limits (more generous for testing).
+   */
+  getSandboxRateLimits() {
+    return { ...SANDBOX_RATE_LIMITS };
+  },
+
+  /**
+   * Validate that a sandbox hasn't expired.
+   */
+  isSandboxExpired(config: SandboxConfig): boolean {
+    if (!config.expiresAt) return false;
+    return new Date(config.expiresAt).getTime() < Date.now();
+  },
+};
+
 // ── ApiAnalyticsService ──
 
 export const ApiAnalyticsService = {
@@ -608,6 +734,56 @@ export const ApiAnalyticsService = {
     }
 
     return alerts;
+  },
+
+  /**
+   * Aggregate ApiRequestLog entries into a UsageSummary.
+   */
+  aggregateRequestLogs(logs: ApiRequestLog[]): UsageSummary {
+    const total = logs.length;
+    const successful = logs.filter(l => l.status_code >= 200 && l.status_code < 400).length;
+    const failed = total - successful;
+    const rateLimited = logs.filter(l => l.status_code === 429).length;
+
+    const times = logs.map(l => l.latency_ms).filter(t => t > 0).sort((a, b) => a - b);
+    const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0;
+    const p95 = times.length ? times[Math.floor(times.length * 0.95)] ?? 0 : 0;
+
+    // Top endpoints
+    const endpointCounts = new Map<string, number>();
+    for (const log of logs) {
+      endpointCounts.set(log.endpoint, (endpointCounts.get(log.endpoint) ?? 0) + 1);
+    }
+    const topEndpoints = [...endpointCounts.entries()]
+      .map(([endpoint, count]) => ({ endpoint, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // Module breakdown
+    const moduleBreakdown: Record<string, number> = {};
+    for (const log of logs) {
+      if (log.module) {
+        moduleBreakdown[log.module] = (moduleBreakdown[log.module] ?? 0) + 1;
+      }
+    }
+
+    return {
+      totalRequests: total,
+      successfulRequests: successful,
+      failedRequests: failed,
+      avgResponseTimeMs: Math.round(avg),
+      p95ResponseTimeMs: Math.round(p95),
+      rateLimitedRequests: rateLimited,
+      topEndpoints,
+      errorBreakdown: moduleBreakdown,
+    };
+  },
+
+  /**
+   * Filter logs by environment (sandbox vs production).
+   */
+  filterByEnvironment(logs: ApiRequestLog[], env: ApiEnvironment): ApiRequestLog[] {
+    return logs.filter(l => (l.environment ?? 'production') === env);
   },
 };
 
