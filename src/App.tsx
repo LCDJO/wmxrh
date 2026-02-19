@@ -102,6 +102,7 @@ import PlatformDevelopers from "./pages/platform/PlatformDevelopers";
 import PlatformMarketplace from "./pages/platform/PlatformMarketplace";
 import PlatformAppsReview from "./pages/platform/PlatformAppsReview";
 import TenantAppsIntegrations from "./pages/TenantAppsIntegrations";
+import PlatformIntegrationAutomation from "./pages/platform/PlatformIntegrationAutomation";
 import SupportNewTicket from "./pages/support/SupportNewTicket";
 import SupportTickets from "./pages/support/SupportTickets";
 import SupportWiki from "./pages/support/SupportWiki";
@@ -162,7 +163,8 @@ function AppRoutes() {
         <Route path="security/governance" element={<PlatformGovernance />} />
         <Route path="security/governance-ai" element={<PlatformGovernanceAI />} />
         <Route path="governance" element={<PlatformGovernanceDashboard />} />
-        <Route path="automation" element={<PlatformAutomation />} />
+         <Route path="automation" element={<PlatformAutomation />} />
+         <Route path="integration-automation" element={<PlatformIntegrationAutomation />} />
         <Route path="observability" element={<PlatformObservability />} />
         <Route path="monitoring/*" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformMonitoring /></PlatformGuard>} />
         <Route path="control-plane" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformControlPlane /></PlatformGuard>} />

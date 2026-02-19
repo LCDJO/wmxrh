@@ -34,6 +34,7 @@ import {
   Settings,
   Headphones,
   Network,
+  Workflow,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -92,6 +93,7 @@ const NAV_ITEMS: PlatformNavItem[] = [
   },
   { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
   { to: '/platform/automation', label: 'Automação', icon: Zap, requiredPermission: 'security.manage' },
+  { to: '/platform/integration-automation', label: 'iPaaS Workflows', icon: Workflow, requiredPermission: 'security.manage' },
   {
     to: '/platform/monitoring',
     label: 'Monitoramento',
