@@ -15,7 +15,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import PlatformLayout from "./components/platform/PlatformLayout";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
-import AdaptiveOnboardingWizard from "./pages/AdaptiveOnboardingWizard";
+const TenantOnboarding = lazy(() => import("./pages/TenantOnboarding"));
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
 import EmployeeDetail from "./pages/EmployeeDetail";
@@ -220,17 +220,23 @@ function AppRoutes() {
           /* Platform user with no tenant → redirect to platform */
           <Route path="*" element={<Navigate to="/platform/dashboard" replace />} />
         ) : (
+          /* No tenant resolved yet — show loading/fallback, NOT onboarding */
           <Route path="*" element={
-            <AdaptiveOnboardingWizard
-              planTier="free"
-              onComplete={() => window.location.reload()}
-            />
+            <div className="min-h-screen flex items-center justify-center bg-background">
+              <div className="text-center space-y-3">
+                <div className="h-8 w-8 mx-auto border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-muted-foreground">Carregando tenant...</p>
+              </div>
+            </div>
           } />
         )
       ) : (
         <Route element={<AppLayout />}>
           <Route path="/" element={
             <ProtectedRoute navKey="dashboard"><Dashboard /></ProtectedRoute>
+          } />
+          <Route path="/onboarding" element={
+            <Suspense fallback={<div className="p-8 text-muted-foreground">Carregando...</div>}><TenantOnboarding /></Suspense>
           } />
           <Route path="/employees" element={
             <ProtectedRoute navKey="employees"><Employees /></ProtectedRoute>
