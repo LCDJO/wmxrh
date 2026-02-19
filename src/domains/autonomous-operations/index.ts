@@ -21,5 +21,14 @@ export { WorkflowOptimizer } from './workflow-optimizer';
 export { TenantImpactAnalyzer } from './tenant-impact-analyzer';
 export { InsightDashboardService } from './insight-dashboard-service';
 
+export {
+  initSignalBridge,
+  emitAutomationSignal,
+  emitApiManagementSignal,
+  emitMarketplaceSignal,
+  emitVersioningSignal,
+  emitObservabilitySignal,
+} from './signal-bridge';
+
 export * from './types';
 export * from './autonomous-operations-events';
