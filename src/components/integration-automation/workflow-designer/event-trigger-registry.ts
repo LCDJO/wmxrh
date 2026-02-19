@@ -263,6 +263,53 @@ const VERSIONING_ENGINE_TRIGGERS: EventTriggerDef[] = [
 ];
 
 // ════════════════════════════════════
+// INTEGRATION AUTOMATION TRIGGERS
+// ════════════════════════════════════
+
+const INTEGRATION_AUTOMATION_TRIGGERS: EventTriggerDef[] = [
+  {
+    eventType: 'automation:workflow_created',
+    domain: 'Integration Automation',
+    domainColor: 'hsl(260 55% 52%)',
+    label: 'Workflow Created',
+    description: 'Novo workflow criado no iPaaS engine',
+    payloadSchema: { workflow_id: 'string', tenant_id: 'string', name: 'string' },
+  },
+  {
+    eventType: 'automation:workflow_activated',
+    domain: 'Integration Automation',
+    domainColor: 'hsl(260 55% 52%)',
+    label: 'Workflow Activated',
+    description: 'Workflow ativado para execução',
+    payloadSchema: { workflow_id: 'string', tenant_id: 'string', name: 'string' },
+  },
+  {
+    eventType: 'automation:workflow_executed',
+    domain: 'Integration Automation',
+    domainColor: 'hsl(260 55% 52%)',
+    label: 'Workflow Executed',
+    description: 'Workflow executado com sucesso',
+    payloadSchema: { run_id: 'string', workflow_id: 'string', duration_ms: 'number', nodes_executed: 'number' },
+  },
+  {
+    eventType: 'automation:workflow_failed',
+    domain: 'Integration Automation',
+    domainColor: 'hsl(260 55% 52%)',
+    label: 'Workflow Failed',
+    description: 'Execução de workflow falhou',
+    payloadSchema: { run_id: 'string', workflow_id: 'string', error: 'string', retry_count: 'number' },
+  },
+  {
+    eventType: 'automation:workflow_version_published',
+    domain: 'Integration Automation',
+    domainColor: 'hsl(260 55% 52%)',
+    label: 'Workflow Version Published',
+    description: 'Nova versão de workflow publicada',
+    payloadSchema: { workflow_id: 'string', version_id: 'string', version_tag: 'string' },
+  },
+];
+
+// ════════════════════════════════════
 // UNIFIED REGISTRY
 // ════════════════════════════════════
 
@@ -272,6 +319,7 @@ export const EVENT_TRIGGER_REGISTRY: EventTriggerDef[] = [
   ...DEVELOPER_PORTAL_TRIGGERS,
   ...API_MANAGEMENT_TRIGGERS,
   ...VERSIONING_ENGINE_TRIGGERS,
+  ...INTEGRATION_AUTOMATION_TRIGGERS,
 ];
 
 /** Get all unique domains. */
