@@ -222,6 +222,38 @@ export function exportPrometheus(): PrometheusExportResult {
     // Marketing metrics unavailable — skip
   }
 
+  // ── Developer / Marketplace metrics ──────────────────────────
+  try {
+    const { getDeveloperMetricsSnapshot } = require('./developer-metrics-collector') as {
+      getDeveloperMetricsSnapshot: () => import('./developer-metrics-collector').DeveloperMetricsSnapshot;
+    };
+    const devMetrics = getDeveloperMetricsSnapshot();
+
+    collector.gauge('developer_apps_total', devMetrics.apps_total);
+    for (const entry of devMetrics.apps_by_status) {
+      collector.gauge('developer_apps_total', entry.count, { status: entry.status });
+    }
+
+    collector.gauge('marketplace_installs_total', devMetrics.installs_total);
+    for (const entry of devMetrics.installs_by_app) {
+      collector.gauge('marketplace_installs_total', entry.install_count, {
+        app_id: entry.app_id,
+        app_name: entry.app_name,
+      });
+    }
+
+    collector.gauge('oauth_token_issued_total', devMetrics.oauth_tokens_issued);
+
+    for (const entry of devMetrics.api_calls_by_app) {
+      collector.gauge('api_calls_by_app', entry.total_calls, {
+        app_id: entry.app_id,
+        app_name: entry.app_name,
+      });
+    }
+  } catch {
+    // Developer metrics unavailable — skip
+  }
+
   // ── Platform Versioning metrics ─────────────────────────────
   // Note: versioning methods are now async (DB-backed). We skip them in
   // the sync exportPrometheus to avoid blocking. Support metrics collector
@@ -602,6 +634,11 @@ export function generateDashboardModel(): {
       { title: 'Tickets Closed', type: 'stat', metric: 'support_ticket_closed_total', description: 'Total resolved/closed tickets', datasource: 'prometheus' },
       { title: 'Avg Agent Score', type: 'gauge', metric: 'support_agent_score_avg', description: 'Average agent evaluation score (1-5)', datasource: 'prometheus' },
       { title: 'Avg System Score', type: 'gauge', metric: 'support_system_score_avg', description: 'Average system rating score (1-5)', datasource: 'prometheus' },
+      // ── Developer / Marketplace panels ──────────────────────
+      { title: 'Developer Apps Total', type: 'stat', metric: 'developer_apps_total', description: 'Total developer apps by status (label: status)', datasource: 'prometheus' },
+      { title: 'Marketplace Installs', type: 'graph', metric: 'marketplace_installs_total', description: 'Total installs per app (labels: app_id, app_name)', datasource: 'prometheus' },
+      { title: 'OAuth Tokens Issued', type: 'stat', metric: 'oauth_token_issued_total', description: 'Active API subscriptions (proxy for OAuth tokens)', datasource: 'prometheus' },
+      { title: 'API Calls by App', type: 'graph', metric: 'api_calls_by_app', description: 'API call volume per app (labels: app_id, app_name)', datasource: 'prometheus' },
       // ── Loki panels ────────────────────────────────────────
       { title: 'Log Stream', type: 'logs', metric: 'logs_total', description: 'Structured log stream from all sources', datasource: 'loki' },
       // ── Tempo panels ───────────────────────────────────────
