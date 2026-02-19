@@ -11,7 +11,9 @@ export const TenantImpactAnalyzer = {
   analyze(tenantId: string, tenantName: string): TenantImpactReport {
     // In production, this would pull real data from signals + billing
     const risks = RiskPredictionService.predict([]);
-    const optimizations = RevenueOptimizationAdvisor.generatePreview().filter(o => o.tenant_id === tenantId);
+    const optimizations = RevenueOptimizationAdvisor.analyze([
+      { tenant_id: tenantId, tenant_name: tenantName, current_plan: 'professional', mrr: 499, usage_pct: 60, active_modules: 6, total_modules: 13, months_active: 6, churn_risk_score: 30 },
+    ]);
 
     return {
       tenant_id: tenantId,
