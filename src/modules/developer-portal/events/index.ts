@@ -54,6 +54,8 @@ export const __DOMAIN_CATALOG = {
     { name: 'AppRejected', description: 'App rejeitado durante processo de review' },
     { name: 'AppPublished', description: 'App publicado e disponível no marketplace' },
     { name: 'AppSuspended', description: 'App suspenso por violação de políticas ou solicitação' },
+    { name: 'AppInstalled', description: 'Tenant instalou um app — permissões concedidas via ApiGatewayController' },
+    { name: 'AppRevoked', description: 'Acesso de app revogado pelo tenant — scopes e tokens invalidados' },
     { name: 'OAuthClientCreated', description: 'Credenciais OAuth criadas para app (client_id + secret)' },
     { name: 'OAuthClientRotated', description: 'Credenciais OAuth rotacionadas com período de carência de 24h' },
     { name: 'ApiSubscriptionCreated', description: 'Desenvolvedor subscreveu a um produto de API' },
