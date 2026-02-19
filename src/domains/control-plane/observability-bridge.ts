@@ -21,6 +21,11 @@ export class ObservabilityBridge {
     metrics.increment('referral_conversion_total', {}, 0);
     metrics.increment('gamification_points_total', {}, 0);
     metrics.gauge('apcp_risk_score', 0);
+    // Workflow / Automation baselines
+    metrics.increment('workflow_executions_total', {}, 0);
+    metrics.increment('workflow_failures_total', {}, 0);
+    metrics.gauge('workflow_latency_avg_ms', 0);
+    metrics.gauge('automation_active_workflows', 0);
     metrics.gauge('apcp_active_modules', 0);
     metrics.gauge('apcp_error_modules', 0);
     metrics.gauge('revenue_forecast_value', 0);

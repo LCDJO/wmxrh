@@ -106,6 +106,45 @@ serve(async (req) => {
     lines.push(`access_graph_recomposition_p95_ms 0`);
 
     // ══════════════════════════════════════════════════════════
+    // ── WORKFLOW / AUTOMATION METRICS (live from DB) ─────────
+    // ══════════════════════════════════════════════════════════
+
+    const [wfTotalRes, wfFailRes, wfActiveRes, wfLatencyRes] = await Promise.all([
+      sb.from("integration_workflow_runs").select("id", { count: "exact", head: true }),
+      sb.from("integration_workflow_runs").select("id", { count: "exact", head: true }).eq("status", "failed"),
+      sb.from("integration_workflows").select("id", { count: "exact", head: true }).eq("is_active", true),
+      sb.from("integration_workflow_runs").select("duration_ms").not("duration_ms", "is", null).order("started_at", { ascending: false }).limit(500),
+    ]);
+
+    lines.push("# HELP workflow_executions_total Total workflow executions");
+    lines.push("# TYPE workflow_executions_total counter");
+    lines.push(`workflow_executions_total ${wfTotalRes.count ?? 0}`);
+
+    lines.push("# HELP workflow_failures_total Total workflow failures");
+    lines.push("# TYPE workflow_failures_total counter");
+    lines.push(`workflow_failures_total ${wfFailRes.count ?? 0}`);
+
+    lines.push("# HELP automation_active_workflows Currently active workflows");
+    lines.push("# TYPE automation_active_workflows gauge");
+    lines.push(`automation_active_workflows ${wfActiveRes.count ?? 0}`);
+
+    const wfLats = (wfLatencyRes.data ?? []).map(r => r.duration_ms ?? 0);
+    const wfAvgLat = wfLats.length ? wfLats.reduce((s, v) => s + v, 0) / wfLats.length : 0;
+    const wfSorted = [...wfLats].sort((a, b) => a - b);
+    const wfP95 = wfSorted.length ? wfSorted[Math.floor(wfSorted.length * 0.95)] ?? 0 : 0;
+    const wfP99 = wfSorted.length ? wfSorted[Math.floor(wfSorted.length * 0.99)] ?? 0 : 0;
+
+    lines.push("# HELP workflow_latency_avg_ms Average workflow latency in ms");
+    lines.push("# TYPE workflow_latency_avg_ms gauge");
+    lines.push(`workflow_latency_avg_ms ${wfAvgLat.toFixed(2)}`);
+    lines.push("# HELP workflow_latency_p95_ms Workflow latency p95 in ms");
+    lines.push("# TYPE workflow_latency_p95_ms gauge");
+    lines.push(`workflow_latency_p95_ms ${wfP95}`);
+    lines.push("# HELP workflow_latency_p99_ms Workflow latency p99 in ms");
+    lines.push("# TYPE workflow_latency_p99_ms gauge");
+    lines.push(`workflow_latency_p99_ms ${wfP99}`);
+
+    // ══════════════════════════════════════════════════════════
     // ── API MANAGEMENT METRICS (live from DB) ────────────────
     // ══════════════════════════════════════════════════════════
 
