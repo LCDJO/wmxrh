@@ -14,6 +14,12 @@ export const AUTONOMOUS_OPS_EVENTS = {
   WorkflowOptimized: 'autonomous_ops:workflow_optimized',
   TenantImpactAnalyzed: 'autonomous_ops:tenant_impact_analyzed',
   DashboardRefreshed: 'autonomous_ops:dashboard_refreshed',
+
+  // ── AI-specific lifecycle events ──
+  AISuggestionGenerated: 'autonomous_ops:ai_suggestion_generated',
+  AIRiskDetected: 'autonomous_ops:ai_risk_detected',
+  AIWorkflowOptimizationSuggested: 'autonomous_ops:ai_workflow_optimization_suggested',
+  AITenantImpactAnalyzed: 'autonomous_ops:ai_tenant_impact_analyzed',
 } as const;
 
 export type AutonomousOpsEventType = typeof AUTONOMOUS_OPS_EVENTS[keyof typeof AUTONOMOUS_OPS_EVENTS];
