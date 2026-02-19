@@ -97,6 +97,7 @@ import LandingPublished from "./pages/platform/landing/LandingPublished";
 import ReferralPage from "./pages/ReferralPage";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
 import PlatformVersioning from "./pages/platform/PlatformVersioning";
+import PlatformApiManagement from "./pages/platform/PlatformApiManagement";
 import SupportNewTicket from "./pages/support/SupportNewTicket";
 import SupportTickets from "./pages/support/SupportTickets";
 import SupportWiki from "./pages/support/SupportWiki";
@@ -195,6 +196,7 @@ function AppRoutes() {
         <Route path="landing/published" element={<LandingPublished />} />
         <Route path="support/console" element={<Suspense fallback={<div className="p-8 text-muted-foreground">Carregando...</div>}><PlatformSupportConsole /></Suspense>} />
         <Route path="support/analytics" element={<PlatformSupportAnalytics />} />
+        <Route path="apis/*" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformApiManagement /></PlatformGuard>} />
       </Route>
 
       {/* ═══ LANDING PAGE RENDERER ═══ */}
