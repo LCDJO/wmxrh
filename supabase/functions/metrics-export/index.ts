@@ -24,6 +24,10 @@ const corsHeaders = {
  *   support_alert_triggered_total            — total support alerts triggered
  *   support_agent_avg_response_time          — avg agent response time (alias)
  *   support_unresolved_total                 — unresolved tickets count
+ *   workflow_executions_total{tenant,status} — total workflow executions
+ *   workflow_failures_total{tenant}          — failed workflow executions
+ *   workflow_latency_ms{tenant}              — avg workflow execution latency
+ *   automation_active_workflows{tenant}      — active integration workflows
  */
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -39,12 +43,12 @@ serve(async (req) => {
       const [
         usageRes, redemptionsRes, discountRes, overageRes,
         activeSessions, recentMessages, closedSessions,
-        // New: per-agent active sessions
         agentActiveSessions,
-        // New: unresolved tickets
         unresolvedTickets,
-        // New: alert triggers (support_chat_notes with type 'alert')
         alertTriggered,
+        // Integration Automation Engine
+        workflowExecutionsRes,
+        activeWorkflowsRes,
       ] = await Promise.all([
         sb.from("platform_financial_entries").select("entry_type, description, amount"),
         sb.from("coupon_redemptions").select("coupon_id, discount_applied_brl, coupons(code)"),
@@ -62,6 +66,9 @@ serve(async (req) => {
         sb.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress"]),
         // support_alert_triggered_total: notes flagged as alerts
         sb.from("support_chat_notes").select("id", { count: "exact", head: true }).eq("note_type", "alert"),
+        // ── Integration Automation Engine metrics ──
+        sb.from("integration_workflow_executions").select("tenant_id, status, duration_ms"),
+        sb.from("integration_workflows").select("tenant_id, status").eq("status", "active"),
       ]);
 
       const lines: string[] = [];
@@ -155,6 +162,82 @@ serve(async (req) => {
       lines.push("# HELP support_unresolved_total Total unresolved support tickets");
       lines.push("# TYPE support_unresolved_total gauge");
       lines.push(`support_unresolved_total ${unresolvedTickets.count ?? 0} ${ts}`);
+
+      // ══════════════════════════════════════════════════════════
+      // Integration Automation Engine Metrics
+      // ══════════════════════════════════════════════════════════
+
+      const wfExecs = workflowExecutionsRes.data ?? [];
+      const wfActive = activeWorkflowsRes.data ?? [];
+
+      // ── workflow_executions_total ──────────────────────────────
+      lines.push("# HELP workflow_executions_total Total workflow executions by tenant and status");
+      lines.push("# TYPE workflow_executions_total counter");
+      const execByTenantStatus = new Map<string, number>();
+      for (const row of wfExecs) {
+        const key = `${row.tenant_id}|${row.status}`;
+        execByTenantStatus.set(key, (execByTenantStatus.get(key) ?? 0) + 1);
+      }
+      if (execByTenantStatus.size === 0) {
+        lines.push(`workflow_executions_total{tenant="none",status="none"} 0 ${ts}`);
+      } else {
+        for (const [key, count] of execByTenantStatus) {
+          const [tenant, status] = key.split("|");
+          lines.push(`workflow_executions_total{tenant="${esc(tenant)}",status="${esc(status)}"} ${count} ${ts}`);
+        }
+      }
+
+      // ── workflow_failures_total ────────────────────────────────
+      lines.push("# HELP workflow_failures_total Total failed workflow executions by tenant");
+      lines.push("# TYPE workflow_failures_total counter");
+      const failsByTenant = new Map<string, number>();
+      for (const row of wfExecs) {
+        if (row.status === "failed" || row.status === "timeout") {
+          failsByTenant.set(row.tenant_id, (failsByTenant.get(row.tenant_id) ?? 0) + 1);
+        }
+      }
+      if (failsByTenant.size === 0) {
+        lines.push(`workflow_failures_total{tenant="none"} 0 ${ts}`);
+      } else {
+        for (const [tenant, count] of failsByTenant) {
+          lines.push(`workflow_failures_total{tenant="${esc(tenant)}"} ${count} ${ts}`);
+        }
+      }
+
+      // ── workflow_latency_ms ───────────────────────────────────
+      lines.push("# HELP workflow_latency_ms Average workflow execution latency in milliseconds by tenant");
+      lines.push("# TYPE workflow_latency_ms gauge");
+      const latencyByTenant = new Map<string, { sum: number; count: number }>();
+      for (const row of wfExecs) {
+        if (row.duration_ms != null && row.duration_ms > 0) {
+          const entry = latencyByTenant.get(row.tenant_id) ?? { sum: 0, count: 0 };
+          entry.sum += row.duration_ms;
+          entry.count += 1;
+          latencyByTenant.set(row.tenant_id, entry);
+        }
+      }
+      if (latencyByTenant.size === 0) {
+        lines.push(`workflow_latency_ms{tenant="none"} 0 ${ts}`);
+      } else {
+        for (const [tenant, { sum, count }] of latencyByTenant) {
+          lines.push(`workflow_latency_ms{tenant="${esc(tenant)}"} ${(sum / count).toFixed(1)} ${ts}`);
+        }
+      }
+
+      // ── automation_active_workflows ────────────────────────────
+      lines.push("# HELP automation_active_workflows Number of active integration workflows by tenant");
+      lines.push("# TYPE automation_active_workflows gauge");
+      const activeByTenant = new Map<string, number>();
+      for (const row of wfActive) {
+        activeByTenant.set(row.tenant_id, (activeByTenant.get(row.tenant_id) ?? 0) + 1);
+      }
+      if (activeByTenant.size === 0) {
+        lines.push(`automation_active_workflows{tenant="none"} 0 ${ts}`);
+      } else {
+        for (const [tenant, count] of activeByTenant) {
+          lines.push(`automation_active_workflows{tenant="${esc(tenant)}"} ${count} ${ts}`);
+        }
+      }
 
       return new Response(lines.join("\n") + "\n", {
         headers: {
