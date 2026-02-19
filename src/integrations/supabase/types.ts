@@ -1977,6 +1977,79 @@ export type Database = {
         }
         Relationships: []
       }
+      developer_api_subscriptions: {
+        Row: {
+          app_id: string
+          billing_external_id: string | null
+          cancelled_at: string | null
+          created_at: string
+          developer_id: string
+          expires_at: string | null
+          granted_scopes: string[]
+          id: string
+          plan_tier: string
+          rate_limit_override: number | null
+          started_at: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          app_id: string
+          billing_external_id?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          developer_id: string
+          expires_at?: string | null
+          granted_scopes?: string[]
+          id?: string
+          plan_tier?: string
+          rate_limit_override?: number | null
+          started_at?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string
+          billing_external_id?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          developer_id?: string
+          expires_at?: string | null
+          granted_scopes?: string[]
+          id?: string
+          plan_tier?: string
+          rate_limit_override?: number | null
+          started_at?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_api_subscriptions_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "developer_apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "developer_api_subscriptions_developer_id_fkey"
+            columns: ["developer_id"]
+            isOneToOne: false
+            referencedRelation: "developer_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "developer_api_subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       developer_app_installations: {
         Row: {
           app_id: string
@@ -2018,6 +2091,85 @@ export type Database = {
           },
           {
             foreignKeyName: "developer_app_installations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      developer_app_revenue_entries: {
+        Row: {
+          app_id: string
+          created_at: string
+          currency: string
+          description: string
+          developer_id: string
+          entry_type: string
+          gross_amount_brl: number
+          id: string
+          invoice_id: string | null
+          metadata: Json | null
+          net_amount_brl: number
+          period_end: string | null
+          period_start: string | null
+          platform_commission_brl: number
+          platform_commission_pct: number
+          tenant_id: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          currency?: string
+          description: string
+          developer_id: string
+          entry_type: string
+          gross_amount_brl?: number
+          id?: string
+          invoice_id?: string | null
+          metadata?: Json | null
+          net_amount_brl?: number
+          period_end?: string | null
+          period_start?: string | null
+          platform_commission_brl?: number
+          platform_commission_pct?: number
+          tenant_id: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          currency?: string
+          description?: string
+          developer_id?: string
+          entry_type?: string
+          gross_amount_brl?: number
+          id?: string
+          invoice_id?: string | null
+          metadata?: Json | null
+          net_amount_brl?: number
+          period_end?: string | null
+          period_start?: string | null
+          platform_commission_brl?: number
+          platform_commission_pct?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_app_revenue_entries_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "developer_apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "developer_app_revenue_entries_developer_id_fkey"
+            columns: ["developer_id"]
+            isOneToOne: false
+            referencedRelation: "developer_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "developer_app_revenue_entries_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
