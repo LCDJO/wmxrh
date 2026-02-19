@@ -1,14 +1,18 @@
 /**
  * Autonomous Operations AI Engine — Platform Intelligence Layer
  *
+ * SECURITY CONSTRAINT (CRITICAL):
+ * This engine is STRICTLY ADVISORY. It NEVER executes actions autonomously.
+ * All outputs are suggestions, recommendations, or alerts requiring human approval.
+ *
  * Modular architecture:
  *  ├── PlatformSignalCollector    — Collect & normalize platform events
  *  ├── BehaviorPatternAnalyzer    — Detect usage patterns & anomalies
- *  ├── AutomationSuggestionEngine — Generate actionable automation suggestions
+ *  ├── AutomationSuggestionEngine — Generate actionable suggestions (human-approved)
  *  ├── RiskPredictionService      — Predict operational, financial & security risks
  *  ├── RevenueOptimizationAdvisor — Revenue-maximizing recommendations per tenant
- *  ├── WorkflowOptimizer          — Cross-module workflow optimization
- *  ├── TenantImpactAnalyzer       — Per-tenant impact assessment
+ *  ├── WorkflowOptimizer          — Cross-module workflow optimization suggestions
+ *  ├── TenantImpactAnalyzer       — Per-tenant impact assessment (pre-deploy)
  *  └── InsightDashboardService    — Unified operational dashboard aggregator
  */
 
