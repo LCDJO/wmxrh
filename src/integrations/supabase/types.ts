@@ -1977,6 +1977,107 @@ export type Database = {
         }
         Relationships: []
       }
+      developer_app_installations: {
+        Row: {
+          app_id: string
+          config: Json | null
+          id: string
+          installed_at: string
+          installed_by: string
+          status: string
+          tenant_id: string
+          uninstalled_at: string | null
+        }
+        Insert: {
+          app_id: string
+          config?: Json | null
+          id?: string
+          installed_at?: string
+          installed_by: string
+          status?: string
+          tenant_id: string
+          uninstalled_at?: string | null
+        }
+        Update: {
+          app_id?: string
+          config?: Json | null
+          id?: string
+          installed_at?: string
+          installed_by?: string
+          status?: string
+          tenant_id?: string
+          uninstalled_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_app_installations_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "developer_apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "developer_app_installations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      developer_app_reviews: {
+        Row: {
+          app_id: string
+          checklist: Json
+          completed_at: string | null
+          created_at: string
+          findings: string[] | null
+          id: string
+          notes: string | null
+          review_stage: string
+          reviewer_id: string | null
+          reviewer_role: string | null
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          app_id: string
+          checklist?: Json
+          completed_at?: string | null
+          created_at?: string
+          findings?: string[] | null
+          id?: string
+          notes?: string | null
+          review_stage?: string
+          reviewer_id?: string | null
+          reviewer_role?: string | null
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          app_id?: string
+          checklist?: Json
+          completed_at?: string | null
+          created_at?: string
+          findings?: string[] | null
+          id?: string
+          notes?: string | null
+          review_stage?: string
+          reviewer_id?: string | null
+          reviewer_role?: string | null
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_app_reviews_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "developer_apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       developer_apps: {
         Row: {
           app_status: string
@@ -2080,6 +2181,65 @@ export type Database = {
             columns: ["developer_id"]
             isOneToOne: false
             referencedRelation: "developer_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      developer_marketplace_listings: {
+        Row: {
+          app_id: string
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          featured: boolean
+          featured_order: number | null
+          id: string
+          price_monthly_brl: number | null
+          price_yearly_brl: number | null
+          pricing_model: string
+          supported_modules: string[]
+          trial_days: number | null
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          app_id: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          featured?: boolean
+          featured_order?: number | null
+          id?: string
+          price_monthly_brl?: number | null
+          price_yearly_brl?: number | null
+          pricing_model?: string
+          supported_modules?: string[]
+          trial_days?: number | null
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          app_id?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          featured?: boolean
+          featured_order?: number | null
+          id?: string
+          price_monthly_brl?: number | null
+          price_yearly_brl?: number | null
+          pricing_model?: string
+          supported_modules?: string[]
+          trial_days?: number | null
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_marketplace_listings_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: true
+            referencedRelation: "developer_apps"
             referencedColumns: ["id"]
           },
         ]
