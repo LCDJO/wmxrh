@@ -39,6 +39,7 @@ import { SupportHealthOverview } from '@/components/control-plane/SupportHealthO
 import { ApiTrafficMonitorWidget } from '@/components/control-plane/ApiTrafficMonitorWidget';
 import { MarketplaceHealthWidget } from '@/components/control-plane/MarketplaceHealthWidget';
 import { AutomationSystemHealthWidget } from '@/components/control-plane/AutomationSystemHealthWidget';
+import { AutonomousOpsWidget } from '@/components/control-plane/AutonomousOpsWidget';
 // ── Hook ──────────────────────────────────────────────────────
 
 function useControlPlane() {
@@ -196,6 +197,9 @@ export default function PlatformControlPlane() {
 
           {/* Row 9: Automation System Health */}
           <AutomationSystemHealthWidget />
+
+          {/* Row 10: Autonomous Operations AI */}
+          <AutonomousOpsWidget />
         </TabsContent>
 
         <TabsContent value="website" className="space-y-4">
