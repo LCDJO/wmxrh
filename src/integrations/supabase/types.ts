@@ -288,7 +288,7 @@ export type Database = {
           metadata: Json | null
           name: string
           status: string
-          tenant_id: string
+          tenant_id: string | null
           updated_at: string
           webhook_url: string | null
         }
@@ -303,7 +303,7 @@ export type Database = {
           metadata?: Json | null
           name: string
           status?: string
-          tenant_id: string
+          tenant_id?: string | null
           updated_at?: string
           webhook_url?: string | null
         }
@@ -318,7 +318,7 @@ export type Database = {
           metadata?: Json | null
           name?: string
           status?: string
-          tenant_id?: string
+          tenant_id?: string | null
           updated_at?: string
           webhook_url?: string | null
         }
