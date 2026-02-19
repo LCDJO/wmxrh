@@ -4279,6 +4279,602 @@ export type Database = {
           },
         ]
       }
+      integration_connector_configs: {
+        Row: {
+          connector_id: string
+          created_at: string
+          created_by: string | null
+          credentials_encrypted: Json
+          display_name: string
+          id: string
+          last_tested_at: string | null
+          settings: Json
+          status: string
+          tenant_id: string
+          test_result: string | null
+          updated_at: string
+        }
+        Insert: {
+          connector_id: string
+          created_at?: string
+          created_by?: string | null
+          credentials_encrypted?: Json
+          display_name: string
+          id?: string
+          last_tested_at?: string | null
+          settings?: Json
+          status?: string
+          tenant_id: string
+          test_result?: string | null
+          updated_at?: string
+        }
+        Update: {
+          connector_id?: string
+          created_at?: string
+          created_by?: string | null
+          credentials_encrypted?: Json
+          display_name?: string
+          id?: string
+          last_tested_at?: string | null
+          settings?: Json
+          status?: string
+          tenant_id?: string
+          test_result?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_connector_configs_connector_id_fkey"
+            columns: ["connector_id"]
+            isOneToOne: false
+            referencedRelation: "integration_connectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_connector_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_connectors: {
+        Row: {
+          auth_config: Json
+          auth_type: string
+          available_actions: Json
+          available_triggers: Json
+          base_url: string | null
+          connector_type: string
+          created_at: string
+          description: string | null
+          icon_url: string | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          auth_config?: Json
+          auth_type?: string
+          available_actions?: Json
+          available_triggers?: Json
+          base_url?: string | null
+          connector_type?: string
+          created_at?: string
+          description?: string | null
+          icon_url?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          auth_config?: Json
+          auth_type?: string
+          available_actions?: Json
+          available_triggers?: Json
+          base_url?: string | null
+          connector_type?: string
+          created_at?: string
+          description?: string | null
+          icon_url?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      integration_execution_node_logs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          execution_id: string
+          id: string
+          input_data: Json | null
+          node_id: string
+          output_data: Json | null
+          retry_attempt: number
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          execution_id: string
+          id?: string
+          input_data?: Json | null
+          node_id: string
+          output_data?: Json | null
+          retry_attempt?: number
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          execution_id?: string
+          id?: string
+          input_data?: Json | null
+          node_id?: string
+          output_data?: Json | null
+          retry_attempt?: number
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_execution_node_logs_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "integration_workflow_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_execution_node_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_workflow_edges: {
+        Row: {
+          condition_expression: string | null
+          created_at: string
+          edge_type: string
+          id: string
+          label: string | null
+          sort_order: number
+          source_node_id: string
+          target_node_id: string
+          tenant_id: string
+          workflow_id: string
+        }
+        Insert: {
+          condition_expression?: string | null
+          created_at?: string
+          edge_type?: string
+          id?: string
+          label?: string | null
+          sort_order?: number
+          source_node_id: string
+          target_node_id: string
+          tenant_id: string
+          workflow_id: string
+        }
+        Update: {
+          condition_expression?: string | null
+          created_at?: string
+          edge_type?: string
+          id?: string
+          label?: string | null
+          sort_order?: number
+          source_node_id?: string
+          target_node_id?: string
+          tenant_id?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_workflow_edges_source_node_id_fkey"
+            columns: ["source_node_id"]
+            isOneToOne: false
+            referencedRelation: "integration_workflow_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_workflow_edges_target_node_id_fkey"
+            columns: ["target_node_id"]
+            isOneToOne: false
+            referencedRelation: "integration_workflow_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_workflow_edges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_workflow_edges_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "integration_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_workflow_executions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          error_node_id: string | null
+          id: string
+          initiated_by: string | null
+          is_sandbox: boolean
+          node_results: Json
+          retries_used: number
+          started_at: string | null
+          status: string
+          tenant_id: string
+          trigger_payload: Json | null
+          trigger_type: string
+          version_number: number
+          workflow_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          error_node_id?: string | null
+          id?: string
+          initiated_by?: string | null
+          is_sandbox?: boolean
+          node_results?: Json
+          retries_used?: number
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+          trigger_payload?: Json | null
+          trigger_type: string
+          version_number: number
+          workflow_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          error_node_id?: string | null
+          id?: string
+          initiated_by?: string | null
+          is_sandbox?: boolean
+          node_results?: Json
+          retries_used?: number
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+          trigger_payload?: Json | null
+          trigger_type?: string
+          version_number?: number
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_workflow_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_workflow_executions_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "integration_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_workflow_nodes: {
+        Row: {
+          action_key: string | null
+          connector_config_id: string | null
+          connector_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          input_config: Json
+          is_enabled: boolean
+          label: string
+          node_type: string
+          output_mapping: Json
+          position_x: number
+          position_y: number
+          retry_config: Json
+          sort_order: number
+          tenant_id: string
+          timeout_ms: number
+          updated_at: string
+          workflow_id: string
+        }
+        Insert: {
+          action_key?: string | null
+          connector_config_id?: string | null
+          connector_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          input_config?: Json
+          is_enabled?: boolean
+          label: string
+          node_type: string
+          output_mapping?: Json
+          position_x?: number
+          position_y?: number
+          retry_config?: Json
+          sort_order?: number
+          tenant_id: string
+          timeout_ms?: number
+          updated_at?: string
+          workflow_id: string
+        }
+        Update: {
+          action_key?: string | null
+          connector_config_id?: string | null
+          connector_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          input_config?: Json
+          is_enabled?: boolean
+          label?: string
+          node_type?: string
+          output_mapping?: Json
+          position_x?: number
+          position_y?: number
+          retry_config?: Json
+          sort_order?: number
+          tenant_id?: string
+          timeout_ms?: number
+          updated_at?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_workflow_nodes_connector_config_id_fkey"
+            columns: ["connector_config_id"]
+            isOneToOne: false
+            referencedRelation: "integration_connector_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_workflow_nodes_connector_id_fkey"
+            columns: ["connector_id"]
+            isOneToOne: false
+            referencedRelation: "integration_connectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_workflow_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_workflow_nodes_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "integration_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_workflow_usage: {
+        Row: {
+          api_calls_external: number
+          created_at: string
+          data_transferred_bytes: number
+          failed_executions: number
+          id: string
+          period_start: string
+          period_type: string
+          successful_executions: number
+          tenant_id: string
+          total_duration_ms: number
+          total_executions: number
+          total_node_runs: number
+          updated_at: string
+        }
+        Insert: {
+          api_calls_external?: number
+          created_at?: string
+          data_transferred_bytes?: number
+          failed_executions?: number
+          id?: string
+          period_start: string
+          period_type?: string
+          successful_executions?: number
+          tenant_id: string
+          total_duration_ms?: number
+          total_executions?: number
+          total_node_runs?: number
+          updated_at?: string
+        }
+        Update: {
+          api_calls_external?: number
+          created_at?: string
+          data_transferred_bytes?: number
+          failed_executions?: number
+          id?: string
+          period_start?: string
+          period_type?: string
+          successful_executions?: number
+          tenant_id?: string
+          total_duration_ms?: number
+          total_executions?: number
+          total_node_runs?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_workflow_usage_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_workflow_versions: {
+        Row: {
+          change_summary: string | null
+          created_at: string
+          edges: Json
+          id: string
+          nodes: Json
+          published_at: string | null
+          published_by: string | null
+          tenant_id: string
+          version_number: number
+          workflow_id: string
+        }
+        Insert: {
+          change_summary?: string | null
+          created_at?: string
+          edges?: Json
+          id?: string
+          nodes?: Json
+          published_at?: string | null
+          published_by?: string | null
+          tenant_id: string
+          version_number: number
+          workflow_id: string
+        }
+        Update: {
+          change_summary?: string | null
+          created_at?: string
+          edges?: Json
+          id?: string
+          nodes?: Json
+          published_at?: string | null
+          published_by?: string | null
+          tenant_id?: string
+          version_number?: number
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_workflow_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_workflow_versions_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "integration_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_workflows: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          current_version: number
+          description: string | null
+          error_count: number
+          execution_count: number
+          id: string
+          is_template: boolean
+          last_executed_at: string | null
+          last_execution_result: string | null
+          name: string
+          settings: Json
+          status: string
+          tenant_id: string
+          trigger_config: Json
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          current_version?: number
+          description?: string | null
+          error_count?: number
+          execution_count?: number
+          id?: string
+          is_template?: boolean
+          last_executed_at?: string | null
+          last_execution_result?: string | null
+          name: string
+          settings?: Json
+          status?: string
+          tenant_id: string
+          trigger_config?: Json
+          trigger_type?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          current_version?: number
+          description?: string | null
+          error_count?: number
+          execution_count?: number
+          id?: string
+          is_template?: boolean
+          last_executed_at?: string | null
+          last_execution_result?: string | null
+          name?: string
+          settings?: Json
+          status?: string
+          tenant_id?: string
+          trigger_config?: Json
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_workflows_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           billing_period_end: string
