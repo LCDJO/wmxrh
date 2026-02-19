@@ -16,16 +16,22 @@ export {
   ApiRateLimiter,
   ApiUsageTracker,
   ApiVersionRouter,
+  ApiSandboxRouter,
   ApiAnalyticsService,
 } from './engine/api-management-engine';
 
 export type {
+  ApiEnvironment,
   ApiGatewayRequest,
   ApiGatewayResponse,
+  ApiRequestLog,
   KeyGenerationResult,
   RateLimitCheck,
   RateLimitDecision,
   UsageSummary,
   UsageBillingRules,
   VersionRouteResult,
+  TenantSandboxEngineAPI,
+  SandboxConfig,
+  SandboxOptions,
 } from './engine/api-management-engine';

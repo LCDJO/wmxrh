@@ -11,6 +11,7 @@ export interface ApiClient {
   tenant_id?: string | null;
   client_type: 'tenant' | 'partner' | 'internal';
   status: 'active' | 'suspended' | 'revoked' | 'pending_approval';
+  environment: 'production' | 'sandbox';
   created_by?: string;
   created_at: string;
   updated_at: string;
