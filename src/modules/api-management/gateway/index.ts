@@ -7,15 +7,10 @@ import type { SandboxContext } from '@/domains/platform-os/federation/module-san
 
 export interface ApiClient {
   id: string;
-  tenant_id: string;
   name: string;
-  description?: string;
-  client_type: 'external' | 'internal' | 'partner' | 'sandbox';
+  tenant_id?: string | null;
+  client_type: 'tenant' | 'partner' | 'internal';
   status: 'active' | 'suspended' | 'revoked' | 'pending_approval';
-  contact_email?: string;
-  webhook_url?: string;
-  allowed_origins: string[];
-  metadata: Record<string, unknown>;
   created_by?: string;
   created_at: string;
   updated_at: string;
