@@ -36,6 +36,7 @@ import { ActivePlatformVersionWidget } from '@/components/control-plane/ActivePl
 import { ModuleHealthByVersionWidget } from '@/components/control-plane/ModuleHealthByVersionWidget';
 import { NavigationStructureStatusWidget } from '@/components/control-plane/NavigationStructureStatusWidget';
 import { SupportHealthOverview } from '@/components/control-plane/SupportHealthOverview';
+import { ApiTrafficMonitorWidget } from '@/components/control-plane/ApiTrafficMonitorWidget';
 // ── Hook ──────────────────────────────────────────────────────
 
 function useControlPlane() {
@@ -184,6 +185,9 @@ export default function PlatformControlPlane() {
 
           {/* Row 6: Support Health */}
           <SupportHealthOverview />
+
+          {/* Row 7: API Traffic Monitor */}
+          <ApiTrafficMonitorWidget />
         </TabsContent>
 
         <TabsContent value="website" className="space-y-4">

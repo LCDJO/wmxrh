@@ -106,6 +106,69 @@ serve(async (req) => {
     lines.push(`access_graph_recomposition_p95_ms 0`);
 
     // ══════════════════════════════════════════════════════════
+    // ── API MANAGEMENT METRICS (live from DB) ────────────────
+    // ══════════════════════════════════════════════════════════
+
+    const { count: apiRequestTotal } = await sb
+      .from("api_usage_logs")
+      .select("id", { count: "exact", head: true });
+
+    const { count: apiRateLimitedTotal } = await sb
+      .from("api_usage_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("status_code", 429);
+
+    const { count: apiErrorTotal } = await sb
+      .from("api_usage_logs")
+      .select("id", { count: "exact", head: true })
+      .gte("status_code", 500);
+
+    const { data: latencyData } = await sb
+      .from("api_usage_logs")
+      .select("latency_ms")
+      .not("latency_ms", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+
+    const latencies = (latencyData ?? []).map(r => r.latency_ms ?? 0);
+    const avgLatency = latencies.length
+      ? latencies.reduce((s, v) => s + v, 0) / latencies.length
+      : 0;
+    const sortedLat = [...latencies].sort((a, b) => a - b);
+    const p95Latency = sortedLat.length
+      ? sortedLat[Math.floor(sortedLat.length * 0.95)] ?? 0
+      : 0;
+    const p99Latency = sortedLat.length
+      ? sortedLat[Math.floor(sortedLat.length * 0.99)] ?? 0
+      : 0;
+
+    // ── api_request_total ────────────────────────────────────
+    lines.push("# HELP api_request_total Total API requests");
+    lines.push("# TYPE api_request_total counter");
+    lines.push(`api_request_total ${apiRequestTotal ?? 0}`);
+
+    // ── api_rate_limited_total ───────────────────────────────
+    lines.push("# HELP api_rate_limited_total Total rate-limited API requests (429)");
+    lines.push("# TYPE api_rate_limited_total counter");
+    lines.push(`api_rate_limited_total ${apiRateLimitedTotal ?? 0}`);
+
+    // ── api_error_total ──────────────────────────────────────
+    lines.push("# HELP api_error_total Total API server errors (5xx)");
+    lines.push("# TYPE api_error_total counter");
+    lines.push(`api_error_total ${apiErrorTotal ?? 0}`);
+
+    // ── api_latency_ms ───────────────────────────────────────
+    lines.push("# HELP api_latency_avg_ms Average API latency in ms");
+    lines.push("# TYPE api_latency_avg_ms gauge");
+    lines.push(`api_latency_avg_ms ${avgLatency.toFixed(2)}`);
+    lines.push("# HELP api_latency_p95_ms API latency p95 in ms");
+    lines.push("# TYPE api_latency_p95_ms gauge");
+    lines.push(`api_latency_p95_ms ${p95Latency}`);
+    lines.push("# HELP api_latency_p99_ms API latency p99 in ms");
+    lines.push("# TYPE api_latency_p99_ms gauge");
+    lines.push(`api_latency_p99_ms ${p99Latency}`);
+
+    // ══════════════════════════════════════════════════════════
     // ── REFERRAL & GAMIFICATION METRICS (live from DB) ───────
     // ══════════════════════════════════════════════════════════
 
