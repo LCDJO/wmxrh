@@ -174,6 +174,17 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/apis/versions', label: 'Versions' },
     ],
   },
+  {
+    to: '/platform/developers',
+    label: 'Developer Portal',
+    icon: Users,
+    requiredPermission: 'security.manage',
+    children: [
+      { to: '/platform/developers', label: 'Developers' },
+      { to: '/platform/marketplace', label: 'Marketplace' },
+      { to: '/platform/apps-review', label: 'Revisão de Apps' },
+    ],
+  },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
   {
     to: '/platform/support',

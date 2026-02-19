@@ -98,6 +98,10 @@ import ReferralPage from "./pages/ReferralPage";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
 import PlatformVersioning from "./pages/platform/PlatformVersioning";
 import PlatformApiManagement from "./pages/platform/PlatformApiManagement";
+import PlatformDevelopers from "./pages/platform/PlatformDevelopers";
+import PlatformMarketplace from "./pages/platform/PlatformMarketplace";
+import PlatformAppsReview from "./pages/platform/PlatformAppsReview";
+import TenantAppsIntegrations from "./pages/TenantAppsIntegrations";
 import SupportNewTicket from "./pages/support/SupportNewTicket";
 import SupportTickets from "./pages/support/SupportTickets";
 import SupportWiki from "./pages/support/SupportWiki";
@@ -197,6 +201,9 @@ function AppRoutes() {
         <Route path="support/console" element={<Suspense fallback={<div className="p-8 text-muted-foreground">Carregando...</div>}><PlatformSupportConsole /></Suspense>} />
         <Route path="support/analytics" element={<PlatformSupportAnalytics />} />
         <Route path="apis/*" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformApiManagement /></PlatformGuard>} />
+        <Route path="developers" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations', 'platform_marketplace_admin']}><PlatformDevelopers /></PlatformGuard>} />
+        <Route path="marketplace" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations', 'platform_marketplace_admin']}><PlatformMarketplace /></PlatformGuard>} />
+        <Route path="apps-review" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformAppsReview /></PlatformGuard>} />
       </Route>
 
       {/* ═══ LANDING PAGE RENDERER ═══ */}
@@ -280,6 +287,7 @@ function AppRoutes() {
           <Route path="/strategic-intelligence" element={
             <ProtectedRoute navKey="dashboard"><StrategicIntelligence /></ProtectedRoute>
           } />
+          <Route path="/apps" element={<TenantAppsIntegrations />} />
           <Route path="/esocial" element={
             <ProtectedRoute navKey="esocial"><ESocialDashboard /></ProtectedRoute>
           } />
