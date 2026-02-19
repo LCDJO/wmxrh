@@ -4756,11 +4756,13 @@ export type Database = {
           created_at: string
           edges: Json
           id: string
+          is_current: boolean
           nodes: Json
           published_at: string | null
           published_by: string | null
           tenant_id: string
           version_number: number
+          version_tag: string | null
           workflow_id: string
         }
         Insert: {
@@ -4768,11 +4770,13 @@ export type Database = {
           created_at?: string
           edges?: Json
           id?: string
+          is_current?: boolean
           nodes?: Json
           published_at?: string | null
           published_by?: string | null
           tenant_id: string
           version_number: number
+          version_tag?: string | null
           workflow_id: string
         }
         Update: {
@@ -4780,11 +4784,13 @@ export type Database = {
           created_at?: string
           edges?: Json
           id?: string
+          is_current?: boolean
           nodes?: Json
           published_at?: string | null
           published_by?: string | null
           tenant_id?: string
           version_number?: number
+          version_tag?: string | null
           workflow_id?: string
         }
         Relationships: [
