@@ -14,7 +14,7 @@ import {
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
-  Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook,
+  Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook, Store,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -127,8 +127,9 @@ const navStructure: NavEntry[] = [
     icon: Plug,
     label: 'Integrações',
     children: [
-      { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' },
-      { to: '/document-signature', icon: FileSignature, label: 'Assinatura de Documentos', key: 'esocial' },
+      { to: '/apps', icon: Store, label: 'Apps & Integrações', key: 'dashboard' as NavKey },
+      { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' as NavKey },
+      { to: '/document-signature', icon: FileSignature, label: 'Assinatura de Documentos', key: 'esocial' as NavKey },
     ],
   },
 
