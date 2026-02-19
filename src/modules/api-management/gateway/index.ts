@@ -18,17 +18,11 @@ export interface ApiClient {
 
 export interface ApiKey {
   id: string;
-  tenant_id: string;
   client_id: string;
-  key_prefix: string;
-  name: string;
-  status: 'active' | 'rotated' | 'revoked' | 'expired';
-  scopes: string[];
-  environment: 'production' | 'staging' | 'sandbox';
-  expires_at?: string;
-  last_used_at?: string;
-  usage_count: number;
-  rate_limit_override?: number;
+  key_hash: string;
+  scopes: string[];           // format: module.resource.action (e.g. "hr.employee.read")
+  rate_limit_plan: string;    // matches plan tier (free, starter, professional, enterprise)
+  expires_at?: string | null;
   created_at: string;
 }
 

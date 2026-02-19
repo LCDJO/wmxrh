@@ -336,68 +336,29 @@ export type Database = {
         Row: {
           client_id: string
           created_at: string
-          created_by: string | null
-          environment: string
           expires_at: string | null
           id: string
           key_hash: string
-          key_prefix: string
-          last_used_at: string | null
-          last_used_ip: string | null
-          name: string
-          rate_limit_override: number | null
-          revoked_at: string | null
-          revoked_by: string | null
-          revoked_reason: string | null
+          rate_limit_plan: string
           scopes: string[]
-          status: string
-          tenant_id: string
-          updated_at: string
-          usage_count: number
         }
         Insert: {
           client_id: string
           created_at?: string
-          created_by?: string | null
-          environment?: string
           expires_at?: string | null
           id?: string
           key_hash: string
-          key_prefix: string
-          last_used_at?: string | null
-          last_used_ip?: string | null
-          name?: string
-          rate_limit_override?: number | null
-          revoked_at?: string | null
-          revoked_by?: string | null
-          revoked_reason?: string | null
+          rate_limit_plan?: string
           scopes?: string[]
-          status?: string
-          tenant_id: string
-          updated_at?: string
-          usage_count?: number
         }
         Update: {
           client_id?: string
           created_at?: string
-          created_by?: string | null
-          environment?: string
           expires_at?: string | null
           id?: string
           key_hash?: string
-          key_prefix?: string
-          last_used_at?: string | null
-          last_used_ip?: string | null
-          name?: string
-          rate_limit_override?: number | null
-          revoked_at?: string | null
-          revoked_by?: string | null
-          revoked_reason?: string | null
+          rate_limit_plan?: string
           scopes?: string[]
-          status?: string
-          tenant_id?: string
-          updated_at?: string
-          usage_count?: number
         }
         Relationships: [
           {
@@ -405,13 +366,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "api_clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "api_keys_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
