@@ -33,6 +33,7 @@ import {
   GitBranch,
   Settings,
   Headphones,
+  Network,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -158,6 +159,19 @@ const NAV_ITEMS: PlatformNavItem[] = [
       { to: '/platform/website/ai-designer', label: 'AI Designer' },
       { to: '/platform/website/templates', label: 'Templates' },
       { to: '/platform/website/versions', label: 'Versionamento' },
+    ],
+  },
+  {
+    to: '/platform/apis',
+    label: 'APIs',
+    icon: Network,
+    requiredPermission: 'security.manage',
+    children: [
+      { to: '/platform/apis', label: 'Clients' },
+      { to: '/platform/apis/keys', label: 'Keys' },
+      { to: '/platform/apis/usage', label: 'Usage' },
+      { to: '/platform/apis/rate-limits', label: 'Rate Limits' },
+      { to: '/platform/apis/versions', label: 'Versions' },
     ],
   },
   { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },

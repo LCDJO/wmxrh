@@ -174,6 +174,9 @@ export const ApiKeyManager = {
 
 // ── ApiScopeResolver ──
 
+/** Platform roles allowed to create global scopes */
+const GLOBAL_SCOPE_ADMIN_ROLES = ['platform_super_admin'] as const;
+
 export const ApiScopeResolver = {
   /**
    * Check if requested scopes are all within the granted set.
@@ -193,6 +196,26 @@ export const ApiScopeResolver = {
       result[scope.risk_level]?.push(scope.code);
     }
     return result;
+  },
+
+  /**
+   * SECURITY: Only PlatformSuperAdmin can create global (system) scopes.
+   * Returns true if the role is authorized.
+   */
+  canCreateGlobalScope(platformRole: string): boolean {
+    return GLOBAL_SCOPE_ADMIN_ROLES.includes(platformRole as any);
+  },
+
+  /**
+   * Validate a scope creation request.
+   * Throws if the caller doesn't have permission for system scopes.
+   */
+  assertCanCreateScope(scope: { is_system: boolean }, callerRole: string): void {
+    if (scope.is_system && !ApiScopeResolver.canCreateGlobalScope(callerRole)) {
+      throw new Error(
+        `[PAMS] Only PlatformSuperAdmin can create system/global scopes. Current role: "${callerRole}".`
+      );
+    }
   },
 };
 
