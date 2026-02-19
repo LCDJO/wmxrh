@@ -2,38 +2,33 @@
  * PlatformAIOperations — Insight Dashboard for Autonomous Operations AI Engine.
  * Route: /platform/ai-operations
  *
- * Widgets:
- *  - AutomationSuggestionsPanel
- *  - RiskPredictionHeatmap
- *  - RevenueOptimizationCards
- *  - TenantImpactPreview
+ * Uses real database data via useAIOperationsData hook.
  */
 
-import { useMemo } from 'react';
-import { Brain, Activity, TrendingUp, Shield } from 'lucide-react';
+import { Brain, Activity, TrendingUp, Shield, Loader2, RefreshCw } from 'lucide-react';
 import { StatsCard } from '@/components/shared/StatsCard';
-import { InsightDashboardService } from '@/domains/autonomous-operations/insight-dashboard-service';
-import { AutomationSuggestionEngine } from '@/domains/autonomous-operations/automation-suggestion-engine';
-import { BehaviorPatternAnalyzer } from '@/domains/autonomous-operations/behavior-pattern-analyzer';
-import { RiskPredictionService } from '@/domains/autonomous-operations/risk-prediction-service';
-import { RevenueOptimizationAdvisor } from '@/domains/autonomous-operations/revenue-optimization-advisor';
-import { TenantImpactAnalyzer } from '@/domains/autonomous-operations/tenant-impact-analyzer';
+import { useAIOperationsData } from '@/hooks/useAIOperationsData';
 import { AutomationSuggestionsPanel } from '@/components/platform/ai-operations/AutomationSuggestionsPanel';
 import { RiskPredictionHeatmap } from '@/components/platform/ai-operations/RiskPredictionHeatmap';
 import { RevenueOptimizationCards } from '@/components/platform/ai-operations/RevenueOptimizationCards';
 import { TenantImpactPreview } from '@/components/platform/ai-operations/TenantImpactPreview';
+import { Button } from '@/components/ui/button';
 
 export default function PlatformAIOperations() {
-  const dashboard = useMemo(() => InsightDashboardService.buildDashboard(), []);
-  const patterns = useMemo(() => BehaviorPatternAnalyzer.analyze(24), []);
-  const suggestions = useMemo(() => AutomationSuggestionEngine.generateAll(patterns), [patterns]);
-  const risks = useMemo(() => RiskPredictionService.predictAll(patterns), [patterns]);
-  const revenueOpts = useMemo(() => RevenueOptimizationAdvisor.analyze([
-    { tenant_id: 't1', tenant_name: 'Empresa Alpha', current_plan: 'professional', mrr: 499, usage_pct: 82, active_modules: 8, total_modules: 13, months_active: 6, churn_risk_score: 15 },
-    { tenant_id: 't2', tenant_name: 'Corp Beta', current_plan: 'starter', mrr: 199, usage_pct: 45, active_modules: 3, total_modules: 13, months_active: 8, churn_risk_score: 25 },
-    { tenant_id: 't3', tenant_name: 'Grupo Gamma', current_plan: 'professional', mrr: 799, usage_pct: 30, active_modules: 5, total_modules: 13, months_active: 12, churn_risk_score: 72 },
-  ]), []);
-  const deployAssessment = useMemo(() => TenantImpactAnalyzer.assessDeployPreview(), []);
+  const { data, isLoading, isRefetching, refetch } = useAIOperationsData();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground">Carregando dados da plataforma…</span>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const { dashboard, suggestions, risks, revenueOpts, deployAssessment } = data;
 
   const healthColor = dashboard.overall_health === 'healthy'
     ? 'text-emerald-500' : dashboard.overall_health === 'degraded'
@@ -49,12 +44,23 @@ export default function PlatformAIOperations() {
             AI Operations
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Insight Dashboard — Inteligência Operacional Autônoma
+            Insight Dashboard — Dados reais da plataforma
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Saúde:</span>
-          <span className={`font-semibold capitalize ${healthColor}`}>{dashboard.overall_health}</span>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isRefetching}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${isRefetching ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Saúde:</span>
+            <span className={`font-semibold capitalize ${healthColor}`}>{dashboard.overall_health}</span>
+          </div>
         </div>
       </div>
 

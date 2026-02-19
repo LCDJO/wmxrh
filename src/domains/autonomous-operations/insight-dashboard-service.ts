@@ -22,11 +22,7 @@ export const InsightDashboardService = {
     const patterns = BehaviorPatternAnalyzer.analyze(24);
     const suggestions = AutomationSuggestionEngine.generate(patterns);
     const risks = RiskPredictionService.predict(patterns);
-    const revenueOpts = RevenueOptimizationAdvisor.analyze([
-      { tenant_id: 't1', tenant_name: 'Empresa Alpha', current_plan: 'professional', mrr: 499, usage_pct: 82, active_modules: 8, total_modules: 13, months_active: 6, churn_risk_score: 15 },
-      { tenant_id: 't2', tenant_name: 'Corp Beta', current_plan: 'starter', mrr: 199, usage_pct: 45, active_modules: 3, total_modules: 13, months_active: 8, churn_risk_score: 25 },
-      { tenant_id: 't3', tenant_name: 'Grupo Gamma', current_plan: 'professional', mrr: 799, usage_pct: 30, active_modules: 5, total_modules: 13, months_active: 12, churn_risk_score: 72 },
-    ]);
+    const revenueOpts = RevenueOptimizationAdvisor.analyze([]);
     const workflowOpts = WorkflowOptimizer.generatePreview();
 
     const insights: OperationalInsight[] = [];
