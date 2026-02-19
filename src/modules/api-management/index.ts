@@ -24,5 +24,8 @@ export type {
   ApiGatewayResponse,
   KeyGenerationResult,
   RateLimitCheck,
+  RateLimitDecision,
   UsageSummary,
+  UsageBillingRules,
+  VersionRouteResult,
 } from './engine/api-management-engine';

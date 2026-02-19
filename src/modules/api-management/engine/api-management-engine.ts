@@ -1,16 +1,25 @@
 /**
  * ApiManagementEngine — Core orchestration engine for PAMS.
  *
+ * Integrations:
+ *  - ModuleVersionRegistry  → ApiVersionRouter (resolve /api/v1/, /api/v2/)
+ *  - TenantPlanResolver     → ApiRateLimiter (rate limits per TenantPlan)
+ *  - UsageBillingRules      → ApiRateLimiter (billing-aware throttling)
+ *
  * Subsystems:
  *  ├── ApiGatewayController   — Routes/validates API requests
  *  ├── ApiClientRegistry      — CRUD for API client applications
  *  ├── ApiKeyManager          — Key generation, rotation, revocation
  *  ├── ApiScopeResolver       — Maps scopes to permissions via Security Kernel
- *  ├── ApiRateLimiter         — Enforces rate limits per plan tier
+ *  ├── ApiRateLimiter         — Enforces rate limits per TenantPlan + UsageBillingRules
  *  ├── ApiUsageTracker        — Logs and aggregates API usage
- *  ├── ApiVersionRouter       — Routes requests to correct API version
+ *  ├── ApiVersionRouter       — Routes via ModuleVersionRegistry (/api/v1/, /api/v2/)
  *  └── ApiAnalyticsService    — Dashboards, metrics, and alerting
  */
+
+import { ModuleVersionRegistry } from '@/domains/platform-versioning/module-version-registry';
+import type { ModuleVersion } from '@/domains/platform-versioning/types';
+import type { PlanTier, TenantPlanSnapshot, TenantPlanResolverAPI } from '@/domains/platform-experience/types';
 
 // ── Types ──
 
@@ -162,13 +171,176 @@ export const ApiScopeResolver = {
   },
 };
 
-// ── ApiRateLimiter ──
+// ── ApiRateLimiter (integrates TenantPlan + UsageBillingRules) ──
+
+/**
+ * UsageBillingRules — Defines how API usage maps to billing thresholds.
+ * These rules are resolved from the TenantPlan and enforce overage policies.
+ */
+export interface UsageBillingRules {
+  /** Hard cap: reject requests beyond this count */
+  hardLimitPerDay: number;
+  /** Soft cap: start logging warnings after this */
+  softLimitPerDay: number;
+  /** Whether overage triggers billing events */
+  overageBillable: boolean;
+  /** Cost per 1000 requests over the soft limit (BRL) */
+  overageCostPer1k_brl: number;
+  /** Whether to auto-upgrade plan on sustained overage */
+  autoUpgradeOnOverage: boolean;
+}
+
+/** Default billing rules per plan tier */
+const USAGE_BILLING_RULES: Record<PlanTier, UsageBillingRules> = {
+  free: {
+    hardLimitPerDay: 500,
+    softLimitPerDay: 400,
+    overageBillable: false,
+    overageCostPer1k_brl: 0,
+    autoUpgradeOnOverage: false,
+  },
+  starter: {
+    hardLimitPerDay: 5_000,
+    softLimitPerDay: 4_000,
+    overageBillable: true,
+    overageCostPer1k_brl: 2.50,
+    autoUpgradeOnOverage: false,
+  },
+  professional: {
+    hardLimitPerDay: 20_000,
+    softLimitPerDay: 15_000,
+    overageBillable: true,
+    overageCostPer1k_brl: 1.50,
+    autoUpgradeOnOverage: false,
+  },
+  enterprise: {
+    hardLimitPerDay: 100_000,
+    softLimitPerDay: 80_000,
+    overageBillable: true,
+    overageCostPer1k_brl: 0.80,
+    autoUpgradeOnOverage: true,
+  },
+  custom: {
+    hardLimitPerDay: 500_000,
+    softLimitPerDay: 400_000,
+    overageBillable: true,
+    overageCostPer1k_brl: 0.50,
+    autoUpgradeOnOverage: false,
+  },
+};
+
+/** Rate limit tiers per plan */
+const PLAN_RATE_LIMITS: Record<PlanTier, { perMinute: number; perHour: number; burst: number; concurrent: number }> = {
+  free:         { perMinute: 10,  perHour: 100,   burst: 3,  concurrent: 2 },
+  starter:      { perMinute: 30,  perHour: 500,   burst: 5,  concurrent: 3 },
+  professional: { perMinute: 60,  perHour: 2000,  burst: 10, concurrent: 5 },
+  enterprise:   { perMinute: 300, perHour: 10000, burst: 50, concurrent: 20 },
+  custom:       { perMinute: 600, perHour: 30000, burst: 100, concurrent: 50 },
+};
+
+export interface RateLimitDecision extends RateLimitCheck {
+  planTier: PlanTier;
+  billingWarning?: string;
+  overageTriggered?: boolean;
+}
 
 const rateLimitStore = new Map<string, { count: number; windowStart: number }>();
+const dailyUsageStore = new Map<string, { count: number; dayStart: number }>();
 
 export const ApiRateLimiter = {
   /**
-   * Check rate limit for a given key + scope combination.
+   * Check rate limit based on TenantPlan and UsageBillingRules.
+   * Integrates with PXE TenantPlanResolver for dynamic plan resolution.
+   */
+  checkWithPlan(
+    keyId: string,
+    tenantId: string,
+    planResolver?: TenantPlanResolverAPI | null,
+  ): RateLimitDecision {
+    // 1. Resolve tenant plan tier
+    let planTier: PlanTier = 'free';
+    if (planResolver) {
+      try {
+        const snapshot: TenantPlanSnapshot = planResolver.resolve(tenantId);
+        planTier = snapshot.plan_tier;
+      } catch {
+        // Fallback to free if resolver unavailable
+      }
+    }
+
+    const limits = PLAN_RATE_LIMITS[planTier] ?? PLAN_RATE_LIMITS.free;
+    const billingRules = USAGE_BILLING_RULES[planTier] ?? USAGE_BILLING_RULES.free;
+
+    // 2. Per-minute rate limit check
+    const now = Date.now();
+    const windowMs = 60_000;
+    const entry = rateLimitStore.get(keyId);
+
+    if (!entry || now - entry.windowStart > windowMs) {
+      rateLimitStore.set(keyId, { count: 1, windowStart: now });
+    } else if (entry.count >= limits.perMinute) {
+      const retryAfterMs = windowMs - (now - entry.windowStart);
+      return {
+        allowed: false,
+        remaining: 0,
+        resetAt: entry.windowStart + windowMs,
+        retryAfterMs,
+        planTier,
+        billingWarning: `Rate limit exceeded for ${planTier} plan (${limits.perMinute} req/min)`,
+      };
+    } else {
+      entry.count++;
+    }
+
+    // 3. Daily usage + billing rules check
+    const dayKey = `${tenantId}:daily`;
+    const dayMs = 86_400_000;
+    const dailyEntry = dailyUsageStore.get(dayKey);
+    let dailyCount = 1;
+
+    if (!dailyEntry || now - dailyEntry.dayStart > dayMs) {
+      dailyUsageStore.set(dayKey, { count: 1, dayStart: now });
+    } else {
+      dailyEntry.count++;
+      dailyCount = dailyEntry.count;
+    }
+
+    // 4. Hard limit check
+    if (dailyCount >= billingRules.hardLimitPerDay) {
+      return {
+        allowed: false,
+        remaining: 0,
+        resetAt: now + dayMs,
+        planTier,
+        billingWarning: `Daily hard limit reached (${billingRules.hardLimitPerDay} requests). Upgrade your plan.`,
+        overageTriggered: true,
+      };
+    }
+
+    // 5. Soft limit warning
+    let billingWarning: string | undefined;
+    let overageTriggered = false;
+    if (dailyCount >= billingRules.softLimitPerDay) {
+      overageTriggered = billingRules.overageBillable;
+      billingWarning = billingRules.overageBillable
+        ? `Approaching daily limit. Overage billing active (R$${billingRules.overageCostPer1k_brl}/1k requests).`
+        : `Approaching daily limit (${dailyCount}/${billingRules.hardLimitPerDay}).`;
+    }
+
+    const remaining = Math.max(0, limits.perMinute - (rateLimitStore.get(keyId)?.count ?? 0));
+
+    return {
+      allowed: true,
+      remaining,
+      resetAt: (rateLimitStore.get(keyId)?.windowStart ?? now) + windowMs,
+      planTier,
+      billingWarning,
+      overageTriggered,
+    };
+  },
+
+  /**
+   * Simple rate limit check (legacy — no plan integration).
    */
   check(keyId: string, limit: number, windowMs: number = 60_000): RateLimitCheck {
     const now = Date.now();
@@ -188,19 +360,24 @@ export const ApiRateLimiter = {
     return { allowed: true, remaining: limit - entry.count, resetAt: entry.windowStart + windowMs };
   },
 
-  /**
-   * Reset rate limit for a key.
-   */
+  /** Reset rate limit for a key. */
   reset(keyId: string): void {
     rateLimitStore.delete(keyId);
   },
 
-  /**
-   * Get the appropriate rate limit config for a plan tier.
-   */
-  getConfigForTier(tier: string, configs: Array<{ plan_tier: string; requests_per_minute: number }>): number {
-    const config = configs.find(c => c.plan_tier === tier);
-    return config?.requests_per_minute ?? 10; // fallback to free tier
+  /** Reset daily usage for a tenant. */
+  resetDaily(tenantId: string): void {
+    dailyUsageStore.delete(`${tenantId}:daily`);
+  },
+
+  /** Get billing rules for a plan tier. */
+  getBillingRules(tier: PlanTier): UsageBillingRules {
+    return USAGE_BILLING_RULES[tier] ?? USAGE_BILLING_RULES.free;
+  },
+
+  /** Get rate limits for a plan tier. */
+  getLimitsForTier(tier: PlanTier): { perMinute: number; perHour: number; burst: number; concurrent: number } {
+    return PLAN_RATE_LIMITS[tier] ?? PLAN_RATE_LIMITS.free;
   },
 };
 
@@ -256,11 +433,77 @@ export const ApiUsageTracker = {
   },
 };
 
-// ── ApiVersionRouter ──
+// ── ApiVersionRouter (integrates ModuleVersionRegistry) ──
+
+const moduleVersionRegistry = new ModuleVersionRegistry();
+
+export interface VersionRouteResult {
+  version: string;
+  status: string;
+  moduleVersion?: ModuleVersion;
+  warning?: string;
+  /** Resolved API path (e.g. /api/v1/hr/employees) */
+  resolvedPath?: string;
+}
 
 export const ApiVersionRouter = {
   /**
-   * Resolve the target version for a request.
+   * Resolve /api/v{N}/... using ModuleVersionRegistry.
+   * Maps API versions to module versions for backward compatibility.
+   */
+  async resolveFromRegistry(
+    requestPath: string,
+    moduleId: string = 'api_management',
+  ): Promise<VersionRouteResult | null> {
+    // Extract version from path: /api/v1/... → "v1"
+    const versionMatch = requestPath.match(/^\/api\/(v\d+)\/?/);
+    if (!versionMatch) {
+      // No version prefix — resolve to latest
+      const latest = await moduleVersionRegistry.getCurrent(moduleId);
+      if (!latest) return null;
+      return {
+        version: latest.version_tag ?? `v${latest.version.major}`,
+        status: latest.status,
+        moduleVersion: latest,
+        resolvedPath: `/api/v${latest.version.major}${requestPath}`,
+      };
+    }
+
+    const requestedVersion = versionMatch[1]; // "v1", "v2"
+    const majorVersion = parseInt(requestedVersion.replace('v', ''), 10);
+
+    // Fetch all versions for the module and find matching major
+    const allVersions = await moduleVersionRegistry.listForModule(moduleId);
+    const matching = allVersions
+      .filter(v => v.version.major === majorVersion)
+      .sort((a, b) => {
+        // Sort by minor desc, then patch desc to get latest within major
+        if (a.version.minor !== b.version.minor) return b.version.minor - a.version.minor;
+        return b.version.patch - a.version.patch;
+      });
+
+    if (matching.length === 0) return null;
+
+    const best = matching[0];
+    const restPath = requestPath.replace(/^\/api\/v\d+\/?/, '/');
+
+    let warning: string | undefined;
+    if (best.status === 'deprecated') {
+      const latest = await moduleVersionRegistry.getCurrent(moduleId);
+      warning = `API ${requestedVersion} is deprecated. Migrate to ${latest?.version_tag ?? 'latest'}.`;
+    }
+
+    return {
+      version: requestedVersion,
+      status: best.status,
+      moduleVersion: best,
+      warning,
+      resolvedPath: `/api/${requestedVersion}${restPath}`,
+    };
+  },
+
+  /**
+   * Simple resolve against static version list (fallback).
    */
   resolve(
     requested: string,
@@ -269,9 +512,7 @@ export const ApiVersionRouter = {
     const match = versions.find(v => v.version === requested);
     if (!match) return null;
 
-    if (match.status === 'sunset') {
-      return null; // No longer available
-    }
+    if (match.status === 'sunset') return null;
 
     const warning = match.status === 'deprecated'
       ? `API version ${requested} is deprecated. Please migrate to the latest version.`
@@ -281,11 +522,46 @@ export const ApiVersionRouter = {
   },
 
   /**
-   * Get the latest active version.
+   * Get the latest active version from ModuleVersionRegistry.
+   */
+  async getLatestFromRegistry(moduleId: string = 'api_management'): Promise<string> {
+    const current = await moduleVersionRegistry.getCurrent(moduleId);
+    return current ? `v${current.version.major}` : 'v1';
+  },
+
+  /**
+   * Get the latest active version from a static list (fallback).
    */
   getLatest(versions: Array<{ version: string; status: string }>): string {
     const active = versions.filter(v => v.status === 'active');
     return active.length > 0 ? active[active.length - 1].version : 'v1';
+  },
+
+  /**
+   * List all available API versions from the registry.
+   */
+  async listAvailableVersions(moduleId: string = 'api_management'): Promise<Array<{
+    version: string;
+    status: string;
+    releasedAt?: string;
+  }>> {
+    const allVersions = await moduleVersionRegistry.listForModule(moduleId);
+    // Deduplicate by major version (keep latest)
+    const byMajor = new Map<number, ModuleVersion>();
+    for (const v of allVersions) {
+      const existing = byMajor.get(v.version.major);
+      if (!existing || v.version.minor > existing.version.minor || 
+          (v.version.minor === existing.version.minor && v.version.patch > existing.version.patch)) {
+        byMajor.set(v.version.major, v);
+      }
+    }
+    return [...byMajor.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([major, v]) => ({
+        version: `v${major}`,
+        status: v.status,
+        releasedAt: v.released_at,
+      }));
   },
 };
 
@@ -343,7 +619,20 @@ function randomHex(bytes: number): string {
   return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * Wildcard matcher for module.resource.action scope format.
+ * Examples:
+ *   "hr.employee.read" matches "hr.*", "hr.employee.*", "*"
+ */
 function matchesWildcard(scope: string, granted: string[]): boolean {
-  const [resource] = scope.split(':');
-  return granted.some(g => g === `${resource}:*` || g === '*');
+  const parts = scope.split('.');
+  return granted.some(g => {
+    if (g === '*') return true;
+    const gParts = g.split('.');
+    for (let i = 0; i < gParts.length; i++) {
+      if (gParts[i] === '*') return true;
+      if (gParts[i] !== parts[i]) return false;
+    }
+    return gParts.length === parts.length;
+  });
 }
