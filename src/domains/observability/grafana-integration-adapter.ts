@@ -261,6 +261,40 @@ export function exportPrometheus(): PrometheusExportResult {
   // Versioning metrics can be collected via collectSupportMetrics() or
   // a dedicated async collector if needed.
 
+  // ── AI Operations metrics ────────────────────────────────────
+  try {
+    const { getAIOperationsMetricsSnapshot } = require('./ai-operations-metrics-collector') as {
+      getAIOperationsMetricsSnapshot: () => import('./ai-operations-metrics-collector').AIOperationsMetricsSnapshot;
+    };
+    const ai = getAIOperationsMetricsSnapshot();
+
+    collector.gauge('ai_suggestions_total', ai.suggestions_total);
+    for (const entry of ai.suggestions_by_priority) {
+      collector.gauge('ai_suggestions_total', entry.count, { priority: entry.priority });
+    }
+    for (const entry of ai.suggestions_by_status) {
+      collector.gauge('ai_suggestions_total', entry.count, { status: entry.status });
+    }
+
+    collector.gauge('ai_risk_predictions_total', ai.risk_predictions_total);
+    for (const entry of ai.risks_by_type) {
+      collector.gauge('ai_risk_predictions_total', entry.count, { risk_type: entry.risk_type });
+    }
+    for (const entry of ai.risks_by_severity) {
+      collector.gauge('ai_risk_predictions_total', entry.count, { severity: entry.severity });
+    }
+
+    collector.gauge('ai_automation_recommendations_total', ai.automation_recommendations_total);
+    for (const entry of ai.recommendations_by_category) {
+      collector.gauge('ai_automation_recommendations_total', entry.count, { category: entry.category });
+    }
+
+    collector.gauge('ai_revenue_optimizations_total', ai.revenue_optimizations_total);
+    collector.gauge('ai_workflow_optimizations_total', ai.workflow_optimizations_total);
+  } catch {
+    // AI operations metrics unavailable — skip
+  }
+
   // ── Support metrics ────────────────────────────────────────
   try {
     const { getSupportMetricsSnapshot } = require('./support-metrics-collector') as {
