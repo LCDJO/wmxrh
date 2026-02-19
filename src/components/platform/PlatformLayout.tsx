@@ -93,7 +93,18 @@ const NAV_ITEMS: PlatformNavItem[] = [
   },
   { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
   { to: '/platform/automation', label: 'Automação', icon: Zap, requiredPermission: 'security.manage' },
-  { to: '/platform/integration-automation', label: 'iPaaS Workflows', icon: Workflow, requiredPermission: 'security.manage' },
+  {
+    to: '/platform/integration-automation',
+    label: 'iPaaS Workflows',
+    icon: Workflow,
+    requiredPermission: 'security.manage',
+    children: [
+      { to: '/platform/integration-automation', label: 'Workflows' },
+      { to: '/platform/integration-automation/templates', label: 'Templates' },
+      { to: '/platform/integration-automation/executions', label: 'Execution Logs' },
+      { to: '/platform/integration-automation/sandbox', label: 'Sandbox Tests' },
+    ],
+  },
   {
     to: '/platform/monitoring',
     label: 'Monitoramento',

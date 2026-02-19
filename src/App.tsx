@@ -164,7 +164,7 @@ function AppRoutes() {
         <Route path="security/governance-ai" element={<PlatformGovernanceAI />} />
         <Route path="governance" element={<PlatformGovernanceDashboard />} />
          <Route path="automation" element={<PlatformAutomation />} />
-         <Route path="integration-automation" element={<PlatformIntegrationAutomation />} />
+         <Route path="integration-automation/*" element={<PlatformIntegrationAutomation />} />
         <Route path="observability" element={<PlatformObservability />} />
         <Route path="monitoring/*" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformMonitoring /></PlatformGuard>} />
         <Route path="control-plane" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformControlPlane /></PlatformGuard>} />
