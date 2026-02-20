@@ -70,3 +70,16 @@ export {
   getSignedDocumentUrl,
 } from './epi-signature.integration';
 export type { SendForSignatureInput } from './epi-signature.integration';
+
+// Validity & Replacement Engine (Automated checks)
+export {
+  checkEPIValidity,
+  isCAValid,
+  getExpiryDashboardStats,
+} from './validity.engine';
+export type {
+  ValidityCheckResult,
+  ExpiredDeliveryInfo,
+  ExpiredCAInfo,
+  NearExpiryInfo,
+} from './validity.engine';
