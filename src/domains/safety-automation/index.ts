@@ -63,6 +63,9 @@ export {
 // Action Orchestrator
 export { executeActions } from './action-orchestrator';
 
+// Action Executor (concrete implementation)
+export { createSafetyActionExecutor } from './action-executor';
+
 // Signal Processor (main entry point)
 export { createSignal, processSignal } from './signal-processor';
 export type { SignalProcessorDeps } from './signal-processor';
