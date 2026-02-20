@@ -491,23 +491,13 @@ export function AppSidebar() {
         </div>
       )}
 
-      {/* ── Plan Badge + Upgrade Banner ── */}
+      {/* ── Plan Badge ── */}
       {!collapsed && expProfile.plan_tier && (
-        <div className="mx-3 mb-2 space-y-2">
+        <div className="mx-3 mb-2">
           <div className="flex items-center justify-between px-1">
             <span className="text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/40">Plano</span>
             <PlanBadge tier={expProfile.plan_tier} size="sm" />
           </div>
-          {!['enterprise', 'custom'].includes(expProfile.plan_tier) && (
-            <div className="p-2.5 rounded-lg bg-primary/10 border border-primary/20">
-              <p className="text-[10px] font-semibold text-primary">⚡ Upgrade disponível</p>
-              <p className="text-[10px] text-sidebar-foreground/50 mt-0.5 leading-relaxed">
-                {expProfile.plan_tier === 'free' && 'Desbloqueie módulos de Inteligência e Compliance.'}
-                {expProfile.plan_tier === 'starter' && 'Acesse Analytics avançado e dashboards extras.'}
-                {expProfile.plan_tier === 'professional' && 'Libere branding customizado e IA completa.'}
-              </p>
-            </div>
-          )}
         </div>
       )}
 
