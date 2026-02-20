@@ -240,3 +240,36 @@ export interface StockAlert {
   dias_restantes?: number;
   message: string;
 }
+
+// ═══════════════════════════════════════════════════════
+// DOMAIN EVENTS
+// ═══════════════════════════════════════════════════════
+
+export interface EPIStockReducedEvent {
+  type: 'EPIStockReduced';
+  tenant_id: string;
+  epi_catalog_id: string;
+  delivery_id: string;
+  employee_id: string;
+  lot_id?: string;
+  warehouse_id: string;
+  quantidade: number;
+  custo_unitario: number;
+  timestamp: string;
+}
+
+export interface EPICostAllocatedEvent {
+  type: 'EPICostAllocated';
+  tenant_id: string;
+  employee_id: string;
+  epi_catalog_id: string;
+  delivery_id: string;
+  lot_id?: string;
+  custo_unitario: number;
+  custo_total: number;
+  quantidade: number;
+  data_apropriacao: string;
+  timestamp: string;
+}
+
+export type EpiInventoryDomainEvent = EPIStockReducedEvent | EPICostAllocatedEvent;
