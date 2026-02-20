@@ -44,24 +44,39 @@ export function useExperienceProfile() {
 
     supabase
       .from('experience_profiles')
-      .select('*')
+      .select('*, saas_plans!experience_profiles_plan_id_fkey(name)')
       .eq('tenant_id', currentTenant.id)
       .maybeSingle()
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error || !data) {
-          setProfile(DEFAULT_PROFILE);
-        } else {
-          setProfile({
-            plan_tier: (data as any).plan_tier ?? 'free',
-            visible_navigation: (data as any).visible_navigation ?? [],
-            hidden_navigation: (data as any).hidden_navigation ?? [],
-            locked_navigation: Array.isArray((data as any).locked_navigation) ? (data as any).locked_navigation : [],
-            max_widgets: (data as any).max_widgets ?? 2,
-            ui_features: (data as any).ui_features ?? {},
-            cognitive_context_level: (data as any).cognitive_context_level ?? 'basic',
-          });
+          // Fallback: try to get plan from tenant_plans
+          supabase
+            .from('tenant_plans')
+            .select('status, saas_plans!tenant_plans_plan_id_fkey(name)')
+            .eq('tenant_id', currentTenant.id!)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            .then(({ data: tp }) => {
+              if (cancelled) return;
+              const planName = (tp as any)?.saas_plans?.name?.toLowerCase() ?? 'free';
+              setProfile({ ...DEFAULT_PROFILE, plan_tier: planName });
+              setLoading(false);
+            });
+          return;
         }
+
+        const planName = (data as any)?.saas_plans?.name?.toLowerCase() ?? 'free';
+        setProfile({
+          plan_tier: planName,
+          visible_navigation: (data as any).visible_navigation ?? [],
+          hidden_navigation: (data as any).hidden_navigation ?? [],
+          locked_navigation: Array.isArray((data as any).locked_navigation) ? (data as any).locked_navigation : [],
+          max_widgets: (data as any).max_widgets ?? 2,
+          ui_features: (data as any).ui_features ?? {},
+          cognitive_context_level: (data as any).cognitive_context_level ?? 'basic',
+        });
         setLoading(false);
       });
 

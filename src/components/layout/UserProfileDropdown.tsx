@@ -1,8 +1,10 @@
 /**
- * UserProfileDropdown — Avatar dropdown with user info, plan badge, and sign out.
+ * UserProfileDropdown — Avatar dropdown with user info, plan badge, profile editing, and sign out.
  */
 
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { useExperienceProfile } from '@/hooks/use-experience-profile';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
 import { PlanBadge } from '@/components/shared/PlanBadge';
@@ -12,19 +14,79 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { LogOut, Crown } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { LogOut, Crown, Pencil, Save, X, Phone, Mail, User } from 'lucide-react';
 import { dualIdentityEngine } from '@/domains/security/kernel/dual-identity-engine';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface ProfileFormData {
+  name: string;
+  email: string;
+  phone: string;
+}
 
 export function UserProfileDropdown() {
   const { user, signOut } = useAuth();
+  const { currentTenant } = useTenant();
   const { profile: expProfile } = useExperienceProfile();
   const { effectiveRoles } = useSecurityKernel();
   const isImpersonating = dualIdentityEngine.isImpersonating;
 
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<ProfileFormData>({ name: '', email: '', phone: '' });
+  const [membershipId, setMembershipId] = useState<string | null>(null);
+
+  const fetchMembership = useCallback(async () => {
+    if (!user?.id || !currentTenant?.id) return;
+    const { data } = await supabase
+      .from('tenant_memberships')
+      .select('id, name, email, phone')
+      .eq('user_id', user.id)
+      .eq('tenant_id', currentTenant.id)
+      .maybeSingle();
+    if (data) {
+      setMembershipId(data.id);
+      setForm({
+        name: (data as any).name ?? '',
+        email: (data as any).email ?? user.email ?? '',
+        phone: (data as any).phone ?? '',
+      });
+    } else {
+      setForm({ name: '', email: user.email ?? '', phone: '' });
+    }
+  }, [user?.id, currentTenant?.id, user?.email]);
+
+  useEffect(() => { fetchMembership(); }, [fetchMembership]);
+
+  const handleSave = async () => {
+    if (!membershipId) {
+      toast.error('Perfil de membro não encontrado.');
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase
+      .from('tenant_memberships')
+      .update({ name: form.name, email: form.email, phone: form.phone })
+      .eq('id', membershipId);
+    setSaving(false);
+    if (error) {
+      toast.error('Erro ao salvar perfil: ' + error.message);
+    } else {
+      toast.success('Perfil atualizado com sucesso.');
+      setEditing(false);
+    }
+  };
+
+  const displayName = form.name || user?.email || 'Administrador';
   const initials = isImpersonating
     ? 'IM'
-    : (user?.email?.substring(0, 2).toUpperCase() ?? 'AD');
+    : (form.name
+        ? form.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+        : (user?.email?.substring(0, 2).toUpperCase() ?? 'AD'));
 
   return (
     <Popover>
@@ -46,7 +108,7 @@ export function UserProfileDropdown() {
         </button>
       </PopoverTrigger>
 
-      <PopoverContent align="end" className="w-72 p-0" sideOffset={8}>
+      <PopoverContent align="end" className="w-80 p-0" sideOffset={8}>
         {/* User info header */}
         <div className="px-4 py-3 border-b border-border bg-muted/30">
           <div className="flex items-center gap-3">
@@ -57,7 +119,7 @@ export function UserProfileDropdown() {
             </Avatar>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-foreground truncate">
-                {user?.email ?? 'Administrador'}
+                {displayName}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                 {effectiveRoles.slice(0, 2).map(role => (
@@ -67,8 +129,69 @@ export function UserProfileDropdown() {
                 ))}
               </div>
             </div>
+            {!editing && (
+              <button
+                onClick={() => setEditing(true)}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Editar perfil"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Edit form */}
+        {editing && (
+          <div className="px-4 py-3 border-b border-border space-y-2.5">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input
+                value={form.name}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="Nome completo"
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input
+                value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="E-mail"
+                type="email"
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input
+                value={form.phone}
+                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                placeholder="Telefone"
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => { setEditing(false); fetchMembership(); }}
+                className="h-7 text-xs"
+              >
+                <X className="h-3 w-3 mr-1" /> Cancelar
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={saving}
+                className="h-7 text-xs"
+              >
+                <Save className="h-3 w-3 mr-1" /> {saving ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Plan section */}
         {expProfile.plan_tier && (
