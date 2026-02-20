@@ -31,6 +31,7 @@ export { salaryBenchmarkService } from './salary-benchmark.service';
 export { riskAlertService } from './risk-alert.service';
 export { legalReferenceService } from './legal-reference.service';
 export { careerLegalMappingService } from './career-legal-mapping.service';
+export { careerPcmsoIntegrationService } from './career-pcmso-integration.service';
 
 // ── Engines (pure, no I/O) ──
 export {
@@ -73,3 +74,4 @@ export type {
   CareerLegalMapping,
   CreateCareerLegalMappingDTO,
 } from './types';
+export type { MedicalProfileResult } from './career-pcmso-integration.service';
