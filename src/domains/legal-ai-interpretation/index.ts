@@ -28,6 +28,16 @@ export { generateActionPlan } from './action-plan.engine';
 export { generateWorkflows } from './workflow-generation.engine';
 export { analyzeLegalChange } from './legal-ai-analyzer.engine';
 export { mapLegalImpact } from './impact-mapping.engine';
+export { generateLegalActionPlans } from './action-plan-generator.engine';
+
+export type {
+  LegalActionPlan,
+  TarefaRecomendada,
+  PrioridadePlano,
+  TarefaStatus,
+  ActionPlanGeneratorInput,
+  ActionPlanGeneratorResult,
+} from './action-plan-generator.engine';
 
 export type {
   LegalInterpretation,
