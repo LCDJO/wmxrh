@@ -1,5 +1,5 @@
 /**
- * /platform/tenants — Full tenant management page with CRUD
+ * /platform/tenants — Full tenant management page with CRUD + detailed analytics
  */
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,11 +26,14 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import {
   Building2, Plus, Search, Ban, CheckCircle, Eye, Puzzle, Package,
   Loader2, MoreHorizontal, Users, Calendar, UserCog, Shield, Clock,
   Pencil, ArrowRightLeft, Trash2, Mail, Phone, FileText, MapPin,
+  Receipt, Headphones, BarChart3, CreditCard, TrendingUp, AlertTriangle,
+  DollarSign, Activity,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
@@ -41,6 +44,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { PlanBadge } from '@/components/shared/PlanBadge';
+
+// ── Types ──
 
 interface Tenant {
   id: string;
@@ -79,6 +84,63 @@ interface TenantPlanRow {
   trial_ends_at: string | null;
   next_billing_date: string | null;
   payment_method: string | null;
+}
+
+interface TenantDetails {
+  usage: {
+    employees: number;
+    companies: number;
+    members: number;
+    active_modules: number;
+    total_modules: number;
+    modules: { module_key: string; is_active: boolean; activated_at: string }[];
+  };
+  plan: {
+    plan_id: string;
+    plan_name: string;
+    plan_price: number;
+    status: string;
+    billing_cycle: string;
+    started_at: string;
+    next_billing_date: string | null;
+    trial_ends_at: string | null;
+    payment_method: string | null;
+  } | null;
+  invoices: {
+    summary: {
+      total: number;
+      paid: number;
+      pending: number;
+      overdue: number;
+      total_billed: number;
+      total_paid: number;
+    };
+    recent: {
+      id: string;
+      total_amount: number;
+      status: string;
+      due_date: string;
+      paid_at: string | null;
+      billing_period_start: string;
+      billing_period_end: string;
+      notes: string | null;
+      created_at: string;
+    }[];
+  };
+  financial_entries: {
+    id: string;
+    entry_type: string;
+    amount: number;
+    description: string;
+    created_at: string;
+  }[];
+  support: {
+    total_sessions: number;
+    resolved: number;
+    by_month: Record<string, { total: number; resolved: number; pending: number }>;
+    by_priority: Record<string, number>;
+  };
+  memberships: { id: string; role: string; user_id: string }[];
 }
 
 type DialogMode = 'create' | 'view' | 'edit' | 'change-plan' | 'modules' | 'impersonate' | null;
@@ -120,14 +182,23 @@ export default function PlatformTenants() {
 
   // Tenant plan data
   const [tenantPlanMap, setTenantPlanMap] = useState<Record<string, { planId: string; planName: string; tier: string; status: string; billingCycle: string }>>({});
-  const [selectedTenantPlan, setSelectedTenantPlan] = useState<TenantPlanRow | null>(null);
 
   // Plan change form
   const [newPlanId, setNewPlanId] = useState('');
   const [newBillingCycle, setNewBillingCycle] = useState('monthly');
+  const [selectedTenantPlan, setSelectedTenantPlan] = useState<TenantPlanRow | null>(null);
 
-  // Membership count per tenant
+  // Member counts
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
+
+  // Tenant detail data (from edge function)
+  const [tenantDetails, setTenantDetails] = useState<TenantDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  // Impersonation
+  const [impersonateReason, setImpersonateReason] = useState('');
+  const [impersonateDuration, setImpersonateDuration] = useState(30);
+  const [impersonating, setImpersonating] = useState(false);
 
   const fetchTenantPlans = useCallback(async () => {
     const { data } = await supabase
@@ -149,11 +220,6 @@ export default function PlatformTenants() {
     setTenantPlanMap(map);
   }, []);
 
-  // Impersonation
-  const [impersonateReason, setImpersonateReason] = useState('');
-  const [impersonateDuration, setImpersonateDuration] = useState(30);
-  const [impersonating, setImpersonating] = useState(false);
-
   const fetchTenants = async () => {
     setLoading(true);
     const { data } = await supabase
@@ -165,14 +231,10 @@ export default function PlatformTenants() {
   };
 
   const fetchMemberCounts = async () => {
-    const { data } = await supabase
-      .from('tenant_memberships')
-      .select('tenant_id');
+    const { data } = await supabase.from('tenant_memberships').select('tenant_id');
     if (data) {
       const counts: Record<string, number> = {};
-      (data as any[]).forEach(row => {
-        counts[row.tenant_id] = (counts[row.tenant_id] || 0) + 1;
-      });
+      (data as any[]).forEach(row => { counts[row.tenant_id] = (counts[row.tenant_id] || 0) + 1; });
       setMemberCounts(counts);
     }
   };
@@ -188,6 +250,41 @@ export default function PlatformTenants() {
     t.document?.includes(search) ||
     t.email?.toLowerCase().includes(search.toLowerCase())
   );
+
+  // ── Fetch tenant details via edge function ──
+  const fetchTenantDetails = async (tenantId: string) => {
+    setDetailsLoading(true);
+    setTenantDetails(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('tenant-details', {
+        body: null,
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      // The edge function uses query params, so we need the full URL approach
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/tenant-details?tenant_id=${tenantId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (res.ok) {
+        const json = await res.json();
+        setTenantDetails(json);
+      }
+    } catch (e) {
+      console.error('[tenant-details] fetch error:', e);
+    }
+    setDetailsLoading(false);
+  };
 
   // ── Create Tenant ──
   const handleCreate = async () => {
@@ -205,13 +302,9 @@ export default function PlatformTenants() {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
       const tenantId = typeof data === 'object' && data !== null ? (data as any).tenant_id : '';
-
-      // Update address if provided
       if (tenantId && form.address.trim()) {
         await supabase.from('tenants').update({ address: form.address.trim() }).eq('id', tenantId);
       }
-
-      // Assign plan
       if (tenantId && form.planId) {
         const { error: planError } = await supabase
           .from('tenant_plans')
@@ -226,21 +319,16 @@ export default function PlatformTenants() {
         } else {
           const selectedPlan = availablePlans.find(p => p.id === form.planId);
           platformEvents.planAssignedToTenant(user?.id ?? '', tenantId, {
-            planId: form.planId,
-            planName: selectedPlan?.name ?? '',
-            tier: selectedPlan?.name?.toLowerCase() ?? 'free',
-            billingCycle: selectedPlan?.billing_cycle ?? 'monthly',
+            planId: form.planId, planName: selectedPlan?.name ?? '',
+            tier: selectedPlan?.name?.toLowerCase() ?? 'free', billingCycle: selectedPlan?.billing_cycle ?? 'monthly',
           });
         }
       }
-
       platformEvents.tenantCreated(user?.id ?? '', tenantId, form.name.trim());
       toast({ title: 'Tenant criado', description: `${form.name} criado com sucesso.` });
       setForm({ name: '', document: '', email: '', phone: '', address: '', adminEmail: '', adminName: '', planId: '' });
       setDialogMode(null);
-      fetchTenants();
-      fetchTenantPlans();
-      fetchMemberCounts();
+      fetchTenants(); fetchTenantPlans(); fetchMemberCounts();
     }
     setSaving(false);
   };
@@ -248,38 +336,23 @@ export default function PlatformTenants() {
   // ── Edit Tenant ──
   const openEdit = (tenant: Tenant) => {
     setSelectedTenant(tenant);
-    setEditForm({
-      name: tenant.name,
-      document: tenant.document ?? '',
-      email: tenant.email ?? '',
-      phone: tenant.phone ?? '',
-      address: tenant.address ?? '',
-      status: tenant.status,
-    });
+    setEditForm({ name: tenant.name, document: tenant.document ?? '', email: tenant.email ?? '', phone: tenant.phone ?? '', address: tenant.address ?? '', status: tenant.status });
     setDialogMode('edit');
   };
 
   const handleSaveEdit = async () => {
     if (!selectedTenant || !editForm.name.trim()) return;
     setSaving(true);
-    const { error } = await supabase
-      .from('tenants')
-      .update({
-        name: editForm.name.trim(),
-        document: editForm.document.trim() || null,
-        email: editForm.email.trim() || null,
-        phone: editForm.phone.trim() || null,
-        address: editForm.address.trim() || null,
-        status: editForm.status,
-      })
-      .eq('id', selectedTenant.id);
-
+    const { error } = await supabase.from('tenants').update({
+      name: editForm.name.trim(), document: editForm.document.trim() || null,
+      email: editForm.email.trim() || null, phone: editForm.phone.trim() || null,
+      address: editForm.address.trim() || null, status: editForm.status,
+    }).eq('id', selectedTenant.id);
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: 'Tenant atualizado', description: `${editForm.name} salvo com sucesso.` });
-      setDialogMode(null);
-      fetchTenants();
+      toast({ title: 'Tenant atualizado' });
+      setDialogMode(null); fetchTenants();
     }
     setSaving(false);
   };
@@ -288,15 +361,8 @@ export default function PlatformTenants() {
   const openChangePlan = async (tenant: Tenant) => {
     setSelectedTenant(tenant);
     setDialogMode('change-plan');
-
-    // Load current plan details
-    const { data } = await supabase
-      .from('tenant_plans')
-      .select('*')
-      .eq('tenant_id', tenant.id)
-      .in('status', ['active', 'trial'])
-      .maybeSingle();
-
+    const { data } = await supabase.from('tenant_plans').select('*')
+      .eq('tenant_id', tenant.id).in('status', ['active', 'trial']).maybeSingle();
     setSelectedTenantPlan((data as TenantPlanRow) ?? null);
     setNewPlanId(data?.plan_id ?? '');
     setNewBillingCycle(data?.billing_cycle ?? 'monthly');
@@ -305,38 +371,21 @@ export default function PlatformTenants() {
   const handleChangePlan = async () => {
     if (!selectedTenant || !newPlanId) return;
     setSaving(true);
-
-    // Deactivate current plan
     if (selectedTenantPlan) {
-      await supabase
-        .from('tenant_plans')
-        .update({ status: 'cancelled' })
-        .eq('id', selectedTenantPlan.id);
+      await supabase.from('tenant_plans').update({ status: 'cancelled' }).eq('id', selectedTenantPlan.id);
     }
-
-    // Create new plan assignment
-    const { error } = await supabase
-      .from('tenant_plans')
-      .insert({
-        tenant_id: selectedTenant.id,
-        plan_id: newPlanId,
-        status: 'active',
-        billing_cycle: newBillingCycle,
-      });
-
+    const { error } = await supabase.from('tenant_plans').insert({
+      tenant_id: selectedTenant.id, plan_id: newPlanId, status: 'active', billing_cycle: newBillingCycle,
+    });
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
       const plan = availablePlans.find(p => p.id === newPlanId);
       platformEvents.planAssignedToTenant(user?.id ?? '', selectedTenant.id, {
-        planId: newPlanId,
-        planName: plan?.name ?? '',
-        tier: plan?.name?.toLowerCase() ?? 'free',
-        billingCycle: newBillingCycle,
+        planId: newPlanId, planName: plan?.name ?? '', tier: plan?.name?.toLowerCase() ?? 'free', billingCycle: newBillingCycle,
       });
-      toast({ title: 'Plano alterado', description: `${selectedTenant.name} agora está no plano ${plan?.name}.` });
-      setDialogMode(null);
-      fetchTenantPlans();
+      toast({ title: 'Plano alterado', description: `Agora no plano ${plan?.name}.` });
+      setDialogMode(null); fetchTenantPlans();
     }
     setSaving(false);
   };
@@ -345,47 +394,25 @@ export default function PlatformTenants() {
   const handleDeleteTenant = async () => {
     if (!tenantToDelete) return;
     setSaving(true);
-
-    // Soft delete - mark as inactive
-    const { error } = await supabase
-      .from('tenants')
-      .update({ status: 'deleted' })
-      .eq('id', tenantToDelete.id);
-
-    if (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    const { error } = await supabase.from('tenants').update({ status: 'deleted' }).eq('id', tenantToDelete.id);
+    if (!error) {
+      await supabase.from('tenant_plans').update({ status: 'cancelled' })
+        .eq('tenant_id', tenantToDelete.id).in('status', ['active', 'trial']);
+      toast({ title: 'Tenant removido' });
+      fetchTenants(); fetchTenantPlans();
     } else {
-      // Also cancel any active plans
-      await supabase
-        .from('tenant_plans')
-        .update({ status: 'cancelled' })
-        .eq('tenant_id', tenantToDelete.id)
-        .in('status', ['active', 'trial']);
-
-      toast({ title: 'Tenant removido', description: `${tenantToDelete.name} foi desativado.` });
-      fetchTenants();
-      fetchTenantPlans();
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
-    setDeleteConfirmOpen(false);
-    setTenantToDelete(null);
-    setSaving(false);
+    setDeleteConfirmOpen(false); setTenantToDelete(null); setSaving(false);
   };
 
   // ── Suspend / Activate ──
   const handleToggleStatus = async (tenant: Tenant) => {
     const newStatus = tenant.status === 'active' ? 'suspended' : 'active';
-    const { error } = await supabase
-      .from('tenants')
-      .update({ status: newStatus })
-      .eq('id', tenant.id);
-    if (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
-    } else {
-      if (newStatus === 'suspended') {
-        platformEvents.tenantSuspended(user?.id ?? '', tenant.id, tenant.name);
-      } else {
-        platformEvents.tenantReactivated(user?.id ?? '', tenant.id, tenant.name);
-      }
+    const { error } = await supabase.from('tenants').update({ status: newStatus }).eq('id', tenant.id);
+    if (!error) {
+      if (newStatus === 'suspended') platformEvents.tenantSuspended(user?.id ?? '', tenant.id, tenant.name);
+      else platformEvents.tenantReactivated(user?.id ?? '', tenant.id, tenant.name);
       toast({ title: newStatus === 'suspended' ? 'Tenant suspenso' : 'Tenant reativado' });
       fetchTenants();
     }
@@ -393,128 +420,80 @@ export default function PlatformTenants() {
 
   // ── Modules ──
   const openModules = async (tenant: Tenant) => {
-    setSelectedTenant(tenant);
-    setDialogMode('modules');
-    setModulesLoading(true);
-    const { data } = await supabase
-      .from('tenant_modules')
-      .select('id, tenant_id, module_key, is_active')
-      .eq('tenant_id', tenant.id);
-    setTenantModules((data as TenantModule[]) ?? []);
-    setModulesLoading(false);
+    setSelectedTenant(tenant); setDialogMode('modules'); setModulesLoading(true);
+    const { data } = await supabase.from('tenant_modules').select('id, tenant_id, module_key, is_active').eq('tenant_id', tenant.id);
+    setTenantModules((data as TenantModule[]) ?? []); setModulesLoading(false);
   };
 
   const toggleModule = async (moduleKey: string, currentlyActive: boolean) => {
     if (!selectedTenant) return;
     const existing = tenantModules.find(m => m.module_key === moduleKey);
-
     if (existing) {
-      await supabase
-        .from('tenant_modules')
-        .update({ is_active: !currentlyActive, deactivated_at: currentlyActive ? new Date().toISOString() : null })
-        .eq('id', existing.id);
+      await supabase.from('tenant_modules').update({ is_active: !currentlyActive, deactivated_at: currentlyActive ? new Date().toISOString() : null }).eq('id', existing.id);
     } else {
-      await supabase
-        .from('tenant_modules')
-        .insert({ tenant_id: selectedTenant.id, module_key: moduleKey, is_active: true });
+      await supabase.from('tenant_modules').insert({ tenant_id: selectedTenant.id, module_key: moduleKey, is_active: true });
     }
-
-    const { data } = await supabase
-      .from('tenant_modules')
-      .select('id, tenant_id, module_key, is_active')
-      .eq('tenant_id', selectedTenant.id);
+    const { data } = await supabase.from('tenant_modules').select('id, tenant_id, module_key, is_active').eq('tenant_id', selectedTenant.id);
     setTenantModules((data as TenantModule[]) ?? []);
   };
 
   const isModuleActive = (key: string) => tenantModules.find(m => m.module_key === key)?.is_active ?? false;
 
+  // ── View Details ──
+  const openView = (tenant: Tenant) => {
+    setSelectedTenant(tenant);
+    setDialogMode('view');
+    fetchTenantDetails(tenant.id);
+  };
+
   // ── Impersonation ──
   const openImpersonate = (tenant: Tenant) => {
-    setSelectedTenant(tenant);
-    setImpersonateReason('');
-    setImpersonateDuration(30);
-    setDialogMode('impersonate');
+    setSelectedTenant(tenant); setImpersonateReason(''); setImpersonateDuration(30); setDialogMode('impersonate');
   };
 
   const handleStartImpersonation = async () => {
     if (!selectedTenant || !user || !platformIdentity) return;
     setImpersonating(true);
-
     dualIdentityEngine.setRealIdentity({
-      userId: user.id,
-      email: user.email ?? null,
-      userType: 'platform',
-      platformRole: platformIdentity.role,
-      authenticatedAt: Date.now(),
+      userId: user.id, email: user.email ?? null, userType: 'platform',
+      platformRole: platformIdentity.role, authenticatedAt: Date.now(),
     });
-
     const result = dualIdentityEngine.startImpersonation({
-      targetTenantId: selectedTenant.id,
-      targetTenantName: selectedTenant.name,
-      reason: impersonateReason.trim(),
-      maxDurationMinutes: impersonateDuration,
+      targetTenantId: selectedTenant.id, targetTenantName: selectedTenant.name,
+      reason: impersonateReason.trim(), maxDurationMinutes: impersonateDuration,
     });
-
     if (!result.success) {
       toast({ title: 'Impersonação negada', description: result.reason, variant: 'destructive' });
-      setImpersonating(false);
-      return;
+      setImpersonating(false); return;
     }
-
     const expiresAt = new Date(Date.now() + impersonateDuration * 60_000).toISOString();
-    await supabase
-      .from('impersonation_sessions')
-      .insert({
-        platform_user_id: user.id,
-        tenant_id: selectedTenant.id,
-        reason: impersonateReason.trim(),
-        expires_at: expiresAt,
-        status: 'active',
-        simulated_role: 'tenant_admin',
-        metadata: {
-          session_id: result.session?.id,
-          platform_role: platformIdentity.role,
-        },
-      } as any);
-
-    toast({
-      title: 'Impersonação iniciada',
-      description: `Operando como TenantAdmin em ${selectedTenant.name}. Expira em ${impersonateDuration} min.`,
-    });
-
-    setDialogMode(null);
-    setImpersonating(false);
+    await supabase.from('impersonation_sessions').insert({
+      platform_user_id: user.id, tenant_id: selectedTenant.id, reason: impersonateReason.trim(),
+      expires_at: expiresAt, status: 'active', simulated_role: 'tenant_admin',
+      metadata: { session_id: result.session?.id, platform_role: platformIdentity.role },
+    } as any);
+    toast({ title: 'Impersonação iniciada', description: `Operando como TenantAdmin em ${selectedTenant.name}. Expira em ${impersonateDuration} min.` });
+    setDialogMode(null); setImpersonating(false);
     window.location.href = '/';
   };
 
-  // ── View Details ──
-  const openView = async (tenant: Tenant) => {
-    setSelectedTenant(tenant);
-    setDialogMode('view');
-
-    const { data } = await supabase
-      .from('tenant_plans')
-      .select('*')
-      .eq('tenant_id', tenant.id)
-      .in('status', ['active', 'trial'])
-      .maybeSingle();
-    setSelectedTenantPlan((data as TenantPlanRow) ?? null);
-  };
-
+  // ── Helpers ──
   const statusBadge = (status: string) => {
     if (status === 'active') return <Badge variant="default" className="bg-primary/10 text-primary border-0">Ativo</Badge>;
     if (status === 'suspended') return <Badge variant="destructive" className="bg-destructive/10 text-destructive border-0">Suspenso</Badge>;
     if (status === 'deleted') return <Badge variant="secondary" className="bg-muted text-muted-foreground border-0">Removido</Badge>;
-    if (status === 'trial') return <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-0">Trial</Badge>;
+    if (status === 'trial') return <Badge className="bg-amber-500/10 text-amber-600 border-0">Trial</Badge>;
     return <Badge variant="secondary">{status}</Badge>;
   };
 
-  const planStatusBadge = (status: string) => {
-    if (status === 'active') return <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-0">Ativo</Badge>;
-    if (status === 'trial') return <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-0">Trial</Badge>;
-    if (status === 'cancelled') return <Badge variant="secondary" className="bg-muted text-muted-foreground border-0">Cancelado</Badge>;
-    return <Badge variant="secondary">{status}</Badge>;
+  const invoiceStatusBadge = (status: string) => {
+    if (status === 'paid') return <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[10px]">Pago</Badge>;
+    if (status === 'pending') return <Badge className="bg-amber-500/10 text-amber-600 border-0 text-[10px]">Pendente</Badge>;
+    if (status === 'overdue') return <Badge className="bg-destructive/10 text-destructive border-0 text-[10px]">Vencida</Badge>;
+    return <Badge variant="secondary" className="text-[10px]">{status}</Badge>;
   };
+
+  const formatBRL = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -526,94 +505,51 @@ export default function PlatformTenants() {
           </div>
           <div>
             <h1 className="text-2xl font-bold font-display text-foreground">Tenants</h1>
-            <p className="text-sm text-muted-foreground">
-              {tenants.length} empresa{tenants.length !== 1 ? 's' : ''} cadastrada{tenants.length !== 1 ? 's' : ''}
-            </p>
+            <p className="text-sm text-muted-foreground">{tenants.length} empresa{tenants.length !== 1 ? 's' : ''} cadastrada{tenants.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
-
         {can('tenant.create') && (
           <Button onClick={() => setDialogMode('create')} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Novo Tenant
+            <Plus className="h-4 w-4" /> Novo Tenant
           </Button>
         )}
       </div>
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-4">
-        <Card>
-          <CardContent className="pt-5 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-              <Building2 className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold font-display">{tenants.filter(t => t.status === 'active').length}</p>
-              <p className="text-xs text-muted-foreground">Ativos</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10">
-              <Clock className="h-4 w-4 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold font-display">
-                {Object.values(tenantPlanMap).filter(p => p.status === 'trial').length}
-              </p>
-              <p className="text-xs text-muted-foreground">Em trial</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/10">
-              <Ban className="h-4 w-4 text-destructive" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold font-display">{tenants.filter(t => t.status === 'suspended').length}</p>
-              <p className="text-xs text-muted-foreground">Suspensos</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold font-display">{tenants.length}</p>
-              <p className="text-xs text-muted-foreground">Total</p>
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          { icon: Building2, label: 'Ativos', count: tenants.filter(t => t.status === 'active').length, color: 'bg-primary/10 text-primary' },
+          { icon: Clock, label: 'Em trial', count: Object.values(tenantPlanMap).filter(p => p.status === 'trial').length, color: 'bg-amber-500/10 text-amber-500' },
+          { icon: Ban, label: 'Suspensos', count: tenants.filter(t => t.status === 'suspended').length, color: 'bg-destructive/10 text-destructive' },
+          { icon: Users, label: 'Total', count: tenants.length, color: 'bg-muted text-muted-foreground' },
+        ].map(s => (
+          <Card key={s.label}>
+            <CardContent className="pt-5 flex items-center gap-3">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${s.color.split(' ')[0]}`}>
+                <s.icon className={`h-4 w-4 ${s.color.split(' ')[1]}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold font-display">{s.count}</p>
+                <p className="text-xs text-muted-foreground">{s.label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Search + Table */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, CNPJ ou email..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="pl-9 h-9"
-              />
-            </div>
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar por nome, CNPJ ou email..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9" />
           </div>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-12 text-sm text-muted-foreground">
-              Nenhum tenant encontrado.
-            </div>
+            <div className="text-center py-12 text-sm text-muted-foreground">Nenhum tenant encontrado.</div>
           ) : (
             <Table>
               <TableHeader>
@@ -631,33 +567,19 @@ export default function PlatformTenants() {
                 {filtered.map(tenant => (
                   <TableRow key={tenant.id} className={tenant.status === 'deleted' ? 'opacity-50' : ''}>
                     <TableCell className="font-medium">{tenant.name}</TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-xs">
-                      {tenant.document || '—'}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs">{tenant.document || '—'}</TableCell>
                     <TableCell>
-                      {tenantPlanMap[tenant.id] ? (
-                        <PlanBadge
-                          tier={tenantPlanMap[tenant.id].tier}
-                          planName={tenantPlanMap[tenant.id].planName}
-                          size="sm"
-                        />
-                      ) : (
-                        <PlanBadge tier="free" size="sm" />
-                      )}
+                      {tenantPlanMap[tenant.id]
+                        ? <PlanBadge tier={tenantPlanMap[tenant.id].tier} planName={tenantPlanMap[tenant.id].planName} size="sm" />
+                        : <PlanBadge tier="free" size="sm" />}
                     </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">{memberCounts[tenant.id] ?? 0}</span>
-                    </TableCell>
+                    <TableCell><span className="text-sm text-muted-foreground">{memberCounts[tenant.id] ?? 0}</span></TableCell>
                     <TableCell>{statusBadge(tenant.status)}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(tenant.created_at), 'dd/MM/yyyy')}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{format(new Date(tenant.created_at), 'dd/MM/yyyy')}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openView(tenant)}>
@@ -686,28 +608,15 @@ export default function PlatformTenants() {
                           {can('tenant.suspend') && tenant.status !== 'deleted' && (
                             <>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleToggleStatus(tenant)}
-                                className={tenant.status === 'active' ? 'text-destructive focus:text-destructive' : 'text-primary focus:text-primary'}
-                              >
-                                {tenant.status === 'active' ? (
-                                  <><Ban className="h-4 w-4 mr-2" /> Suspender</>
-                                ) : (
-                                  <><CheckCircle className="h-4 w-4 mr-2" /> Reativar</>
-                                )}
+                              <DropdownMenuItem onClick={() => handleToggleStatus(tenant)}
+                                className={tenant.status === 'active' ? 'text-destructive focus:text-destructive' : 'text-primary focus:text-primary'}>
+                                {tenant.status === 'active' ? <><Ban className="h-4 w-4 mr-2" /> Suspender</> : <><CheckCircle className="h-4 w-4 mr-2" /> Reativar</>}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive focus:text-destructive"
+                                onClick={() => { setTenantToDelete(tenant); setDeleteConfirmOpen(true); }}>
+                                <Trash2 className="h-4 w-4 mr-2" /> Remover tenant
                               </DropdownMenuItem>
                             </>
-                          )}
-                          {can('tenant.suspend') && tenant.status !== 'deleted' && (
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => {
-                                setTenantToDelete(tenant);
-                                setDeleteConfirmOpen(true);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" /> Remover tenant
-                            </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -719,6 +628,341 @@ export default function PlatformTenants() {
           )}
         </CardContent>
       </Card>
+
+      {/* ═══ View Tenant Detail Dialog ═══ */}
+      <Dialog open={dialogMode === 'view'} onOpenChange={open => !open && setDialogMode(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0">
+          <DialogHeader className="px-6 pt-6 pb-0">
+            <DialogTitle className="font-display flex items-center gap-2">
+              {selectedTenant?.name}
+              {selectedTenant && statusBadge(selectedTenant.status)}
+            </DialogTitle>
+            <DialogDescription>Painel completo do tenant</DialogDescription>
+          </DialogHeader>
+          {selectedTenant && (
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="mx-6 grid w-[calc(100%-3rem)] grid-cols-4">
+                <TabsTrigger value="overview" className="text-xs">Visão geral</TabsTrigger>
+                <TabsTrigger value="financial" className="text-xs">Financeiro</TabsTrigger>
+                <TabsTrigger value="support" className="text-xs">Atendimento</TabsTrigger>
+                <TabsTrigger value="usage" className="text-xs">Uso</TabsTrigger>
+              </TabsList>
+
+              <ScrollArea className="h-[60vh]">
+                {/* ── Overview ── */}
+                <TabsContent value="overview" className="px-6 pb-6 space-y-4">
+                  {/* Info cards */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <FileText className="h-4 w-4 shrink-0" />
+                      <span className="font-mono">{selectedTenant.document || '—'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Mail className="h-4 w-4 shrink-0" />
+                      <span>{selectedTenant.email || '—'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Phone className="h-4 w-4 shrink-0" />
+                      <span>{selectedTenant.phone || '—'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{selectedTenant.address || '—'}</span>
+                    </div>
+                  </div>
+
+                  {/* Plan card */}
+                  {detailsLoading ? (
+                    <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                  ) : tenantDetails?.plan ? (
+                    <Card>
+                      <CardContent className="pt-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-foreground">{tenantDetails.plan.plan_name}</p>
+                            <p className="text-xs text-muted-foreground capitalize">{tenantDetails.plan.billing_cycle} · {tenantDetails.plan.status}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold font-display text-foreground">{formatBRL(tenantDetails.plan.plan_price)}</p>
+                            <p className="text-xs text-muted-foreground">/mês</p>
+                          </div>
+                        </div>
+                        {tenantDetails.plan.next_billing_date && (
+                          <p className="text-xs text-muted-foreground">Próxima cobrança: {format(new Date(tenantDetails.plan.next_billing_date), 'dd/MM/yyyy')}</p>
+                        )}
+                        {tenantDetails.plan.trial_ends_at && (
+                          <p className="text-xs text-amber-600">Trial expira: {format(new Date(tenantDetails.plan.trial_ends_at), 'dd/MM/yyyy')}</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card>
+                      <CardContent className="pt-4 text-center">
+                        <PlanBadge tier="free" size="sm" />
+                        <p className="text-xs text-muted-foreground mt-1">Sem plano ativo vinculado</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Usage summary */}
+                  {tenantDetails && (
+                    <div className="grid grid-cols-4 gap-3">
+                      {[
+                        { label: 'Empresas', value: tenantDetails.usage.companies, icon: Building2 },
+                        { label: 'Funcionários', value: tenantDetails.usage.employees, icon: Users },
+                        { label: 'Membros', value: tenantDetails.usage.members, icon: UserCog },
+                        { label: 'Módulos', value: `${tenantDetails.usage.active_modules}/${tenantDetails.usage.total_modules}`, icon: Puzzle },
+                      ].map(item => (
+                        <div key={item.label} className="rounded-lg border border-border p-3 text-center">
+                          <item.icon className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
+                          <p className="text-lg font-bold font-display">{item.value}</p>
+                          <p className="text-[10px] text-muted-foreground">{item.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Quick actions */}
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={() => { setDialogMode(null); setTimeout(() => openEdit(selectedTenant), 150); }}>
+                      <Pencil className="h-3.5 w-3.5" /> Editar
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={() => { setDialogMode(null); setTimeout(() => openChangePlan(selectedTenant), 150); }}>
+                      <ArrowRightLeft className="h-3.5 w-3.5" /> Plano
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={() => { setDialogMode(null); setTimeout(() => openModules(selectedTenant), 150); }}>
+                      <Puzzle className="h-3.5 w-3.5" /> Módulos
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                {/* ── Financial ── */}
+                <TabsContent value="financial" className="px-6 pb-6 space-y-4">
+                  {detailsLoading ? (
+                    <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                  ) : tenantDetails ? (
+                    <>
+                      {/* Financial summary */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="rounded-lg border border-border p-3 text-center">
+                          <DollarSign className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
+                          <p className="text-lg font-bold font-display">{formatBRL(tenantDetails.invoices.summary.total_billed)}</p>
+                          <p className="text-[10px] text-muted-foreground">Total faturado</p>
+                        </div>
+                        <div className="rounded-lg border border-border p-3 text-center">
+                          <CreditCard className="h-4 w-4 text-emerald-500 mx-auto mb-1" />
+                          <p className="text-lg font-bold font-display text-emerald-600">{formatBRL(tenantDetails.invoices.summary.total_paid)}</p>
+                          <p className="text-[10px] text-muted-foreground">Total pago</p>
+                        </div>
+                        <div className="rounded-lg border border-border p-3 text-center">
+                          <AlertTriangle className="h-4 w-4 text-amber-500 mx-auto mb-1" />
+                          <p className="text-lg font-bold font-display">{tenantDetails.invoices.summary.overdue}</p>
+                          <p className="text-[10px] text-muted-foreground">Faturas vencidas</p>
+                        </div>
+                      </div>
+
+                      {/* Recent invoices */}
+                      <div>
+                        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                          <Receipt className="h-3.5 w-3.5" /> Últimas faturas
+                        </h4>
+                        {tenantDetails.invoices.recent.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-4">Nenhuma fatura emitida.</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {tenantDetails.invoices.recent.map(inv => (
+                              <div key={inv.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/60 text-sm">
+                                <div className="space-y-0.5">
+                                  <p className="font-mono text-xs text-muted-foreground">#{inv.id.slice(0, 8)}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {inv.billing_period_start && format(new Date(inv.billing_period_start), 'dd/MM/yy')}
+                                    {inv.billing_period_end && ` — ${format(new Date(inv.billing_period_end), 'dd/MM/yy')}`}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  {invoiceStatusBadge(inv.status)}
+                                  <span className="font-medium text-foreground">{formatBRL(inv.total_amount)}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Financial ledger */}
+                      <div>
+                        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                          <Activity className="h-3.5 w-3.5" /> Movimentações financeiras
+                        </h4>
+                        {tenantDetails.financial_entries.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-4">Nenhuma movimentação registrada.</p>
+                        ) : (
+                          <div className="space-y-1">
+                            {tenantDetails.financial_entries.map(entry => (
+                              <div key={entry.id} className="flex items-center justify-between p-2 rounded-lg text-sm hover:bg-muted/30">
+                                <div className="flex items-center gap-2">
+                                  <div className={`h-1.5 w-1.5 rounded-full ${entry.entry_type === 'charge' ? 'bg-emerald-500' : entry.entry_type === 'refund' ? 'bg-destructive' : 'bg-amber-500'}`} />
+                                  <span className="text-muted-foreground text-xs">{entry.description}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className={`font-mono text-xs ${entry.entry_type === 'charge' ? 'text-emerald-600' : 'text-destructive'}`}>
+                                    {entry.entry_type === 'charge' ? '+' : '-'}{formatBRL(entry.amount)}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground">{format(new Date(entry.created_at), 'dd/MM')}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">Dados não disponíveis.</p>
+                  )}
+                </TabsContent>
+
+                {/* ── Support ── */}
+                <TabsContent value="support" className="px-6 pb-6 space-y-4">
+                  {detailsLoading ? (
+                    <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                  ) : tenantDetails ? (
+                    <>
+                      {/* Support summary */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="rounded-lg border border-border p-3 text-center">
+                          <Headphones className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
+                          <p className="text-lg font-bold font-display">{tenantDetails.support.total_sessions}</p>
+                          <p className="text-[10px] text-muted-foreground">Total atendimentos</p>
+                        </div>
+                        <div className="rounded-lg border border-border p-3 text-center">
+                          <CheckCircle className="h-4 w-4 text-emerald-500 mx-auto mb-1" />
+                          <p className="text-lg font-bold font-display text-emerald-600">{tenantDetails.support.resolved}</p>
+                          <p className="text-[10px] text-muted-foreground">Resolvidos</p>
+                        </div>
+                        <div className="rounded-lg border border-border p-3 text-center">
+                          <TrendingUp className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
+                          <p className="text-lg font-bold font-display">
+                            {tenantDetails.support.total_sessions > 0
+                              ? Math.round((tenantDetails.support.resolved / tenantDetails.support.total_sessions) * 100)
+                              : 0}%
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">Taxa resolução</p>
+                        </div>
+                      </div>
+
+                      {/* By priority */}
+                      <div>
+                        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Por prioridade</h4>
+                        <div className="grid grid-cols-4 gap-2">
+                          {Object.entries(tenantDetails.support.by_priority).map(([priority, count]) => (
+                            <div key={priority} className="rounded-lg border border-border/60 p-2 text-center">
+                              <p className="text-sm font-bold">{count}</p>
+                              <p className="text-[10px] text-muted-foreground capitalize">{priority}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* By month */}
+                      <div>
+                        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                          <BarChart3 className="h-3.5 w-3.5" /> Atendimentos por mês
+                        </h4>
+                        {Object.keys(tenantDetails.support.by_month).length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-4">Nenhum atendimento registrado.</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {Object.entries(tenantDetails.support.by_month)
+                              .sort(([a], [b]) => b.localeCompare(a))
+                              .slice(0, 6)
+                              .map(([month, data]) => (
+                                <div key={month} className="flex items-center justify-between p-2 rounded-lg border border-border/60 text-sm">
+                                  <span className="font-mono text-muted-foreground">{month}</span>
+                                  <div className="flex items-center gap-3 text-xs">
+                                    <span className="text-foreground font-medium">{data.total} total</span>
+                                    <span className="text-emerald-600">{data.resolved} resolvidos</span>
+                                    {data.pending > 0 && <span className="text-amber-600">{data.pending} pendentes</span>}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">Dados não disponíveis.</p>
+                  )}
+                </TabsContent>
+
+                {/* ── Usage ── */}
+                <TabsContent value="usage" className="px-6 pb-6 space-y-4">
+                  {detailsLoading ? (
+                    <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                  ) : tenantDetails ? (
+                    <>
+                      {/* Modules */}
+                      <div>
+                        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                          <Puzzle className="h-3.5 w-3.5" /> Módulos ativos
+                        </h4>
+                        <div className="space-y-1.5">
+                          {tenantDetails.usage.modules.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-4">Nenhum módulo vinculado.</p>
+                          ) : (
+                            tenantDetails.usage.modules.map(mod => {
+                              const def = PLATFORM_MODULES.find(m => m.key === mod.module_key);
+                              return (
+                                <div key={mod.module_key} className="flex items-center justify-between p-2.5 rounded-lg border border-border/60">
+                                  <div className="space-y-0.5">
+                                    <p className="text-sm font-medium">{def?.label ?? mod.module_key}</p>
+                                    {def?.description && <p className="text-[10px] text-muted-foreground">{def.description}</p>}
+                                  </div>
+                                  <Badge className={mod.is_active ? 'bg-emerald-500/10 text-emerald-600 border-0 text-[10px]' : 'bg-muted text-muted-foreground border-0 text-[10px]'}>
+                                    {mod.is_active ? 'Ativo' : 'Inativo'}
+                                  </Badge>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Members */}
+                      <div>
+                        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                          <Users className="h-3.5 w-3.5" /> Membros ({tenantDetails.memberships.length})
+                        </h4>
+                        <div className="space-y-1">
+                          {tenantDetails.memberships.map(m => (
+                            <div key={m.id} className="flex items-center justify-between p-2 rounded-lg text-sm hover:bg-muted/30">
+                              <span className="font-mono text-xs text-muted-foreground">{m.user_id.slice(0, 12)}…</span>
+                              <Badge variant="outline" className="text-[10px]">{m.role}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Meta */}
+                      <div className="border-t border-border pt-3 space-y-2 text-sm">
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Criado em</span>
+                          <span>{format(new Date(selectedTenant.created_at), 'dd/MM/yyyy HH:mm')}</span>
+                        </div>
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>ID</span>
+                          <span className="font-mono text-xs">{selectedTenant.id}</span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">Dados não disponíveis.</p>
+                  )}
+                </TabsContent>
+              </ScrollArea>
+            </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ═══ Create Tenant Dialog ═══ */}
       <Dialog open={dialogMode === 'create'} onOpenChange={open => !open && setDialogMode(null)}>
@@ -750,36 +994,22 @@ export default function PlatformTenants() {
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Endereço</Label>
               <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Rua, número, cidade - UF" />
             </div>
-
-            {/* Plan selection */}
             <div className="border-t border-border pt-4 space-y-3">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <Package className="h-3.5 w-3.5" /> Plano SaaS
               </p>
               <div className="grid gap-2">
                 {availablePlans.map(plan => (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, planId: plan.id }))}
+                  <button key={plan.id} type="button" onClick={() => setForm(f => ({ ...f, planId: plan.id }))}
                     className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-all ${
-                      form.planId === plan.id
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border text-muted-foreground hover:border-primary/30'
-                    }`}
-                  >
+                      form.planId === plan.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary/30'
+                    }`}>
                     <span className="font-medium">{plan.name}</span>
-                    <span className="text-xs">
-                      {plan.price === 0 ? 'Gratuito' : `R$ ${plan.price.toFixed(2).replace('.', ',')} /${plan.billing_cycle === 'monthly' ? 'mês' : 'ano'}`}
-                    </span>
+                    <span className="text-xs">{plan.price === 0 ? 'Gratuito' : `R$ ${plan.price.toFixed(2).replace('.', ',')} /mês`}</span>
                   </button>
                 ))}
-                {availablePlans.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic">Nenhum plano ativo cadastrado.</p>
-                )}
               </div>
             </div>
-
             <div className="border-t border-border pt-4 space-y-3">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Primeiro Administrador</p>
               <div className="space-y-1.5">
@@ -802,147 +1032,23 @@ export default function PlatformTenants() {
         </DialogContent>
       </Dialog>
 
-      {/* ═══ View Tenant Dialog ═══ */}
-      <Dialog open={dialogMode === 'view'} onOpenChange={open => !open && setDialogMode(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-display flex items-center gap-2">
-              {selectedTenant?.name}
-              {selectedTenant && statusBadge(selectedTenant.status)}
-            </DialogTitle>
-            <DialogDescription>Detalhes completos do tenant</DialogDescription>
-          </DialogHeader>
-          {selectedTenant && (
-            <Tabs defaultValue="info" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="info">Informações</TabsTrigger>
-                <TabsTrigger value="plan">Plano & Assinatura</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="info" className="space-y-3 pt-2 text-sm">
-                <div className="grid gap-3">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <FileText className="h-4 w-4 shrink-0" />
-                    <span className="font-mono">{selectedTenant.document || '—'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="h-4 w-4 shrink-0" />
-                    <span>{selectedTenant.email || '—'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-4 w-4 shrink-0" />
-                    <span>{selectedTenant.phone || '—'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="h-4 w-4 shrink-0" />
-                    <span>{selectedTenant.address || '—'}</span>
-                  </div>
-                </div>
-                <div className="border-t border-border pt-3 space-y-2">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Membros</span>
-                    <span className="font-medium text-foreground">{memberCounts[selectedTenant.id] ?? 0}</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Criado em</span>
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {format(new Date(selectedTenant.created_at), 'dd/MM/yyyy HH:mm')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>ID</span>
-                    <span className="font-mono text-xs">{selectedTenant.id.slice(0, 12)}…</span>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="plan" className="space-y-3 pt-2 text-sm">
-                {tenantPlanMap[selectedTenant.id] ? (
-                  <>
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-                      <div>
-                        <p className="font-medium text-foreground">{tenantPlanMap[selectedTenant.id].planName}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{tenantPlanMap[selectedTenant.id].billingCycle}</p>
-                      </div>
-                      <PlanBadge tier={tenantPlanMap[selectedTenant.id].tier} size="sm" />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Status assinatura</span>
-                        {planStatusBadge(tenantPlanMap[selectedTenant.id].status)}
-                      </div>
-                      {selectedTenantPlan?.started_at && (
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>Início</span>
-                          <span>{format(new Date(selectedTenantPlan.started_at), 'dd/MM/yyyy')}</span>
-                        </div>
-                      )}
-                      {selectedTenantPlan?.next_billing_date && (
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>Próxima cobrança</span>
-                          <span>{format(new Date(selectedTenantPlan.next_billing_date), 'dd/MM/yyyy')}</span>
-                        </div>
-                      )}
-                      {selectedTenantPlan?.trial_ends_at && (
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>Trial até</span>
-                          <span>{format(new Date(selectedTenantPlan.trial_ends_at), 'dd/MM/yyyy')}</span>
-                        </div>
-                      )}
-                      {selectedTenantPlan?.payment_method && (
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>Meio de pagamento</span>
-                          <span className="capitalize">{selectedTenantPlan.payment_method}</span>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-4">
-                    <PlanBadge tier="free" size="sm" />
-                    <p className="text-xs text-muted-foreground mt-2">Sem plano ativo vinculado</p>
-                  </div>
-                )}
-
-                <div className="pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full gap-2"
-                    onClick={() => {
-                      setDialogMode(null);
-                      setTimeout(() => openChangePlan(selectedTenant), 150);
-                    }}
-                  >
-                    <ArrowRightLeft className="h-3.5 w-3.5" />
-                    Alterar plano
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* ═══ Edit Tenant Dialog ═══ */}
       <Dialog open={dialogMode === 'edit'} onOpenChange={open => !open && setDialogMode(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-2">
-              <Pencil className="h-5 w-5 text-primary" />
-              Editar Tenant
+              <Pencil className="h-5 w-5 text-primary" /> Editar Tenant
             </DialogTitle>
             <DialogDescription>Atualize os dados cadastrais de {selectedTenant?.name}.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nome da empresa *</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nome *</Label>
               <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">CNPJ</Label>
-              <Input value={editForm.document} onChange={e => setEditForm(f => ({ ...f, document: e.target.value }))} placeholder="00.000.000/0000-00" />
+              <Input value={editForm.document} onChange={e => setEditForm(f => ({ ...f, document: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -956,14 +1062,12 @@ export default function PlatformTenants() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Endereço</Label>
-              <Input value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} placeholder="Rua, número, cidade - UF" />
+              <Input value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status</Label>
               <Select value={editForm.status} onValueChange={v => setEditForm(f => ({ ...f, status: v }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Ativo</SelectItem>
                   <SelectItem value="suspended">Suspenso</SelectItem>
@@ -975,8 +1079,7 @@ export default function PlatformTenants() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogMode(null)}>Cancelar</Button>
             <Button onClick={handleSaveEdit} disabled={saving || !editForm.name.trim()} className="gap-2">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-              Salvar
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />} Salvar
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -987,54 +1090,32 @@ export default function PlatformTenants() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-2">
-              <ArrowRightLeft className="h-5 w-5 text-primary" />
-              Trocar Plano
+              <ArrowRightLeft className="h-5 w-5 text-primary" /> Trocar Plano
             </DialogTitle>
             <DialogDescription>
               Altere o plano de {selectedTenant?.name}.
-              {selectedTenantPlan && (
-                <span className="block mt-1">
-                  Plano atual: <strong>{availablePlans.find(p => p.id === selectedTenantPlan.plan_id)?.name ?? 'Desconhecido'}</strong>
-                </span>
-              )}
+              {selectedTenantPlan && <span className="block mt-1">Plano atual: <strong>{availablePlans.find(p => p.id === selectedTenantPlan.plan_id)?.name}</strong></span>}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Novo plano</Label>
-              <div className="grid gap-2">
-                {availablePlans.map(plan => {
-                  const isCurrent = plan.id === selectedTenantPlan?.plan_id;
-                  return (
-                    <button
-                      key={plan.id}
-                      type="button"
-                      onClick={() => setNewPlanId(plan.id)}
-                      className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-all ${
-                        newPlanId === plan.id
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border text-muted-foreground hover:border-primary/30'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{plan.name}</span>
-                        {isCurrent && <Badge variant="outline" className="text-[10px] h-5">Atual</Badge>}
-                      </div>
-                      <span className="text-xs">
-                        {plan.price === 0 ? 'Gratuito' : `R$ ${plan.price.toFixed(2).replace('.', ',')} /mês`}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="grid gap-2">
+              {availablePlans.map(plan => (
+                <button key={plan.id} type="button" onClick={() => setNewPlanId(plan.id)}
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-all ${
+                    newPlanId === plan.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary/30'
+                  }`}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{plan.name}</span>
+                    {plan.id === selectedTenantPlan?.plan_id && <Badge variant="outline" className="text-[10px] h-5">Atual</Badge>}
+                  </div>
+                  <span className="text-xs">{plan.price === 0 ? 'Gratuito' : `R$ ${plan.price.toFixed(2).replace('.', ',')} /mês`}</span>
+                </button>
+              ))}
             </div>
-
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Ciclo de cobrança</Label>
               <Select value={newBillingCycle} onValueChange={setNewBillingCycle}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="monthly">Mensal</SelectItem>
                   <SelectItem value="quarterly">Trimestral</SelectItem>
@@ -1042,16 +1123,12 @@ export default function PlatformTenants() {
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Modules preview */}
             {newPlanId && (
               <div className="border-t border-border pt-3 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Módulos inclusos</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(availablePlans.find(p => p.id === newPlanId)?.allowed_modules ?? []).map(mod => (
-                    <Badge key={mod} variant="secondary" className="text-[10px]">
-                      {PLATFORM_MODULES.find(m => m.key === mod)?.label ?? mod}
-                    </Badge>
+                    <Badge key={mod} variant="secondary" className="text-[10px]">{PLATFORM_MODULES.find(m => m.key === mod)?.label ?? mod}</Badge>
                   ))}
                 </div>
               </div>
@@ -1059,13 +1136,8 @@ export default function PlatformTenants() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogMode(null)}>Cancelar</Button>
-            <Button
-              onClick={handleChangePlan}
-              disabled={saving || !newPlanId || newPlanId === selectedTenantPlan?.plan_id}
-              className="gap-2"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" />}
-              Confirmar troca
+            <Button onClick={handleChangePlan} disabled={saving || !newPlanId || newPlanId === selectedTenantPlan?.plan_id} className="gap-2">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" />} Confirmar troca
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1076,33 +1148,23 @@ export default function PlatformTenants() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-2">
-              <Puzzle className="h-5 w-5 text-primary" />
-              Módulos — {selectedTenant?.name}
+              <Puzzle className="h-5 w-5 text-primary" /> Módulos — {selectedTenant?.name}
             </DialogTitle>
             <DialogDescription>Ative ou desative módulos para este tenant.</DialogDescription>
           </DialogHeader>
           {modulesLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
+            <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : (
             <div className="space-y-2 py-2 max-h-[400px] overflow-y-auto">
               {PLATFORM_MODULES.map(mod => {
                 const active = isModuleActive(mod.key);
                 return (
-                  <div
-                    key={mod.key}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border/60 hover:bg-muted/30 transition-colors"
-                  >
+                  <div key={mod.key} className="flex items-center justify-between p-3 rounded-lg border border-border/60 hover:bg-muted/30 transition-colors">
                     <div className="space-y-0.5">
                       <p className="text-sm font-medium text-foreground">{mod.label}</p>
                       <p className="text-xs text-muted-foreground">{mod.description}</p>
                     </div>
-                    <Switch
-                      checked={active}
-                      onCheckedChange={() => toggleModule(mod.key, active)}
-                      disabled={!can('module.enable')}
-                    />
+                    <Switch checked={active} onCheckedChange={() => toggleModule(mod.key, active)} disabled={!can('module.enable')} />
                   </div>
                 );
               })}
@@ -1111,21 +1173,18 @@ export default function PlatformTenants() {
         </DialogContent>
       </Dialog>
 
-      {/* ═══ Impersonate Tenant Dialog ═══ */}
+      {/* ═══ Impersonate Dialog ═══ */}
       <Dialog open={dialogMode === 'impersonate'} onOpenChange={open => !open && setDialogMode(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-2">
-              <Shield className="h-5 w-5 text-amber-500" />
-              Entrar como Tenant
+              <Shield className="h-5 w-5 text-amber-500" /> Entrar como Tenant
             </DialogTitle>
             <DialogDescription>
               Você irá operar como <span className="font-semibold text-foreground">TenantAdmin</span> no ambiente de{' '}
-              <span className="font-semibold text-foreground">{selectedTenant?.name}</span>.
-              Todas as ações serão auditadas.
+              <span className="font-semibold text-foreground">{selectedTenant?.name}</span>. Todas as ações serão auditadas.
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4 py-2">
             <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <Shield className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
@@ -1138,73 +1197,39 @@ export default function PlatformTenants() {
                 </ul>
               </div>
             </div>
-
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                Motivo da impersonação *
-              </Label>
-              <Textarea
-                value={impersonateReason}
-                onChange={e => setImpersonateReason(e.target.value)}
-                placeholder="Ex: Investigação de ticket #1234 — usuário reportou erro na folha"
-                rows={3}
-                className="resize-none"
-              />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Motivo *</Label>
+              <Textarea value={impersonateReason} onChange={e => setImpersonateReason(e.target.value)}
+                placeholder="Ex: Investigação de ticket #1234" rows={3} className="resize-none" />
             </div>
-
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" />
-                Duração (minutos)
+                <Clock className="h-3.5 w-3.5" /> Duração (minutos)
               </Label>
               <div className="flex items-center gap-3">
                 {[15, 30, 60, 120].map(min => (
-                  <Button
-                    key={min}
-                    size="sm"
-                    variant={impersonateDuration === min ? 'default' : 'outline'}
-                    onClick={() => setImpersonateDuration(min)}
-                    className="flex-1"
-                  >
-                    {min}m
-                  </Button>
+                  <Button key={min} size="sm" variant={impersonateDuration === min ? 'default' : 'outline'}
+                    onClick={() => setImpersonateDuration(min)} className="flex-1">{min}m</Button>
                 ))}
               </div>
             </div>
-
             <div className="rounded-lg border border-border/60 p-3 space-y-2 text-xs">
               <div className="flex justify-between text-muted-foreground">
-                <span>Identidade real</span>
-                <span className="font-mono text-foreground">{user?.email}</span>
+                <span>Identidade real</span><span className="font-mono text-foreground">{user?.email}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>Role de plataforma</span>
-                <Badge variant="outline" className="text-[10px] h-5">{platformIdentity?.role}</Badge>
+                <span>Role</span><Badge variant="outline" className="text-[10px] h-5">{platformIdentity?.role}</Badge>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>Tenant alvo</span>
-                <span className="font-medium text-foreground">{selectedTenant?.name}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Role simulada</span>
-                <Badge variant="outline" className="text-[10px] h-5 bg-amber-500/10 text-amber-600 border-amber-500/30">tenant_admin</Badge>
+                <span>Tenant alvo</span><span className="font-medium text-foreground">{selectedTenant?.name}</span>
               </div>
             </div>
           </div>
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogMode(null)}>Cancelar</Button>
-            <Button
-              onClick={handleStartImpersonation}
-              disabled={impersonating || !impersonateReason.trim()}
-              className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              {impersonating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <UserCog className="h-4 w-4" />
-              )}
-              Iniciar Impersonação
+            <Button onClick={handleStartImpersonation} disabled={impersonating || !impersonateReason.trim()}
+              className="gap-2 bg-amber-600 hover:bg-amber-700 text-white">
+              {impersonating ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCog className="h-4 w-4" />} Iniciar Impersonação
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1216,18 +1241,13 @@ export default function PlatformTenants() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remover tenant?</AlertDialogTitle>
             <AlertDialogDescription>
-              O tenant <strong>{tenantToDelete?.name}</strong> será desativado e todos os planos ativos serão cancelados.
-              Esta ação pode ser revertida reativando o tenant posteriormente.
+              O tenant <strong>{tenantToDelete?.name}</strong> será desativado e todos os planos cancelados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteTenant}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-              Remover
+            <AlertDialogAction onClick={handleDeleteTenant} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />} Remover
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
