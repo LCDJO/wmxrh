@@ -90,3 +90,14 @@ export type {
   EsocialGovernanceLogEntry,
   CreateLogInput as EsocialGovernanceCreateLogInput,
 } from './esocial-governance-audit.service';
+
+// Security Layer
+export {
+  checkEsocialGovernanceAccess,
+  guardEsocialAccess,
+  canViewTenant,
+} from './esocial-governance-security';
+export type {
+  EsocialAccessLevel,
+  EsocialAccessCheckResult,
+} from './esocial-governance-security';
