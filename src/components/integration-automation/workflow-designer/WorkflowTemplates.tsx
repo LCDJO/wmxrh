@@ -26,8 +26,8 @@ interface WorkflowTemplate {
 const TEMPLATES: WorkflowTemplate[] = [
   {
     id: 'onboard-tenant',
-    name: 'Onboarding de Tenant',
-    description: 'Cria usuário admin, envia email de boas-vindas e atribui plano free ao criar tenant',
+    name: 'Onboarding de Cliente',
+    description: 'Cria usuário admin, envia email de boas-vindas e atribui plano free ao criar cliente',
     category: 'Lifecycle',
     icon: Users,
     color: 'hsl(200 70% 50%)',

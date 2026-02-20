@@ -78,7 +78,7 @@ export default function LaborRulesPage() {
           ) : ruleSets.length === 0 ? (
             <Card><CardContent className="py-12 text-center text-muted-foreground flex flex-col items-center gap-2">
               <CheckCircle2 className="h-10 w-10 text-primary" />
-              Nenhum conjunto de regras cadastrado. O seed automático é aplicado ao criar um tenant.
+              Nenhum conjunto de regras cadastrado. O seed automático é aplicado ao criar um cliente.
             </CardContent></Card>
           ) : (
             <div className="space-y-4">

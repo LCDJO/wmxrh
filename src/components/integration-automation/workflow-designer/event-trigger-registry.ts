@@ -76,7 +76,7 @@ const BILLING_CORE_TRIGGERS: EventTriggerDef[] = [
     domain: 'BillingCore',
     domainColor: 'hsl(145 60% 42%)',
     label: 'TenantPlanAssigned',
-    description: 'Plano atribuído ao tenant',
+    description: 'Plano atribuído ao cliente',
     payloadSchema: { tenantId: 'string', planId: 'string', planName: 'string' },
   },
   {
@@ -116,7 +116,7 @@ const BILLING_CORE_TRIGGERS: EventTriggerDef[] = [
     domain: 'BillingCore',
     domainColor: 'hsl(145 60% 42%)',
     label: 'CouponRedeemed',
-    description: 'Cupom resgatado por um tenant',
+    description: 'Cupom resgatado por um cliente',
     payloadSchema: { tenantId: 'string', couponCode: 'string', discountValue: 'number' },
   },
   {

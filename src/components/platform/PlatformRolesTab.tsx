@@ -12,7 +12,7 @@ import { Loader2, Shield, Lock, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const MODULE_LABELS: Record<string, string> = {
-  tenants: 'Tenants',
+  tenants: 'Clientes',
   modulos: 'Módulos',
   auditoria: 'Auditoria',
   financeiro: 'Financeiro',

@@ -93,7 +93,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Gestão',
     items: [
-      { to: '/platform/tenants', label: 'Tenants', icon: Building2, requiredPermission: 'tenant.view' },
+      { to: '/platform/tenants', label: 'Clientes', icon: Building2, requiredPermission: 'tenant.view' },
       { to: '/platform/users', label: 'Usuários', icon: Users, requiredPermission: 'platform_user.view' },
       { to: '/platform/modules', label: 'Módulos', icon: Puzzle, requiredPermission: 'module.view' },
       { to: '/platform/plans', label: 'Planos', icon: Package, requiredPermission: 'plan.manage' },
@@ -308,7 +308,7 @@ const NAV_SECTIONS: NavSection[] = [
                 label: 'Dashboards',
                 children: [
                   { to: '/platform/dashboard', label: 'Platform Dashboard' },
-                  { to: '/dashboard', label: 'Tenant Dashboard' },
+                  { to: '/dashboard', label: 'Cliente Dashboard' },
                   { to: '/platform/website', label: 'Website Dashboard' },
                   { to: '/platform/monitoring', label: 'Monitoramento Status' },
                   { to: '/platform/billing', label: 'Financeiro Overview' },

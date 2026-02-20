@@ -24,7 +24,7 @@ import type {
 
 const DOMAIN_CONFIG: Record<GraphDomain, { label: string; color: string; bgClass: string }> = {
   platform_access: { label: 'Platform Access', color: 'hsl(265 80% 55%)', bgClass: 'bg-purple-500/15 text-purple-400 border-purple-500/30' },
-  tenant_access: { label: 'Tenant Access', color: 'hsl(210 100% 52%)', bgClass: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
+  tenant_access: { label: 'Acesso Cliente', color: 'hsl(210 100% 52%)', bgClass: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
   permission: { label: 'Permissões', color: 'hsl(38 92% 50%)', bgClass: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
   module_access: { label: 'Módulos', color: 'hsl(150 60% 45%)', bgClass: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
   identity: { label: 'Identidade', color: 'hsl(0 72% 51%)', bgClass: 'bg-red-500/15 text-red-400 border-red-500/30' },

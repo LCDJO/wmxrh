@@ -301,7 +301,7 @@ export default function PlatformRevenueIntelligence() {
             </CardHeader>
             <CardContent>
               {churnRisks.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">Nenhum tenant em risco identificado. 🎉</p>
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhum cliente em risco identificado. 🎉</p>
               ) : (
                 <ScrollArea className="h-[400px]">
                   <div className="space-y-3">

@@ -397,7 +397,7 @@ export class FABContentEngine {
         { name: 'Ana Rodrigues', role: 'CEO', company: 'StartupXYZ', quote: 'Escalamos de 20 para 200 colaboradores sem contratar ninguém para o DP.' },
       ],
       stats: [
-        { label: 'Tenants ativos', value: '340+' },
+        { label: 'Clientes ativos', value: '340+' },
         { label: 'Colaboradores gerenciados', value: '12.000+' },
         { label: 'Economia média em DP', value: '40%' },
         { label: 'Tempo médio de admissão', value: '< 24h' },

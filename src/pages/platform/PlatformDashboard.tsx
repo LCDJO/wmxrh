@@ -146,7 +146,7 @@ export default function PlatformDashboard() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KpiCard label="MRR" value={formatCurrency(metrics.total_mrr)} subtitle={`Ticket médio: ${formatCurrency(metrics.avg_mrr)}`} icon={DollarSign} iconClass="text-emerald-500" bgClass="bg-emerald-500/10" />
           <KpiCard label="ARR" value={formatCurrency(metrics.total_mrr * 12)} subtitle="Receita anual recorrente" icon={TrendingUp} iconClass="text-primary" bgClass="bg-primary/10" />
-          <KpiCard label="Tenants Ativos" value={String(metrics.active_tenants)} subtitle={`${metrics.trial_subscriptions} trial · ${metrics.suspended_tenants} suspensos`} icon={Building2} iconClass="text-sky-500" bgClass="bg-sky-500/10" />
+          <KpiCard label="Clientes Ativos" value={String(metrics.active_tenants)} subtitle={`${metrics.trial_subscriptions} trial · ${metrics.suspended_tenants} suspensos`} icon={Building2} iconClass="text-sky-500" bgClass="bg-sky-500/10" />
           <KpiCard label="Churn Rate" value={`${metrics.churn_rate}%`} subtitle={`${metrics.churned_subscriptions} churned de ${metrics.active_subscriptions + metrics.churned_subscriptions}`} icon={metrics.churn_rate > 5 ? TrendingDown : TrendingUp} iconClass={metrics.churn_rate > 5 ? 'text-destructive' : 'text-emerald-500'} bgClass={metrics.churn_rate > 5 ? 'bg-destructive/10' : 'bg-emerald-500/10'} />
         </div>
       </section>
@@ -156,8 +156,8 @@ export default function PlatformDashboard() {
         <SectionHeader title="Receita & Distribuição" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-4">
           <KpiCard label="Assinaturas Ativas" value={String(metrics.active_subscriptions)} subtitle={`ARPA: ${formatCurrency(metrics.active_subscriptions > 0 ? metrics.total_mrr / metrics.active_subscriptions : 0)}`} icon={Activity} iconClass="text-amber-500" bgClass="bg-amber-500/10" />
-          <KpiCard label="Usuários Totais" value={String(metrics.total_users)} subtitle={`~${metrics.active_tenants > 0 ? Math.round(metrics.total_users / metrics.active_tenants) : 0} por tenant`} icon={Users} iconClass="text-sky-500" bgClass="bg-sky-500/10" />
-          <KpiCard label="Total Tenants" value={String(metrics.total_tenants)} subtitle={`${metrics.active_tenants} ativos · ${metrics.suspended_tenants} suspensos`} icon={Building2} iconClass="text-muted-foreground" bgClass="bg-muted/30" />
+          <KpiCard label="Usuários Totais" value={String(metrics.total_users)} subtitle={`~${metrics.active_tenants > 0 ? Math.round(metrics.total_users / metrics.active_tenants) : 0} por cliente`} icon={Users} iconClass="text-sky-500" bgClass="bg-sky-500/10" />
+          <KpiCard label="Total Clientes" value={String(metrics.total_tenants)} subtitle={`${metrics.active_tenants} ativos · ${metrics.suspended_tenants} suspensos`} icon={Building2} iconClass="text-muted-foreground" bgClass="bg-muted/30" />
         </div>
         <div className="grid gap-4 lg:grid-cols-5">
           <Card className="lg:col-span-3">
@@ -174,7 +174,7 @@ export default function PlatformDashboard() {
                   <BarChart data={barData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `R$${v}`} />
-                    <Tooltip formatter={(val: number) => formatCurrency(val)} labelFormatter={l => `Tenant: ${l}`} contentStyle={{ borderRadius: 8, border: '1px solid hsl(var(--border))' }} />
+                    <Tooltip formatter={(val: number) => formatCurrency(val)} labelFormatter={l => `Cliente: ${l}`} contentStyle={{ borderRadius: 8, border: '1px solid hsl(var(--border))' }} />
                     <Bar dataKey="mrr" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -358,7 +358,7 @@ export default function PlatformDashboard() {
             </CardHeader>
             <CardContent className="space-y-3">
               {metrics.recent_tenants.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum tenant cadastrado.</p>
+                <p className="text-sm text-muted-foreground">Nenhum cliente cadastrado.</p>
               ) : (
                 metrics.recent_tenants.slice(0, 6).map((t) => {
                   const sub = STATUS_LABELS[t.sub_status ?? ''] ?? { label: 'Sem plano', variant: 'secondary' as const };

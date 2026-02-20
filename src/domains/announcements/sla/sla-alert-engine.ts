@@ -156,7 +156,7 @@ export const GRADE_CONFIG: Record<TenantHealthScore['grade'], {
   color: string;
   description: string;
 }> = {
-  A: { label: 'Excelente', color: 'text-emerald-600', description: 'Tenant em conformidade total com operação saudável' },
+  A: { label: 'Excelente', color: 'text-emerald-600', description: 'Cliente em conformidade total com operação saudável' },
   B: { label: 'Bom', color: 'text-primary', description: 'Poucos pontos de atenção, operação estável' },
   C: { label: 'Regular', color: 'text-warning', description: 'Áreas críticas precisam de atenção' },
   D: { label: 'Preocupante', color: 'text-orange-600', description: 'Múltiplos riscos identificados, ação urgente necessária' },

@@ -237,7 +237,7 @@ export default function ModuleMonitoringPanel() {
                 <TableHead className="w-[200px]">Módulo</TableHead>
                 <TableHead className="w-[130px]">Status</TableHead>
                 <TableHead className="w-[120px]">Último Evento</TableHead>
-                <TableHead className="w-[100px] text-right">Tenants Ativos</TableHead>
+                <TableHead className="w-[100px] text-right">Clientes Ativos</TableHead>
                 <TableHead className="w-[90px] text-right">Latência</TableHead>
                 <TableHead className="w-[90px] text-right">Erros/1h</TableHead>
               </TableRow>

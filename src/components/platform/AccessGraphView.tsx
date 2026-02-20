@@ -28,7 +28,7 @@ const ROLE_META: Record<string, { icon: typeof Shield; color: string; bgColor: s
 const DEFAULT_META = { icon: Shield, color: 'text-muted-foreground', bgColor: 'bg-muted' };
 
 const MODULE_LABELS: Record<string, string> = {
-  tenants: 'Tenants', modulos: 'Módulos', auditoria: 'Auditoria',
+  tenants: 'Clientes', modulos: 'Módulos', auditoria: 'Auditoria',
   financeiro: 'Financeiro', fiscal: 'Fiscal', suporte: 'Suporte', usuarios: 'Usuários', seguranca: 'Segurança',
 };
 

@@ -180,7 +180,7 @@ export const __DOMAIN_CATALOG = {
     { name: 'RevenueUpdated', description: 'Receita atualizada (MRR/ARR)' },
     { name: 'UsageRecorded', description: 'Uso registrado (métrica + quantidade)' },
     { name: 'CouponCreated', description: 'Cupom criado na plataforma' },
-    { name: 'CouponRedeemed', description: 'Cupom resgatado por um tenant' },
+    { name: 'CouponRedeemed', description: 'Cupom resgatado por um cliente' },
     { name: 'InvoiceDiscountApplied', description: 'Desconto aplicado em fatura' },
     { name: 'UsageOverageCalculated', description: 'Excedente de uso calculado' },
   ],
