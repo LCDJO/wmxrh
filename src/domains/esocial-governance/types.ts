@@ -53,6 +53,16 @@ export interface EsocialTenantOverview {
   proximo_prazo: string | null;
 }
 
+export interface TenantESocialStatus {
+  tenant_id: string;
+  empresas_integradas: number;
+  empresas_com_erro: number;
+  eventos_pendentes: number;
+  eventos_rejeitados: number;
+  certificado_valido: boolean;
+  validade_certificado: string | null;
+}
+
 export interface EsocialCompanyStatus {
   company_id: string;
   company_name: string;

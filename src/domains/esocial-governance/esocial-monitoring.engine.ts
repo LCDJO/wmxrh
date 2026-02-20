@@ -17,6 +17,7 @@ import type {
   EsocialAlertType,
   EsocialGovernanceConfig,
   EsocialSystemStatus,
+  TenantESocialStatus,
 } from './types';
 import { emitEsocialGovEvent, esocialGovernanceEvents } from './esocial-governance.events';
 
@@ -166,6 +167,31 @@ export function getPlatformKPIs(): EsocialPlatformKPIs {
 /** Get tenant overviews for the monitoring table. */
 export function getTenantOverviews(): EsocialTenantOverview[] {
   return DEMO_TENANT_OVERVIEWS;
+}
+
+/** Get eSocial status for a specific tenant. */
+export function getTenantESocialStatus(tenantId: string): TenantESocialStatus {
+  const tenant = DEMO_TENANT_OVERVIEWS.find(t => t.tenant_id === tenantId);
+  if (!tenant) {
+    return {
+      tenant_id: tenantId,
+      empresas_integradas: 0,
+      empresas_com_erro: 0,
+      eventos_pendentes: 0,
+      eventos_rejeitados: 0,
+      certificado_valido: false,
+      validade_certificado: null,
+    };
+  }
+  return {
+    tenant_id: tenant.tenant_id,
+    empresas_integradas: tenant.empresas_em_dia,
+    empresas_com_erro: tenant.empresas_pendentes + tenant.empresas_bloqueadas,
+    eventos_pendentes: tenant.eventos_pendentes,
+    eventos_rejeitados: tenant.eventos_rejeitados,
+    certificado_valido: tenant.status !== 'nao_configurado',
+    validade_certificado: tenant.status !== 'nao_configurado' ? '2027-06-15T00:00:00Z' : null,
+  };
 }
 
 /** Get active alerts. */
