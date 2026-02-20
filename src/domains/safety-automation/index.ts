@@ -126,3 +126,14 @@ export type {
   SafetyInsight,
   SafetyInsightType,
 } from './workforce-intelligence-bridge';
+
+// Occupational Risk Integration
+export {
+  recalculateEmployeeRiskScore,
+  onSafetyTaskCompleted,
+  batchRecalculateRiskScores,
+} from './occupational-risk-integration';
+export type {
+  RiskScoreFactors,
+  RiskRecalculationResult,
+} from './occupational-risk-integration';
