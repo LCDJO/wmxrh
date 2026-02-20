@@ -29,6 +29,26 @@ export type RegulatoryAlertType =
   | 'CCT_UPDATED'
   | 'ESOCIAL_LAYOUT_CHANGED';
 
+export type RegulatorySourceType = 'dou' | 'mte' | 'ibge' | 'esocial' | 'manual' | 'api_externa';
+export type RegulatoryAuditEventType =
+  | 'LEGISLATION_UPDATED'
+  | 'NR_UPDATED'
+  | 'CCT_UPDATED'
+  | 'ESOCIAL_LAYOUT_CHANGED'
+  | 'SOURCE_CONFIGURED'
+  | 'SOURCE_UPDATED'
+  | 'SOURCE_DISABLED'
+  | 'IMPACT_ANALYZED'
+  | 'ACTION_GENERATED'
+  | 'ACTION_APPROVED'
+  | 'ACTION_REJECTED'
+  | 'ACTION_EXECUTED'
+  | 'DOCUMENT_VERSIONED'
+  | 'ALERT_GENERATED'
+  | 'ALERT_RESOLVED'
+  | 'MONITOR_CHECK'
+  | 'LEGAL_BASE_UPDATED';
+
 // ── Core Entities ──
 
 /** A legal norm tracked by the system */
@@ -210,4 +230,42 @@ export interface LegalBaseRefreshInput {
   norm: RegulatoryNorm;
   new_version: NormVersion;
   impacts: RegulatoryImpact[];
+}
+
+// ── Security Entities ──
+
+/** Configuration for a regulatory data source — SuperAdmin only */
+export interface RegulatorySourceConfig {
+  id: string;
+  tenant_id: string;
+  source_type: RegulatorySourceType;
+  nome: string;
+  url_base: string | null;
+  credenciais_ref: string | null;
+  is_active: boolean;
+  frequencia_verificacao: string;
+  tipos_monitorados: string[];
+  configurado_por: string;
+  configurado_em: string;
+  updated_at: string;
+  metadata: Record<string, unknown>;
+}
+
+/** Immutable audit log entry for regulatory operations */
+export interface RegulatoryAuditLogEntry {
+  id: string;
+  tenant_id: string;
+  event_type: RegulatoryAuditEventType;
+  actor_id: string;
+  actor_role: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  document_code: string | null;
+  descricao: string;
+  dados_antes: Record<string, unknown> | null;
+  dados_depois: Record<string, unknown> | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
 }
