@@ -22,6 +22,7 @@ export interface RiskScoreFactors {
   active_blocks: number;
   expired_trainings: number;
   overdue_exams: number;
+  missing_epis: number;
 }
 
 export interface RiskRecalculationResult {
@@ -46,7 +47,8 @@ function calculateRiskScore(factors: RiskScoreFactors): number {
     Math.min(factors.escalated_tasks * 10, 20) +
     Math.min(factors.active_blocks * 25, 25) +
     Math.min(factors.expired_trainings * 5, 15) +
-    Math.min(factors.overdue_exams * 10, 10);
+    Math.min(factors.overdue_exams * 10, 10) +
+    Math.min(factors.missing_epis * 15, 30);  // EPI compliance: +15/missing, max 30
 
   return Math.min(100, Math.max(0, score));
 }
@@ -59,7 +61,7 @@ async function gatherRiskFactors(tenantId: string, employeeId: string): Promise<
   const now = new Date().toISOString();
 
   // Parallel queries for all risk factors
-  const [pendingRes, overdueRes, escalatedRes, blocksRes, trainingsRes, examsRes] =
+  const [pendingRes, overdueRes, escalatedRes, blocksRes, trainingsRes, examsRes, missingEpisRes] =
     await Promise.all([
       // Pending tasks
       supabase
@@ -87,7 +89,7 @@ async function gatherRiskFactors(tenantId: string, employeeId: string): Promise<
         .eq('status', 'pending')
         .gt('escalation_count' as any, 0),
 
-      // Active blocks (tasks with block metadata)
+      // Active blocks
       supabase
         .from('safety_tasks')
         .select('id', { count: 'exact', head: true })
@@ -112,6 +114,15 @@ async function gatherRiskFactors(tenantId: string, employeeId: string): Promise<
         .eq('employee_id', employeeId)
         .eq('is_valid', true)
         .lt('next_exam_date', now.split('T')[0]),
+
+      // Missing EPIs (exposed to risk, no active EPI delivered)
+      supabase
+        .from('epi_requirements' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('employee_id', employeeId)
+        .eq('status', 'pendente')
+        .eq('obrigatorio', true),
     ]);
 
   return {
@@ -121,6 +132,7 @@ async function gatherRiskFactors(tenantId: string, employeeId: string): Promise<
     active_blocks: blocksRes.count ?? 0,
     expired_trainings: trainingsRes.count ?? 0,
     overdue_exams: examsRes.count ?? 0,
+    missing_epis: missingEpisRes.count ?? 0,
   };
 }
 
@@ -160,6 +172,43 @@ export async function recalculateEmployeeRiskScore(
     old_value: previousScore != null ? { score: previousScore } as any : null,
     new_value: { score: newScore, factors } as any,
   }]);
+
+  // Generate critical alert if employee has missing EPIs while exposed to risk
+  if (factors.missing_epis > 0) {
+    try {
+      emitSafetyEvent({
+        type: 'SafetyExecutionCompleted',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        execution_id: `epi-compliance-alert-${employeeId}`,
+        signal_id: '',
+        rule_id: '',
+        status: 'completed',
+        actions_total: 1,
+        actions_succeeded: 1,
+        actions_failed: 0,
+        duration_ms: 0,
+      });
+
+      await supabase.from('audit_logs').insert([{
+        tenant_id: tenantId,
+        action: 'epi_compliance_critical_alert',
+        entity_type: 'employee',
+        entity_id: employeeId,
+        new_value: {
+          missing_epis: factors.missing_epis,
+          risk_score: newScore,
+          alert: 'Colaborador exposto a risco sem EPI ativo obrigatório',
+        } as any,
+      }]);
+
+      console.warn(
+        `[OccupationalRisk] CRITICAL: Employee ${employeeId} exposed to risk with ${factors.missing_epis} missing EPI(s). Score: ${newScore}`,
+      );
+    } catch (err) {
+      console.error('[OccupationalRisk] Failed to emit EPI compliance alert:', err);
+    }
+  }
 
   // Remove blocks if no blocking factors remain
   let blocksRemoved = 0;
