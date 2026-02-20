@@ -51,13 +51,22 @@ function menuTreeToNavigationEntries(nodes: MenuTreeNode[]): NavigationEntry[] {
   }));
 }
 
-/* ─── Default tree ─── */
+/* ─── Default tree — mirrors NAV_SECTIONS in PlatformLayout.tsx ─── */
 const createDefaultTree = (): MenuTreeNode[] => [
+  // ── Overview ──
+  mn('section-overview', '── OVERVIEW ──', '#', { locked: true }),
   mn('dashboard', 'Dashboard', '/platform/dashboard', { icon: 'LayoutDashboard' }),
+  mn('control-plane', 'Control Plane', '/platform/control-plane', { icon: 'Gauge', role_permissions: ['platform_super_admin'] }),
+
+  // ── Gestão ──
+  mn('section-gestao', '── GESTÃO ──', '#', { locked: true }),
   mn('tenants', 'Tenants', '/platform/tenants', { icon: 'Building2', role_permissions: ['platform_super_admin', 'platform_operations'] }),
+  mn('users', 'Usuários', '/platform/users', { icon: 'Users', role_permissions: ['platform_super_admin', 'platform_operations'] }),
   mn('modules', 'Módulos', '/platform/modules', { icon: 'Puzzle', role_permissions: ['platform_super_admin', 'platform_operations'] }),
   mn('plans', 'Planos', '/platform/plans', { icon: 'Package', role_permissions: ['platform_super_admin', 'platform_finance'] }),
-  mn('users', 'Usuários', '/platform/users', { icon: 'Users', role_permissions: ['platform_super_admin', 'platform_operations'] }),
+
+  // ── Segurança ──
+  mn('section-seguranca', '── SEGURANÇA ──', '#', { locked: true }),
   mn('security', 'Segurança', '/platform/security', {
     icon: 'ShieldCheck', role_permissions: ['platform_super_admin', 'platform_operations'],
     children: [
@@ -70,61 +79,130 @@ const createDefaultTree = (): MenuTreeNode[] => [
     ],
   }),
   mn('iam', 'IAM', '/platform/iam', { icon: 'KeyRound', role_permissions: ['platform_super_admin'] }),
-  mn('automation', 'Automação', '/platform/automation', { icon: 'Zap', role_permissions: ['platform_super_admin'] }),
+  mn('audit', 'Auditoria', '/platform/audit', { icon: 'ScrollText', role_permissions: ['platform_super_admin'] }),
+  mn('gov-dashboard', 'Governance Dashboard', '/platform/governance-dashboard', { icon: 'BarChart3', role_permissions: ['platform_super_admin'] }),
+
+  // ── Operações ──
+  mn('section-operacoes', '── OPERAÇÕES ──', '#', { locked: true }),
   mn('monitoring', 'Monitoramento', '/platform/monitoring', {
     icon: 'Monitor',
     children: [
-      mn('mon-status', 'Status', '/platform/monitoring/status'),
+      mn('mon-status', 'Status', '/platform/monitoring'),
       mn('mon-mods', 'Módulos', '/platform/monitoring/modules'),
       mn('mon-err', 'Erros', '/platform/monitoring/errors'),
       mn('mon-perf', 'Performance', '/platform/monitoring/performance'),
       mn('mon-inc', 'Incidentes', '/platform/monitoring/incidents'),
     ],
   }),
-  
-  mn('comms', 'Comunicação', '/platform/communications', { icon: 'Megaphone' }),
-  mn('audit', 'Auditoria', '/platform/audit', { icon: 'ScrollText' }),
-  mn('billing', 'Financeiro', '/platform/billing', {
+  mn('observability', 'Observabilidade', '/platform/observability', { icon: 'Eye' }),
+  mn('automation', 'Automação', '/platform/automation', { icon: 'Zap', role_permissions: ['platform_super_admin'] }),
+  mn('ipaas', 'iPaaS Workflows', '/platform/integration-automation', {
+    icon: 'Workflow', role_permissions: ['platform_super_admin'],
+    children: [
+      mn('ipaas-wf', 'Workflows', '/platform/integration-automation'),
+      mn('ipaas-tpl', 'Templates', '/platform/integration-automation/templates'),
+      mn('ipaas-exec', 'Execution Logs', '/platform/integration-automation/executions'),
+      mn('ipaas-sandbox', 'Sandbox Tests', '/platform/integration-automation/sandbox'),
+    ],
+  }),
+  mn('ai-ops', 'AI Operations', '/platform/ai-operations', { icon: 'Brain', role_permissions: ['platform_super_admin'] }),
+
+  // ── Financeiro ──
+  mn('section-financeiro', '── FINANCEIRO ──', '#', { locked: true }),
+  mn('billing', 'Billing', '/platform/billing', {
     icon: 'Package', role_permissions: ['platform_super_admin', 'platform_finance'],
     children: [
-      mn('bill-overview', 'Visão Geral', '/platform/billing/overview'),
+      mn('bill-overview', 'Visão Geral', '/platform/billing'),
       mn('bill-coupons', 'Cupons', '/platform/billing/coupons'),
       mn('bill-cc', 'Control Center', '/platform/billing/control-center'),
     ],
   }),
   mn('revenue', 'Revenue', '/platform/revenue', {
-    icon: 'TrendingUp',
+    icon: 'TrendingUp', role_permissions: ['platform_super_admin', 'platform_finance'],
     children: [
-      mn('rev-overview', 'Visão Geral', '/platform/revenue/overview'),
+      mn('rev-overview', 'Visão Geral', '/platform/revenue'),
       mn('rev-ref', 'Referrals', '/platform/referrals'),
-      mn('rev-gam', 'Gamificação', '/platform/gamification'),
       mn('rev-intel', 'Intelligence', '/platform/revenue/intelligence'),
     ],
   }),
+  mn('fiscal', 'Fiscal', '/platform/fiscal', { icon: 'ScrollText', role_permissions: ['platform_super_admin', 'platform_finance'] }),
+
+  // ── Growth & Marketing ──
+  mn('section-growth', '── GROWTH & MARKETING ──', '#', { locked: true }),
   mn('growth-ai', 'Growth AI', '/platform/growth', {
     icon: 'Rocket',
     children: [
-      mn('growth-overview', 'Visão Geral', '/platform/growth/overview'),
+      mn('growth-overview', 'Visão Geral', '/platform/growth'),
       mn('growth-insights', 'Insights', '/platform/growth/insights'),
       mn('growth-landing', 'Landing Pages', '/platform/growth/landing-pages'),
       mn('growth-conversions', 'Conversões', '/platform/growth/conversions'),
       mn('growth-fab', 'FAB Builder', '/platform/growth/fab-builder'),
       mn('growth-submissions', 'Meus Rascunhos', '/platform/growth/submissions'),
-      mn('growth-approvals', 'Aprovações', '/platform/growth/approvals'),
-      mn('growth-versions', 'Versionamento & Publicação', '/platform/growth/version-publish'),
-      mn('growth-mkt', 'Marketing Analytics', '/platform/marketing/analytics'),
+      mn('growth-approvals', 'Aprovações Pendentes', '/platform/growth/approvals'),
+      mn('growth-versions', 'Publicadas', '/platform/growth/version-publish'),
     ],
   }),
+  mn('marketing', 'Marketing', '/platform/marketing', {
+    icon: 'Megaphone',
+    children: [
+      mn('mkt-analytics', 'Analytics', '/platform/marketing/analytics'),
+    ],
+  }),
+  mn('landing', 'Landing Pages', '/platform/landing', {
+    icon: 'BookOpen',
+    children: [
+      mn('landing-drafts', 'Rascunhos', '/platform/landing/drafts'),
+      mn('landing-review', 'Revisão', '/platform/landing/review'),
+      mn('landing-pub', 'Publicadas', '/platform/landing/published'),
+    ],
+  }),
+
+  // ── Canais ──
+  mn('section-canais', '── CANAIS ──', '#', { locked: true }),
   mn('website', 'Website', '/platform/website', {
     icon: 'Globe',
     children: [
-      mn('web-dash', 'Dashboard', '/platform/website/dashboard'),
+      mn('web-dash', 'Dashboard', '/platform/website'),
       mn('web-ai', 'AI Designer', '/platform/website/ai-designer'),
       mn('web-tpl', 'Templates', '/platform/website/templates'),
       mn('web-ver', 'Versionamento', '/platform/website/versions'),
     ],
   }),
-  mn('fiscal', 'Fiscal', '/platform/fiscal', { icon: 'ScrollText' }),
+  mn('comms', 'Comunicação', '/platform/communications', { icon: 'Megaphone' }),
+
+  // ── Developers ──
+  mn('section-developers', '── DEVELOPERS ──', '#', { locked: true }),
+  mn('apis', 'APIs', '/platform/apis', {
+    icon: 'Network', role_permissions: ['platform_super_admin'],
+    children: [
+      mn('api-clients', 'Clients', '/platform/apis'),
+      mn('api-keys', 'Keys', '/platform/apis/keys'),
+      mn('api-usage', 'Usage', '/platform/apis/usage'),
+      mn('api-rate', 'Rate Limits', '/platform/apis/rate-limits'),
+      mn('api-ver', 'Versions', '/platform/apis/versions'),
+    ],
+  }),
+  mn('dev-portal', 'Developer Portal', '/platform/developers', {
+    icon: 'Users', role_permissions: ['platform_super_admin'],
+    children: [
+      mn('dev-devs', 'Developers', '/platform/developers'),
+      mn('dev-mkt', 'Marketplace', '/platform/marketplace'),
+      mn('dev-review', 'Revisão de Apps', '/platform/apps-review'),
+    ],
+  }),
+
+  // ── Suporte ──
+  mn('section-suporte', '── SUPORTE ──', '#', { locked: true }),
+  mn('support', 'Suporte', '/platform/support', {
+    icon: 'Headphones',
+    children: [
+      mn('support-console', 'Console de Suporte', '/platform/support/console'),
+      mn('support-analytics', 'Analytics', '/platform/support/analytics'),
+    ],
+  }),
+
+  // ── Sistema ──
+  mn('section-sistema', '── SISTEMA ──', '#', { locked: true }),
   mn('settings', 'Settings', '/platform/settings', {
     icon: 'Settings',
     children: [
@@ -141,13 +219,13 @@ const createDefaultTree = (): MenuTreeNode[] => [
             children: [
               mn('dash-platform', 'Platform Dashboard', '/platform/dashboard'),
               mn('dash-tenant', 'Tenant Dashboard', '/dashboard'),
-              mn('dash-website', 'Website Dashboard', '/platform/website/dashboard'),
-              mn('dash-monitoring', 'Monitoramento Status', '/platform/monitoring/status'),
-              mn('dash-billing', 'Financeiro Overview', '/platform/billing/overview'),
-              mn('dash-revenue', 'Revenue Overview', '/platform/revenue/overview'),
-              mn('dash-growth', 'Growth AI Overview', '/platform/growth/overview'),
+              mn('dash-website', 'Website Dashboard', '/platform/website'),
+              mn('dash-monitoring', 'Monitoramento Status', '/platform/monitoring'),
+              mn('dash-billing', 'Financeiro Overview', '/platform/billing'),
+              mn('dash-revenue', 'Revenue Overview', '/platform/revenue'),
+              mn('dash-growth', 'Growth AI Overview', '/platform/growth'),
               mn('dash-marketing', 'Marketing Analytics', '/platform/marketing/analytics'),
-              mn('dash-gamification', 'Gamificação', '/platform/gamification'),
+              mn('dash-gamification', 'Gamificação', '/platform/settings/gamification'),
               mn('dash-labor', 'Labor Compliance', '/labor-dashboard'),
               mn('dash-workforce', 'Workforce Intelligence', '/workforce-intelligence'),
               mn('dash-strategic', 'Strategic Intelligence', '/strategic-intelligence'),
