@@ -44,6 +44,25 @@ export { suggestSalaryBand } from './salary-band-intelligence.engine';
 export { runCareerAlertEngine } from './career-alert.engine';
 export { generateCareerInsights } from './career-workforce-integration.engine';
 
+// ── Future Preparation ──
+export {
+  createExternalBenchmarkService,
+  createOrgStructureAIService,
+  createLegislationMonitorService,
+  createSyndicateIntegrationService,
+} from './career-future-preparation.engine';
+export type {
+  ExternalBenchmarkSource,
+  ExternalBenchmarkResult,
+  ExternalBenchmarkQuery,
+  OrgStructureSuggestion,
+  OrgAnalysisInput,
+  LegislationUpdate,
+  LegislationMonitorConfig,
+  SyndicateInfo,
+  CctSyncResult,
+} from './career-future-preparation.engine';
+
 // ── Events ──
 export { careerIntelligenceEvents, emitCareerEvent, onCareerEvent } from './career-intelligence.events';
 
