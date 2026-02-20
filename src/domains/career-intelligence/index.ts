@@ -32,6 +32,7 @@ export { riskAlertService } from './risk-alert.service';
 export { legalReferenceService } from './legal-reference.service';
 export { careerLegalMappingService } from './career-legal-mapping.service';
 export { careerPcmsoIntegrationService } from './career-pcmso-integration.service';
+export { careerTrackService } from './career-track.service';
 
 // ── Engines (pure, no I/O) ──
 export {
@@ -75,6 +76,8 @@ export type {
   AdicionalAplicavel,
   CareerLegalMapping,
   CreateCareerLegalMappingDTO,
+  CareerTrack,
+  CreateCareerTrackDTO,
 } from './types';
 export type { MedicalProfileResult } from './career-pcmso-integration.service';
 export type { SuggestedSalaryBand, CctSalaryInput, EncargoFactorInput } from './salary-band-intelligence.engine';

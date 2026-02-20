@@ -255,3 +255,24 @@ export interface CreateCareerLegalMappingDTO {
   adicional_aplicavel?: AdicionalAplicavel | null;
   piso_salarial_referencia?: string | null;
 }
+
+// ── Career Track (Progression Model) ──
+export interface CareerTrack {
+  id: string;
+  tenant_id: string;
+  cargo_origem_id: string;
+  cargo_destino_id: string;
+  requisitos: string | null;
+  tempo_minimo_meses: number;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCareerTrackDTO {
+  tenant_id: string;
+  cargo_origem_id: string;
+  cargo_destino_id: string;
+  requisitos?: string | null;
+  tempo_minimo_meses?: number;
+}
