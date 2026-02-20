@@ -158,6 +158,16 @@ export interface EsocialSystemStatus {
   compatibilidade: boolean;
 }
 
+// ── Layout Mismatch ──
+
+export interface LayoutMismatchInfo {
+  versao_suportada: EsocialLayoutVersion;
+  versao_oficial: EsocialLayoutVersion;
+  empresas_nao_migradas: Array<{ company_id: string; company_name: string; layout_atual: EsocialLayoutVersion }>;
+  total_nao_migradas: number;
+  detectado_em: string;
+}
+
 // ── Governance Config ──
 
 export interface EsocialGovernanceConfig {
