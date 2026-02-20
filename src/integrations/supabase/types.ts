@@ -11654,12 +11654,43 @@ export type Database = {
         Args: { _user_id: string }
         Returns: string[]
       }
+      get_epi_assets_in_use: {
+        Args: { _tenant_id: string }
+        Returns: {
+          asset_id: string
+          data_entrega: string
+          employee_id: string
+          employee_name: string
+          epi_nome: string
+          serial_number: string
+        }[]
+      }
+      get_epi_cost_by_department: {
+        Args: { _months?: number; _tenant_id: string }
+        Returns: {
+          custo_total: number
+          department_id: string
+          department_name: string
+          mes: string
+          quantidade: number
+        }[]
+      }
       get_epi_cost_by_employee: {
         Args: { _employee_id: string; _tenant_id: string }
         Returns: {
           custo_total_acumulado: number
           epi_nome: string
           total_quantidade: number
+        }[]
+      }
+      get_epi_cost_ranking_by_company: {
+        Args: { _tenant_id: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          custo_total: number
+          total_colaboradores: number
+          total_itens: number
         }[]
       }
       get_epi_cost_summary_by_company: {
@@ -11675,6 +11706,39 @@ export type Database = {
           employee_name: string
           total_epi_cost: number
           total_items: number
+        }[]
+      }
+      get_epi_inventory_summary: {
+        Args: { _tenant_id: string; _warehouse_id?: string }
+        Returns: {
+          custo_unitario_medio: number
+          epi_catalog_id: string
+          epi_nome: string
+          last_movement_at: string
+          quantidade_disponivel: number
+          quantidade_minima: number
+          quantidade_reservada: number
+          warehouse_id: string
+          warehouse_name: string
+        }[]
+      }
+      get_epi_lots_by_expiry: {
+        Args: { _tenant_id: string }
+        Returns: {
+          status: string
+          total: number
+        }[]
+      }
+      get_epi_stock_rupture_risk: {
+        Args: { _tenant_id: string }
+        Returns: {
+          dias_cobertura: number
+          epi_nome: string
+          inventory_id: string
+          quantidade_disponivel: number
+          quantidade_minima: number
+          risco: string
+          warehouse_name: string
         }[]
       }
       get_platform_extended_metrics: { Args: never; Returns: Json }
