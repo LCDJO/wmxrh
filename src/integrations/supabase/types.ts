@@ -9332,6 +9332,124 @@ export type Database = {
           },
         ]
       }
+      regulatory_audit_log: {
+        Row: {
+          actor_id: string
+          actor_role: string | null
+          created_at: string
+          dados_antes: Json | null
+          dados_depois: Json | null
+          descricao: string
+          document_code: string | null
+          entity_id: string | null
+          entity_type: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          tenant_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          actor_id: string
+          actor_role?: string | null
+          created_at?: string
+          dados_antes?: Json | null
+          dados_depois?: Json | null
+          descricao: string
+          document_code?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          tenant_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          actor_id?: string
+          actor_role?: string | null
+          created_at?: string
+          dados_antes?: Json | null
+          dados_depois?: Json | null
+          descricao?: string
+          document_code?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          tenant_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regulatory_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      regulatory_source_configs: {
+        Row: {
+          configurado_em: string
+          configurado_por: string
+          credenciais_ref: string | null
+          frequencia_verificacao: string
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          nome: string
+          source_type: string
+          tenant_id: string
+          tipos_monitorados: string[]
+          updated_at: string
+          url_base: string | null
+        }
+        Insert: {
+          configurado_em?: string
+          configurado_por: string
+          credenciais_ref?: string | null
+          frequencia_verificacao?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          nome: string
+          source_type: string
+          tenant_id: string
+          tipos_monitorados?: string[]
+          updated_at?: string
+          url_base?: string | null
+        }
+        Update: {
+          configurado_em?: string
+          configurado_por?: string
+          credenciais_ref?: string | null
+          frequencia_verificacao?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          nome?: string
+          source_type?: string
+          tenant_id?: string
+          tipos_monitorados?: string[]
+          updated_at?: string
+          url_base?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regulatory_source_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       risk_trend_snapshots: {
         Row: {
           ai_forecast: string | null
@@ -12393,6 +12511,22 @@ export type Database = {
         Returns: string[]
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      fn_regulatory_audit_insert: {
+        Args: {
+          _actor_id: string
+          _actor_role: string
+          _dados_antes?: Json
+          _dados_depois?: Json
+          _descricao: string
+          _document_code: string
+          _entity_id: string
+          _entity_type: string
+          _event_type: string
+          _metadata?: Json
+          _tenant_id: string
+        }
+        Returns: string
+      }
       generate_billing_alerts: { Args: never; Returns: undefined }
       generate_support_protocol: { Args: never; Returns: string }
       get_cognitive_event_stats: { Args: { days_back?: number }; Returns: Json }
@@ -12530,6 +12664,10 @@ export type Database = {
         Returns: boolean
       }
       is_tenant_member: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_tenant_superadmin: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
