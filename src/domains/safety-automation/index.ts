@@ -102,3 +102,16 @@ export type {
   EscalationPolicy,
   EscalationResult,
 } from './escalation-engine';
+
+// Playbook Engine
+export {
+  matchPlaybooks,
+  executePlaybook,
+  processSignalWithPlaybooks,
+  getDefaultPlaybooks,
+} from './playbook-engine';
+export type {
+  SafetyPlaybook,
+  PlaybookMatchResult,
+  PlaybookExecutionResult,
+} from './playbook-engine';
