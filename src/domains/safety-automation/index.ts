@@ -69,3 +69,23 @@ export type { SignalProcessorDeps } from './signal-processor';
 
 // Default Rules
 export { getDefaultSafetyRules } from './default-rules';
+
+// Automation Triggers
+export {
+  handleDomainEvent,
+  handleDomainEvents,
+  getDefaultThresholds,
+} from './automation-triggers';
+export type {
+  OperationalRiskScoreCalculatedEvent,
+  TrainingExpiredRiskEvent,
+  MedicalExamExpiredEvent,
+  EmployeeOperationBlockedEvent,
+  RiskExposureUpdatedEvent,
+  SafetyDomainEvent,
+  SafetyWorkflowType,
+  SafetyThresholdConfig,
+  SafetyWorkflowPayload,
+  AutomationTriggerDeps,
+  TriggerResult,
+} from './automation-triggers';
