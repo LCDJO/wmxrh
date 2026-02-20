@@ -44,6 +44,7 @@ import TenantAnnouncements from "./pages/TenantAnnouncements";
 import DocumentSignatureIntegrations from "./pages/DocumentSignatureIntegrations";
 import OccupationalCompliance from "./pages/OccupationalCompliance";
 import NrComplianceDashboard from "./pages/NrComplianceDashboard";
+import SafetyAutomation from "./pages/SafetyAutomation";
 import IAMManagement from "./pages/IAMManagement";
 import SettingsUsers from "./pages/SettingsUsers";
 import SettingsRoles from "./pages/SettingsRoles";
@@ -314,6 +315,9 @@ function AppRoutes() {
           } />
           <Route path="/nr-compliance" element={
             <ProtectedRoute navKey="health"><NrComplianceDashboard /></ProtectedRoute>
+          } />
+          <Route path="/safety-automation" element={
+            <ProtectedRoute navKey="health"><SafetyAutomation /></ProtectedRoute>
           } />
           <Route path="/iam" element={<Navigate to="/settings/users" replace />} />
           <Route path="/settings/users" element={
