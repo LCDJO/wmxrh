@@ -3624,6 +3624,100 @@ export type Database = {
           },
         ]
       }
+      epi_employee_costs: {
+        Row: {
+          centro_custo: string | null
+          company_id: string | null
+          created_at: string
+          custo_total: number
+          custo_unitario: number
+          data_apropriacao: string
+          delivery_id: string | null
+          employee_id: string
+          epi_catalog_id: string
+          id: string
+          lot_id: string | null
+          metadata: Json | null
+          quantidade: number
+          tenant_id: string
+        }
+        Insert: {
+          centro_custo?: string | null
+          company_id?: string | null
+          created_at?: string
+          custo_total?: number
+          custo_unitario?: number
+          data_apropriacao?: string
+          delivery_id?: string | null
+          employee_id: string
+          epi_catalog_id: string
+          id?: string
+          lot_id?: string | null
+          metadata?: Json | null
+          quantidade?: number
+          tenant_id: string
+        }
+        Update: {
+          centro_custo?: string | null
+          company_id?: string | null
+          created_at?: string
+          custo_total?: number
+          custo_unitario?: number
+          data_apropriacao?: string
+          delivery_id?: string | null
+          employee_id?: string
+          epi_catalog_id?: string
+          id?: string
+          lot_id?: string | null
+          metadata?: Json | null
+          quantidade?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_employee_costs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_employee_costs_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "epi_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_employee_costs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_employee_costs_epi_catalog_id_fkey"
+            columns: ["epi_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "epi_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_employee_costs_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "epi_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_employee_costs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       epi_incidents: {
         Row: {
           created_at: string
@@ -3689,6 +3783,277 @@ export type Database = {
           },
           {
             foreignKeyName: "epi_incidents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      epi_inventory: {
+        Row: {
+          created_at: string
+          custo_unitario_medio: number
+          epi_catalog_id: string
+          id: string
+          last_movement_at: string | null
+          lot_id: string | null
+          metadata: Json | null
+          quantidade_disponivel: number
+          quantidade_minima: number
+          quantidade_reservada: number
+          tenant_id: string
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string
+          custo_unitario_medio?: number
+          epi_catalog_id: string
+          id?: string
+          last_movement_at?: string | null
+          lot_id?: string | null
+          metadata?: Json | null
+          quantidade_disponivel?: number
+          quantidade_minima?: number
+          quantidade_reservada?: number
+          tenant_id: string
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string
+          custo_unitario_medio?: number
+          epi_catalog_id?: string
+          id?: string
+          last_movement_at?: string | null
+          lot_id?: string | null
+          metadata?: Json | null
+          quantidade_disponivel?: number
+          quantidade_minima?: number
+          quantidade_reservada?: number
+          tenant_id?: string
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_inventory_epi_catalog_id_fkey"
+            columns: ["epi_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "epi_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "epi_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "epi_warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      epi_inventory_movements: {
+        Row: {
+          created_at: string
+          custo_total: number | null
+          custo_unitario: number | null
+          delivery_id: string | null
+          employee_id: string | null
+          epi_catalog_id: string
+          executor_user_id: string | null
+          id: string
+          inventory_id: string
+          justificativa: string | null
+          lot_id: string | null
+          metadata: Json | null
+          movement_type: string
+          nota_fiscal: string | null
+          quantidade: number
+          reference_id: string | null
+          reference_type: string | null
+          tenant_id: string
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string
+          custo_total?: number | null
+          custo_unitario?: number | null
+          delivery_id?: string | null
+          employee_id?: string | null
+          epi_catalog_id: string
+          executor_user_id?: string | null
+          id?: string
+          inventory_id: string
+          justificativa?: string | null
+          lot_id?: string | null
+          metadata?: Json | null
+          movement_type: string
+          nota_fiscal?: string | null
+          quantidade: number
+          reference_id?: string | null
+          reference_type?: string | null
+          tenant_id: string
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string
+          custo_total?: number | null
+          custo_unitario?: number | null
+          delivery_id?: string | null
+          employee_id?: string | null
+          epi_catalog_id?: string
+          executor_user_id?: string | null
+          id?: string
+          inventory_id?: string
+          justificativa?: string | null
+          lot_id?: string | null
+          metadata?: Json | null
+          movement_type?: string
+          nota_fiscal?: string | null
+          quantidade?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          tenant_id?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_inventory_movements_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "epi_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_movements_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_movements_epi_catalog_id_fkey"
+            columns: ["epi_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "epi_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_movements_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "epi_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_movements_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "epi_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_movements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_movements_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "epi_warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      epi_lots: {
+        Row: {
+          ca_numero: string | null
+          ca_validade: string | null
+          created_at: string
+          custo_unitario: number
+          epi_catalog_id: string
+          fabricante: string | null
+          fornecedor: string | null
+          id: string
+          lote_fabricacao: string | null
+          lote_numero: string
+          lote_validade: string | null
+          metadata: Json | null
+          nota_fiscal: string | null
+          nota_fiscal_data: string | null
+          quantidade_recebida: number
+          serial_number: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          ca_numero?: string | null
+          ca_validade?: string | null
+          created_at?: string
+          custo_unitario?: number
+          epi_catalog_id: string
+          fabricante?: string | null
+          fornecedor?: string | null
+          id?: string
+          lote_fabricacao?: string | null
+          lote_numero: string
+          lote_validade?: string | null
+          metadata?: Json | null
+          nota_fiscal?: string | null
+          nota_fiscal_data?: string | null
+          quantidade_recebida?: number
+          serial_number?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          ca_numero?: string | null
+          ca_validade?: string | null
+          created_at?: string
+          custo_unitario?: number
+          epi_catalog_id?: string
+          fabricante?: string | null
+          fornecedor?: string | null
+          id?: string
+          lote_fabricacao?: string | null
+          lote_numero?: string
+          lote_validade?: string | null
+          metadata?: Json | null
+          nota_fiscal?: string | null
+          nota_fiscal_data?: string | null
+          quantidade_recebida?: number
+          serial_number?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_lots_epi_catalog_id_fkey"
+            columns: ["epi_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "epi_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_lots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3906,6 +4271,66 @@ export type Database = {
           },
           {
             foreignKeyName: "epi_signatures_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      epi_warehouses: {
+        Row: {
+          address: string | null
+          code: string
+          company_id: string | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          name: string
+          responsible_user_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          code: string
+          company_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name: string
+          responsible_user_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          code?: string
+          company_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name?: string
+          responsible_user_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_warehouses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_warehouses_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -10903,6 +11328,14 @@ export type Database = {
         Args: { _user_id: string }
         Returns: string[]
       }
+      get_epi_cost_by_employee: {
+        Args: { _employee_id: string; _tenant_id: string }
+        Returns: {
+          custo_total_acumulado: number
+          epi_nome: string
+          total_quantidade: number
+        }[]
+      }
       get_platform_extended_metrics: { Args: never; Returns: Json }
       get_platform_metrics: { Args: never; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
@@ -10992,6 +11425,17 @@ export type Database = {
           employee_id: string
           employee_name: string
           epi_nome: string
+        }[]
+      }
+      scan_expiring_epi_lots: {
+        Args: { _days_ahead?: number; _tenant_id: string }
+        Returns: {
+          dias_restantes: number
+          epi_nome: string
+          lot_id: string
+          lote_numero: string
+          lote_validade: string
+          quantidade_em_estoque: number
         }[]
       }
       seed_default_labor_rules: {
