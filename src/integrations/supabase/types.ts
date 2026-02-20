@@ -7508,6 +7508,82 @@ export type Database = {
           },
         ]
       }
+      safety_workflows: {
+        Row: {
+          assigned_to: string | null
+          company_id: string | null
+          created_at: string
+          description: string | null
+          employee_id: string | null
+          id: string
+          metadata: Json | null
+          origem_evento: Json
+          prioridade: Database["public"]["Enums"]["safety_workflow_priority"]
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["safety_workflow_status"]
+          tenant_id: string
+          tipo_workflow: Database["public"]["Enums"]["safety_workflow_type"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          employee_id?: string | null
+          id?: string
+          metadata?: Json | null
+          origem_evento?: Json
+          prioridade?: Database["public"]["Enums"]["safety_workflow_priority"]
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["safety_workflow_status"]
+          tenant_id: string
+          tipo_workflow: Database["public"]["Enums"]["safety_workflow_type"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          employee_id?: string | null
+          id?: string
+          metadata?: Json | null
+          origem_evento?: Json
+          prioridade?: Database["public"]["Enums"]["safety_workflow_priority"]
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["safety_workflow_status"]
+          tenant_id?: string
+          tipo_workflow?: Database["public"]["Enums"]["safety_workflow_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_workflows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_workflows_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_workflows_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salary_additionals: {
         Row: {
           additional_type: Database["public"]["Enums"]["salary_additional_type"]
@@ -10249,6 +10325,14 @@ export type Database = {
         | "ergonomico"
         | "acidente"
       rubric_base_calculo: "salario_base" | "percentual" | "manual"
+      safety_workflow_priority: "low" | "medium" | "high" | "critical"
+      safety_workflow_status: "open" | "in_progress" | "resolved" | "cancelled"
+      safety_workflow_type:
+        | "nr_expirada"
+        | "exame_vencido"
+        | "risco_critico"
+        | "falta_epi"
+        | "treinamento_obrigatorio"
       salary_additional_type:
         | "bonus"
         | "commission"
@@ -10542,6 +10626,15 @@ export const Constants = {
         "acidente",
       ],
       rubric_base_calculo: ["salario_base", "percentual", "manual"],
+      safety_workflow_priority: ["low", "medium", "high", "critical"],
+      safety_workflow_status: ["open", "in_progress", "resolved", "cancelled"],
+      safety_workflow_type: [
+        "nr_expirada",
+        "exame_vencido",
+        "risco_critico",
+        "falta_epi",
+        "treinamento_obrigatorio",
+      ],
       salary_additional_type: [
         "bonus",
         "commission",
