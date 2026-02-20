@@ -26,6 +26,7 @@ export {
   getActiveAlerts,
   generateAlert,
   detectLayoutMismatch,
+  runCertificateMonitor,
 } from './esocial-monitoring.engine';
 
 export {
@@ -54,4 +55,7 @@ export type {
   CertificadoStatus,
   CompanyESocialStatus,
   LayoutMismatchInfo,
+  CertificadoTipo,
+  CertificateInfo,
+  CertificateMonitorResult,
 } from './types';
