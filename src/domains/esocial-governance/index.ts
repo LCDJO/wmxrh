@@ -80,3 +80,13 @@ export type {
   TenantActionPlanItem,
   TenantDashboardView,
 } from './types';
+
+// Audit Log
+export {
+  logEsocialGovernanceAction,
+  fetchEsocialGovernanceLogs,
+} from './esocial-governance-audit.service';
+export type {
+  EsocialGovernanceLogEntry,
+  CreateLogInput as EsocialGovernanceCreateLogInput,
+} from './esocial-governance-audit.service';

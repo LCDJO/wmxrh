@@ -5420,6 +5420,54 @@ export type Database = {
           },
         ]
       }
+      esocial_governance_logs: {
+        Row: {
+          acao: string
+          created_at: string
+          empresa_id: string | null
+          evento: string | null
+          id: string
+          metadata: Json | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          empresa_id?: string | null
+          evento?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          empresa_id?: string | null
+          evento?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "esocial_governance_logs_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "esocial_governance_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       experience_profiles: {
         Row: {
           available_widgets: string[]
