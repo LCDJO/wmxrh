@@ -1,11 +1,13 @@
 /**
  * NotificationFlyout — Floating panel content shown inside a Popover.
  * Renders a scrollable list of NotificationItems with header + footer.
+ * Now also includes NavigationSuggestionsSection (moved from sidebar).
  */
 
 import { type AppNotification } from '@/domains/notifications/notification-hub';
 import { NotificationItem } from './NotificationItem';
 import { AnnouncementFlyoutSection } from '@/components/announcements/AnnouncementFlyoutSection';
+import { NavigationSuggestionsSection } from './NavigationSuggestionsSection';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -57,6 +59,9 @@ export function NotificationFlyout({
 
       {/* List */}
       <ScrollArea className="max-h-[400px]">
+        {/* Navigation Suggestions (moved from sidebar) */}
+        <NavigationSuggestionsSection />
+
         {/* Institutional announcements section */}
         <AnnouncementFlyoutSection />
 

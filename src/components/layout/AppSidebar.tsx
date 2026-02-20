@@ -27,7 +27,7 @@ import { useIdentityIntelligence } from '@/domains/security/kernel/identity-inte
 import { useNavigationPins } from '@/hooks/use-navigation-pins';
 import { useOnboardingStatus } from '@/hooks/use-onboarding-status';
 import { useExperienceProfile } from '@/hooks/use-experience-profile';
-import { NavigationSuggestionsPanel } from './NavigationSuggestionsPanel';
+// NavigationSuggestionsPanel moved to NotificationBell flyout
 import { Progress } from '@/components/ui/progress';
 import { ContextSelector } from './ContextSelector';
 import { PlanBadge } from '@/components/shared/PlanBadge';
@@ -459,8 +459,7 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      {/* ── Navigation Suggestions ── */}
-      <NavigationSuggestionsPanel collapsed={collapsed} />
+      {/* Navigation Suggestions moved to NotificationBell flyout */}
 
       {/* ── Onboarding CTA ── */}
       {!onboardingComplete && (
