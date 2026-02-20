@@ -194,81 +194,88 @@ export default function TenantOnboarding() {
   // ── Creation form (pre-onboarding) ──
   if (!tenantCreated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/20 p-4 sm:p-8">
-        <div className="w-full max-w-lg animate-fade-in">
-          <Card className="border-border/50 shadow-xl overflow-hidden">
-            {/* Decorative top bar */}
-            <div className="h-1.5 bg-gradient-to-r from-primary via-primary/70 to-accent" />
-
-            <CardContent className="p-8 sm:p-10">
-              {/* Header */}
-              <div className="text-center mb-8">
-                <div className="relative inline-flex">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
-                    <Building2 className="h-8 w-8 text-primary" />
-                  </div>
-                </div>
-                <h1 className="text-2xl font-bold font-display text-foreground mt-5">
-                  Criar Organização
-                </h1>
-                <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto leading-relaxed">
-                  Configure sua empresa para começar a gerenciar seus recursos humanos.
-                </p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10 p-6 sm:p-10">
+        <div className="w-full max-w-3xl mx-auto animate-fade-in">
+          {/* Page header */}
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
+                <Building2 className="h-5 w-5 text-primary" />
               </div>
+              <h1 className="text-2xl font-bold font-display text-foreground">
+                Criar Organização
+              </h1>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed ml-[52px]">
+              Configure sua empresa para começar a gerenciar seus recursos humanos.
+            </p>
+          </div>
 
-              {/* Form */}
-              <form onSubmit={handleCreate} className="space-y-5">
-                <div className="space-y-1.5">
-                  <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Nome da Organização <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="name"
-                    placeholder="Ex: Grupo Alpha, Contabilidade XYZ"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    required
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="doc" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    CNPJ / CPF <span className="text-muted-foreground/50">(opcional)</span>
-                  </Label>
-                  <Input
-                    id="doc"
-                    placeholder="00.000.000/0000-00"
-                    value={document}
-                    onChange={e => setDocument(e.target.value)}
-                    className="h-11"
-                  />
-                </div>
-
-                <Button type="submit" className="w-full h-11 gap-2 text-sm font-semibold mt-2" disabled={createMutation.isPending}>
-                  <Plus className="h-4 w-4" />
-                  {createMutation.isPending ? 'Criando...' : 'Criar Organização'}
-                </Button>
-              </form>
-
-              {/* Feature hints */}
-              <div className="mt-8 pt-6 border-t border-border/50">
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  {[
-                    { icon: Users, label: 'Colaboradores' },
-                    { icon: Shield, label: 'Compliance' },
-                    { icon: BarChart3, label: 'Relatórios' },
-                  ].map(({ icon: Icon, label }) => (
-                    <div key={label} className="flex flex-col items-center gap-1.5">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted/50">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <span className="text-[11px] text-muted-foreground font-medium">{label}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main form — takes 2 columns */}
+            <Card className="lg:col-span-2 border-border/50 shadow-md">
+              <CardContent className="p-6 sm:p-8">
+                <form onSubmit={handleCreate} className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Nome da Organização <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="name"
+                        placeholder="Ex: Grupo Alpha, Contabilidade XYZ"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        required
+                        className="h-11"
+                      />
                     </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="doc" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        CNPJ / CPF <span className="text-muted-foreground/50">(opcional)</span>
+                      </Label>
+                      <Input
+                        id="doc"
+                        placeholder="00.000.000/0000-00"
+                        value={document}
+                        onChange={e => setDocument(e.target.value)}
+                        className="h-11"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button type="submit" className="w-full sm:w-auto h-11 px-8 gap-2 text-sm font-semibold" disabled={createMutation.isPending}>
+                      <Plus className="h-4 w-4" />
+                      {createMutation.isPending ? 'Criando...' : 'Criar Organização'}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Side info card */}
+            <Card className="border-border/50 shadow-md bg-muted/30">
+              <CardContent className="p-6 space-y-5">
+                <h2 className="text-sm font-semibold text-foreground">O que você terá acesso</h2>
+                {[
+                  { icon: Users, label: 'Colaboradores', desc: 'Gerencie admissões, cargos e equipes.' },
+                  { icon: Shield, label: 'Compliance', desc: 'Regras trabalhistas e conformidade.' },
+                  { icon: BarChart3, label: 'Relatórios', desc: 'Dashboards e indicadores em tempo real.' },
+                ].map(({ icon: Icon, label, desc }) => (
+                  <div key={label} className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <Icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{label}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
