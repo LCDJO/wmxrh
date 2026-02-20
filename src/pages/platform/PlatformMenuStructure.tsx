@@ -128,8 +128,9 @@ const createDefaultTree = (): MenuTreeNode[] => [
   mn('settings', 'Settings', '/platform/settings', {
     icon: 'Settings',
     children: [
-      mn('set-ver', 'Versionamento', '/platform/settings/versioning'),
       mn('set-saas', 'Parametrizações', '/platform/settings/saas'),
+      mn('set-gam', 'Gamificação', '/platform/settings/gamification'),
+      mn('set-ver', 'Versionamento', '/platform/settings/versioning'),
       mn('structure', 'Estrutura', '/platform/structure', {
         children: [
           mn('str-events', 'Eventos', '/platform/structure/events'),
