@@ -88,10 +88,30 @@ export interface EpiInventoryPosition {
   quantidade_reservada: number;
   quantidade_minima: number;
   custo_unitario_medio: number;
+  local_estoque?: string | null;
   last_movement_at?: string | null;
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+// ═══════════════════════════════════════════════════════
+// STOCK ALERTS (Persistent)
+// ═══════════════════════════════════════════════════════
+
+export interface EpiStockAlert {
+  id: string;
+  tenant_id: string;
+  inventory_id: string;
+  epi_catalog_id: string;
+  warehouse_id: string;
+  alert_type: 'low_stock' | 'no_stock';
+  quantidade_disponivel: number;
+  quantidade_minima: number;
+  is_resolved: boolean;
+  resolved_at?: string | null;
+  resolved_by?: string | null;
+  created_at: string;
 }
 
 // ═══════════════════════════════════════════════════════

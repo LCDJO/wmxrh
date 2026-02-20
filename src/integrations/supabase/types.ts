@@ -3806,6 +3806,7 @@ export type Database = {
           epi_catalog_id: string
           id: string
           last_movement_at: string | null
+          local_estoque: string | null
           lot_id: string | null
           metadata: Json | null
           quantidade_disponivel: number
@@ -3821,6 +3822,7 @@ export type Database = {
           epi_catalog_id: string
           id?: string
           last_movement_at?: string | null
+          local_estoque?: string | null
           lot_id?: string | null
           metadata?: Json | null
           quantidade_disponivel?: number
@@ -3836,6 +3838,7 @@ export type Database = {
           epi_catalog_id?: string
           id?: string
           last_movement_at?: string | null
+          local_estoque?: string | null
           lot_id?: string | null
           metadata?: Json | null
           quantidade_disponivel?: number
@@ -4283,6 +4286,80 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      epi_stock_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          epi_catalog_id: string
+          id: string
+          inventory_id: string
+          is_resolved: boolean
+          quantidade_disponivel: number
+          quantidade_minima: number
+          resolved_at: string | null
+          resolved_by: string | null
+          tenant_id: string
+          warehouse_id: string
+        }
+        Insert: {
+          alert_type?: string
+          created_at?: string
+          epi_catalog_id: string
+          id?: string
+          inventory_id: string
+          is_resolved?: boolean
+          quantidade_disponivel: number
+          quantidade_minima: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+          tenant_id: string
+          warehouse_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          epi_catalog_id?: string
+          id?: string
+          inventory_id?: string
+          is_resolved?: boolean
+          quantidade_disponivel?: number
+          quantidade_minima?: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+          tenant_id?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_stock_alerts_epi_catalog_id_fkey"
+            columns: ["epi_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "epi_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_stock_alerts_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "epi_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_stock_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_stock_alerts_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "epi_warehouses"
             referencedColumns: ["id"]
           },
         ]
