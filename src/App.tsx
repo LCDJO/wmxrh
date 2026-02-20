@@ -97,6 +97,7 @@ import LandingPublished from "./pages/platform/landing/LandingPublished";
 import ReferralPage from "./pages/ReferralPage";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
 import PlatformVersioning from "./pages/platform/PlatformVersioning";
+import PlatformSaasSettings from "./pages/platform/PlatformSaasSettings";
 import PlatformApiManagement from "./pages/platform/PlatformApiManagement";
 import PlatformDevelopers from "./pages/platform/PlatformDevelopers";
 import PlatformMarketplace from "./pages/platform/PlatformMarketplace";
@@ -184,6 +185,7 @@ function AppRoutes() {
         <Route path="structure/menus" element={<PlatformMenuStructure />} />
         <Route path="structure/modules" element={<PlatformModulesCatalog />} />
         <Route path="settings/versioning" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformVersioning /></PlatformGuard>} />
+        <Route path="settings/saas" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformSaasSettings /></PlatformGuard>} />
         <Route path="growth" element={<PlatformGrowthAI />} />
         <Route path="growth/insights" element={<GrowthInsights />} />
         <Route path="growth/landing-pages" element={<GrowthLandingPages />} />

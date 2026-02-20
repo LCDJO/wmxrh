@@ -6813,6 +6813,39 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_settings: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          label: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          label: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          label?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       platform_users: {
         Row: {
           created_at: string
@@ -9143,6 +9176,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          scheduled_deletion_at: string | null
           status: string
           updated_at: string
         }
@@ -9154,6 +9188,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          scheduled_deletion_at?: string | null
           status?: string
           updated_at?: string
         }
@@ -9165,6 +9200,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          scheduled_deletion_at?: string | null
           status?: string
           updated_at?: string
         }
