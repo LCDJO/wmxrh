@@ -7508,6 +7508,60 @@ export type Database = {
           },
         ]
       }
+      safety_automation_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          executor: string
+          executor_user_id: string | null
+          id: string
+          metadata: Json | null
+          tenant_id: string
+          workflow_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          executor?: string
+          executor_user_id?: string | null
+          id?: string
+          metadata?: Json | null
+          tenant_id: string
+          workflow_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          executor?: string
+          executor_user_id?: string | null
+          id?: string
+          metadata?: Json | null
+          tenant_id?: string
+          workflow_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_automation_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_automation_audit_log_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "safety_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       safety_escalation_policies: {
         Row: {
           created_at: string
@@ -10312,6 +10366,18 @@ export type Database = {
       is_tenant_member: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
+      }
+      log_safety_automation_action: {
+        Args: {
+          p_action: string
+          p_entity_id?: string
+          p_entity_type?: string
+          p_executor?: string
+          p_metadata?: Json
+          p_tenant_id: string
+          p_workflow_id: string
+        }
+        Returns: string
       }
       platform_create_tenant: {
         Args: {

@@ -150,3 +150,13 @@ export type {
   SafetyAccessResult,
   SafetyAuditEntry,
 } from './security-layer';
+
+// Audit Log (Legal Compliance)
+export {
+  logSafetyAuditAction,
+  fetchSafetyAuditLog,
+  startAuditLogBridge,
+} from './audit-log.service';
+export type {
+  SafetyAuditLogEntry,
+} from './audit-log.service';
