@@ -66,7 +66,7 @@ export function ApplyCouponInput({
     const trimmed = code.trim().toUpperCase();
     if (!trimmed) return;
     if (!tenantId) {
-      setError('Nenhum tenant ativo.');
+      setError('Nenhum cliente ativo.');
       return;
     }
 

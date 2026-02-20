@@ -8,7 +8,7 @@ export const TRIGGER_NODES: WfNodeTemplate[] = [
     key: 'trigger.tenant_created',
     category: 'trigger',
     label: 'TenantCreated',
-    description: 'Disparado quando um novo tenant é criado na plataforma',
+    description: 'Disparado quando um novo cliente é criado na plataforma',
     icon: 'Building2',
     configFields: [
       { key: 'filter_plan', label: 'Filtrar por Plano', type: 'select', options: ['any', 'starter', 'professional', 'enterprise'] },
@@ -21,7 +21,7 @@ export const TRIGGER_NODES: WfNodeTemplate[] = [
     description: 'Disparado quando uma landing page é publicada',
     icon: 'Globe',
     configFields: [
-      { key: 'filter_tenant', label: 'Tenant ID (opcional)', type: 'text' },
+      { key: 'filter_tenant', label: 'Cliente ID (opcional)', type: 'text' },
     ],
   },
   {

@@ -60,7 +60,7 @@ const createDefaultTree = (): MenuTreeNode[] => [
 
   // ── Gestão ──
   mn('section-gestao', '── GESTÃO ──', '#', { locked: true }),
-  mn('tenants', 'Tenants', '/platform/tenants', { icon: 'Building2', role_permissions: ['platform_super_admin', 'platform_operations'] }),
+  mn('tenants', 'Clientes', '/platform/tenants', { icon: 'Building2', role_permissions: ['platform_super_admin', 'platform_operations'] }),
   mn('users', 'Usuários', '/platform/users', { icon: 'Users', role_permissions: ['platform_super_admin', 'platform_operations'] }),
   mn('modules', 'Módulos', '/platform/modules', { icon: 'Puzzle', role_permissions: ['platform_super_admin', 'platform_operations'] }),
   mn('plans', 'Planos', '/platform/plans', { icon: 'Package', role_permissions: ['platform_super_admin', 'platform_finance'] }),
@@ -218,7 +218,7 @@ const createDefaultTree = (): MenuTreeNode[] => [
             icon: 'LayoutDashboard',
             children: [
               mn('dash-platform', 'Platform Dashboard', '/platform/dashboard'),
-              mn('dash-tenant', 'Tenant Dashboard', '/dashboard'),
+              mn('dash-tenant', 'Cliente Dashboard', '/dashboard'),
               mn('dash-website', 'Website Dashboard', '/platform/website'),
               mn('dash-monitoring', 'Monitoramento Status', '/platform/monitoring'),
               mn('dash-billing', 'Financeiro Overview', '/platform/billing'),
@@ -241,8 +241,8 @@ const ROLE_OPTIONS: { value: MenuEditorRole; label: string }[] = [
   { value: 'PlatformSuperAdmin', label: 'Super Admin' },
   { value: 'PlatformMarketing', label: 'Marketing' },
   { value: 'PlatformOperations', label: 'Operations' },
-  { value: 'TenantAdmin', label: 'Tenant Admin' },
-  { value: 'TenantUser', label: 'Tenant User' },
+  { value: 'TenantAdmin', label: 'Admin Cliente' },
+  { value: 'TenantUser', label: 'Usuário Cliente' },
 ];
 
 /* ═══════════════ Component ═══════════════ */

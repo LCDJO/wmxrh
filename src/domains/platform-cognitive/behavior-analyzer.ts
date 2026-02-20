@@ -113,7 +113,7 @@ export const ROLE_FINGERPRINTS: RoleFingerprint[] = [
   {
     role: 'platform_operator',
     label: 'Platform Operator',
-    description: 'Gestão de tenants, módulos e operações da plataforma',
+    description: 'Gestão de clientes, módulos e operações da plataforma',
     signals: [
       { pattern: /platform/i, weight: 3 },
       { pattern: /tenants/i, weight: 2.5 },

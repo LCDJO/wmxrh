@@ -167,7 +167,7 @@ function createCouponValidationService(): CouponValidationServiceAPI {
 
       // Tenant scope
       if (c.tenant_scope && c.tenant_scope !== tenantId) {
-        return { valid: false, reason: 'Cupom não disponível para este tenant.' };
+        return { valid: false, reason: 'Cupom não disponível para este cliente.' };
       }
 
       // Per-tenant limit

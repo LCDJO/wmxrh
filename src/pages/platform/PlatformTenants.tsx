@@ -315,7 +315,7 @@ export default function PlatformTenants() {
             billing_cycle: availablePlans.find(p => p.id === form.planId)?.billing_cycle ?? 'monthly',
           });
         if (planError) {
-          toast({ title: 'Aviso', description: 'Tenant criado mas houve erro ao vincular o plano.', variant: 'destructive' });
+          toast({ title: 'Aviso', description: 'Cliente criado mas houve erro ao vincular o plano.', variant: 'destructive' });
         } else {
           const selectedPlan = availablePlans.find(p => p.id === form.planId);
           platformEvents.planAssignedToTenant(user?.id ?? '', tenantId, {
@@ -325,7 +325,7 @@ export default function PlatformTenants() {
         }
       }
       platformEvents.tenantCreated(user?.id ?? '', tenantId, form.name.trim());
-      toast({ title: 'Tenant criado', description: `${form.name} criado com sucesso.` });
+      toast({ title: 'Cliente criado', description: `${form.name} criado com sucesso.` });
       setForm({ name: '', document: '', email: '', phone: '', address: '', adminEmail: '', adminName: '', planId: '' });
       setDialogMode(null);
       fetchTenants(); fetchTenantPlans(); fetchMemberCounts();
@@ -539,13 +539,13 @@ export default function PlatformTenants() {
             <Building2 className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold font-display text-foreground">Tenants</h1>
+            <h1 className="text-2xl font-bold font-display text-foreground">Clientes</h1>
             <p className="text-sm text-muted-foreground">{tenants.length} empresa{tenants.length !== 1 ? 's' : ''} cadastrada{tenants.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
         {can('tenant.create') && (
           <Button onClick={() => setDialogMode('create')} className="gap-2">
-            <Plus className="h-4 w-4" /> Novo Tenant
+            <Plus className="h-4 w-4" /> Novo Cliente
           </Button>
         )}
       </div>
@@ -584,7 +584,7 @@ export default function PlatformTenants() {
           {loading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-12 text-sm text-muted-foreground">Nenhum tenant encontrado.</div>
+            <div className="text-center py-12 text-sm text-muted-foreground">Nenhum cliente encontrado.</div>
           ) : (
             <Table>
               <TableHeader>
@@ -681,7 +681,7 @@ export default function PlatformTenants() {
               {selectedTenant?.name}
               {selectedTenant && statusBadge(selectedTenant.status)}
             </DialogTitle>
-            <DialogDescription>Painel completo do tenant</DialogDescription>
+            <DialogDescription>Painel completo do cliente</DialogDescription>
           </DialogHeader>
           {selectedTenant && (
             <Tabs defaultValue="overview" className="w-full">
@@ -1012,7 +1012,7 @@ export default function PlatformTenants() {
       <Dialog open={dialogMode === 'create'} onOpenChange={open => !open && setDialogMode(null)}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-display">Novo Tenant</DialogTitle>
+            <DialogTitle className="font-display">Novo Cliente</DialogTitle>
             <DialogDescription>Cadastre uma nova empresa cliente na plataforma.</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 py-2">
@@ -1082,7 +1082,7 @@ export default function PlatformTenants() {
                   <Puzzle className="h-3.5 w-3.5" /> Módulos Disponíveis
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  Após criar o tenant, você poderá ativar os módulos desejados na tela de detalhes.
+                  Após criar o cliente, você poderá ativar os módulos desejados na tela de detalhes.
                 </p>
                 <div className="flex flex-wrap gap-1 pt-1">
                   {PLATFORM_MODULES.slice(0, 8).map(mod => (
@@ -1099,7 +1099,7 @@ export default function PlatformTenants() {
             <Button variant="outline" onClick={() => setDialogMode(null)}>Cancelar</Button>
             <Button onClick={handleCreate} disabled={saving || !form.name.trim() || !form.adminEmail.trim()} className="gap-2">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Criar Tenant
+              Criar Cliente
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1110,7 +1110,7 @@ export default function PlatformTenants() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-2">
-              <Pencil className="h-5 w-5 text-primary" /> Editar Tenant
+              <Pencil className="h-5 w-5 text-primary" /> Editar Cliente
             </DialogTitle>
             <DialogDescription>Atualize os dados cadastrais de {selectedTenant?.name}.</DialogDescription>
           </DialogHeader>

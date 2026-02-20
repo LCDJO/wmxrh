@@ -37,10 +37,10 @@ export function AppBreadcrumbs() {
           <div className="flex items-center gap-1.5">
             <Globe className="h-3.5 w-3.5 text-muted-foreground" />
             {scope.level === 'tenant' ? (
-              <BreadcrumbPage>{currentTenant?.name || 'Tenant'}</BreadcrumbPage>
+              <BreadcrumbPage>{currentTenant?.name || 'Cliente'}</BreadcrumbPage>
             ) : (
               <BreadcrumbLink className="cursor-pointer" onClick={resetToTenant}>
-                {currentTenant?.name || 'Tenant'}
+                {currentTenant?.name || 'Cliente'}
               </BreadcrumbLink>
             )}
           </div>

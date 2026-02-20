@@ -30,7 +30,7 @@ const ROLE_META: Record<string, { icon: typeof Shield; accent: string }> = {
 };
 
 const MODULE_LABELS: Record<string, string> = {
-  tenants: 'Tenants', modulos: 'Módulos', auditoria: 'Auditoria',
+  tenants: 'Clientes', modulos: 'Módulos', auditoria: 'Auditoria',
   financeiro: 'Financeiro', fiscal: 'Fiscal', suporte: 'Suporte',
   usuarios: 'Usuários', seguranca: 'Segurança',
   marketplace: 'Marketplace', compliance: 'Compliance',

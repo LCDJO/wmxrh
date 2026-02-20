@@ -207,7 +207,7 @@ const RICH_META: Record<string, ModuleRichMeta> = {
       { key: 'role_created', label: 'Role Created', description: 'Novo role customizado criado.' },
       { key: 'permission_granted', label: 'Permission Granted', description: 'Permissão concedida a role.' },
     ],
-    usedIn: ['Controle de Acesso', 'Tenant Admin', 'Auditoria'],
+    usedIn: ['Controle de Acesso', 'Admin Cliente', 'Auditoria'],
     status: 'active',
   },
   billing: {
