@@ -83,3 +83,20 @@ export type {
   ExpiredCAInfo,
   NearExpiryInfo,
 } from './validity.engine';
+
+// Incident Service (Loss / Damage + Safety Automation)
+export {
+  registerEpiIncident,
+  getIncidents,
+  getIncidentById,
+  resolveIncident,
+  updateIncidentStatus,
+  getIncidentStats,
+} from './incident.service';
+export type {
+  EpiIncident,
+  EpiIncidentWithDetails,
+  EpiIncidentType,
+  EpiIncidentStatus,
+  RegisterIncidentInput,
+} from './incident.service';
