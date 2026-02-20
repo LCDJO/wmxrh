@@ -197,3 +197,31 @@ export interface SalaryPositioningResult {
   positioning: 'abaixo' | 'adequado' | 'acima';
   alert: boolean;
 }
+
+// ── Legal Knowledge Base ──
+export type LegalReferenceTipo = 'NR' | 'CLT' | 'CCT' | 'Portaria';
+
+export interface LegalReference {
+  id: string;
+  tenant_id: string;
+  tipo: LegalReferenceTipo;
+  codigo_referencia: string;
+  resumo: string | null;
+  obrigatoriedade: boolean;
+  categoria_profissional: string | null;
+  vigencia_inicio: string | null;
+  vigencia_fim: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateLegalReferenceDTO {
+  tenant_id: string;
+  tipo: LegalReferenceTipo;
+  codigo_referencia: string;
+  resumo?: string | null;
+  obrigatoriedade?: boolean;
+  categoria_profissional?: string | null;
+  vigencia_inicio?: string | null;
+  vigencia_fim?: string | null;
+}

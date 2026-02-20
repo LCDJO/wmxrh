@@ -7446,6 +7446,56 @@ export type Database = {
           },
         ]
       }
+      legal_references: {
+        Row: {
+          categoria_profissional: string | null
+          codigo_referencia: string
+          created_at: string
+          id: string
+          obrigatoriedade: boolean
+          resumo: string | null
+          tenant_id: string
+          tipo: string
+          updated_at: string
+          vigencia_fim: string | null
+          vigencia_inicio: string | null
+        }
+        Insert: {
+          categoria_profissional?: string | null
+          codigo_referencia: string
+          created_at?: string
+          id?: string
+          obrigatoriedade?: boolean
+          resumo?: string | null
+          tenant_id: string
+          tipo: string
+          updated_at?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Update: {
+          categoria_profissional?: string | null
+          codigo_referencia?: string
+          created_at?: string
+          id?: string
+          obrigatoriedade?: boolean
+          resumo?: string | null
+          tenant_id?: string
+          tipo?: string
+          updated_at?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_references_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_versions: {
         Row: {
           breaking_changes: boolean
