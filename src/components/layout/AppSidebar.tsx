@@ -72,7 +72,13 @@ const navSections: NavSection[] = [
       { to: '/companies', icon: Building2, label: 'Empresas', key: 'companies' },
       { to: '/groups', icon: Layers, label: 'Grupos Econômicos', key: 'groups' },
       { to: '/departments', icon: Briefcase, label: 'Departamentos', key: 'departments' },
-      { to: '/positions', icon: UserCog, label: 'Cargos', key: 'positions' },
+      {
+        to: '/positions', icon: UserCog, label: 'Cargos', key: 'positions',
+        children: [
+          { to: '/positions', icon: UserCog, label: 'Lista de Cargos', key: 'positions' },
+          { to: '/pccs-dashboard', icon: TrendingUp, label: 'PCCS', key: 'positions' },
+        ],
+      },
     ],
   },
 
