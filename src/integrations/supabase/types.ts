@@ -12409,6 +12409,7 @@ export type Database = {
           warehouse_name: string
         }[]
       }
+      get_pccs_dashboard_stats: { Args: { p_tenant_id: string }; Returns: Json }
       get_platform_extended_metrics: { Args: never; Returns: Json }
       get_platform_metrics: { Args: never; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
