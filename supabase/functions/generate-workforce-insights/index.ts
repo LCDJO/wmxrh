@@ -15,9 +15,39 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Accept tenant_id from body or run for all tenants
+    // ── Authentication ──
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Invalid token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Authorization: check if platform user or tenant member ──
+    const { data: platformUser } = await adminClient
+      .from("platform_users")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    // Accept tenant_id from body
     let tenantIds: string[] = [];
 
     if (req.method === "POST") {
@@ -27,9 +57,34 @@ serve(async (req) => {
       }
     }
 
-    // If no specific tenant, fetch all active tenants
-    if (tenantIds.length === 0) {
-      const { data: tenants, error } = await supabase
+    // Non-platform users MUST specify a tenant_id and have access
+    if (!platformUser) {
+      if (tenantIds.length === 0) {
+        return new Response(JSON.stringify({ error: "tenant_id is required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Verify tenant membership
+      const { data: membership } = await adminClient
+        .from("tenant_memberships")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("tenant_id", tenantIds[0])
+        .maybeSingle();
+
+      if (!membership) {
+        return new Response(JSON.stringify({ error: "Access denied" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // If platform user and no specific tenant, fetch all active tenants
+    if (tenantIds.length === 0 && platformUser) {
+      const { data: tenants, error } = await adminClient
         .from("tenants")
         .select("id")
         .eq("status", "active");
@@ -41,14 +96,10 @@ serve(async (req) => {
 
     for (const tenantId of tenantIds) {
       try {
-        // 1. Load dataset
-        const dataset = await loadDataset(supabase, tenantId);
-
-        // 2. Run pure engines inline (no import from src/)
+        const dataset = await loadDataset(adminClient, tenantId);
         const riskDetection = detectRisks(dataset);
         const healthScore = computeHealthScore(riskDetection);
 
-        // 3. Persist insights
         const risks = riskDetection.risks;
         const rows = risks.map((risk: any) => ({
           tenant_id: tenantId,
@@ -68,7 +119,7 @@ serve(async (req) => {
 
         let insightsCreated = 0;
         if (rows.length > 0) {
-          const { data, error } = await supabase
+          const { data, error } = await adminClient
             .from("workforce_insights")
             .insert(rows)
             .select("id");
@@ -84,7 +135,7 @@ serve(async (req) => {
         };
       } catch (tenantError: any) {
         console.error(`[generate-workforce-insights] tenant ${tenantId}:`, tenantError);
-        results[tenantId] = { success: false, error: tenantError.message };
+        results[tenantId] = { success: false, error: "Failed to process tenant" };
       }
     }
 
@@ -93,14 +144,14 @@ serve(async (req) => {
     });
   } catch (e: any) {
     console.error("[generate-workforce-insights] error:", e);
-    return new Response(JSON.stringify({ error: e.message }), {
+    return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
 
-// ── Inline lightweight dataset loader (edge function can't import from src/) ──
+// ── Inline lightweight dataset loader ──
 
 async function loadDataset(supabase: any, tenantId: string) {
   const [employeesRes, exposuresRes, examsRes, benefitsRes, violationsRes, nrTrainingsRes] = await Promise.all([
@@ -117,7 +168,6 @@ async function loadDataset(supabase: any, tenantId: string) {
     current_salary: e.current_salary ?? 0, company_id: e.company_id,
   }));
 
-  // Build compliance snapshots
   const exposuresByEmp = new Map<string, any[]>();
   for (const exp of (exposuresRes.data ?? [])) {
     const list = exposuresByEmp.get(exp.employee_id) ?? [];
@@ -182,15 +232,13 @@ async function loadDataset(supabase: any, tenantId: string) {
   };
 }
 
-// ── Inline risk detection (subset of rules for edge function) ──
+// ── Inline risk detection ──
 
 function detectRisks(dataset: any) {
   const risks: any[] = [];
   let counter = 0;
   const rid = () => `WIR-${String(++counter).padStart(3, "0")}`;
-  const now = dataset.analysis_date;
 
-  // Overdue exams
   const overdue = dataset.compliance.filter((c: any) => c.exam_overdue);
   if (overdue.length > 0) {
     risks.push({
@@ -203,7 +251,6 @@ function detectRisks(dataset: any) {
     });
   }
 
-  // Risk exposure without hazard pay
   const missingHazard = dataset.compliance.filter((c: any) => c.has_risk_exposure && !c.has_hazard_pay);
   if (missingHazard.length > 0) {
     risks.push({
@@ -216,7 +263,6 @@ function detectRisks(dataset: any) {
     });
   }
 
-  // Critical violations
   const critViolations = dataset.compliance.filter((c: any) => c.violation_severities.includes("critical"));
   if (critViolations.length > 0) {
     risks.push({
@@ -228,7 +274,6 @@ function detectRisks(dataset: any) {
     });
   }
 
-  // Employees without benefits (>20%)
   const active = dataset.employees.filter((e: any) => e.status === "active");
   const benefitSet = new Set(dataset.benefits.filter((b: any) => b.is_active).map((b: any) => b.employee_id));
   const noBenefits = active.filter((e: any) => !benefitSet.has(e.id));
@@ -242,7 +287,6 @@ function detectRisks(dataset: any) {
     });
   }
 
-  // NR Compliance Risk — expired trainings
   const nrTrainings = dataset.nr_trainings ?? [];
   const expiredTrainings = nrTrainings.filter((t: any) => t.status === "expired");
   if (expiredTrainings.length > 0) {
@@ -257,7 +301,6 @@ function detectRisks(dataset: any) {
     });
   }
 
-  // Training Gap Detected — overdue trainings
   const overdueTrainings = nrTrainings.filter((t: any) => t.status === "overdue");
   if (overdueTrainings.length > 0) {
     const affectedCount = new Set(overdueTrainings.map((t: any) => t.employee_id)).size;
@@ -271,7 +314,6 @@ function detectRisks(dataset: any) {
     });
   }
 
-  // Operational Risk Detected — blocked employees
   const blockedTrainings = nrTrainings.filter((t: any) => t.blocking_level === "hard_block" || t.blocking_level === "soft_block");
   if (blockedTrainings.length > 0) {
     const hardBlocked = new Set(blockedTrainings.filter((t: any) => t.blocking_level === "hard_block").map((t: any) => t.employee_id));

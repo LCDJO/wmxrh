@@ -282,7 +282,7 @@ serve(async (req) => {
     return new Response("Method not allowed", { status: 405, headers: corsHeaders });
   } catch (e) {
     console.error("metrics-export error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "Failed to export metrics" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
