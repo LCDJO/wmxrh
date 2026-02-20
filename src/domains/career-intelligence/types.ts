@@ -225,3 +225,33 @@ export interface CreateLegalReferenceDTO {
   vigencia_inicio?: string | null;
   vigencia_fim?: string | null;
 }
+
+// ── Career Legal Mapping (Cargo → Legislação) ──
+export type AdicionalAplicavel = 'insalubridade' | 'periculosidade';
+
+export interface CareerLegalMapping {
+  id: string;
+  tenant_id: string;
+  career_position_id: string;
+  legal_reference_id: string | null;
+  nr_codigo: string | null;
+  exige_treinamento: boolean;
+  exige_exame_medico: boolean;
+  exige_epi: boolean;
+  adicional_aplicavel: AdicionalAplicavel | null;
+  piso_salarial_referencia: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCareerLegalMappingDTO {
+  tenant_id: string;
+  career_position_id: string;
+  legal_reference_id?: string | null;
+  nr_codigo?: string | null;
+  exige_treinamento?: boolean;
+  exige_exame_medico?: boolean;
+  exige_epi?: boolean;
+  adicional_aplicavel?: AdicionalAplicavel | null;
+  piso_salarial_referencia?: string | null;
+}

@@ -910,6 +910,73 @@ export type Database = {
           },
         ]
       }
+      career_legal_mappings: {
+        Row: {
+          adicional_aplicavel: string | null
+          career_position_id: string
+          created_at: string
+          exige_epi: boolean
+          exige_exame_medico: boolean
+          exige_treinamento: boolean
+          id: string
+          legal_reference_id: string | null
+          nr_codigo: string | null
+          piso_salarial_referencia: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          adicional_aplicavel?: string | null
+          career_position_id: string
+          created_at?: string
+          exige_epi?: boolean
+          exige_exame_medico?: boolean
+          exige_treinamento?: boolean
+          id?: string
+          legal_reference_id?: string | null
+          nr_codigo?: string | null
+          piso_salarial_referencia?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          adicional_aplicavel?: string | null
+          career_position_id?: string
+          created_at?: string
+          exige_epi?: boolean
+          exige_exame_medico?: boolean
+          exige_treinamento?: boolean
+          id?: string
+          legal_reference_id?: string | null
+          nr_codigo?: string | null
+          piso_salarial_referencia?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_legal_mappings_career_position_id_fkey"
+            columns: ["career_position_id"]
+            isOneToOne: false
+            referencedRelation: "career_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_legal_mappings_legal_reference_id_fkey"
+            columns: ["legal_reference_id"]
+            isOneToOne: false
+            referencedRelation: "legal_references"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_legal_mappings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       career_legal_requirements: {
         Row: {
           base_legal: string | null

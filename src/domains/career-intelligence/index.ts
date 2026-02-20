@@ -30,6 +30,7 @@ export { legalRequirementsService } from './legal-requirements.service';
 export { salaryBenchmarkService } from './salary-benchmark.service';
 export { riskAlertService } from './risk-alert.service';
 export { legalReferenceService } from './legal-reference.service';
+export { careerLegalMappingService } from './career-legal-mapping.service';
 
 // ── Engines (pure, no I/O) ──
 export {
@@ -68,4 +69,7 @@ export type {
   LegalReferenceTipo,
   LegalReference,
   CreateLegalReferenceDTO,
+  AdicionalAplicavel,
+  CareerLegalMapping,
+  CreateCareerLegalMappingDTO,
 } from './types';
