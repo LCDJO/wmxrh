@@ -1,10 +1,11 @@
 /**
- * App Sidebar — Grouped navigation with collapsible parent menus
+ * App Sidebar — Section-based professional navigation
  *
- * Reacts to UnifiedIdentitySession.active_context:
- *   - Shows active tenant/scope info in header
- *   - Filters navigation by active_context.effective_roles
- *   - Visual indicator for scope level (tenant/group/company)
+ * Mirrors the platform sidebar pattern with:
+ *   - Uppercase section labels with separators
+ *   - Collapsible sub-groups with border-left indicators
+ *   - Permission-aware visibility
+ *   - Experience Profile locking
  */
 
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
@@ -15,6 +16,7 @@ import {
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
   Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook, Store,
+  HardHat, Activity, Stethoscope,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -36,119 +38,108 @@ import type { FeatureKey } from '@/domains/security/feature-flags';
 // TYPES
 // ════════════════════════════════════
 
-interface NavChild {
+interface NavItem {
   to: string;
   icon: typeof LayoutDashboard;
   label: string;
   key: NavKey;
   featureFlag?: FeatureKey;
+  children?: NavItem[];
 }
 
-interface NavGroup {
-  id: string;
-  icon: typeof LayoutDashboard;
+interface NavSection {
   label: string;
-  children: NavChild[];
-}
-
-type NavEntry = NavChild | NavGroup;
-
-function isGroup(entry: NavEntry): entry is NavGroup {
-  return 'children' in entry;
+  items: NavItem[];
 }
 
 // ════════════════════════════════════
-// NAV STRUCTURE
+// NAV STRUCTURE — Section-based
 // ════════════════════════════════════
 
-const navStructure: NavEntry[] = [
-  // ── Standalone ──
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard', key: 'dashboard' },
-
-  // ── Empresa ──
+const navSections: NavSection[] = [
+  // ── OVERVIEW ──
   {
-    id: 'empresa',
-    icon: Building2,
-    label: 'Empresa',
-    children: [
+    label: 'Overview',
+    items: [
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard', key: 'dashboard' },
+    ],
+  },
+
+  // ── ORGANIZAÇÃO ──
+  {
+    label: 'Organização',
+    items: [
       { to: '/companies', icon: Building2, label: 'Empresas', key: 'companies' },
-      { to: '/groups', icon: Building2, label: 'Grupos', key: 'groups' },
+      { to: '/groups', icon: Layers, label: 'Grupos Econômicos', key: 'groups' },
       { to: '/departments', icon: Briefcase, label: 'Departamentos', key: 'departments' },
-      { to: '/positions', icon: Briefcase, label: 'Cargos', key: 'positions' },
+      { to: '/positions', icon: UserCog, label: 'Cargos', key: 'positions' },
     ],
   },
 
-  // ── Funcionário ──
+  // ── PESSOAS ──
   {
-    id: 'funcionario',
-    icon: Users,
-    label: 'Funcionários',
-    children: [
-      { to: '/employees', icon: Users, label: 'Cadastro', key: 'employees' },
+    label: 'Pessoas',
+    items: [
+      { to: '/employees', icon: Users, label: 'Colaboradores', key: 'employees' },
       { to: '/agreements', icon: ScrollText, label: 'Termos e Acordos', key: 'employees' },
-      { to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation' },
-      { to: '/benefits', icon: ShieldCheck, label: 'Benefícios', key: 'benefits' },
-      { to: '/health', icon: Heart, label: 'Saúde Ocupacional', key: 'health' },
-      { to: '/occupational-compliance', icon: GraduationCap, label: 'Compliance Ocupacional', key: 'health' },
-      { to: '/nr-compliance', icon: ShieldAlert, label: 'NR Compliance', key: 'health' },
-      { to: '/compliance', icon: FileText, label: 'Rubricas', key: 'compliance' },
-      { to: '/payroll-simulation', icon: Calculator, label: 'Simulação Folha', key: 'compensation' },
+      {
+        to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation',
+        children: [
+          { to: '/compensation', icon: TrendingUp, label: 'Visão Geral', key: 'compensation' },
+          { to: '/payroll-simulation', icon: Calculator, label: 'Simulação Folha', key: 'compensation' },
+        ],
+      },
+      { to: '/benefits', icon: Gift, label: 'Benefícios', key: 'benefits' },
     ],
   },
 
-  // ── Trabalhista & Legal ──
+  // ── SAÚDE & SEGURANÇA ──
   {
-    id: 'trabalhista',
-    icon: Scale,
-    label: 'Trabalhista',
-    children: [
+    label: 'Saúde & Segurança',
+    items: [
+      { to: '/health', icon: Stethoscope, label: 'Saúde Ocupacional', key: 'health' },
+      { to: '/occupational-compliance', icon: GraduationCap, label: 'Riscos Ocupacionais', key: 'health' },
+      { to: '/nr-compliance', icon: ShieldAlert, label: 'NR Compliance', key: 'health' },
+      { to: '/safety-automation', icon: Zap, label: 'Automação SST', key: 'health' },
+    ],
+  },
+
+  // ── TRABALHISTA & LEGAL ──
+  {
+    label: 'Trabalhista & Legal',
+    items: [
       { to: '/labor-dashboard', icon: ClipboardCheck, label: 'Painel Trabalhista', key: 'labor_dashboard' },
       { to: '/labor-compliance', icon: Scale, label: 'Conformidade', key: 'labor_compliance' },
-      { to: '/labor-rules', icon: Gavel, label: 'Regras Trabalhistas', key: 'labor_rules' },
+      { to: '/labor-rules', icon: Gavel, label: 'Regras & Convenções', key: 'labor_rules' },
       { to: '/legal-dashboard', icon: Landmark, label: 'Dashboard Legal', key: 'legal_dashboard' },
+      { to: '/compliance', icon: FileText, label: 'Rubricas', key: 'compliance' },
       { to: '/audit', icon: ScrollText, label: 'Auditoria', key: 'audit' },
     ],
   },
 
-  // ── Segurança do Trabalho ──
+  // ── INTELIGÊNCIA ──
   {
-    id: 'seguranca_trabalho',
-    icon: ShieldAlert,
-    label: 'Segurança do Trabalho',
-    children: [
-      { to: '/safety-automation', icon: Zap, label: 'Automação de Segurança', key: 'health' },
-    ],
-  },
-
-  // ── Inteligência ──
-  {
-    id: 'inteligencia',
-    icon: Brain,
     label: 'Inteligência',
-    children: [
+    items: [
       { to: '/workforce-intelligence', icon: Brain, label: 'Inteligência RH', key: 'dashboard' },
       { to: '/strategic-intelligence', icon: Sparkles, label: 'IA Estratégica', key: 'dashboard' },
     ],
   },
 
-  // ── Integrações ──
+  // ── INTEGRAÇÕES ──
   {
-    id: 'integracoes',
-    icon: Plug,
     label: 'Integrações',
-    children: [
+    items: [
       { to: '/apps', icon: Store, label: 'Apps & Integrações', key: 'dashboard' as NavKey },
       { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' as NavKey },
-      { to: '/document-signature', icon: FileSignature, label: 'Assinatura de Documentos', key: 'esocial' as NavKey },
+      { to: '/document-signature', icon: FileSignature, label: 'Assinatura Digital', key: 'esocial' as NavKey },
     ],
   },
 
-  // ── Suporte ──
+  // ── SUPORTE ──
   {
-    id: 'suporte',
-    icon: Headphones,
     label: 'Suporte',
-    children: [
+    items: [
       { to: '/support/chat', icon: MessageSquarePlus, label: 'Chat ao Vivo', key: 'support' },
       { to: '/support/new', icon: MessageSquarePlus, label: 'Abrir Chamado', key: 'support' },
       { to: '/support/tickets', icon: Headphones, label: 'Meus Chamados', key: 'support' },
@@ -156,15 +147,18 @@ const navStructure: NavEntry[] = [
     ],
   },
 
-  // ── Indique e Ganhe ──
-  { to: '/referral', icon: Gift, label: 'Indique e Ganhe', key: 'dashboard' },
-
-  // ── Configurações ──
+  // ── GROWTH ──
   {
-    id: 'configuracoes',
-    icon: Settings,
+    label: 'Growth',
+    items: [
+      { to: '/referral', icon: Trophy, label: 'Indique e Ganhe', key: 'dashboard' },
+    ],
+  },
+
+  // ── CONFIGURAÇÕES ──
+  {
     label: 'Configurações',
-    children: [
+    items: [
       { to: '/settings/users', icon: Users, label: 'Usuários', key: 'iam_users' },
       { to: '/settings/roles', icon: ShieldCheck, label: 'Cargos & Permissões', key: 'iam_roles' },
       { to: '/settings/webhooks', icon: Webhook, label: 'Webhooks', key: 'dashboard' },
@@ -179,7 +173,7 @@ const navStructure: NavEntry[] = [
 
 export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [expandedNav, setExpandedNav] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -189,16 +183,13 @@ export function AppSidebar() {
   const { announcements } = useAnnouncements();
   const hasCriticalAnnouncement = announcements.some(a => a.severity === 'critical');
   const { isPathVisible, isPathLocked, profile: expProfile } = useExperienceProfile();
-
-  // ── Onboarding progress from cache-backed hook ──
   const { isOnboarding, completionPct: onboardingPct } = useOnboardingStatus();
   const onboardingComplete = !isOnboarding;
 
-  const isVisible = (item: NavChild) => {
+  const isVisible = (item: NavItem) => {
     if (loading) return true;
     if (item.featureFlag && !isFeatureEnabled(item.featureFlag)) return false;
     if (!canNav(item.key)) return false;
-    // PXE: hide if plan hides this path
     if (!isPathVisible(item.to)) return false;
     return true;
   };
@@ -206,30 +197,29 @@ export function AppSidebar() {
   const isActive = (to: string) =>
     location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
 
-  const isGroupActive = (group: NavGroup) =>
-    group.children.some(c => isActive(c.to));
+  // Filter sections to only show those with visible items
+  const visibleSections = navSections
+    .map(section => ({
+      ...section,
+      items: section.items.filter(isVisible),
+    }))
+    .filter(section => section.items.length > 0);
 
-  const toggleGroup = (id: string) => {
-    setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const isGroupOpen = (group: NavGroup) =>
-    openGroups[group.id] ?? isGroupActive(group);
-
-  const renderChild = (item: NavChild) => {
-    if (!isVisible(item)) return null;
+  const renderNavItem = (item: NavItem) => {
     const active = isActive(item.to);
     const lockInfo = isPathLocked(item.to);
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedNav === item.to || (hasChildren && item.children!.some(c => isActive(c.to)));
     const isCriticalHighlight = item.to === '/announcements' && hasCriticalAnnouncement;
 
-    // Locked: show but greyed out with lock icon
+    // Locked item
     if (lockInfo.locked) {
       return (
         <div
           key={item.to}
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium cursor-not-allowed group relative",
-            collapsed ? "justify-center" : "pl-10",
+            collapsed ? "justify-center" : "",
             "text-sidebar-foreground/30"
           )}
           title={lockInfo.message || `Disponível no plano ${lockInfo.requiredPlan}`}
@@ -237,11 +227,10 @@ export function AppSidebar() {
           <item.icon className="h-4 w-4 shrink-0" />
           {!collapsed && (
             <>
-              <span className="truncate">{item.label}</span>
-              <Lock className="h-3 w-3 ml-auto shrink-0 text-sidebar-foreground/20" />
+              <span className="truncate flex-1">{item.label}</span>
+              <Lock className="h-3 w-3 shrink-0 text-sidebar-foreground/20" />
             </>
           )}
-          {/* Upgrade tooltip on hover */}
           {!collapsed && (
             <div className="absolute left-full ml-2 top-0 z-50 hidden group-hover:block">
               <div className="bg-popover text-popover-foreground text-xs rounded-lg shadow-lg border border-border p-3 w-48">
@@ -254,13 +243,73 @@ export function AppSidebar() {
       );
     }
 
+    // Item with children (expandable)
+    if (hasChildren) {
+      return (
+        <div key={item.to}>
+          <button
+            type="button"
+            onClick={() => {
+              if (collapsed) {
+                navigate(item.to);
+              } else {
+                setExpandedNav(prev => prev === item.to ? null : item.to);
+              }
+            }}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full",
+              collapsed && "justify-center",
+              active
+                ? "bg-sidebar-accent text-sidebar-primary"
+                : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+            )}
+          >
+            <item.icon className={cn("h-4 w-4 shrink-0", active && "text-sidebar-primary")} />
+            {!collapsed && (
+              <>
+                <span className="truncate flex-1 text-left">{item.label}</span>
+                <ChevronRight className={cn(
+                  "h-3.5 w-3.5 shrink-0 transition-transform",
+                  isExpanded && "rotate-90"
+                )} />
+              </>
+            )}
+          </button>
+
+          {/* Sub-items with border-left indicator */}
+          {isExpanded && !collapsed && (
+            <div className="ml-6 mt-0.5 space-y-0.5 border-l border-sidebar-border pl-3">
+              {item.children!.filter(isVisible).map(child => {
+                const childActive = isActive(child.to);
+                return (
+                  <NavLink
+                    key={child.to}
+                    to={child.to}
+                    className={cn(
+                      "flex items-center px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200",
+                      childActive
+                        ? "bg-sidebar-accent text-sidebar-primary"
+                        : "text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-sidebar-accent/30"
+                    )}
+                  >
+                    {child.label}
+                  </NavLink>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Regular item
     return (
       <NavLink
         key={item.to}
         to={item.to}
         className={cn(
           "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-          collapsed ? "justify-center" : "pl-10",
+          collapsed && "justify-center",
           active
             ? "bg-sidebar-accent text-sidebar-primary"
             : isCriticalHighlight
@@ -275,84 +324,13 @@ export function AppSidebar() {
         )} />
         {!collapsed && (
           <>
-            <span className="truncate">{item.label}</span>
+            <span className="truncate flex-1">{item.label}</span>
             {isCriticalHighlight && (
               <span className="ml-auto h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" />
             )}
           </>
         )}
       </NavLink>
-    );
-  };
-
-  const renderEntry = (entry: NavEntry, idx: number) => {
-    // Standalone item
-    if (!isGroup(entry)) {
-      if (!isVisible(entry)) return null;
-      const active = isActive(entry.to);
-      return (
-        <NavLink
-          key={entry.to}
-          to={entry.to}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-            active
-              ? "bg-sidebar-accent text-sidebar-primary"
-              : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-          )}
-        >
-          <entry.icon className={cn("h-5 w-5 shrink-0", active && "text-sidebar-primary")} />
-          {!collapsed && <span>{entry.label}</span>}
-        </NavLink>
-      );
-    }
-
-    // Group — hide if no visible children
-    const visibleChildren = entry.children.filter(isVisible);
-    if (visibleChildren.length === 0) return null;
-
-    const groupActive = isGroupActive(entry);
-    const open = isGroupOpen(entry);
-    const groupHasCritical = entry.id === 'configuracoes' && hasCriticalAnnouncement;
-
-    return (
-      <div key={entry.id}>
-        <button
-          onClick={() => collapsed ? undefined : toggleGroup(entry.id)}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 w-full",
-            groupHasCritical
-              ? "text-destructive bg-destructive/5 hover:bg-destructive/10"
-              : groupActive
-                ? "text-sidebar-primary"
-                : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-          )}
-        >
-          <entry.icon className={cn(
-            "h-5 w-5 shrink-0",
-            groupHasCritical ? "text-destructive" : groupActive && "text-sidebar-primary",
-          )} />
-          {!collapsed && (
-            <>
-              <span className="flex-1 text-left truncate">{entry.label}</span>
-              {groupHasCritical && !open && (
-                <span className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0 mr-1" />
-              )}
-              <ChevronDown className={cn(
-                "h-4 w-4 shrink-0 transition-transform duration-200",
-                open ? "rotate-0" : "-rotate-90"
-              )} />
-            </>
-          )}
-        </button>
-
-        {/* Children */}
-        {(collapsed || open) && (
-          <div className={cn("space-y-0.5", !collapsed && "mt-0.5")}>
-            {visibleChildren.map(renderChild)}
-          </div>
-        )}
-      </div>
     );
   };
 
@@ -377,7 +355,6 @@ export function AppSidebar() {
         {!collapsed && (
           <div className="animate-fade-in overflow-hidden min-w-0">
             <h1 className="font-display text-base font-bold text-sidebar-primary-foreground">RH Gestão</h1>
-            {/* Active context summary from IIL */}
             {activeContext && (
               <p className="text-[10px] text-sidebar-foreground/50 truncate flex items-center gap-1 mt-0.5">
                 {activeContext.scope_level === 'company' && <Building2 className="h-2.5 w-2.5 shrink-0" />}
@@ -452,15 +429,37 @@ export function AppSidebar() {
         </div>
       )}
 
-      {/* ── Navigation ── */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navStructure.map((entry, idx) => renderEntry(entry, idx))}
+      {/* ── Section-based Navigation ── */}
+      <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        {visibleSections.map((section, sectionIdx) => (
+          <div key={section.label}>
+            {/* Section separator */}
+            {sectionIdx > 0 && (
+              <div className="my-3 mx-1 border-t border-sidebar-border" />
+            )}
+            {/* Section label */}
+            {!collapsed && (
+              <p className="px-3 pt-1 pb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/35">
+                {section.label}
+              </p>
+            )}
+            {collapsed && sectionIdx > 0 && (
+              <div className="flex justify-center py-1">
+                <div className="w-5 border-t border-sidebar-border" />
+              </div>
+            )}
+
+            <div className="space-y-0.5">
+              {section.items.map(renderNavItem)}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* ── Navigation Suggestions ── */}
       <NavigationSuggestionsPanel collapsed={collapsed} />
 
-      {/* ── Onboarding CTA — visible until onboarding is complete ── */}
+      {/* ── Onboarding CTA ── */}
       {!onboardingComplete && (
         <div className={cn("mx-3 mb-2", collapsed && "mx-2")}>
           <button
