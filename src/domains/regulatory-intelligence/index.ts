@@ -112,3 +112,13 @@ export type {
   ImpactoEstimado,
   AcaoRecomendada,
 } from './legal-diff.engine';
+
+// ── Legal Versioning Manager ──
+export { legalVersioningService } from './legal-versioning.service';
+
+export type {
+  LegalDocumentTipo,
+  LegalDocumentRecord,
+  CreateLegalDocumentDTO,
+  VersionComparisonResult,
+} from './legal-versioning.service';

@@ -7571,6 +7571,84 @@ export type Database = {
           },
         ]
       }
+      legal_documents: {
+        Row: {
+          codigo: string
+          conteudo_texto: string | null
+          created_at: string
+          data_publicacao: string
+          ementa: string | null
+          fonte: string | null
+          hash_conteudo: string
+          id: string
+          is_current: boolean
+          metadata: Json | null
+          substituida_por: string | null
+          tenant_id: string
+          tipo: string
+          titulo: string
+          url_original: string | null
+          versao: number
+          vigencia_fim: string | null
+          vigencia_inicio: string
+        }
+        Insert: {
+          codigo: string
+          conteudo_texto?: string | null
+          created_at?: string
+          data_publicacao: string
+          ementa?: string | null
+          fonte?: string | null
+          hash_conteudo: string
+          id?: string
+          is_current?: boolean
+          metadata?: Json | null
+          substituida_por?: string | null
+          tenant_id: string
+          tipo: string
+          titulo: string
+          url_original?: string | null
+          versao?: number
+          vigencia_fim?: string | null
+          vigencia_inicio: string
+        }
+        Update: {
+          codigo?: string
+          conteudo_texto?: string | null
+          created_at?: string
+          data_publicacao?: string
+          ementa?: string | null
+          fonte?: string | null
+          hash_conteudo?: string
+          id?: string
+          is_current?: boolean
+          metadata?: Json | null
+          substituida_por?: string | null
+          tenant_id?: string
+          tipo?: string
+          titulo?: string
+          url_original?: string | null
+          versao?: number
+          vigencia_fim?: string | null
+          vigencia_inicio?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_documents_substituida_por_fkey"
+            columns: ["substituida_por"]
+            isOneToOne: false
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_references: {
         Row: {
           categoria_profissional: string | null
