@@ -26,6 +26,14 @@ export { generateInterpretation } from './interpretation.engine';
 export { analyzePositionImpacts } from './position-impact.engine';
 export { generateActionPlan } from './action-plan.engine';
 export { generateWorkflows } from './workflow-generation.engine';
+export { analyzeLegalChange } from './legal-ai-analyzer.engine';
+
+export type {
+  LegalInterpretation,
+  LegalChangeInput,
+  NivelGravidade,
+  TipoImpacto,
+} from './legal-ai-analyzer.engine';
 
 // ── Event Consumer (Regulatory Intelligence → Legal AI) ──
 export { startRegulatoryEventConsumer, stopRegulatoryEventConsumer } from './regulatory-event-consumer';
