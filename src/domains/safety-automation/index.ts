@@ -115,3 +115,14 @@ export type {
   PlaybookMatchResult,
   PlaybookExecutionResult,
 } from './playbook-engine';
+
+// Workforce Intelligence Bridge
+export {
+  startWorkforceIntelligenceBridge,
+  scanOverdueWorkflows,
+  getRecentSafetyInsights,
+} from './workforce-intelligence-bridge';
+export type {
+  SafetyInsight,
+  SafetyInsightType,
+} from './workforce-intelligence-bridge';
