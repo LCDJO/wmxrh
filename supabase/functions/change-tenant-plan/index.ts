@@ -131,45 +131,58 @@ Deno.serve(async (req: Request) => {
     return jsonError(409, "SAME_PLAN", "Tenant is already on this plan");
   }
 
-  // ── 5. Cancel current plan ──
-  if (currentPlan) {
-    const { error: cancelErr } = await admin
-      .from("tenant_plans")
-      .update({ status: "cancelled", updated_at: now })
-      .eq("id", currentPlan.id);
-
-    if (cancelErr) {
-      console.error("[change-tenant-plan] Failed to cancel current plan:", cancelErr);
-      return jsonError(500, "CANCEL_FAILED", "Failed to cancel current plan");
-    }
-  }
-
-  // ── 6. Activate new plan ──
+  // ── 5. Cancel current plan & activate new one ──
+  // tenant_plans has a UNIQUE constraint on tenant_id, so we must UPDATE (not INSERT)
   const nextBillingDate = calculateNextBillingDate(billing_cycle);
 
-  const { data: newTenantPlan, error: insertErr } = await admin
-    .from("tenant_plans")
-    .insert({
-      tenant_id,
-      plan_id,
-      status: "active",
-      billing_cycle,
-      started_at: now,
-      next_billing_date: nextBillingDate,
-      activated_by: user.id,
-    })
-    .select()
-    .single();
+  let newTenantPlan: any;
 
-  if (insertErr) {
-    console.error("[change-tenant-plan] Failed to create new plan:", insertErr);
-    // Attempt to rollback
-    if (currentPlan) {
-      await admin.from("tenant_plans").update({ status: "active", updated_at: now }).eq("id", currentPlan.id);
+  if (currentPlan) {
+    // Update existing record in-place
+    const { data: updated, error: updateErr } = await admin
+      .from("tenant_plans")
+      .update({
+        plan_id,
+        status: "active",
+        billing_cycle,
+        started_at: now,
+        next_billing_date: nextBillingDate,
+        activated_by: user.id,
+        updated_at: now,
+      })
+      .eq("id", currentPlan.id)
+      .select()
+      .single();
+
+    if (updateErr) {
+      console.error("[change-tenant-plan] Failed to update plan:", updateErr);
+      return jsonError(500, "ACTIVATION_FAILED", "Failed to activate new plan.");
     }
-    return jsonError(500, "ACTIVATION_FAILED", "Failed to activate new plan. Previous plan restored.");
+    newTenantPlan = updated;
+  } else {
+    // No existing plan — insert fresh
+    const { data: inserted, error: insertErr } = await admin
+      .from("tenant_plans")
+      .insert({
+        tenant_id,
+        plan_id,
+        status: "active",
+        billing_cycle,
+        started_at: now,
+        next_billing_date: nextBillingDate,
+        activated_by: user.id,
+      })
+      .select()
+      .single();
+
+    if (insertErr) {
+      console.error("[change-tenant-plan] Failed to create new plan:", insertErr);
+      return jsonError(500, "ACTIVATION_FAILED", "Failed to activate new plan.");
+    }
+    newTenantPlan = inserted;
   }
 
+  // ── 6. (continued below) ──
   // ── 7. Generate proration invoice ──
   const oldPrice = currentPlan?.saas_plans?.price ?? 0;
   const newPrice = newPlan.price;
