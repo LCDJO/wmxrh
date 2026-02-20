@@ -7649,6 +7649,56 @@ export type Database = {
           },
         ]
       }
+      legal_interpretation_logs: {
+        Row: {
+          acoes_geradas: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          impacto: Json
+          modelo_utilizado: string | null
+          mudanca_id: string
+          norm_codigo: string | null
+          resumo: string
+          risco_nivel: string
+          tenant_id: string
+        }
+        Insert: {
+          acoes_geradas?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          impacto?: Json
+          modelo_utilizado?: string | null
+          mudanca_id: string
+          norm_codigo?: string | null
+          resumo: string
+          risco_nivel?: string
+          tenant_id: string
+        }
+        Update: {
+          acoes_geradas?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          impacto?: Json
+          modelo_utilizado?: string | null
+          mudanca_id?: string
+          norm_codigo?: string | null
+          resumo?: string
+          risco_nivel?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_interpretation_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_references: {
         Row: {
           categoria_profissional: string | null
@@ -12651,6 +12701,19 @@ export type Database = {
       increment_referral_link_signups: {
         Args: { link_id: string }
         Returns: undefined
+      }
+      insert_legal_interpretation_log: {
+        Args: {
+          p_acoes_geradas: Json
+          p_impacto: Json
+          p_modelo_utilizado?: string
+          p_mudanca_id: string
+          p_norm_codigo: string
+          p_resumo: string
+          p_risco_nivel?: string
+          p_tenant_id: string
+        }
+        Returns: string
       }
       is_active_platform_user: { Args: { _user_id: string }; Returns: boolean }
       is_platform_billing_admin: {
