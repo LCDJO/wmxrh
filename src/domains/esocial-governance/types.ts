@@ -200,3 +200,36 @@ export interface EsocialGovernanceConfig {
   max_retry_attempts: number;
   notification_channels: ('in_app' | 'email' | 'webhook')[];
 }
+
+// ── Error Analytics ──
+
+export interface ESocialErrorCode {
+  codigo: string;
+  descricao: string;
+  ocorrencias: number;
+  ultimo_registro: string;
+}
+
+export interface ESocialRejeicaoPorEvento {
+  evento_tipo: string;
+  total_rejeitados: number;
+  codigos_erro: string[];
+}
+
+export interface ESocialEmpresaFalha {
+  company_id: string;
+  company_name: string;
+  total_erros: number;
+  taxa_falha: number; // 0-100
+  erros_principais: string[];
+}
+
+export interface ESocialErrorInsight {
+  periodo: string;
+  erros_recorrentes: ESocialErrorCode[];
+  rejeicoes_por_evento: ESocialRejeicaoPorEvento[];
+  empresas_alta_falha: ESocialEmpresaFalha[];
+  total_erros_periodo: number;
+  erro_mais_frequente: string;
+  recomendacoes: string[];
+}
