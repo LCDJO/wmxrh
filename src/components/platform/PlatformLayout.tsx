@@ -292,9 +292,10 @@ const NAV_SECTIONS: NavSection[] = [
         label: 'Settings',
         icon: Settings,
         children: [
-          { to: '/platform/settings/gamification', label: 'Gamificação' },
           { to: '/platform/settings/saas', label: 'Parametrizações' },
+          { to: '/platform/settings/gamification', label: 'Gamificação' },
           { to: '/platform/settings/versioning', label: 'Versionamento' },
+          { to: '---separator-estrutura---', label: '---' },
           {
             to: '/platform/structure',
             label: 'Estrutura',
@@ -583,6 +584,11 @@ export default function PlatformLayout() {
                       {hasChildren && isExpanded && !collapsed && (
                         <div className="ml-6 mt-0.5 space-y-0.5 border-l border-[hsl(250_25%_22%)] pl-3">
                           {children.map(child => {
+                            // Separator support
+                            if (child.to.startsWith('---separator')) {
+                              return <div key={child.to} className="my-1.5 mx-1 border-t border-[hsl(250_25%_22%)]" />;
+                            }
+
                             const hasGrandchildren = child.children && child.children.length > 0;
                             const isChildActive = location.pathname.startsWith(child.to);
                             const isChildExpanded = expandedChild === child.to || (hasGrandchildren && isChildActive);
