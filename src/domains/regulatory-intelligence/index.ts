@@ -79,3 +79,23 @@ export type {
   CnaeRecord, CboRecord,
   CctRecord, CctClausulaDestaque,
 } from './adapters';
+
+// ── Legal Crawler Service ──
+export {
+  normalizeText,
+  generateContentHash,
+  extractSections,
+  diffDocuments,
+  crawlDocument,
+  runCrawl,
+  createInMemoryVersionStore,
+} from './legal-crawler.service';
+
+export type {
+  CrawledDocument,
+  VersionedDocument,
+  CrawlDiffResult,
+  CrawlRunResult,
+  CrawlError,
+  DocumentVersionStore,
+} from './legal-crawler.service';
