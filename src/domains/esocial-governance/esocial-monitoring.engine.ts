@@ -23,6 +23,9 @@ import type {
   CertificateInfo,
   CertificateMonitorResult,
   ESocialErrorInsight,
+  ClientCommTrigger,
+  ClientCommAction,
+  ClientCommResult,
 } from './types';
 import { emitEsocialGovEvent, esocialGovernanceEvents } from './esocial-governance.events';
 
@@ -338,4 +341,67 @@ export function getErrorInsights(): ESocialErrorInsight {
       'Validar datas de admissão antes do envio do S-2200',
     ],
   };
+}
+
+// ── Client Communication Engine ──
+
+function buildAction(
+  tipo: ClientCommAction['tipo'],
+  titulo: string,
+  mensagem: string,
+  prioridade: ClientCommAction['prioridade'],
+  tenantId?: string | null,
+  companyId?: string | null,
+  metadata?: Record<string, unknown>,
+): ClientCommAction {
+  return {
+    tipo, titulo, mensagem,
+    destinatario_tenant_id: tenantId ?? null,
+    destinatario_company_id: companyId ?? null,
+    prioridade,
+    metadata: metadata ?? {},
+    gerado_em: new Date().toISOString(),
+  };
+}
+
+/** Dispatch client communications based on a trigger. */
+export function dispatchClientComm(trigger: ClientCommTrigger, context?: Record<string, unknown>): ClientCommResult {
+  const acoes: ClientCommAction[] = [];
+
+  if (trigger === 'layout_change') {
+    const versao = (context?.versao as string) ?? 'S-1.3';
+    acoes.push(
+      buildAction('notificacao_sistema', `Nova versão do layout eSocial: ${versao}`, `O layout ${versao} foi publicado. Verifique a compatibilidade dos seus eventos.`, 'alta'),
+      buildAction('alerta_dashboard', `Atualização de layout obrigatória`, `Migração para o layout ${versao} será necessária. Confira os eventos alterados no painel de governança.`, 'alta'),
+      buildAction('recomendacao_legal_ai', `Análise de impacto — Layout ${versao}`, `Recomendação: revisar mapeamentos de eventos S-2240, S-1200 e S-1210 antes da data de obrigatoriedade. A Legal AI identificou 3 cláusulas impactadas.`, 'media'),
+    );
+  } else if (trigger === 'critical_error') {
+    const evento = (context?.evento as string) ?? 'S-2240';
+    const empresa = (context?.empresa as string) ?? 'Empresa';
+    const companyId = (context?.company_id as string) ?? null;
+    acoes.push(
+      buildAction('notificacao_sistema', `Erro crítico eSocial — ${empresa}`, `Evento ${evento} rejeitado por inconsistência cadastral. Ação imediata requerida.`, 'urgente', null, companyId),
+      buildAction('alerta_dashboard', `${evento} rejeitado — ação requerida`, `Verifique os dados cadastrais e reenvie o evento. Prazo de regularização: 5 dias úteis.`, 'urgente', null, companyId),
+      buildAction('recomendacao_legal_ai', `Análise de risco — Rejeição ${evento}`, `A Legal AI recomenda: corrigir dados CNIS do trabalhador e validar CBO antes do reenvio. Risco de multa: R$ 402,53/evento.`, 'alta', null, companyId),
+    );
+  } else if (trigger === 'new_obligation') {
+    const obrigacao = (context?.descricao as string) ?? 'Nova obrigatoriedade SST';
+    acoes.push(
+      buildAction('notificacao_sistema', `Nova obrigatoriedade eSocial`, obrigacao, 'alta'),
+      buildAction('alerta_dashboard', `Atenção: nova obrigatoriedade`, `${obrigacao}. Verifique os prazos e prepare os eventos necessários.`, 'alta'),
+      buildAction('recomendacao_legal_ai', `Plano de ação — Nova obrigatoriedade`, `A Legal AI gerou um plano de conformidade com 4 etapas para adequação à nova obrigatoriedade. Prazo estimado: 15 dias.`, 'media'),
+    );
+  }
+
+  const result: ClientCommResult = {
+    trigger,
+    trigger_description: trigger === 'layout_change' ? 'Mudança de layout' : trigger === 'critical_error' ? 'Erro crítico' : 'Nova obrigatoriedade',
+    acoes_geradas: acoes,
+    total_notificacoes: acoes.filter(a => a.tipo === 'notificacao_sistema').length,
+    total_alertas_dashboard: acoes.filter(a => a.tipo === 'alerta_dashboard').length,
+    total_recomendacoes_legal_ai: acoes.filter(a => a.tipo === 'recomendacao_legal_ai').length,
+  };
+
+  emitEsocialGovEvent(esocialGovernanceEvents.CLIENT_COMM_DISPATCHED, result);
+  return result;
 }

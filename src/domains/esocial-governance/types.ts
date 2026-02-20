@@ -233,3 +233,27 @@ export interface ESocialErrorInsight {
   erro_mais_frequente: string;
   recomendacoes: string[];
 }
+
+// ── Client Communication Engine ──
+
+export type ClientCommTrigger = 'layout_change' | 'critical_error' | 'new_obligation';
+
+export interface ClientCommAction {
+  tipo: 'notificacao_sistema' | 'alerta_dashboard' | 'recomendacao_legal_ai';
+  titulo: string;
+  mensagem: string;
+  destinatario_tenant_id: string | null;
+  destinatario_company_id: string | null;
+  prioridade: 'baixa' | 'media' | 'alta' | 'urgente';
+  metadata: Record<string, unknown>;
+  gerado_em: string;
+}
+
+export interface ClientCommResult {
+  trigger: ClientCommTrigger;
+  trigger_description: string;
+  acoes_geradas: ClientCommAction[];
+  total_notificacoes: number;
+  total_alertas_dashboard: number;
+  total_recomendacoes_legal_ai: number;
+}
