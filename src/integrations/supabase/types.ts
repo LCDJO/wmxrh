@@ -3341,9 +3341,12 @@ export type Database = {
           employee_id: string | null
           entity_id: string | null
           entity_type: string | null
+          epi_catalog_id: string | null
           executor: string
           executor_user_id: string | null
+          hash_documento: string | null
           id: string
+          ip_address: string | null
           metadata: Json | null
           tenant_id: string
         }
@@ -3355,9 +3358,12 @@ export type Database = {
           employee_id?: string | null
           entity_id?: string | null
           entity_type?: string | null
+          epi_catalog_id?: string | null
           executor?: string
           executor_user_id?: string | null
+          hash_documento?: string | null
           id?: string
+          ip_address?: string | null
           metadata?: Json | null
           tenant_id: string
         }
@@ -3369,9 +3375,12 @@ export type Database = {
           employee_id?: string | null
           entity_id?: string | null
           entity_type?: string | null
+          epi_catalog_id?: string | null
           executor?: string
           executor_user_id?: string | null
+          hash_documento?: string | null
           id?: string
+          ip_address?: string | null
           metadata?: Json | null
           tenant_id?: string
         }
@@ -3388,6 +3397,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_audit_log_epi_catalog_id_fkey"
+            columns: ["epi_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "epi_catalog"
             referencedColumns: ["id"]
           },
           {
