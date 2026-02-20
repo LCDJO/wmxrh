@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Shield, Mail, Lock, ArrowRight, Loader2, KeyRound, Building2, Crown } from 'lucide-react';
+import { Shield, Mail, Lock, ArrowRight, Loader2, KeyRound, Building2, Crown, User, Phone, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -38,6 +38,10 @@ export default function Auth() {
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [companyDocument, setCompanyDocument] = useState('');
+  const [companyPhone, setCompanyPhone] = useState('');
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
@@ -170,7 +174,18 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await signUp(email, password);
+    if (!fullName.trim() || !companyName.trim() || !companyDocument.trim() || !companyPhone.trim()) {
+      toast({ title: 'Campos obrigatórios', description: 'Preencha todos os campos para continuar.', variant: 'destructive' });
+      setLoading(false);
+      return;
+    }
+
+    const { error } = await signUp(email, password, {
+      full_name: fullName.trim(),
+      company_name: companyName.trim(),
+      company_document: companyDocument.trim(),
+      company_phone: companyPhone.trim(),
+    });
 
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
@@ -368,10 +383,30 @@ export default function Auth() {
 
           {/* Sign up form */}
           {mode === 'signup' && (
-            <form onSubmit={handleSignUp} className="space-y-5">
+            <form onSubmit={handleSignUp} className="space-y-4">
+              {/* Personal info */}
+              <div className="space-y-1.5">
+                <Label htmlFor="signup-name" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Nome completo *
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                  <Input
+                    id="signup-name"
+                    type="text"
+                    placeholder="Seu nome completo"
+                    value={fullName}
+                    onChange={e => setFullName(e.target.value)}
+                    className="pl-10 h-11"
+                    required
+                    autoComplete="name"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="signup-email" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Email
+                  Email *
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
@@ -390,7 +425,7 @@ export default function Auth() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="signup-password" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Senha
+                  Senha *
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
@@ -405,6 +440,71 @@ export default function Auth() {
                     minLength={6}
                     autoComplete="new-password"
                   />
+                </div>
+              </div>
+
+              {/* Company info separator */}
+              <div className="border-t border-border pt-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5" /> Dados da Empresa
+                </p>
+
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="signup-company" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Nome da empresa *
+                    </Label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                      <Input
+                        id="signup-company"
+                        type="text"
+                        placeholder="Empresa ABC Ltda"
+                        value={companyName}
+                        onChange={e => setCompanyName(e.target.value)}
+                        className="pl-10 h-11"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="signup-cnpj" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        CNPJ *
+                      </Label>
+                      <div className="relative">
+                        <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                        <Input
+                          id="signup-cnpj"
+                          type="text"
+                          placeholder="00.000.000/0000-00"
+                          value={companyDocument}
+                          onChange={e => setCompanyDocument(e.target.value)}
+                          className="pl-10 h-11"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="signup-phone" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Telefone *
+                      </Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                        <Input
+                          id="signup-phone"
+                          type="tel"
+                          placeholder="(00) 00000-0000"
+                          value={companyPhone}
+                          onChange={e => setCompanyPhone(e.target.value)}
+                          className="pl-10 h-11"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
