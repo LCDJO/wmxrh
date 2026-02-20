@@ -288,6 +288,29 @@ export interface StockAlert {
 }
 
 // ═══════════════════════════════════════════════════════
+// UNIFIED ALERTS
+// ═══════════════════════════════════════════════════════
+
+export type EpiAlertType = 'lot_expiring' | 'ca_expiring' | 'low_stock' | 'no_stock' | 'cost_spike';
+export type EpiAlertSeverity = 'info' | 'warning' | 'critical';
+
+export interface EpiAlert {
+  id: string;
+  tenant_id: string;
+  alert_type: EpiAlertType;
+  severity: EpiAlertSeverity;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  title: string;
+  message: string;
+  metadata: Record<string, unknown>;
+  is_resolved: boolean;
+  resolved_at?: string | null;
+  resolved_by?: string | null;
+  created_at: string;
+}
+
+// ═══════════════════════════════════════════════════════
 // DOMAIN EVENTS
 // ═══════════════════════════════════════════════════════
 
@@ -318,4 +341,38 @@ export interface EPICostAllocatedEvent {
   timestamp: string;
 }
 
-export type EpiInventoryDomainEvent = EPIStockReducedEvent | EPICostAllocatedEvent;
+export interface EPILotExpiringEvent {
+  type: 'EPILotExpiring';
+  tenant_id: string;
+  lot_id: string;
+  lote_numero: string;
+  dias_restantes: number;
+  timestamp: string;
+}
+
+export interface EPIStockLowEvent {
+  type: 'EPIStockLow';
+  tenant_id: string;
+  epi_catalog_id: string;
+  warehouse_id: string;
+  quantidade_disponivel: number;
+  quantidade_minima: number;
+  timestamp: string;
+}
+
+export interface EPICostSpikeDetectedEvent {
+  type: 'EPICostSpikeDetected';
+  tenant_id: string;
+  department_id: string;
+  custo_atual: number;
+  media_setor: number;
+  employee_id: string;
+  timestamp: string;
+}
+
+export type EpiInventoryDomainEvent =
+  | EPIStockReducedEvent
+  | EPICostAllocatedEvent
+  | EPILotExpiringEvent
+  | EPIStockLowEvent
+  | EPICostSpikeDetectedEvent;

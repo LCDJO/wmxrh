@@ -3335,6 +3335,62 @@ export type Database = {
           },
         ]
       }
+      epi_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_resolved: boolean
+          message: string
+          metadata: Json | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          tenant_id: string
+          title: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_resolved?: boolean
+          message: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id: string
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_resolved?: boolean
+          message?: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       epi_asset_returns: {
         Row: {
           asset_id: string | null
