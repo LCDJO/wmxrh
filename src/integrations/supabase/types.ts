@@ -3739,6 +3739,7 @@ export type Database = {
           employee_id: string
           epi_catalog_id: string
           id: string
+          impacto_financeiro: number | null
           lot_id: string | null
           metadata: Json | null
           quantidade: number
@@ -3755,6 +3756,7 @@ export type Database = {
           employee_id: string
           epi_catalog_id: string
           id?: string
+          impacto_financeiro?: number | null
           lot_id?: string | null
           metadata?: Json | null
           quantidade?: number
@@ -3771,6 +3773,7 @@ export type Database = {
           employee_id?: string
           epi_catalog_id?: string
           id?: string
+          impacto_financeiro?: number | null
           lot_id?: string | null
           metadata?: Json | null
           quantidade?: number
@@ -11514,6 +11517,21 @@ export type Database = {
           custo_total_acumulado: number
           epi_nome: string
           total_quantidade: number
+        }[]
+      }
+      get_epi_cost_summary_by_company: {
+        Args: {
+          _company_id: string
+          _period_from?: string
+          _period_to?: string
+          _tenant_id: string
+        }
+        Returns: {
+          centro_custo: string
+          employee_id: string
+          employee_name: string
+          total_epi_cost: number
+          total_items: number
         }[]
       }
       get_platform_extended_metrics: { Args: never; Returns: Json }

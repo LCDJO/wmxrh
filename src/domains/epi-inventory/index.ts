@@ -57,3 +57,24 @@ export {
   getEmployeeCostSummary,
   getTenantCostReport,
 } from './cost-tracking.service';
+
+// Cost Engine Integration (Payroll + Workforce Intelligence)
+export {
+  getEpiCostsForPayroll,
+  getEpiCostIntelligence,
+} from './cost-engine.integration';
+
+export type {
+  EpiCostForPayroll,
+  EpiCostIntelligence,
+} from './cost-engine.integration';
+
+// Domain Events & Asset Types
+export type {
+  EpiAsset,
+  EpiAssetStatus,
+  EpiStockAlert,
+  EPIStockReducedEvent,
+  EPICostAllocatedEvent,
+  EpiInventoryDomainEvent,
+} from './types';
