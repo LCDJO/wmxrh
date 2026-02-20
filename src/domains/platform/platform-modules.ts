@@ -44,6 +44,7 @@ export const PLATFORM_MODULES: readonly PlatformModule[] = [
   { key: 'landing_engine',   label: 'Landing Engine',       description: 'Construtor de landing pages com versionamento e A/B testing',            icon: 'Layout',         category: 'platform' },
   { key: 'website_engine',   label: 'Website Engine',       description: 'Páginas institucionais, blog e gestão de conteúdo',                     icon: 'Globe',          category: 'platform' },
   { key: 'autonomous_ops',  label: 'Autonomous Ops AI',    description: 'Inteligência operacional: análise de sinais, predição de riscos, sugestões de automação e otimização de receita', icon: 'Brain', category: 'platform' },
+  { key: 'esocial_governance', label: 'Governança eSocial', description: 'Monitoramento central de layout, certificados, alertas e conformidade eSocial por tenant', icon: 'ShieldCheck', category: 'platform' },
 ] as const;
 
 export type ModuleKey = typeof PLATFORM_MODULES[number]['key'];
