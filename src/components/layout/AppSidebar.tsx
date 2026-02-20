@@ -158,7 +158,6 @@ const navSections: NavSection[] = [
     items: [
       { to: '/apps', icon: Store, label: 'Apps & Integrações', key: 'dashboard' as NavKey },
       { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' as NavKey },
-      { to: '/document-signature', icon: FileSignature, label: 'Assinatura Digital', key: 'esocial' as NavKey },
     ],
   },
 
