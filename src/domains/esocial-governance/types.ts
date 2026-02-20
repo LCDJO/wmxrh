@@ -257,3 +257,35 @@ export interface ClientCommResult {
   total_alertas_dashboard: number;
   total_recomendacoes_legal_ai: number;
 }
+
+// ── Tenant Dashboard View ──
+
+export interface TenantActionPlanItem {
+  id: string;
+  titulo: string;
+  descricao: string;
+  prioridade: 'baixa' | 'media' | 'alta' | 'urgente';
+  prazo: string | null;
+  status: 'pendente' | 'em_andamento' | 'concluido';
+  evento_relacionado: string | null;
+}
+
+export interface TenantDashboardView {
+  tenant_id: string;
+  tenant_name: string;
+  status_integracao: EsocialTenantStatus;
+  layout_version: EsocialLayoutVersion;
+  certificado_status: CertificadoStatus;
+  certificado_validade: string | null;
+  empresas_total: number;
+  empresas_em_dia: number;
+  empresas_pendentes: number;
+  empresas_bloqueadas: number;
+  eventos_pendentes: number;
+  eventos_rejeitados: number;
+  ultimo_envio: string | null;
+  proximo_prazo: string | null;
+  pendencias: EsocialPendency[];
+  alertas: EsocialAlert[];
+  plano_acao: TenantActionPlanItem[];
+}

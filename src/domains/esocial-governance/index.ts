@@ -29,6 +29,7 @@ export {
   runCertificateMonitor,
   getErrorInsights,
   dispatchClientComm,
+  getTenantDashboardView,
 } from './esocial-monitoring.engine';
 
 export {
@@ -67,4 +68,6 @@ export type {
   ClientCommTrigger,
   ClientCommAction,
   ClientCommResult,
+  TenantActionPlanItem,
+  TenantDashboardView,
 } from './types';
