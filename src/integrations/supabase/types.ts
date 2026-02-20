@@ -7508,6 +7508,76 @@ export type Database = {
           },
         ]
       }
+      safety_tasks: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          descricao: string
+          employee_id: string | null
+          id: string
+          metadata: Json | null
+          prazo: string
+          responsavel_user_id: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          workflow_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          descricao: string
+          employee_id?: string | null
+          id?: string
+          metadata?: Json | null
+          prazo: string
+          responsavel_user_id?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          workflow_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          descricao?: string
+          employee_id?: string | null
+          id?: string
+          metadata?: Json | null
+          prazo?: string
+          responsavel_user_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_tasks_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_tasks_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "safety_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       safety_workflows: {
         Row: {
           assigned_to: string | null
