@@ -116,11 +116,11 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── 4. Get current plan (if any) ──
+  // Fetch ANY existing tenant_plan row (unique constraint on tenant_id means at most one)
   const { data: currentPlan } = await admin
     .from("tenant_plans")
     .select("*, saas_plans(name, price)")
     .eq("tenant_id", tenant_id)
-    .in("status", ["active", "trial"])
     .maybeSingle();
 
   const now = new Date().toISOString();
