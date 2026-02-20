@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { useExperienceProfile } from '@/hooks/use-experience-profile';
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { LogOut, Crown, Pencil, Save, X, Phone, Mail, User } from 'lucide-react';
+import { LogOut, Crown, Pencil, Save, X, Phone, Mail, User, ChevronRight } from 'lucide-react';
 import { dualIdentityEngine } from '@/domains/security/kernel/dual-identity-engine';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +30,7 @@ interface ProfileFormData {
 }
 
 export function UserProfileDropdown() {
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { currentTenant } = useTenant();
   const { profile: expProfile } = useExperienceProfile();
@@ -193,17 +195,23 @@ export function UserProfileDropdown() {
           </div>
         )}
 
-        {/* Plan section */}
+        {/* Plan section — clickable → /plans */}
         {expProfile.plan_tier && (
-          <div className="px-4 py-3 border-b border-border">
+          <button
+            onClick={() => navigate('/plans')}
+            className="w-full px-4 py-3 border-b border-border hover:bg-muted/50 transition-colors text-left"
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Crown className="h-4 w-4" />
                 <span className="text-xs font-medium">Plano Atual</span>
               </div>
-              <PlanBadge tier={expProfile.plan_tier} size="sm" />
+              <div className="flex items-center gap-1.5">
+                <PlanBadge tier={expProfile.plan_tier} size="sm" />
+                <ChevronRight className="h-3 w-3 text-muted-foreground" />
+              </div>
             </div>
-          </div>
+          </button>
         )}
 
         {/* Actions */}

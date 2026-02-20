@@ -57,6 +57,7 @@ import SettingsUsers from "./pages/SettingsUsers";
 import SettingsRoles from "./pages/SettingsRoles";
 import SettingsGamification from "./pages/SettingsGamification";
 import WebhookSettings from "./pages/WebhookSettings";
+import TenantPlansPage from "./pages/TenantPlansPage";
 import PlatformDashboard from "./pages/platform/PlatformDashboard";
 import PlatformTenants from "./pages/platform/PlatformTenants";
 import PlatformModules from "./pages/platform/PlatformModules";
@@ -285,6 +286,7 @@ function AppRoutes() {
             <ProtectedRoute navKey="labor_dashboard"><LaborDashboard /></ProtectedRoute>
           } />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/plans" element={<TenantPlansPage />} />
           <Route path="/announcements" element={<TenantAnnouncements />} />
           <Route path="/communication-center" element={<TenantCommunicationCenter />} />
           <Route path="/audit" element={
