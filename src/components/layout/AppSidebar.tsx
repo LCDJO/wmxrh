@@ -110,6 +110,16 @@ const navStructure: NavEntry[] = [
     ],
   },
 
+  // ── Segurança do Trabalho ──
+  {
+    id: 'seguranca_trabalho',
+    icon: ShieldAlert,
+    label: 'Segurança do Trabalho',
+    children: [
+      { to: '/safety-automation', icon: Zap, label: 'Automação de Segurança', key: 'health' },
+    ],
+  },
+
   // ── Inteligência ──
   {
     id: 'inteligencia',
