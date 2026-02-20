@@ -1168,6 +1168,18 @@ export default function PlatformTenants() {
                       <span>{format(new Date(selectedTenant.created_at), 'dd/MM/yyyy HH:mm')}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
+                      <span>Cliente há</span>
+                      <span>{(() => {
+                        const months = Math.floor((Date.now() - new Date(selectedTenant.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+                        if (months < 1) return 'menos de 1 mês';
+                        if (months === 1) return '1 mês';
+                        if (months < 12) return `${months} meses`;
+                        const years = Math.floor(months / 12);
+                        const rem = months % 12;
+                        return `${years} ano${years > 1 ? 's' : ''}${rem > 0 ? ` e ${rem} ${rem === 1 ? 'mês' : 'meses'}` : ''}`;
+                      })()}</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
                       <span>ID</span>
                       <span className="font-mono text-xs">{selectedTenant.id.slice(0, 8)}…</span>
                     </div>
