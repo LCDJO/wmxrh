@@ -33,6 +33,15 @@ export {
 } from './esocial-monitoring.engine';
 
 export {
+  handleCriticalEsocialError,
+  handleCriticalEsocialErrors,
+} from './esocial-safety-workflow';
+export type {
+  EsocialCriticalErrorPayload,
+  EsocialWorkflowResult,
+} from './esocial-safety-workflow';
+
+export {
   esocialGovernanceEvents,
   emitEsocialGovEvent,
   onEsocialGovEvent,
