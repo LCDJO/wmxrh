@@ -150,7 +150,7 @@ export async function recalculateEmployeeRiskScore(
   const factors = await gatherRiskFactors(tenantId, employeeId);
   const newScore = calculateRiskScore(factors);
 
-  // Get previous score from employee_risk_exposures or similar
+  // Get previous score from employee_risk_exposures
   const { data: currentExposure } = await supabase
     .from('employee_risk_exposures')
     .select('risk_score')
@@ -162,6 +162,18 @@ export async function recalculateEmployeeRiskScore(
     .maybeSingle();
 
   const previousScore = (currentExposure as any)?.risk_score ?? null;
+
+  // Persist new score to the latest active exposure
+  if (currentExposure) {
+    await supabase
+      .from('employee_risk_exposures')
+      .update({ risk_score: newScore } as any)
+      .eq('tenant_id', tenantId)
+      .eq('employee_id', employeeId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1);
+  }
 
   // Log the recalculation as audit entry
   await supabase.from('audit_logs').insert([{

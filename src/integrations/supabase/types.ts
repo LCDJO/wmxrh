@@ -3110,6 +3110,7 @@ export type Database = {
           requires_epi: boolean
           risk_factor_id: string
           risk_level: string
+          risk_score: number | null
           start_date: string
           tenant_id: string
           updated_at: string
@@ -3134,6 +3135,7 @@ export type Database = {
           requires_epi?: boolean
           risk_factor_id: string
           risk_level?: string
+          risk_score?: number | null
           start_date?: string
           tenant_id: string
           updated_at?: string
@@ -3158,6 +3160,7 @@ export type Database = {
           requires_epi?: boolean
           risk_factor_id?: string
           risk_level?: string
+          risk_score?: number | null
           start_date?: string
           tenant_id?: string
           updated_at?: string
