@@ -138,6 +138,7 @@ const navSections: NavSection[] = [
       { to: '/labor-rules', icon: Gavel, label: 'Regras & Convenções', key: 'labor_rules' },
       { to: '/legal-dashboard', icon: Landmark, label: 'Dashboard Legal', key: 'legal_dashboard' },
       { to: '/regulatory-dashboard', icon: Activity, label: 'Regulatório', key: 'legal_dashboard' },
+      { to: '/legal-intelligence', icon: Scale, label: 'Inteligência Jurídica', key: 'legal_dashboard' },
       { to: '/compliance', icon: FileText, label: 'Rubricas', key: 'compliance' },
       { to: '/audit', icon: ScrollText, label: 'Auditoria', key: 'audit' },
     ],
