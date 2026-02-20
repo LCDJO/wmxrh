@@ -137,3 +137,16 @@ export type {
   RiskScoreFactors,
   RiskRecalculationResult,
 } from './occupational-risk-integration';
+
+// Security Layer
+export {
+  checkSafetyAccess,
+  logSecurityEvent,
+  startSecurityEventBridge,
+  guardedSafetyOperation,
+} from './security-layer';
+export type {
+  SafetyAccessLevel,
+  SafetyAccessResult,
+  SafetyAuditEntry,
+} from './security-layer';
