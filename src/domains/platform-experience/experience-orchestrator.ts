@@ -27,7 +27,7 @@ export function createExperienceOrchestrator(
     compliance: ['/compliance'],
     esocial: ['/esocial'],
     labor_rules: ['/labor-rules', '/labor-compliance', '/labor-dashboard'],
-    agreements: ['/agreements', '/document-signature-integrations'],
+    agreements: ['/agreements'],
     payroll_simulation: ['/payroll-simulation'],
     workforce_intelligence: ['/workforce-intelligence', '/strategic-intelligence'],
     audit: ['/audit'],

@@ -41,6 +41,7 @@ import {
   FileEdit,
   CheckSquare,
   BookOpen,
+  FileSignature,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -152,6 +153,7 @@ const NAV_SECTIONS: NavSection[] = [
         ],
       },
       { to: '/platform/ai-operations', label: 'AI Operations', icon: Brain, requiredPermission: 'security.manage' },
+      { to: '/platform/document-signature', label: 'Assinatura Digital', icon: FileSignature, requiredPermission: 'security.manage' },
     ],
   },
   {

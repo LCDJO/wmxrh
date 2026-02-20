@@ -218,6 +218,7 @@ function AppRoutes() {
         <Route path="marketplace" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations', 'platform_marketplace_admin']}><PlatformMarketplace /></PlatformGuard>} />
         <Route path="apps-review" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformAppsReview /></PlatformGuard>} />
         <Route path="ai-operations" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><PlatformAIOperations /></PlatformGuard>} />
+        <Route path="document-signature" element={<PlatformGuard allowedRoles={['platform_super_admin', 'platform_operations']}><DocumentSignatureIntegrations /></PlatformGuard>} />
       </Route>
 
       {/* ═══ LANDING PAGE RENDERER ═══ */}
@@ -317,9 +318,7 @@ function AppRoutes() {
           <Route path="/agreements" element={
             <ProtectedRoute navKey="employees"><AgreementManagement /></ProtectedRoute>
           } />
-          <Route path="/document-signature" element={
-            <ProtectedRoute navKey="esocial"><DocumentSignatureIntegrations /></ProtectedRoute>
-          } />
+          {/* document-signature moved to /platform/document-signature */}
           <Route path="/occupational-compliance" element={
             <ProtectedRoute navKey="health"><OccupationalCompliance /></ProtectedRoute>
           } />
