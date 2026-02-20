@@ -159,12 +159,9 @@ export default function PlatformPlans() {
       if (error) { toast.error('Erro ao atualizar plano'); console.error(error); }
       else { toast.success('Plano atualizado'); }
     } else {
-      // Get tenant_id from first existing plan or fail gracefully
-      const tenantId = plans[0]?.tenant_id;
-      if (!tenantId) { toast.error('Nenhum tenant encontrado'); setSaving(false); return; }
       const { error } = await supabase
         .from('saas_plans')
-        .insert({ ...payload, tenant_id: tenantId });
+        .insert(payload);
       if (error) { toast.error('Erro ao criar plano'); console.error(error); }
       else { toast.success('Plano criado'); }
     }
