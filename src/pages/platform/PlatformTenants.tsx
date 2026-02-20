@@ -371,21 +371,46 @@ export default function PlatformTenants() {
   const handleChangePlan = async () => {
     if (!selectedTenant || !newPlanId) return;
     setSaving(true);
-    if (selectedTenantPlan) {
-      await supabase.from('tenant_plans').update({ status: 'cancelled' }).eq('id', selectedTenantPlan.id);
-    }
-    const { error } = await supabase.from('tenant_plans').insert({
-      tenant_id: selectedTenant.id, plan_id: newPlanId, status: 'active', billing_cycle: newBillingCycle,
-    });
-    if (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
-    } else {
-      const plan = availablePlans.find(p => p.id === newPlanId);
-      platformEvents.planAssignedToTenant(user?.id ?? '', selectedTenant.id, {
-        planId: newPlanId, planName: plan?.name ?? '', tier: plan?.name?.toLowerCase() ?? 'free', billingCycle: newBillingCycle,
-      });
-      toast({ title: 'Plano alterado', description: `Agora no plano ${plan?.name}.` });
-      setDialogMode(null); fetchTenantPlans();
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('No session');
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/change-tenant-plan`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            tenant_id: selectedTenant.id,
+            plan_id: newPlanId,
+            billing_cycle: newBillingCycle,
+            reason: 'Plan change via admin panel',
+          }),
+        }
+      );
+
+      const result = await res.json();
+
+      if (!res.ok || !result.success) {
+        toast({ title: 'Erro', description: result.error?.message ?? 'Falha ao trocar plano', variant: 'destructive' });
+      } else {
+        const d = result.data;
+        platformEvents.planAssignedToTenant(user?.id ?? '', selectedTenant.id, {
+          planId: newPlanId, planName: d.new_plan.name, tier: d.new_plan.name?.toLowerCase() ?? 'free', billingCycle: newBillingCycle,
+        });
+        toast({
+          title: 'Plano alterado com sucesso',
+          description: `${d.previous_plan?.name ?? 'Nenhum'} → ${d.new_plan.name}${d.proration.amount > 0 ? ` | Proration: R$${d.proration.amount.toFixed(2)}` : ''}`,
+        });
+        setDialogMode(null); fetchTenantPlans();
+      }
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     }
     setSaving(false);
   };
