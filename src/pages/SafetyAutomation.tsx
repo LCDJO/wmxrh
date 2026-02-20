@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
 import {
   ShieldCheck, Workflow, ClipboardList, Zap, AlertTriangle, Clock,
-  CheckCircle2, XCircle, ArrowUpCircle, RefreshCw,
+  CheckCircle2, XCircle, ArrowUpCircle, RefreshCw, BarChart3, Building2, Trophy,
 } from 'lucide-react';
 import { runEscalationScan, getEscalationSummary } from '@/domains/safety-automation';
 import { useToast } from '@/hooks/use-toast';
@@ -45,6 +46,17 @@ interface AuditInsight {
   entity_id: string | null;
   metadata: any;
   created_at: string;
+}
+
+interface CompanyComplianceStats {
+  company_id: string;
+  company_name: string;
+  active_workflows: number;
+  pending_tasks: number;
+  critical_tasks: number;
+  overdue_tasks: number;
+  risks_mitigating: number;
+  compliance_score: number;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -97,6 +109,7 @@ export default function SafetyAutomation() {
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [actions, setActions] = useState<AuditInsight[]>([]);
   const [escalationSummary, setEscalationSummary] = useState<any>(null);
+  const [companyStats, setCompanyStats] = useState<CompanyComplianceStats[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -137,7 +150,58 @@ export default function SafetyAutomation() {
     const summary = await getEscalationSummary(tenantId);
     setEscalationSummary(summary);
 
+    // Load company compliance stats
+    await loadCompanyStats();
+
     setLoading(false);
+  }
+
+  async function loadCompanyStats() {
+    if (!tenantId) return;
+
+    // Get companies
+    const { data: companies } = await supabase
+      .from('companies')
+      .select('id, name')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null);
+
+    if (!companies?.length) { setCompanyStats([]); return; }
+
+    // Get workflows and tasks per company
+    const [wfAll, tasksAll] = await Promise.all([
+      supabase.from('safety_workflows' as any).select('id, company_id, status').eq('tenant_id', tenantId),
+      supabase.from('safety_tasks').select('id, company_id, status, priority, prazo').eq('tenant_id', tenantId),
+    ]);
+
+    const wfData = (wfAll.data ?? []) as any[];
+    const taskData = (tasksAll.data ?? []) as any[];
+
+    const stats: CompanyComplianceStats[] = companies.map(c => {
+      const cWf = wfData.filter((w: any) => w.company_id === c.id);
+      const cTasks = taskData.filter((t: any) => t.company_id === c.id);
+      const pending = cTasks.filter((t: any) => t.status === 'pending');
+      const critical = pending.filter((t: any) => t.priority === 'critical' || t.priority === 'high');
+      const overdue = pending.filter((t: any) => t.prazo && new Date(t.prazo) < new Date());
+      const activeWf = cWf.filter((w: any) => w.status === 'open' || w.status === 'in_progress');
+      const doneTotal = cTasks.filter((t: any) => t.status === 'done').length;
+      const total = cTasks.length || 1;
+      const score = Math.round((doneTotal / total) * 100);
+
+      return {
+        company_id: c.id,
+        company_name: c.name,
+        active_workflows: activeWf.length,
+        pending_tasks: pending.length,
+        critical_tasks: critical.length,
+        overdue_tasks: overdue.length,
+        risks_mitigating: activeWf.filter((w: any) => w.status === 'in_progress').length,
+        compliance_score: score,
+      };
+    });
+
+    stats.sort((a, b) => b.compliance_score - a.compliance_score);
+    setCompanyStats(stats);
   }
 
   async function handleRunEscalation() {
@@ -207,8 +271,11 @@ export default function SafetyAutomation() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="workflows" className="space-y-4">
+      <Tabs defaultValue="dashboard" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="dashboard" className="gap-1.5">
+            <BarChart3 className="h-4 w-4" />Dashboard
+          </TabsTrigger>
           <TabsTrigger value="workflows" className="gap-1.5">
             <Workflow className="h-4 w-4" />Workflows Ativos
           </TabsTrigger>
@@ -219,6 +286,108 @@ export default function SafetyAutomation() {
             <Zap className="h-4 w-4" />Ações Executadas
           </TabsTrigger>
         </TabsList>
+
+        {/* ── Dashboard ── */}
+        <TabsContent value="dashboard">
+          <div className="space-y-6">
+            {/* Company-level cards */}
+            <div>
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+                <Building2 className="h-5 w-5 text-primary" />
+                Visão por Empresa
+              </h2>
+              {companyStats.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">Nenhuma empresa com dados de segurança.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {companyStats.map(cs => (
+                    <Card key={cs.company_id} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base truncate">{cs.company_name}</CardTitle>
+                        <CardDescription className="flex items-center gap-2">
+                          <span>Score: {cs.compliance_score}%</span>
+                          <Progress value={cs.compliance_score} className="h-2 flex-1" />
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="space-y-1">
+                            <p className="text-muted-foreground text-xs">Workflows Ativos</p>
+                            <p className="font-semibold text-foreground">{cs.active_workflows}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-muted-foreground text-xs">Riscos em Mitigação</p>
+                            <p className="font-semibold text-chart-4">{cs.risks_mitigating}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-muted-foreground text-xs">Tarefas Críticas</p>
+                            <p className="font-semibold text-destructive">{cs.critical_tasks}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-muted-foreground text-xs">Vencidas</p>
+                            <p className={`font-semibold ${cs.overdue_tasks > 0 ? 'text-destructive' : 'text-chart-1'}`}>{cs.overdue_tasks}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Tenant-level: Compliance Ranking */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-chart-4" />
+                  Ranking de Compliance por Empresa
+                </CardTitle>
+                <CardDescription>Ordenado pelo score de conclusão de tarefas de segurança</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {companyStats.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">Nenhum dado disponível.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {companyStats.map((cs, idx) => (
+                      <div key={cs.company_id} className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
+                        <div className={`flex items-center justify-center h-8 w-8 rounded-full text-sm font-bold shrink-0 ${
+                          idx === 0 ? 'bg-chart-4/20 text-chart-4' :
+                          idx === 1 ? 'bg-muted text-muted-foreground' :
+                          idx === 2 ? 'bg-chart-2/20 text-chart-2' :
+                          'bg-muted/50 text-muted-foreground'
+                        }`}>
+                          {idx + 1}º
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{cs.company_name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Progress value={cs.compliance_score} className="h-2 flex-1 max-w-[200px]" />
+                            <span className="text-xs font-medium text-muted-foreground">{cs.compliance_score}%</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 shrink-0 text-xs text-muted-foreground">
+                          <span>{cs.pending_tasks} pendentes</span>
+                          {cs.critical_tasks > 0 && (
+                            <Badge variant="destructive" className="text-[10px]">
+                              {cs.critical_tasks} críticas
+                            </Badge>
+                          )}
+                          {cs.overdue_tasks > 0 && (
+                            <Badge variant="destructive" className="text-[10px]">
+                              <AlertTriangle className="h-3 w-3 mr-0.5" />
+                              {cs.overdue_tasks} vencidas
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         {/* ── Workflows Ativos ── */}
         <TabsContent value="workflows">
