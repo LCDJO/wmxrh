@@ -63,6 +63,18 @@ export interface TenantESocialStatus {
   validade_certificado: string | null;
 }
 
+export type CertificadoStatus = 'valido' | 'expirando' | 'expirado' | 'nao_configurado';
+
+export interface CompanyESocialStatus {
+  company_id: string;
+  eventos_enviados: number;
+  eventos_pendentes: number;
+  eventos_rejeitados: number;
+  ultimo_protocolo: string | null;
+  certificado_status: CertificadoStatus;
+  layout_utilizado: EsocialLayoutVersion;
+}
+
 export interface EsocialCompanyStatus {
   company_id: string;
   company_name: string;
