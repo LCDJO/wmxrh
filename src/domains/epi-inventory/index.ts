@@ -78,3 +78,31 @@ export type {
   EPICostAllocatedEvent,
   EpiInventoryDomainEvent,
 } from './types';
+
+// Future Capabilities (Stubs)
+export {
+  QRCodeServiceStub,
+  MobileScannerServiceStub,
+  ERPIntegrationServiceStub,
+  DemandForecastingServiceStub,
+  RiskConsumptionBIServiceStub,
+} from './future-capabilities';
+
+export type {
+  QRCodePayload,
+  QRCodeGenerationResult,
+  QRCodeService,
+  MobileScanAction,
+  MobileScanResult,
+  MobileScannerService,
+  ERPPurchaseOrder,
+  ERPPurchaseItem,
+  ERPSyncResult,
+  ERPIntegrationService,
+  DemandForecastItem,
+  ReplenishmentPlan,
+  DemandForecastingService,
+  RiskConsumptionMetric,
+  ConsumptionByRiskReport,
+  RiskConsumptionBIService,
+} from './future-capabilities';
