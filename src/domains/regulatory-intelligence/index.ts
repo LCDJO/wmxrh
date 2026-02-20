@@ -162,3 +162,6 @@ export type {
   AutomatedAction,
   AutomatedActionsResult,
 } from './legal-automated-actions.engine';
+
+// ── Future Preparation ──
+export * from './future';
