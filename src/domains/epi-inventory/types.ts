@@ -223,6 +223,28 @@ export interface ExpiringLotResult {
 }
 
 // ═══════════════════════════════════════════════════════
+// ASSET TRACKING (Individual)
+// ═══════════════════════════════════════════════════════
+
+export type EpiAssetStatus = 'disponivel' | 'in_use' | 'returned' | 'discarded';
+
+export interface EpiAsset {
+  id: string;
+  tenant_id: string;
+  epi_catalog_id: string;
+  lot_id?: string | null;
+  serial_number: string;
+  employee_id?: string | null;
+  delivery_id?: string | null;
+  status: EpiAssetStatus;
+  data_entrega?: string | null;
+  data_retorno?: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+// ═══════════════════════════════════════════════════════
 // ALERTS & THRESHOLDS
 // ═══════════════════════════════════════════════════════
 

@@ -3335,6 +3335,90 @@ export type Database = {
           },
         ]
       }
+      epi_assets: {
+        Row: {
+          created_at: string
+          data_entrega: string | null
+          data_retorno: string | null
+          delivery_id: string | null
+          employee_id: string | null
+          epi_catalog_id: string
+          id: string
+          lot_id: string | null
+          metadata: Json | null
+          serial_number: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_entrega?: string | null
+          data_retorno?: string | null
+          delivery_id?: string | null
+          employee_id?: string | null
+          epi_catalog_id: string
+          id?: string
+          lot_id?: string | null
+          metadata?: Json | null
+          serial_number: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_entrega?: string | null
+          data_retorno?: string | null
+          delivery_id?: string | null
+          employee_id?: string | null
+          epi_catalog_id?: string
+          id?: string
+          lot_id?: string | null
+          metadata?: Json | null
+          serial_number?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_assets_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "epi_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_assets_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_assets_epi_catalog_id_fkey"
+            columns: ["epi_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "epi_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_assets_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "epi_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_assets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       epi_audit_log: {
         Row: {
           action: string
