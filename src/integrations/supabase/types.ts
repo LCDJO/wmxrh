@@ -10068,6 +10068,17 @@ export type Database = {
         Args: { _tenant_id: string }
         Returns: undefined
       }
+      self_register_tenant: {
+        Args: {
+          p_company_document?: string
+          p_company_name: string
+          p_company_phone?: string
+          p_user_email: string
+          p_user_id: string
+          p_user_name: string
+        }
+        Returns: Json
+      }
       sync_experience_profile: {
         Args: { p_tenant_id: string }
         Returns: undefined
