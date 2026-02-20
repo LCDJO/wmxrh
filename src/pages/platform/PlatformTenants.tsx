@@ -1107,46 +1107,90 @@ export default function PlatformTenants() {
 
       {/* ═══ Edit Tenant Dialog ═══ */}
       <Dialog open={dialogMode === 'edit'} onOpenChange={open => !open && setDialogMode(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-2">
               <Pencil className="h-5 w-5 text-primary" /> Editar Cliente
             </DialogTitle>
             <DialogDescription>Atualize os dados cadastrais de {selectedTenant?.name}.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nome *</Label>
-              <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">CNPJ</Label>
-              <Input value={editForm.document} onChange={e => setEditForm(f => ({ ...f, document: e.target.value }))} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Email</Label>
-                <Input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 py-2">
+            {/* Left column — form fields */}
+            <div className="lg:col-span-3 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nome da empresa *</Label>
+                  <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Empresa ABC Ltda" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">CNPJ</Label>
+                  <Input value={editForm.document} onChange={e => setEditForm(f => ({ ...f, document: e.target.value }))} placeholder="00.000.000/0000-00" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Email</Label>
+                  <Input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} placeholder="contato@empresa.com" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Telefone</Label>
+                  <Input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} placeholder="(00) 0000-0000" />
+                </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Telefone</Label>
-                <Input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Endereço</Label>
+                <Input value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} placeholder="Rua, número, cidade - UF" />
+              </div>
+
+              <div className="border-t border-border pt-4 space-y-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Status do Cliente</p>
+                <Select value={editForm.status} onValueChange={v => setEditForm(f => ({ ...f, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="suspended">Suspenso</SelectItem>
+                    <SelectItem value="trial">Trial</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Endereço</Label>
-              <Input value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Status</Label>
-              <Select value={editForm.status} onValueChange={v => setEditForm(f => ({ ...f, status: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Ativo</SelectItem>
-                  <SelectItem value="suspended">Suspenso</SelectItem>
-                  <SelectItem value="trial">Trial</SelectItem>
-                </SelectContent>
-              </Select>
+
+            {/* Right column — Info panels */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5" /> Informações
+                </p>
+                {selectedTenant && (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Criado em</span>
+                      <span>{format(new Date(selectedTenant.created_at), 'dd/MM/yyyy HH:mm')}</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>ID</span>
+                      <span className="font-mono text-xs">{selectedTenant.id.slice(0, 8)}…</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Puzzle className="h-3.5 w-3.5" /> Módulos Ativos
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Para gerenciar módulos, acesse a tela de detalhes do cliente.
+                </p>
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {PLATFORM_MODULES.slice(0, 8).map(mod => (
+                    <Badge key={mod.key} variant="outline" className="text-[9px]">{mod.label}</Badge>
+                  ))}
+                  {PLATFORM_MODULES.length > 8 && (
+                    <Badge variant="outline" className="text-[9px]">+{PLATFORM_MODULES.length - 8}</Badge>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
