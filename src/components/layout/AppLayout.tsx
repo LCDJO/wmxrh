@@ -6,6 +6,7 @@ import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
 import { UserProfileDropdown } from './UserProfileDropdown';
+import { GlobalFooter } from './GlobalFooter';
 import { useSecurityMonitor } from '@/domains/security/useSecurityMonitor';
 import { dualIdentityEngine } from '@/domains/security/kernel/dual-identity-engine';
 
@@ -40,6 +41,7 @@ export function AppLayout() {
         <main className={`flex-1 p-8 ${isImpersonating ? 'ring-2 ring-inset ring-[hsl(var(--impersonation-border))]/30' : ''}`}>
           <Outlet />
         </main>
+        <GlobalFooter />
       </div>
     </div>
   );
