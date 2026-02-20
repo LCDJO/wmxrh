@@ -3587,6 +3587,90 @@ export type Database = {
           },
         ]
       }
+      epi_requirements: {
+        Row: {
+          atendido_em: string | null
+          atendido_por: string | null
+          created_at: string
+          delivery_id: string | null
+          employee_id: string
+          epi_catalog_id: string
+          id: string
+          motivo: string
+          obrigatorio: boolean
+          risk_exposure_id: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          atendido_em?: string | null
+          atendido_por?: string | null
+          created_at?: string
+          delivery_id?: string | null
+          employee_id: string
+          epi_catalog_id: string
+          id?: string
+          motivo: string
+          obrigatorio?: boolean
+          risk_exposure_id?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          atendido_em?: string | null
+          atendido_por?: string | null
+          created_at?: string
+          delivery_id?: string | null
+          employee_id?: string
+          epi_catalog_id?: string
+          id?: string
+          motivo?: string
+          obrigatorio?: boolean
+          risk_exposure_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_requirements_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "epi_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_requirements_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_requirements_epi_catalog_id_fkey"
+            columns: ["epi_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "epi_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_requirements_risk_exposure_id_fkey"
+            columns: ["risk_exposure_id"]
+            isOneToOne: false
+            referencedRelation: "employee_risk_exposures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       epi_risk_mappings: {
         Row: {
           created_at: string

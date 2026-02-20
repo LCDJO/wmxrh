@@ -51,3 +51,13 @@ export {
   processExpiredEpis,
 } from './compliance.service';
 export type { EpiComplianceResult } from './compliance.service';
+
+// Requirement Engine (Auto-generation from Risk Exposures)
+export {
+  getPendingRequirements,
+  getEmployeeRequirements,
+  createRequirement,
+  dismissRequirement,
+  scanAndGenerateRequirements,
+} from './requirement.engine';
+export type { EpiRequirement, EpiRequirementWithDetails } from './requirement.engine';
