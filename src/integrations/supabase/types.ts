@@ -7508,6 +7508,65 @@ export type Database = {
           },
         ]
       }
+      safety_escalation_policies: {
+        Row: {
+          created_at: string
+          current_priority: string
+          description: string | null
+          dias_sem_resposta: number
+          escalation_level: number
+          id: string
+          is_active: boolean
+          max_escalations: number
+          name: string
+          nova_prioridade: string
+          novo_responsavel: string
+          novo_responsavel_user_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_priority?: string
+          description?: string | null
+          dias_sem_resposta?: number
+          escalation_level?: number
+          id?: string
+          is_active?: boolean
+          max_escalations?: number
+          name: string
+          nova_prioridade?: string
+          novo_responsavel?: string
+          novo_responsavel_user_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_priority?: string
+          description?: string | null
+          dias_sem_resposta?: number
+          escalation_level?: number
+          id?: string
+          is_active?: boolean
+          max_escalations?: number
+          name?: string
+          nova_prioridade?: string
+          novo_responsavel?: string
+          novo_responsavel_user_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_escalation_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       safety_tasks: {
         Row: {
           completed_at: string | null
@@ -7515,9 +7574,13 @@ export type Database = {
           created_at: string
           descricao: string
           employee_id: string | null
+          escalation_count: number
+          escalation_history: Json
           id: string
+          last_escalated_at: string | null
           metadata: Json | null
           prazo: string
+          priority: string
           responsavel_user_id: string | null
           status: string
           tenant_id: string
@@ -7530,9 +7593,13 @@ export type Database = {
           created_at?: string
           descricao: string
           employee_id?: string | null
+          escalation_count?: number
+          escalation_history?: Json
           id?: string
+          last_escalated_at?: string | null
           metadata?: Json | null
           prazo: string
+          priority?: string
           responsavel_user_id?: string | null
           status?: string
           tenant_id: string
@@ -7545,9 +7612,13 @@ export type Database = {
           created_at?: string
           descricao?: string
           employee_id?: string | null
+          escalation_count?: number
+          escalation_history?: Json
           id?: string
+          last_escalated_at?: string | null
           metadata?: Json | null
           prazo?: string
+          priority?: string
           responsavel_user_id?: string | null
           status?: string
           tenant_id?: string
