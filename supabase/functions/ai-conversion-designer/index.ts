@@ -296,7 +296,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("ai-conversion-designer error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Failed to process design request" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
