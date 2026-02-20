@@ -8920,7 +8920,7 @@ export type Database = {
           role: Database["public"]["Enums"]["tenant_role"]
           status: string
           tenant_id: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -8931,7 +8931,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["tenant_role"]
           status?: string
           tenant_id: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -8942,7 +8942,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["tenant_role"]
           status?: string
           tenant_id?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -9970,6 +9970,10 @@ export type Database = {
       check_tenant_needs_onboarding: {
         Args: { p_tenant_id: string }
         Returns: boolean
+      }
+      claim_invited_memberships: {
+        Args: { p_email: string; p_user_id: string }
+        Returns: string[]
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       generate_billing_alerts: { Args: never; Returns: undefined }
