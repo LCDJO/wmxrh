@@ -20,13 +20,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, Mail, Phone, Calendar, TrendingUp, Building2, FileText,
-  Plus, Clock, Heart, ShieldAlert, Gift, Activity, Calculator, GraduationCap, Pencil,
+  Plus, Clock, Heart, ShieldAlert, Gift, Activity, Calculator, GraduationCap, Pencil, HardHat,
 } from 'lucide-react';
 import { SimulacaoTrabalhistaTab } from '@/components/employee/SimulacaoTrabalhistaTab';
 import { DocumentosTab } from '@/components/employee/DocumentosTab';
 import { TermosDocumentosTab } from '@/components/employee/TermosDocumentosTab';
 import { TreinamentosNrTab } from '@/components/employee/TreinamentosNrTab';
 import { CorrectiveActionsTab } from '@/components/employee/CorrectiveActionsTab';
+import { EpisTab } from '@/components/employee/EpisTab';
 import { useToast } from '@/hooks/use-toast';
 
 // ── Labels ──
@@ -265,6 +266,7 @@ export default function EmployeeDetail() {
               <TabsTrigger value="nr_trainings" className="gap-1.5 text-xs"><GraduationCap className="h-3.5 w-3.5" />Treinamentos NR</TabsTrigger>
               <TabsTrigger value="timeline" className="gap-1.5 text-xs"><Clock className="h-3.5 w-3.5" />Timeline</TabsTrigger>
               <TabsTrigger value="corrective_actions" className="gap-1.5 text-xs"><ShieldAlert className="h-3.5 w-3.5" />Ações Corretivas</TabsTrigger>
+              <TabsTrigger value="epis" className="gap-1.5 text-xs"><HardHat className="h-3.5 w-3.5" />EPIs</TabsTrigger>
             </TabsList>
 
             {/* ── TAB: Dados Trabalhistas ── */}
@@ -696,6 +698,15 @@ export default function EmployeeDetail() {
             <TabsContent value="corrective_actions">
               {tenantId && id ? (
                 <CorrectiveActionsTab employeeId={id} tenantId={tenantId} />
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">Dados não disponíveis.</p>
+              )}
+            </TabsContent>
+
+            {/* ── TAB: EPIs ── */}
+            <TabsContent value="epis">
+              {tenantId && id ? (
+                <EpisTab employeeId={id} tenantId={tenantId} />
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">Dados não disponíveis.</p>
               )}
