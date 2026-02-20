@@ -22,6 +22,7 @@ import type {
   LayoutMismatchInfo,
   CertificateInfo,
   CertificateMonitorResult,
+  ESocialErrorInsight,
 } from './types';
 import { emitEsocialGovEvent, esocialGovernanceEvents } from './esocial-governance.events';
 
@@ -306,5 +307,35 @@ export function runCertificateMonitor(): CertificateMonitorResult {
     validos, expirando, expirados, nao_configurados: naoConfig,
     certificados: DEMO_CERTIFICATES,
     alertas_gerados: alertasGerados,
+  };
+}
+
+// ── Error Analytics ──
+
+/** Analyze error patterns across events and companies. */
+export function getErrorInsights(): ESocialErrorInsight {
+  return {
+    periodo: '2026-02',
+    erros_recorrentes: [
+      { codigo: '1001', descricao: 'CPF do trabalhador não encontrado na base CNIS', ocorrencias: 14, ultimo_registro: '2026-02-19T11:00:00Z' },
+      { codigo: '2050', descricao: 'Código CBO incompatível com atividade CNAE', ocorrencias: 8, ultimo_registro: '2026-02-18T15:30:00Z' },
+      { codigo: '3100', descricao: 'Data de admissão anterior ao início da obrigatoriedade', ocorrencias: 5, ultimo_registro: '2026-02-17T09:00:00Z' },
+    ],
+    rejeicoes_por_evento: [
+      { evento_tipo: 'S-2240', total_rejeitados: 8, codigos_erro: ['1001', '2050'] },
+      { evento_tipo: 'S-2200', total_rejeitados: 5, codigos_erro: ['1001', '3100'] },
+      { evento_tipo: 'S-1200', total_rejeitados: 3, codigos_erro: ['2050'] },
+    ],
+    empresas_alta_falha: [
+      { company_id: 'c3', company_name: 'Beta Filial RJ', total_erros: 12, taxa_falha: 45, erros_principais: ['1001', '2050'] },
+      { company_id: 'c5', company_name: 'Gamma Matriz', total_erros: 6, taxa_falha: 30, erros_principais: ['3100'] },
+    ],
+    total_erros_periodo: 27,
+    erro_mais_frequente: '1001',
+    recomendacoes: [
+      'Atualizar cadastro CPF/CNIS dos trabalhadores da Beta Filial RJ',
+      'Revisar mapeamento CBO↔CNAE nas empresas com erro 2050',
+      'Validar datas de admissão antes do envio do S-2200',
+    ],
   };
 }

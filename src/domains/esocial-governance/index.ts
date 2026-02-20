@@ -27,6 +27,7 @@ export {
   generateAlert,
   detectLayoutMismatch,
   runCertificateMonitor,
+  getErrorInsights,
 } from './esocial-monitoring.engine';
 
 export {
@@ -58,4 +59,8 @@ export type {
   CertificadoTipo,
   CertificateInfo,
   CertificateMonitorResult,
+  ESocialErrorCode,
+  ESocialRejeicaoPorEvento,
+  ESocialEmpresaFalha,
+  ESocialErrorInsight,
 } from './types';
