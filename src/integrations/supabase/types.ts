@@ -3228,6 +3228,7 @@ export type Database = {
           position_id: string | null
           restricao_motivo: Json | null
           status: Database["public"]["Enums"]["employee_status"]
+          status_operacional: string
           tenant_id: string
           updated_at: string
           user_id: string | null
@@ -3252,6 +3253,7 @@ export type Database = {
           position_id?: string | null
           restricao_motivo?: Json | null
           status?: Database["public"]["Enums"]["employee_status"]
+          status_operacional?: string
           tenant_id: string
           updated_at?: string
           user_id?: string | null
@@ -3276,6 +3278,7 @@ export type Database = {
           position_id?: string | null
           restricao_motivo?: Json | null
           status?: Database["public"]["Enums"]["employee_status"]
+          status_operacional?: string
           tenant_id?: string
           updated_at?: string
           user_id?: string | null

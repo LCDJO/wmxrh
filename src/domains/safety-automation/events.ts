@@ -22,7 +22,8 @@ export type SafetyAutomationEvent =
   | SafetyActionExecutedEvent
   | SafetyExecutionCompletedEvent
   | SafetyEscalationTriggeredEvent
-  | SafetyEmployeeBlockedEvent;
+  | SafetyEmployeeBlockedEvent
+  | EmployeeOperationBlockedByEPIEvent;
 
 export interface SafetySignalReceivedEvent {
   type: 'SafetySignalReceived';
@@ -87,6 +88,15 @@ export interface SafetyEmployeeBlockedEvent {
   blocking_level: string;
   reason: string;
   signal_id: string;
+}
+
+export interface EmployeeOperationBlockedByEPIEvent {
+  type: 'EmployeeOperationBlockedByEPI';
+  timestamp: number;
+  tenant_id: string;
+  employee_id: string;
+  missing_mandatory_epis: number;
+  reason: string;
 }
 
 // ═══════════════════════════════════════════════════════
