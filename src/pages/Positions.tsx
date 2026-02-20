@@ -40,7 +40,7 @@ export default function Positions() {
     if (!tenantId || !companyId) { toast({ title: 'Erro', description: 'Campos obrigatórios', variant: 'destructive' }); return; }
     createMutation.mutate({
       tenant_id: tenantId, company_id: companyId, title, level: level || null,
-      base_salary: parseFloat(baseSalary) || 0, max_salary: parseFloat(maxSalary) || 0,
+      faixa_salarial_min: parseFloat(baseSalary) || 0, faixa_salarial_max: parseFloat(maxSalary) || 0,
     }, {
       onSuccess: () => { toast({ title: 'Cargo criado!' }); setOpen(false); setTitle(''); setLevel(''); setBaseSalary(''); setMaxSalary(''); setCompanyId(''); },
       onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
@@ -49,7 +49,7 @@ export default function Positions() {
 
   const handleUpdate = () => {
     if (!editId) return;
-    updateMutation.mutate({ id: editId, title: editTitle, level: editLevel || null, base_salary: parseFloat(editBaseSalary) || 0, max_salary: parseFloat(editMaxSalary) || 0 }, {
+    updateMutation.mutate({ id: editId, title: editTitle, level: editLevel || null, faixa_salarial_min: parseFloat(editBaseSalary) || 0, faixa_salarial_max: parseFloat(editMaxSalary) || 0 }, {
       onSuccess: () => { toast({ title: 'Cargo atualizado!' }); setEditId(null); },
       onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
     });
@@ -65,7 +65,7 @@ export default function Positions() {
 
   const openEdit = (pos: typeof positions[0]) => {
     setEditId(pos.id); setEditTitle(pos.title); setEditLevel(pos.level || '');
-    setEditBaseSalary(String(pos.base_salary || '')); setEditMaxSalary(String(pos.max_salary || ''));
+    setEditBaseSalary(String(pos.faixa_salarial_min || '')); setEditMaxSalary(String(pos.faixa_salarial_max || ''));
   };
 
   return (
@@ -91,8 +91,8 @@ export default function Positions() {
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><Label>Salário Base</Label><Input type="number" value={baseSalary} onChange={e => setBaseSalary(e.target.value)} /></div>
-                <div className="space-y-2"><Label>Salário Máx</Label><Input type="number" value={maxSalary} onChange={e => setMaxSalary(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Faixa Mín</Label><Input type="number" value={baseSalary} onChange={e => setBaseSalary(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Faixa Máx</Label><Input type="number" value={maxSalary} onChange={e => setMaxSalary(e.target.value)} /></div>
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? 'Criando...' : 'Criar Cargo'}</Button>
             </form>
@@ -123,13 +123,13 @@ export default function Positions() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-card-foreground">R$ {(pos.base_salary || 0).toLocaleString('pt-BR')}</span>
+                  <span className="text-sm font-medium text-card-foreground">R$ {(pos.faixa_salarial_min || 0).toLocaleString('pt-BR')}</span>
                   <span className="text-xs text-muted-foreground">—</span>
-                  <span className="text-sm font-medium text-primary">R$ {(pos.max_salary || 0).toLocaleString('pt-BR')}</span>
+                  <span className="text-sm font-medium text-primary">R$ {(pos.faixa_salarial_max || 0).toLocaleString('pt-BR')}</span>
                 </div>
-                {(pos.max_salary || 0) > 0 && (
+                {(pos.faixa_salarial_max || 0) > 0 && (
                   <div className="h-1.5 rounded-full bg-secondary">
-                    <div className="h-full rounded-full gradient-primary" style={{ width: `${((pos.base_salary || 0) / (pos.max_salary || 1)) * 100}%` }} />
+                    <div className="h-full rounded-full gradient-primary" style={{ width: `${((pos.faixa_salarial_min || 0) / (pos.faixa_salarial_max || 1)) * 100}%` }} />
                   </div>
                 )}
               </div>
@@ -146,8 +146,8 @@ export default function Positions() {
             <div className="space-y-2"><Label>Título *</Label><Input value={editTitle} onChange={e => setEditTitle(e.target.value)} required /></div>
             <div className="space-y-2"><Label>Nível</Label><Input value={editLevel} onChange={e => setEditLevel(e.target.value)} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>Salário Base</Label><Input type="number" value={editBaseSalary} onChange={e => setEditBaseSalary(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Salário Máx</Label><Input type="number" value={editMaxSalary} onChange={e => setEditMaxSalary(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Faixa Mín</Label><Input type="number" value={editBaseSalary} onChange={e => setEditBaseSalary(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Faixa Máx</Label><Input type="number" value={editMaxSalary} onChange={e => setEditMaxSalary(e.target.value)} /></div>
             </div>
             <Button type="submit" className="w-full" disabled={updateMutation.isPending}>{updateMutation.isPending ? 'Salvando...' : 'Salvar'}</Button>
           </form>
