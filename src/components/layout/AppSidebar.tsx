@@ -373,21 +373,6 @@ export function AppSidebar() {
 
 
 
-      {/* ── Role badges ── */}
-      {!collapsed && effectiveRoles.length > 0 && (
-        <div className="px-5 py-2 border-b border-sidebar-border">
-          <div className="flex flex-wrap gap-1">
-            {effectiveRoles.slice(0, 2).map(role => (
-              <span key={role} className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-sidebar-accent text-sidebar-accent-foreground uppercase">
-                {role.replace('_', ' ')}
-              </span>
-            ))}
-            {effectiveRoles.length > 2 && (
-              <span className="text-[10px] text-sidebar-foreground/50">+{effectiveRoles.length - 2}</span>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ── Pinned Shortcuts ── */}
       {pins.length > 0 && (
