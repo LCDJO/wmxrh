@@ -4,7 +4,8 @@ import { useCreateTenant } from '@/domains/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Building2, Plus, Sparkles } from 'lucide-react';
+import { Building2, Plus, Sparkles, Shield, Users, BarChart3 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/contexts/TenantContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -193,32 +194,81 @@ export default function TenantOnboarding() {
   // ── Creation form (pre-onboarding) ──
   if (!tenantCreated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-8">
-        <div className="w-full max-w-md space-y-8 animate-fade-in">
-          <div className="text-center">
-            <div className="flex h-14 w-14 mx-auto items-center justify-center rounded-2xl bg-accent mb-6">
-              <Building2 className="h-7 w-7 text-accent-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold font-display text-foreground">Criar Organização</h1>
-            <p className="text-muted-foreground mt-2">
-              Configure sua empresa, grupo ou escritório para começar a gerenciar seus recursos humanos.
-            </p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/20 p-4 sm:p-8">
+        <div className="w-full max-w-lg animate-fade-in">
+          <Card className="border-border/50 shadow-xl overflow-hidden">
+            {/* Decorative top bar */}
+            <div className="h-1.5 bg-gradient-to-r from-primary via-primary/70 to-accent" />
 
-          <form onSubmit={handleCreate} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome da Organização *</Label>
-              <Input id="name" placeholder="Ex: Grupo Alpha, Contabilidade XYZ" value={name} onChange={e => setName(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="doc">CNPJ / CPF</Label>
-              <Input id="doc" placeholder="00.000.000/0000-00" value={document} onChange={e => setDocument(e.target.value)} />
-            </div>
-            <Button type="submit" className="w-full gap-2" disabled={createMutation.isPending}>
-              <Plus className="h-4 w-4" />
-              {createMutation.isPending ? 'Criando...' : 'Criar Organização'}
-            </Button>
-          </form>
+            <CardContent className="p-8 sm:p-10">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <div className="relative inline-flex">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
+                    <Building2 className="h-8 w-8 text-primary" />
+                  </div>
+                </div>
+                <h1 className="text-2xl font-bold font-display text-foreground mt-5">
+                  Criar Organização
+                </h1>
+                <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto leading-relaxed">
+                  Configure sua empresa para começar a gerenciar seus recursos humanos.
+                </p>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleCreate} className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Nome da Organização <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    placeholder="Ex: Grupo Alpha, Contabilidade XYZ"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    required
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="doc" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    CNPJ / CPF <span className="text-muted-foreground/50">(opcional)</span>
+                  </Label>
+                  <Input
+                    id="doc"
+                    placeholder="00.000.000/0000-00"
+                    value={document}
+                    onChange={e => setDocument(e.target.value)}
+                    className="h-11"
+                  />
+                </div>
+
+                <Button type="submit" className="w-full h-11 gap-2 text-sm font-semibold mt-2" disabled={createMutation.isPending}>
+                  <Plus className="h-4 w-4" />
+                  {createMutation.isPending ? 'Criando...' : 'Criar Organização'}
+                </Button>
+              </form>
+
+              {/* Feature hints */}
+              <div className="mt-8 pt-6 border-t border-border/50">
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  {[
+                    { icon: Users, label: 'Colaboradores' },
+                    { icon: Shield, label: 'Compliance' },
+                    { icon: BarChart3, label: 'Relatórios' },
+                  ].map(({ icon: Icon, label }) => (
+                    <div key={label} className="flex flex-col items-center gap-1.5">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted/50">
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-medium">{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
