@@ -29,6 +29,7 @@ export { generateWorkflows } from './workflow-generation.engine';
 export { analyzeLegalChange } from './legal-ai-analyzer.engine';
 export { mapLegalImpact } from './impact-mapping.engine';
 export { generateLegalActionPlans } from './action-plan-generator.engine';
+export { integrateSafetyAutomation } from './safety-automation-integration.engine';
 
 export type {
   LegalActionPlan,
@@ -38,6 +39,19 @@ export type {
   ActionPlanGeneratorInput,
   ActionPlanGeneratorResult,
 } from './action-plan-generator.engine';
+
+export type {
+  SafetyWorkflow,
+  SafetyWorkflowTipo,
+  SafetyWorkflowStatus,
+  NotificacaoRH,
+  NotificacaoCanal,
+  NotificacaoPrioridade,
+  CareerLegalMappingUpdate,
+  RiskScoreRecalculation,
+  SafetyAutomationResult,
+  SafetyAutomationInput,
+} from './safety-automation-integration.engine';
 
 export type {
   LegalInterpretation,
