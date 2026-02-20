@@ -18,6 +18,7 @@ export const esocialGovernanceEvents = {
   CERTIFICATE_EXPIRING: 'esocial_gov.certificate_expiring',
   CERTIFICATE_EXPIRED: 'esocial_gov.certificate_expired',
   CERTIFICATE_INVALID: 'esocial_gov.certificate_invalid',
+  CLIENT_COMM_DISPATCHED: 'esocial_gov.client_comm_dispatched',
 } as const;
 
 export function emitEsocialGovEvent(event: string, payload?: unknown): void {

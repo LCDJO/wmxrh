@@ -28,6 +28,7 @@ export {
   detectLayoutMismatch,
   runCertificateMonitor,
   getErrorInsights,
+  dispatchClientComm,
 } from './esocial-monitoring.engine';
 
 export {
@@ -63,4 +64,7 @@ export type {
   ESocialRejeicaoPorEvento,
   ESocialEmpresaFalha,
   ESocialErrorInsight,
+  ClientCommTrigger,
+  ClientCommAction,
+  ClientCommResult,
 } from './types';
