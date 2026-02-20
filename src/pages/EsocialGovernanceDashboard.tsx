@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 import {
   Shield, Building2, AlertTriangle, CheckCircle2, Clock,
   ChevronDown, ChevronRight, FileText, Activity, Zap,
-  Server, XCircle, Info,
+  Server, XCircle, Info, KeyRound, Send,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,8 @@ import {
   getTenantOverviews,
   getActiveAlerts,
   getLayoutVersions,
+  getSystemStatus,
+  runCertificateMonitor,
   type EsocialTenantOverview,
   type EsocialAlert,
 } from '@/domains/esocial-governance';
@@ -54,7 +56,15 @@ export default function EsocialGovernanceDashboard() {
   const tenants = getTenantOverviews();
   const alerts = getActiveAlerts();
   const layouts = getLayoutVersions();
+  const systemStatus = getSystemStatus();
+  const certMonitor = runCertificateMonitor();
   const [expandedTenant, setExpandedTenant] = useState<string | null>(null);
+
+  const taxaRejeicao = kpis.eventos_enviados_mes > 0
+    ? Math.round((kpis.eventos_rejeitados_mes / kpis.eventos_enviados_mes) * 100)
+    : 0;
+  const empresasCriticas = tenants.filter(t => t.status === 'pendencias_criticas' || t.status === 'bloqueado');
+  const certsExpirando = certMonitor.certificados.filter(c => c.status === 'expirando' || c.status === 'expirado');
 
   // Charts data
   const statusDistribution = useMemo(() => {
@@ -97,11 +107,12 @@ export default function EsocialGovernanceDashboard() {
       </div>
 
       {/* ═══ KPIs ═══ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatsCard title="Tenants Monitorados" value={kpis.tenants_total} subtitle={`${kpis.tenants_em_dia} em dia`} icon={Building2} />
-        <StatsCard title="Taxa de Sucesso" value={`${kpis.taxa_sucesso}%`} subtitle={`${kpis.eventos_enviados_mes} eventos/mês`} icon={Activity} />
-        <StatsCard title="Layout Vigente" value={kpis.layout_vigente} subtitle={kpis.proxima_mudanca_layout ? `Próximo: ${kpis.proxima_mudanca_layout.versao}` : 'Sem mudança prevista'} icon={FileText} />
-        <StatsCard title="Alertas Ativos" value={kpis.alertas_ativos} subtitle={kpis.alertas_criticos > 0 ? `${kpis.alertas_criticos} crítico(s)` : 'Nenhum crítico'} icon={AlertTriangle} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+        <StatsCard title="Eventos Hoje" value={kpis.eventos_enviados_mes} subtitle="total enviados" icon={Send} />
+        <StatsCard title="Taxa Rejeição" value={`${taxaRejeicao}%`} subtitle={`${kpis.eventos_rejeitados_mes} rejeitados`} icon={XCircle} />
+        <StatsCard title="Empresas Críticas" value={empresasCriticas.length} subtitle={empresasCriticas.length > 0 ? empresasCriticas.map(e => e.tenant_name).join(', ') : 'Nenhuma'} icon={AlertTriangle} />
+        <StatsCard title="Layout" value={systemStatus.layout_atual_suportado} subtitle={systemStatus.compatibilidade ? `✓ Compatível (${systemStatus.layout_vigente_oficial})` : `⚠ Oficial: ${systemStatus.layout_vigente_oficial}`} icon={FileText} />
+        <StatsCard title="Certificados" value={`${certMonitor.expirando + certMonitor.expirados}`} subtitle={certMonitor.expirando > 0 ? `${certMonitor.expirando} expirando em 30d` : 'Todos em dia'} icon={KeyRound} />
       </div>
 
       {/* ═══ Charts ═══ */}
@@ -189,6 +200,35 @@ export default function EsocialGovernanceDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ═══ Certificates Near Expiry ═══ */}
+      {certsExpirando.length > 0 && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <KeyRound className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold font-display text-card-foreground">Certificados — Atenção</h2>
+              <Badge variant="destructive" className="text-[10px] ml-auto">{certsExpirando.length}</Badge>
+            </div>
+            <div className="space-y-2">
+              {certsExpirando.map(cert => (
+                <div key={cert.company_id} className="flex items-center gap-3 p-3 rounded-lg border border-border">
+                  <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg shrink-0', cert.status === 'expirado' ? 'bg-destructive/10' : 'bg-warning/10')}>
+                    <KeyRound className={cn('h-4 w-4', cert.status === 'expirado' ? 'text-destructive' : 'text-warning')} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-card-foreground">{cert.company_name}</p>
+                    <p className="text-xs text-muted-foreground">Tipo {cert.tipo} · {cert.emitido_por ?? 'N/A'}</p>
+                  </div>
+                  <Badge variant="outline" className={cn('text-[10px] shrink-0', cert.status === 'expirado' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning')}>
+                    {cert.status === 'expirado' ? `Expirado (${Math.abs(cert.dias_restantes!)}d atrás)` : `${cert.dias_restantes}d restantes`}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ═══ Alerts ═══ */}
       {alerts.length > 0 && (
