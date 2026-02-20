@@ -910,6 +910,385 @@ export type Database = {
           },
         ]
       }
+      career_legal_requirements: {
+        Row: {
+          base_legal: string | null
+          career_position_id: string
+          codigo_referencia: string | null
+          created_at: string
+          descricao: string
+          id: string
+          obrigatorio: boolean
+          periodicidade_meses: number | null
+          risco_nao_conformidade: string | null
+          tenant_id: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          base_legal?: string | null
+          career_position_id: string
+          codigo_referencia?: string | null
+          created_at?: string
+          descricao: string
+          id?: string
+          obrigatorio?: boolean
+          periodicidade_meses?: number | null
+          risco_nao_conformidade?: string | null
+          tenant_id: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          base_legal?: string | null
+          career_position_id?: string
+          codigo_referencia?: string | null
+          created_at?: string
+          descricao?: string
+          id?: string
+          obrigatorio?: boolean
+          periodicidade_meses?: number | null
+          risco_nao_conformidade?: string | null
+          tenant_id?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_legal_requirements_career_position_id_fkey"
+            columns: ["career_position_id"]
+            isOneToOne: false
+            referencedRelation: "career_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_legal_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_path_steps: {
+        Row: {
+          career_path_id: string
+          career_position_id: string
+          created_at: string
+          id: string
+          ordem: number
+          requisitos_transicao: string | null
+          tempo_minimo_meses: number | null
+          tenant_id: string
+        }
+        Insert: {
+          career_path_id: string
+          career_position_id: string
+          created_at?: string
+          id?: string
+          ordem?: number
+          requisitos_transicao?: string | null
+          tempo_minimo_meses?: number | null
+          tenant_id: string
+        }
+        Update: {
+          career_path_id?: string
+          career_position_id?: string
+          created_at?: string
+          id?: string
+          ordem?: number
+          requisitos_transicao?: string | null
+          tempo_minimo_meses?: number | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_path_steps_career_path_id_fkey"
+            columns: ["career_path_id"]
+            isOneToOne: false
+            referencedRelation: "career_paths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_path_steps_career_position_id_fkey"
+            columns: ["career_position_id"]
+            isOneToOne: false
+            referencedRelation: "career_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_path_steps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_paths: {
+        Row: {
+          ativo: boolean
+          company_id: string | null
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          tenant_id: string
+          trilha_tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          company_id?: string | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          tenant_id: string
+          trilha_tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          company_id?: string | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          tenant_id?: string
+          trilha_tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_paths_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_paths_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_positions: {
+        Row: {
+          ativo: boolean
+          cbo_codigo: string | null
+          certificacoes_exigidas: string[] | null
+          company_group_id: string | null
+          company_id: string
+          created_at: string
+          deleted_at: string | null
+          descricao: string | null
+          faixa_salarial_max: number | null
+          faixa_salarial_min: number | null
+          formacao_minima: string | null
+          id: string
+          nivel: string
+          nome: string
+          position_id: string | null
+          tempo_experiencia_meses: number | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cbo_codigo?: string | null
+          certificacoes_exigidas?: string[] | null
+          company_group_id?: string | null
+          company_id: string
+          created_at?: string
+          deleted_at?: string | null
+          descricao?: string | null
+          faixa_salarial_max?: number | null
+          faixa_salarial_min?: number | null
+          formacao_minima?: string | null
+          id?: string
+          nivel?: string
+          nome: string
+          position_id?: string | null
+          tempo_experiencia_meses?: number | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cbo_codigo?: string | null
+          certificacoes_exigidas?: string[] | null
+          company_group_id?: string | null
+          company_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          descricao?: string | null
+          faixa_salarial_max?: number | null
+          faixa_salarial_min?: number | null
+          formacao_minima?: string | null
+          id?: string
+          nivel?: string
+          nome?: string
+          position_id?: string | null
+          tempo_experiencia_meses?: number | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_positions_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_positions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_positions_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_positions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_risk_alerts: {
+        Row: {
+          career_position_id: string | null
+          created_at: string
+          descricao: string
+          employee_id: string | null
+          id: string
+          metadata: Json | null
+          resolvido: boolean
+          resolvido_em: string | null
+          resolvido_por: string | null
+          severidade: string
+          tenant_id: string
+          tipo_alerta: string
+        }
+        Insert: {
+          career_position_id?: string | null
+          created_at?: string
+          descricao: string
+          employee_id?: string | null
+          id?: string
+          metadata?: Json | null
+          resolvido?: boolean
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          severidade?: string
+          tenant_id: string
+          tipo_alerta: string
+        }
+        Update: {
+          career_position_id?: string | null
+          created_at?: string
+          descricao?: string
+          employee_id?: string | null
+          id?: string
+          metadata?: Json | null
+          resolvido?: boolean
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          severidade?: string
+          tenant_id?: string
+          tipo_alerta?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_risk_alerts_career_position_id_fkey"
+            columns: ["career_position_id"]
+            isOneToOne: false
+            referencedRelation: "career_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_risk_alerts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_risk_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_salary_benchmarks: {
+        Row: {
+          career_position_id: string
+          created_at: string
+          fonte: string
+          id: string
+          observacao: string | null
+          referencia_data: string
+          tenant_id: string
+          valor_maximo: number
+          valor_mediano: number
+          valor_minimo: number
+        }
+        Insert: {
+          career_position_id: string
+          created_at?: string
+          fonte?: string
+          id?: string
+          observacao?: string | null
+          referencia_data?: string
+          tenant_id: string
+          valor_maximo?: number
+          valor_mediano?: number
+          valor_minimo?: number
+        }
+        Update: {
+          career_position_id?: string
+          created_at?: string
+          fonte?: string
+          id?: string
+          observacao?: string | null
+          referencia_data?: string
+          tenant_id?: string
+          valor_maximo?: number
+          valor_mediano?: number
+          valor_minimo?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_salary_benchmarks_career_position_id_fkey"
+            columns: ["career_position_id"]
+            isOneToOne: false
+            referencedRelation: "career_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_salary_benchmarks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cbo_catalog: {
         Row: {
           area_ocupacional: string | null
