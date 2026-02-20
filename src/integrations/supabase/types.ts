@@ -12867,6 +12867,10 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      user_is_admin_or_hr: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_is_company_admin: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
