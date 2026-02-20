@@ -101,6 +101,7 @@ const navSections: NavSection[] = [
       { to: '/occupational-compliance', icon: GraduationCap, label: 'Riscos Ocupacionais', key: 'health' },
       { to: '/nr-compliance', icon: ShieldAlert, label: 'NR Compliance', key: 'health' },
       { to: '/epi-catalog', icon: HardHat, label: 'Catálogo de EPI', key: 'health' },
+      { to: '/epi-delivery', icon: ClipboardCheck, label: 'Entrega de EPI', key: 'health' },
       { to: '/safety-automation', icon: Zap, label: 'Automação SST', key: 'health' },
     ],
   },
