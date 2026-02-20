@@ -18,6 +18,7 @@ import type {
   EsocialGovernanceConfig,
   EsocialSystemStatus,
   TenantESocialStatus,
+  CompanyESocialStatus,
 } from './types';
 import { emitEsocialGovEvent, esocialGovernanceEvents } from './esocial-governance.events';
 
@@ -197,6 +198,19 @@ export function getTenantESocialStatus(tenantId: string): TenantESocialStatus {
 /** Get active alerts. */
 export function getActiveAlerts(): EsocialAlert[] {
   return DEMO_ALERTS.filter(a => !a.resolved);
+}
+
+/** Get eSocial status for a specific company (stub). */
+export function getCompanyESocialStatus(companyId: string): CompanyESocialStatus {
+  return {
+    company_id: companyId,
+    eventos_enviados: 42,
+    eventos_pendentes: 3,
+    eventos_rejeitados: 1,
+    ultimo_protocolo: '1.2.2026.0000012345',
+    certificado_status: 'valido',
+    layout_utilizado: 'S-1.2',
+  };
 }
 
 /** Generate alert (stub — will emit events for notification system). */

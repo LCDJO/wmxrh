@@ -22,6 +22,7 @@ export {
   getPlatformKPIs,
   getTenantOverviews,
   getTenantESocialStatus,
+  getCompanyESocialStatus,
   getActiveAlerts,
   generateAlert,
 } from './esocial-monitoring.engine';
@@ -49,4 +50,6 @@ export type {
   EsocialWebserviceStatus,
   EsocialSystemStatus,
   TenantESocialStatus,
+  CertificadoStatus,
+  CompanyESocialStatus,
 } from './types';
