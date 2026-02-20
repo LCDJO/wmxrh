@@ -101,8 +101,13 @@ export interface Position extends SoftDeletable {
   company_group_id: string | null;
   title: string;
   level: string | null;
-  base_salary: number | null;
-  max_salary: number | null;
+  cbo_code: string | null;
+  faixa_salarial_min: number | null;
+  faixa_salarial_max: number | null;
+  descricao: string | null;
+  formacao_minima: string | null;
+  certificacoes_exigidas: string[];
+  ativo: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -307,8 +312,13 @@ export interface CreatePositionDTO {
   company_group_id?: string | null;
   title: string;
   level?: string | null;
-  base_salary?: number;
-  max_salary?: number;
+  cbo_code?: string | null;
+  faixa_salarial_min?: number;
+  faixa_salarial_max?: number;
+  descricao?: string | null;
+  formacao_minima?: string | null;
+  certificacoes_exigidas?: string[];
+  ativo?: boolean;
 }
 
 export interface CreateTenantDTO {

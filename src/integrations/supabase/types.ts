@@ -8389,43 +8389,55 @@ export type Database = {
       }
       positions: {
         Row: {
-          base_salary: number | null
+          ativo: boolean
           cbo_code: string | null
+          certificacoes_exigidas: string[] | null
           company_group_id: string | null
           company_id: string
           created_at: string
           deleted_at: string | null
+          descricao: string | null
+          faixa_salarial_max: number | null
+          faixa_salarial_min: number | null
+          formacao_minima: string | null
           id: string
           level: string | null
-          max_salary: number | null
           tenant_id: string
           title: string
           updated_at: string
         }
         Insert: {
-          base_salary?: number | null
+          ativo?: boolean
           cbo_code?: string | null
+          certificacoes_exigidas?: string[] | null
           company_group_id?: string | null
           company_id: string
           created_at?: string
           deleted_at?: string | null
+          descricao?: string | null
+          faixa_salarial_max?: number | null
+          faixa_salarial_min?: number | null
+          formacao_minima?: string | null
           id?: string
           level?: string | null
-          max_salary?: number | null
           tenant_id: string
           title: string
           updated_at?: string
         }
         Update: {
-          base_salary?: number | null
+          ativo?: boolean
           cbo_code?: string | null
+          certificacoes_exigidas?: string[] | null
           company_group_id?: string | null
           company_id?: string
           created_at?: string
           deleted_at?: string | null
+          descricao?: string | null
+          faixa_salarial_max?: number | null
+          faixa_salarial_min?: number | null
+          formacao_minima?: string | null
           id?: string
           level?: string | null
-          max_salary?: number | null
           tenant_id?: string
           title?: string
           updated_at?: string
