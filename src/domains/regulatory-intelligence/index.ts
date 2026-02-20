@@ -59,3 +59,23 @@ export type { MonitorCheckResult, DetectedNormChange } from './regulatory-monito
 export type { ImpactAnalysisResult, ImpactSummary } from './regulatory-impact.engine';
 export type { AlertGenerationResult } from './regulatory-alert.engine';
 export type { LegalBaseRefreshResult } from './regulatory-legal-base.engine';
+
+// ── Legal Source Adapters ──
+export {
+  createNrAdapter,
+  createCltAdapter,
+  createEsocialAdapter,
+  createCnaeAdapter,
+  createCboAdapter,
+  createCctAdapter,
+  createAllAdapters,
+} from './adapters';
+
+export type {
+  LegalSourceAdapter, LegalSourceResult, LegalSourceUpdateCheck,
+  SyncOptions, SyncResult, LegalSourceId,
+  NrRecord, CltArticle, CltTema,
+  EsocialEvent, EsocialEventGroup,
+  CnaeRecord, CboRecord,
+  CctRecord, CctClausulaDestaque,
+} from './adapters';
