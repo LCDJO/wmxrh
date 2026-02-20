@@ -29,6 +29,7 @@ export { careerPathService } from './career-path.service';
 export { legalRequirementsService } from './legal-requirements.service';
 export { salaryBenchmarkService } from './salary-benchmark.service';
 export { riskAlertService } from './risk-alert.service';
+export { legalReferenceService } from './legal-reference.service';
 
 // ── Engines (pure, no I/O) ──
 export {
@@ -64,4 +65,7 @@ export type {
   CareerPathWithSteps,
   CareerComplianceAnalysis,
   SalaryPositioningResult,
+  LegalReferenceTipo,
+  LegalReference,
+  CreateLegalReferenceDTO,
 } from './types';
