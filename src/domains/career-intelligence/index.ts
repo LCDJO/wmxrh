@@ -39,6 +39,7 @@ export {
   analyzeSalaryPositioning,
   suggestLegalRequirements,
 } from './career-compliance.engine';
+export { suggestSalaryBand } from './salary-band-intelligence.engine';
 
 // ── Events ──
 export { careerIntelligenceEvents, emitCareerEvent, onCareerEvent } from './career-intelligence.events';
@@ -75,3 +76,4 @@ export type {
   CreateCareerLegalMappingDTO,
 } from './types';
 export type { MedicalProfileResult } from './career-pcmso-integration.service';
+export type { SuggestedSalaryBand, CctSalaryInput, EncargoFactorInput } from './salary-band-intelligence.engine';
