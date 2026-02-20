@@ -140,3 +140,20 @@ export type {
   NotificationPriority,
   NotificationChannel,
 } from './legal-impact-analyzer.engine';
+
+// ── Legal Automated Actions ──
+export { generateAutomatedActions } from './legal-automated-actions.engine';
+
+export type {
+  AutomatedActionType,
+  ActionStatus,
+  AutomatedActionBase,
+  CreateSafetyWorkflowAction,
+  RequireTrainingAction,
+  UpdateSalaryFloorAction,
+  RecalculatePayrollAction,
+  UpdateEpiRequirementsAction,
+  UpdateHealthProgramAction,
+  AutomatedAction,
+  AutomatedActionsResult,
+} from './legal-automated-actions.engine';
