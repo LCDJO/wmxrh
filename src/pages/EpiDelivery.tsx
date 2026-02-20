@@ -1,5 +1,5 @@
 /**
- * EPI Delivery Page — Registro formal de entrega de EPIs
+ * EPI Delivery Page — Registro formal de entrega de EPIs com assinatura digital
  */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -14,12 +14,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import {
-  Plus, Search, Package, ClipboardCheck, AlertTriangle,
-  FileSignature, Clock, CheckCircle2, XCircle, RefreshCw,
+  Plus, Search, Package, AlertTriangle,
+  FileSignature, CheckCircle2, XCircle, Send,
 } from 'lucide-react';
 import { format, isPast, parseISO, differenceInDays } from 'date-fns';
+import {
+  sendEpiDeliveryForSignature,
+  quickSignEpiDelivery,
+  getSignedDocumentUrl,
+} from '@/domains/epi-lifecycle/epi-signature.integration';
 
 // ═══════════════════════════════════════════════════════
 // TYPES
@@ -27,18 +33,22 @@ import { format, isPast, parseISO, differenceInDays } from 'date-fns';
 
 interface DeliveryRow {
   id: string;
+  tenant_id: string;
   employee_id: string;
   epi_catalog_id: string;
   data_entrega: string;
   data_validade: string | null;
   quantidade: number;
   status: string;
+  assinatura_status: string;
+  hash_documento: string | null;
+  storage_path: string | null;
   lote: string | null;
   ca_numero: string | null;
   motivo: string;
   observacoes: string | null;
   created_at: string;
-  employees?: { name: string } | null;
+  employees?: { name: string; email: string | null } | null;
   epi_catalog?: { nome: string; ca_numero: string | null; ca_validade: string | null } | null;
 }
 
@@ -68,6 +78,14 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
   extraviado: { label: 'Extraviado', variant: 'destructive' },
 };
 
+const SIGNATURE_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  pending: { label: 'Pendente', variant: 'outline' },
+  sent: { label: 'Enviado', variant: 'secondary' },
+  signed: { label: 'Assinado', variant: 'default' },
+  rejected: { label: 'Rejeitado', variant: 'destructive' },
+  expired: { label: 'Expirado', variant: 'destructive' },
+};
+
 const emptyForm: DeliveryForm = {
   employee_id: '',
   epi_catalog_id: '',
@@ -94,7 +112,7 @@ export default function EpiDelivery() {
       if (!currentTenantId) return [];
       const { data, error } = await supabase
         .from('epi_deliveries' as any)
-        .select(`*, employees:employee_id(name), epi_catalog:epi_catalog_id(nome, ca_numero, ca_validade)`)
+        .select(`*, employees:employee_id(name, email), epi_catalog:epi_catalog_id(nome, ca_numero, ca_validade)`)
         .eq('tenant_id', currentTenantId)
         .order('data_entrega', { ascending: false });
       if (error) throw error;
@@ -110,7 +128,7 @@ export default function EpiDelivery() {
       if (!currentTenantId) return [];
       const { data } = await supabase
         .from('employees')
-        .select('id, name')
+        .select('id, name, email')
         .eq('tenant_id', currentTenantId)
         .eq('status', 'active')
         .is('deleted_at', null)
@@ -136,15 +154,17 @@ export default function EpiDelivery() {
     enabled: !!currentTenantId,
   });
 
-  // ── Create delivery mutation ──
+  // ── Create delivery mutation (auto-sends for signature) ──
   const createMutation = useMutation({
     mutationFn: async (input: DeliveryForm) => {
       const selectedEpi = epiItems.find((e: any) => e.id === input.epi_catalog_id);
+      const selectedEmployee = employees.find((e: any) => e.id === input.employee_id);
       const validadeMeses = selectedEpi?.validade_meses ?? 12;
       const dataValidade = new Date(input.data_entrega);
       dataValidade.setMonth(dataValidade.getMonth() + validadeMeses);
 
-      const { error } = await supabase
+      // 1. Create delivery
+      const { data: delivery, error } = await supabase
         .from('epi_deliveries' as any)
         .insert({
           tenant_id: currentTenantId,
@@ -158,17 +178,90 @@ export default function EpiDelivery() {
           ca_numero: selectedEpi?.ca_numero ?? null,
           observacoes: input.observacoes || null,
           status: 'entregue',
-        });
+          assinatura_status: 'pending',
+        })
+        .select()
+        .single();
+
       if (error) throw error;
+      const deliveryData = delivery as any;
+
+      // 2. Auto-send for digital signature
+      try {
+        await sendEpiDeliveryForSignature({
+          deliveryId: deliveryData.id,
+          tenantId: currentTenantId!,
+          employeeName: selectedEmployee?.name ?? '',
+          employeeEmail: selectedEmployee?.email ?? '',
+          epiNome: selectedEpi?.nome ?? '',
+          caNumero: selectedEpi?.ca_numero ?? '',
+          dataEntrega: input.data_entrega,
+          quantidade: input.quantidade,
+          lote: input.lote || undefined,
+          motivo: input.motivo,
+        });
+      } catch {
+        // Signature sending is non-blocking; delivery was already created
+        console.warn('Assinatura não enviada automaticamente');
+      }
+
+      return deliveryData;
     },
     onSuccess: () => {
-      toast.success('Entrega de EPI registrada com sucesso');
+      toast.success('Entrega registrada e termo enviado para assinatura');
       qc.invalidateQueries({ queryKey: ['epi-deliveries'] });
       setDialogOpen(false);
       setForm({ ...emptyForm });
     },
     onError: (err: any) => toast.error(err.message),
   });
+
+  // ── Quick sign mutation ──
+  const quickSignMutation = useMutation({
+    mutationFn: async (delivery: DeliveryRow) => {
+      const success = await quickSignEpiDelivery(delivery.id, delivery.tenant_id, delivery.employee_id);
+      if (!success) throw new Error('Falha ao registrar assinatura');
+    },
+    onSuccess: () => {
+      toast.success('Assinatura registrada com sucesso');
+      qc.invalidateQueries({ queryKey: ['epi-deliveries'] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // ── Send for signature mutation ──
+  const sendSignatureMutation = useMutation({
+    mutationFn: async (delivery: DeliveryRow) => {
+      const result = await sendEpiDeliveryForSignature({
+        deliveryId: delivery.id,
+        tenantId: delivery.tenant_id,
+        employeeName: delivery.employees?.name ?? '',
+        employeeEmail: delivery.employees?.email ?? '',
+        epiNome: delivery.epi_catalog?.nome ?? '',
+        caNumero: delivery.ca_numero ?? '',
+        dataEntrega: delivery.data_entrega,
+        quantidade: delivery.quantidade,
+        lote: delivery.lote ?? undefined,
+        motivo: delivery.motivo,
+      });
+      if (!result.success) throw new Error(result.error);
+    },
+    onSuccess: () => {
+      toast.success('Termo enviado para assinatura digital');
+      qc.invalidateQueries({ queryKey: ['epi-deliveries'] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // ── View signed document ──
+  const handleViewDocument = async (deliveryId: string) => {
+    const url = await getSignedDocumentUrl(deliveryId);
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      toast.error('Documento não encontrado');
+    }
+  };
 
   // ── Update status mutation ──
   const updateStatusMutation = useMutation({
@@ -206,7 +299,9 @@ export default function EpiDelivery() {
   const totalExpired = deliveries.filter(
     (d) => d.status === 'entregue' && d.data_validade && isPast(parseISO(d.data_validade)),
   ).length;
-  const totalPendingSignature = deliveries.filter((d) => d.status === 'entregue').length; // placeholder
+  const pendingSignatures = deliveries.filter(
+    (d) => d.assinatura_status === 'pending' || d.assinatura_status === 'sent',
+  ).length;
   const nearExpiry = deliveries.filter((d) => {
     if (d.status !== 'entregue' || !d.data_validade) return false;
     const days = differenceInDays(parseISO(d.data_validade), new Date());
@@ -218,7 +313,7 @@ export default function EpiDelivery() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Entrega de EPI</h1>
-          <p className="text-sm text-muted-foreground">Registro formal de entregas de equipamentos de proteção individual</p>
+          <p className="text-sm text-muted-foreground">Registro formal com assinatura digital obrigatória</p>
         </div>
         <Button onClick={() => { setForm({ ...emptyForm }); setDialogOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" /> Nova Entrega
@@ -235,6 +330,17 @@ export default function EpiDelivery() {
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-emerald-500" />
               <span className="text-2xl font-bold">{totalActive}</span>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Assinaturas Pendentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <FileSignature className="h-5 w-5 text-amber-500" />
+              <span className="text-2xl font-bold">{pendingSignatures}</span>
             </div>
           </CardContent>
         </Card>
@@ -257,17 +363,6 @@ export default function EpiDelivery() {
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
               <span className="text-2xl font-bold">{nearExpiry}</span>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Entregas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-primary" />
-              <span className="text-2xl font-bold">{deliveries.length}</span>
             </div>
           </CardContent>
         </Card>
@@ -312,7 +407,7 @@ export default function EpiDelivery() {
                 <TableHead>Validade</TableHead>
                 <TableHead>Qtd</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Lote</TableHead>
+                <TableHead>Assinatura</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -336,6 +431,7 @@ export default function EpiDelivery() {
                     ? differenceInDays(parseISO(d.data_validade), new Date())
                     : null;
                   const statusCfg = STATUS_CONFIG[d.status] ?? { label: d.status, variant: 'outline' as const };
+                  const sigCfg = SIGNATURE_CONFIG[d.assinatura_status] ?? { label: d.assinatura_status, variant: 'outline' as const };
 
                   return (
                     <TableRow key={d.id}>
@@ -360,36 +456,94 @@ export default function EpiDelivery() {
                               </Badge>
                             )}
                           </div>
-                        ) : (
-                          '—'
-                        )}
+                        ) : '—'}
                       </TableCell>
                       <TableCell>{d.quantidade}</TableCell>
                       <TableCell>
                         <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{d.lote ?? '—'}</TableCell>
                       <TableCell>
-                        {d.status === 'entregue' && (
-                          <div className="flex gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant={sigCfg.variant} className="cursor-help">
+                              {d.assinatura_status === 'signed' && <CheckCircle2 className="mr-1 h-3 w-3" />}
+                              {sigCfg.label}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {d.hash_documento
+                              ? `Hash: ${d.hash_documento.substring(0, 16)}...`
+                              : 'Aguardando assinatura'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {/* Signature actions */}
+                          {d.assinatura_status === 'pending' && d.status === 'entregue' && (
+                            <>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0"
+                                    onClick={() => sendSignatureMutation.mutate(d)}
+                                    disabled={sendSignatureMutation.isPending}
+                                  >
+                                    <Send className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Enviar para assinatura digital</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0"
+                                    onClick={() => quickSignMutation.mutate(d)}
+                                    disabled={quickSignMutation.isPending}
+                                  >
+                                    <FileSignature className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Assinatura presencial (rápida)</TooltipContent>
+                              </Tooltip>
+                            </>
+                          )}
+                          {d.assinatura_status === 'signed' && d.storage_path && (
                             <Button
                               size="sm"
                               variant="ghost"
                               className="h-7 text-xs"
-                              onClick={() => updateStatusMutation.mutate({ id: d.id, status: 'devolvido' })}
+                              onClick={() => handleViewDocument(d.id)}
                             >
-                              Devolver
+                              Ver PDF
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 text-xs text-destructive"
-                              onClick={() => updateStatusMutation.mutate({ id: d.id, status: 'extraviado' })}
-                            >
-                              Extravio
-                            </Button>
-                          </div>
-                        )}
+                          )}
+                          {/* Delivery actions */}
+                          {d.status === 'entregue' && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs"
+                                onClick={() => updateStatusMutation.mutate({ id: d.id, status: 'devolvido' })}
+                              >
+                                Devolver
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs text-destructive"
+                                onClick={() => updateStatusMutation.mutate({ id: d.id, status: 'extraviado' })}
+                              >
+                                Extravio
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -407,6 +561,10 @@ export default function EpiDelivery() {
             <DialogTitle>Registrar Entrega de EPI</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+              <FileSignature className="inline-block mr-2 h-4 w-4 text-primary" />
+              O Termo de Entrega será gerado automaticamente e enviado para assinatura digital do colaborador.
+            </div>
             <div>
               <Label>Colaborador *</Label>
               <Select value={form.employee_id} onValueChange={(v) => setForm({ ...form, employee_id: v })}>
@@ -485,7 +643,7 @@ export default function EpiDelivery() {
               onClick={() => createMutation.mutate(form)}
               disabled={!form.employee_id || !form.epi_catalog_id || createMutation.isPending}
             >
-              {createMutation.isPending ? 'Salvando...' : 'Registrar Entrega'}
+              {createMutation.isPending ? 'Registrando...' : 'Registrar e Enviar Termo'}
             </Button>
           </DialogFooter>
         </DialogContent>
