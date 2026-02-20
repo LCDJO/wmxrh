@@ -122,3 +122,21 @@ export type {
   CreateLegalDocumentDTO,
   VersionComparisonResult,
 } from './legal-versioning.service';
+
+// ── Legal Impact Analyzer ──
+export { analyzeLegalImpact } from './legal-impact-analyzer.engine';
+
+export type {
+  CargoSnapshot,
+  EmpresaSnapshot,
+  TreinamentoNrSnapshot,
+  EpiCatalogSnapshot,
+  LegalImpactInput,
+  AffectedCargo,
+  AffectedEmpresa,
+  AffectedTreinamento,
+  AffectedEpi,
+  LegalImpactNotification,
+  NotificationPriority,
+  NotificationChannel,
+} from './legal-impact-analyzer.engine';
