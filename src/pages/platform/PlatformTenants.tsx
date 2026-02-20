@@ -33,7 +33,7 @@ import {
   Loader2, MoreHorizontal, Users, Calendar, UserCog, Shield, Clock,
   Pencil, ArrowRightLeft, Trash2, Mail, Phone, FileText, MapPin,
   Receipt, Headphones, BarChart3, CreditCard, TrendingUp, AlertTriangle,
-  DollarSign, Activity,
+  DollarSign, Activity, RotateCcw,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
@@ -390,15 +390,24 @@ export default function PlatformTenants() {
     setSaving(false);
   };
 
-  // ── Delete Tenant ──
+  // ── Delete Tenant (soft — pending_deletion) ──
+  const [retentionDays, setRetentionDays] = useState(30);
+  useEffect(() => {
+    supabase.from('platform_settings').select('value').eq('key', 'tenant_deletion_retention_days').single()
+      .then(({ data }) => { if (data?.value) setRetentionDays(Number(data.value)); });
+  }, []);
+
   const handleDeleteTenant = async () => {
     if (!tenantToDelete) return;
     setSaving(true);
-    const { error } = await supabase.from('tenants').update({ status: 'deleted' }).eq('id', tenantToDelete.id);
+    const scheduledDate = new Date();
+    scheduledDate.setDate(scheduledDate.getDate() + retentionDays);
+    const { error } = await supabase.from('tenants').update({
+      status: 'pending_deletion',
+      scheduled_deletion_at: scheduledDate.toISOString(),
+    } as any).eq('id', tenantToDelete.id);
     if (!error) {
-      await supabase.from('tenant_plans').update({ status: 'cancelled' })
-        .eq('tenant_id', tenantToDelete.id).in('status', ['active', 'trial']);
-      toast({ title: 'Tenant removido' });
+      toast({ title: 'Tenant marcado para deleção', description: `Será removido em ${retentionDays} dias (${scheduledDate.toLocaleDateString('pt-BR')}).` });
       fetchTenants(); fetchTenantPlans();
     } else {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
@@ -481,6 +490,7 @@ export default function PlatformTenants() {
   const statusBadge = (status: string) => {
     if (status === 'active') return <Badge variant="default" className="bg-primary/10 text-primary border-0">Ativo</Badge>;
     if (status === 'suspended') return <Badge variant="destructive" className="bg-destructive/10 text-destructive border-0">Suspenso</Badge>;
+    if (status === 'pending_deletion') return <Badge className="bg-orange-500/10 text-orange-600 border-0">Aguardando Deleção</Badge>;
     if (status === 'deleted') return <Badge variant="secondary" className="bg-muted text-muted-foreground border-0">Removido</Badge>;
     if (status === 'trial') return <Badge className="bg-amber-500/10 text-amber-600 border-0">Trial</Badge>;
     return <Badge variant="secondary">{status}</Badge>;
@@ -565,7 +575,7 @@ export default function PlatformTenants() {
               </TableHeader>
               <TableBody>
                 {filtered.map(tenant => (
-                  <TableRow key={tenant.id} className={tenant.status === 'deleted' ? 'opacity-50' : ''}>
+                  <TableRow key={tenant.id} className={['deleted', 'pending_deletion'].includes(tenant.status) ? 'opacity-50' : ''}>
                     <TableCell className="font-medium">{tenant.name}</TableCell>
                     <TableCell className="text-muted-foreground font-mono text-xs">{tenant.document || '—'}</TableCell>
                     <TableCell>
@@ -585,17 +595,17 @@ export default function PlatformTenants() {
                           <DropdownMenuItem onClick={() => openView(tenant)}>
                             <Eye className="h-4 w-4 mr-2" /> Ver detalhes
                           </DropdownMenuItem>
-                          {can('tenant.create') && tenant.status !== 'deleted' && (
+                          {can('tenant.create') && !['deleted', 'pending_deletion'].includes(tenant.status) && (
                             <DropdownMenuItem onClick={() => openEdit(tenant)}>
                               <Pencil className="h-4 w-4 mr-2" /> Editar dados
                             </DropdownMenuItem>
                           )}
-                          {can('tenant.create') && tenant.status !== 'deleted' && (
+                          {can('tenant.create') && !['deleted', 'pending_deletion'].includes(tenant.status) && (
                             <DropdownMenuItem onClick={() => openChangePlan(tenant)}>
                               <ArrowRightLeft className="h-4 w-4 mr-2" /> Trocar plano
                             </DropdownMenuItem>
                           )}
-                          {can('module.enable') && tenant.status !== 'deleted' && (
+                          {can('module.enable') && !['deleted', 'pending_deletion'].includes(tenant.status) && (
                             <DropdownMenuItem onClick={() => openModules(tenant)}>
                               <Puzzle className="h-4 w-4 mr-2" /> Módulos
                             </DropdownMenuItem>
@@ -605,7 +615,7 @@ export default function PlatformTenants() {
                               <UserCog className="h-4 w-4 mr-2" /> Entrar como Tenant
                             </DropdownMenuItem>
                           )}
-                          {can('tenant.suspend') && tenant.status !== 'deleted' && (
+                          {can('tenant.suspend') && !['deleted', 'pending_deletion'].includes(tenant.status) && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => handleToggleStatus(tenant)}
@@ -614,7 +624,16 @@ export default function PlatformTenants() {
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-destructive focus:text-destructive"
                                 onClick={() => { setTenantToDelete(tenant); setDeleteConfirmOpen(true); }}>
-                                <Trash2 className="h-4 w-4 mr-2" /> Remover tenant
+                                <Trash2 className="h-4 w-4 mr-2" /> Marcar para deleção
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {can('tenant.suspend') && tenant.status === 'pending_deletion' && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-primary focus:text-primary"
+                                onClick={() => handleToggleStatus(tenant)}>
+                                <RotateCcw className="h-4 w-4 mr-2" /> Cancelar deleção (Reativar)
                               </DropdownMenuItem>
                             </>
                           )}
@@ -1239,15 +1258,15 @@ export default function PlatformTenants() {
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover tenant?</AlertDialogTitle>
+            <AlertDialogTitle>Marcar tenant para deleção?</AlertDialogTitle>
             <AlertDialogDescription>
-              O tenant <strong>{tenantToDelete?.name}</strong> será desativado e todos os planos cancelados.
+              O tenant <strong>{tenantToDelete?.name}</strong> será marcado como <em>"Aguardando Deleção"</em> e ficará retido por <strong>{retentionDays} dias</strong> antes da remoção definitiva. Durante esse período é possível reverter a ação.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteTenant} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />} Remover
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />} Marcar para Deleção
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

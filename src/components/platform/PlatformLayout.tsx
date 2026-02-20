@@ -293,6 +293,7 @@ const NAV_SECTIONS: NavSection[] = [
         icon: Settings,
         children: [
           { to: '/platform/settings/gamification', label: 'Gamificação' },
+          { to: '/platform/settings/saas', label: 'Parametrizações' },
           { to: '/platform/settings/versioning', label: 'Versionamento' },
           {
             to: '/platform/structure',
