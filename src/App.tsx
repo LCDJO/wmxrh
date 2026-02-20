@@ -48,6 +48,7 @@ import SafetyAutomation from "./pages/SafetyAutomation";
 import EpiCatalog from "./pages/EpiCatalog";
 import EpiDelivery from "./pages/EpiDelivery";
 import EpiDashboard from "./pages/EpiDashboard";
+import EpiAuditLog from "./pages/EpiAuditLog";
 import IAMManagement from "./pages/IAMManagement";
 import SettingsUsers from "./pages/SettingsUsers";
 import SettingsRoles from "./pages/SettingsRoles";
@@ -330,6 +331,9 @@ function AppRoutes() {
           } />
           <Route path="/epi-dashboard" element={
             <ProtectedRoute navKey="health"><EpiDashboard /></ProtectedRoute>
+          } />
+          <Route path="/epi-audit" element={
+            <ProtectedRoute navKey="health"><EpiAuditLog /></ProtectedRoute>
           } />
           <Route path="/iam" element={<Navigate to="/settings/users" replace />} />
           <Route path="/settings/users" element={

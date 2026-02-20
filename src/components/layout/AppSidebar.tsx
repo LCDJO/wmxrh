@@ -103,6 +103,7 @@ const navSections: NavSection[] = [
       { to: '/epi-catalog', icon: HardHat, label: 'Catálogo de EPI', key: 'health' },
       { to: '/epi-delivery', icon: ClipboardCheck, label: 'Entrega de EPI', key: 'health' },
       { to: '/epi-dashboard', icon: ShieldCheck, label: 'Dashboard EPI', key: 'health' },
+      { to: '/epi-audit', icon: ScrollText, label: 'Auditoria EPI', key: 'health' },
       { to: '/safety-automation', icon: Zap, label: 'Automação SST', key: 'health' },
     ],
   },
