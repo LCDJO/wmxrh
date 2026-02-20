@@ -40,6 +40,7 @@ export {
   suggestLegalRequirements,
 } from './career-compliance.engine';
 export { suggestSalaryBand } from './salary-band-intelligence.engine';
+export { runCareerAlertEngine } from './career-alert.engine';
 
 // ── Events ──
 export { careerIntelligenceEvents, emitCareerEvent, onCareerEvent } from './career-intelligence.events';
@@ -77,3 +78,4 @@ export type {
 } from './types';
 export type { MedicalProfileResult } from './career-pcmso-integration.service';
 export type { SuggestedSalaryBand, CctSalaryInput, EncargoFactorInput } from './salary-band-intelligence.engine';
+export type { AlertEngineInput } from './career-alert.engine';
