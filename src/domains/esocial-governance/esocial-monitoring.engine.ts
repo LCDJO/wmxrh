@@ -16,6 +16,7 @@ import type {
   EsocialAlert,
   EsocialAlertType,
   EsocialGovernanceConfig,
+  EsocialSystemStatus,
 } from './types';
 import { emitEsocialGovEvent, esocialGovernanceEvents } from './esocial-governance.events';
 
@@ -104,6 +105,18 @@ const DEMO_ALERTS: EsocialAlert[] = [
 ];
 
 // ── Engine Functions ──
+
+/** Get global eSocial system status. */
+export function getSystemStatus(): EsocialSystemStatus {
+  const current = getCurrentLayout();
+  return {
+    layout_atual_suportado: current.versao,
+    layout_vigente_oficial: 'S-1.2',
+    data_ultima_verificacao: new Date().toISOString(),
+    status_webservice: 'online',
+    compatibilidade: current.versao === 'S-1.2',
+  };
+}
 
 /** Get current governance config. */
 export function getGovernanceConfig(): EsocialGovernanceConfig {
