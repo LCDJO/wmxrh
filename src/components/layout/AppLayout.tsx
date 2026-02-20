@@ -5,7 +5,7 @@ import { ImpersonationBanner } from './ImpersonationBanner';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { UserProfileDropdown } from './UserProfileDropdown';
 import { useSecurityMonitor } from '@/domains/security/useSecurityMonitor';
 import { dualIdentityEngine } from '@/domains/security/kernel/dual-identity-engine';
 
@@ -34,17 +34,7 @@ export function AppLayout() {
           </div>
           <div className="flex items-center gap-4">
             <NotificationBell />
-            <Avatar className={`h-9 w-9 border-2 ${
-              isImpersonating ? 'border-[hsl(var(--impersonation))]' : 'border-primary/20'
-            }`}>
-              <AvatarFallback className={`text-sm font-semibold ${
-                isImpersonating
-                  ? 'bg-[hsl(var(--impersonation))] text-[hsl(var(--impersonation-foreground))]'
-                  : 'bg-primary text-primary-foreground'
-              }`}>
-                {isImpersonating ? 'IM' : 'AD'}
-              </AvatarFallback>
-            </Avatar>
+            <UserProfileDropdown />
           </div>
         </header>
         <main className={`flex-1 p-8 ${isImpersonating ? 'ring-2 ring-inset ring-[hsl(var(--impersonation-border))]/30' : ''}`}>

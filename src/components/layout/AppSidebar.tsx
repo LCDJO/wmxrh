@@ -492,15 +492,6 @@ export function AppSidebar() {
         </div>
       )}
 
-      {/* ── Plan Badge ── */}
-      {!collapsed && expProfile.plan_tier && (
-        <div className="mx-3 mb-2">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/40">Plano</span>
-            <PlanBadge tier={expProfile.plan_tier} size="sm" />
-          </div>
-        </div>
-      )}
 
       {/* ── Footer ── */}
       <div className="px-3 pb-3 space-y-1">
