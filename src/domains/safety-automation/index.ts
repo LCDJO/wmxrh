@@ -92,3 +92,13 @@ export type {
   AutomationTriggerDeps,
   TriggerResult,
 } from './automation-triggers';
+
+// Escalation Engine
+export {
+  runEscalationScan,
+  getEscalationSummary,
+} from './escalation-engine';
+export type {
+  EscalationPolicy,
+  EscalationResult,
+} from './escalation-engine';
