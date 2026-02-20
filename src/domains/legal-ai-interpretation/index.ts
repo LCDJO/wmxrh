@@ -27,6 +27,9 @@ export { analyzePositionImpacts } from './position-impact.engine';
 export { generateActionPlan } from './action-plan.engine';
 export { generateWorkflows } from './workflow-generation.engine';
 
+// ── Event Consumer (Regulatory Intelligence → Legal AI) ──
+export { startRegulatoryEventConsumer, stopRegulatoryEventConsumer } from './regulatory-event-consumer';
+
 // ── Events ──
 export { legalAiEvents, emitLegalAiEvent, onLegalAiEvent } from './legal-ai-interpretation.events';
 
