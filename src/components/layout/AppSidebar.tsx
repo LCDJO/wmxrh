@@ -103,14 +103,29 @@ const navSections: NavSection[] = [
   {
     label: 'Saúde & Segurança',
     items: [
-      { to: '/health', icon: Stethoscope, label: 'Saúde Ocupacional', key: 'health' },
-      { to: '/occupational-compliance', icon: GraduationCap, label: 'Riscos Ocupacionais', key: 'health' },
-      { to: '/nr-compliance', icon: ShieldAlert, label: 'NR Compliance', key: 'health' },
-      { to: '/epi-catalog', icon: HardHat, label: 'Catálogo de EPI', key: 'health' },
-      { to: '/epi-delivery', icon: ClipboardCheck, label: 'Entrega de EPI', key: 'health' },
-      { to: '/epi-dashboard', icon: ShieldCheck, label: 'Dashboard EPI', key: 'health' },
-      { to: '/epi-audit', icon: ScrollText, label: 'Auditoria EPI', key: 'health' },
-      { to: '/safety-automation', icon: Zap, label: 'Automação SST', key: 'health' },
+      {
+        to: '/health', icon: Stethoscope, label: 'Saúde Ocupacional', key: 'health' as NavKey,
+        children: [
+          { to: '/health', icon: Stethoscope, label: 'Programas (PCMSO)', key: 'health' as NavKey },
+          { to: '/occupational-compliance', icon: GraduationCap, label: 'Riscos Ocupacionais', key: 'health' as NavKey },
+        ],
+      },
+      {
+        to: '/epi-catalog', icon: HardHat, label: 'EPI', key: 'health' as NavKey,
+        children: [
+          { to: '/epi-catalog', icon: HardHat, label: 'Catálogo', key: 'health' as NavKey },
+          { to: '/epi-delivery', icon: ClipboardCheck, label: 'Entregas', key: 'health' as NavKey },
+          { to: '/epi-dashboard', icon: ShieldCheck, label: 'Dashboard', key: 'health' as NavKey },
+          { to: '/epi-audit', icon: ScrollText, label: 'Auditoria', key: 'health' as NavKey },
+        ],
+      },
+      {
+        to: '/nr-compliance', icon: ShieldAlert, label: 'Normas & Automação', key: 'health' as NavKey,
+        children: [
+          { to: '/nr-compliance', icon: ShieldAlert, label: 'NR Compliance', key: 'health' as NavKey },
+          { to: '/safety-automation', icon: Zap, label: 'Automação SST', key: 'health' as NavKey },
+        ],
+      },
     ],
   },
 
