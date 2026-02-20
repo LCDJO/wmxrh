@@ -31,6 +31,7 @@ import LaborDashboard from "./pages/LaborDashboard";
 import LaborCompliance from "./pages/LaborCompliance";
 import LaborRules from "./pages/LaborRules";
 import LegalDashboard from "./pages/LegalDashboard";
+import RegulatoryDashboard from "./pages/RegulatoryDashboard";
 import Audit from "./pages/Audit";
 import PayrollSimulation from "./pages/PayrollSimulation";
 import NotFound from "./pages/NotFound";
@@ -296,6 +297,9 @@ function AppRoutes() {
           } />
           <Route path="/legal-dashboard" element={
             <ProtectedRoute navKey="legal_dashboard"><LegalDashboard /></ProtectedRoute>
+          } />
+          <Route path="/regulatory-dashboard" element={
+            <ProtectedRoute navKey="legal_dashboard"><RegulatoryDashboard /></ProtectedRoute>
           } />
           <Route path="/payroll-simulation" element={
             <ProtectedRoute navKey="compensation"><PayrollSimulation /></ProtectedRoute>
