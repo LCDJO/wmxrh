@@ -21,6 +21,7 @@ export {
   getUpcomingLayoutChange,
   getPlatformKPIs,
   getTenantOverviews,
+  getTenantESocialStatus,
   getActiveAlerts,
   generateAlert,
 } from './esocial-monitoring.engine';
@@ -47,4 +48,5 @@ export type {
   EsocialGovernanceConfig,
   EsocialWebserviceStatus,
   EsocialSystemStatus,
+  TenantESocialStatus,
 } from './types';
