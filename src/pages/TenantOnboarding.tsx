@@ -1,14 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateTenant } from '@/domains/hooks';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Building2, Plus, Sparkles, Shield, Users, BarChart3 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/contexts/TenantContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useAdaptiveOnboarding } from '@/hooks/use-adaptive-onboarding';
 import { OnboardingStepper } from '@/components/onboarding/OnboardingStepper';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
@@ -25,42 +21,31 @@ import { isOnboardingAdmin, type OnboardingSecurityContext } from '@/domains/ada
 
 export default function TenantOnboarding() {
   const navigate = useNavigate();
-  const { currentTenant } = useTenant();
-  const [name, setName] = useState('');
-  const [document, setDocument] = useState('');
-  const [tenantCreated, setTenantCreated] = useState(false);
-  const [showWizard, setShowWizard] = useState(false);
-  const [checkingCompanies, setCheckingCompanies] = useState(true);
+  const { user } = useAuth();
+  const { currentTenant, needsOnboarding, loading } = useTenant();
+  const [showWizard, setShowWizard] = useState(true); // auto-open wizard on first load
   const [startedAt] = useState(Date.now());
   const { toast } = useToast();
-  const createMutation = useCreateTenant();
 
   const TENANT_ID = currentTenant?.id ?? 'preview-tenant';
-  const USER_ID = 'current-user';
+  const USER_ID = user?.id ?? 'current-user';
 
-  // ── Bypass: if tenant already has companies, skip onboarding ──
+  // ── Redirect if no tenant or onboarding not needed ──
   useEffect(() => {
-    if (!currentTenant?.id) {
-      setCheckingCompanies(false);
+    if (loading) return;
+
+    if (!currentTenant) {
+      // No tenant associated — user hasn't been invited yet
+      navigate('/auth', { replace: true });
       return;
     }
 
-    const check = async () => {
-      // Use SECURITY DEFINER function — bypasses RLS for reliable check
-      const { data: needsOnboarding, error } = await supabase
-        .rpc('check_tenant_needs_onboarding', { p_tenant_id: currentTenant.id });
+    if (!needsOnboarding) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [currentTenant, needsOnboarding, loading, navigate]);
 
-      if (error || needsOnboarding === false) {
-        // Tenant already has companies or onboarding completed — redirect
-        navigate('/dashboard', { replace: true });
-        return;
-      }
-      setCheckingCompanies(false);
-    };
-    check();
-  }, [currentTenant?.id, navigate]);
-
-  // Security context — in production, derived from JWT/session
+  // Security context
   const securityCtx: OnboardingSecurityContext = {
     user_id: USER_ID,
     tenant_id: TENANT_ID,
@@ -74,6 +59,17 @@ export default function TenantOnboarding() {
     allowedModules: ['employees', 'companies', 'departments', 'compensation', 'benefits', 'compliance', 'health'],
     userRole: 'tenant_admin',
   });
+
+  // Emit onboarding started on mount
+  useEffect(() => {
+    if (!currentTenant?.id) return;
+    emitTenantOnboardingStarted(TENANT_ID, USER_ID, {
+      plan_tier: 'professional',
+      total_steps: onboarding.flow.steps.length,
+      estimated_minutes: onboarding.flow.estimated_total_minutes,
+    });
+    saveProgressToCache(onboarding.progress);
+  }, [currentTenant?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Skip handler ──
   const handleSkipOnboarding = useCallback(() => {
@@ -103,7 +99,6 @@ export default function TenantOnboarding() {
     const step = onboarding.flow.steps.find(s => s.id === stepId);
     onboarding.completeStep(stepId);
 
-    // Emit event
     emitOnboardingStepCompleted(TENANT_ID, USER_ID, {
       step_id: stepId,
       step_title: step?.title ?? stepId,
@@ -112,10 +107,8 @@ export default function TenantOnboarding() {
       elapsed_ms: Date.now() - startedAt,
     });
 
-    // Persist to cache
     persistProgress();
 
-    // Check if onboarding just finished
     if (onboarding.completionPct >= 100) {
       emitOnboardingFinished(TENANT_ID, USER_ID, {
         total_steps: onboarding.flow.steps.length,
@@ -151,32 +144,7 @@ export default function TenantOnboarding() {
     persistProgress();
   }, [onboarding, securityCtx, persistProgress, toast]);
 
-  if (checkingCompanies) return null;
-
-  const handleCreate = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate({ name, document: document || null }, {
-      onSuccess: () => {
-        toast({ title: 'Organização criada!', description: 'Sua organização foi criada com sucesso.' });
-        setTenantCreated(true);
-        setShowWizard(true);
-
-        // Emit onboarding started
-        emitTenantOnboardingStarted(TENANT_ID, USER_ID, {
-          plan_tier: 'professional',
-          total_steps: onboarding.flow.steps.length,
-          estimated_minutes: onboarding.flow.estimated_total_minutes,
-        });
-
-        // Persist initial progress
-        saveProgressToCache(onboarding.progress);
-      },
-      onError: (err) => toast({ title: 'Erro', description: err.message, variant: 'destructive' }),
-    });
-  };
-
   const handleWizardFinish = (config: { selectedModules: string[]; selectedRoles: string[] }) => {
-    // Emit role bootstrap event
     emitRoleBootstrapCompleted(TENANT_ID, USER_ID, {
       roles_created: config.selectedRoles,
       plan_tier: 'professional',
@@ -187,101 +155,12 @@ export default function TenantOnboarding() {
       description: `${config.selectedModules.length} módulos e ${config.selectedRoles.length} papéis serão configurados.`,
     });
 
-    // Complete the welcome step automatically
     handleCompleteStep('welcome');
   };
 
-  // ── Creation form (pre-onboarding) ──
-  if (!tenantCreated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10 p-6 sm:p-10">
-        <div className="w-full max-w-3xl mx-auto animate-fade-in">
-          {/* Page header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
-                <Building2 className="h-5 w-5 text-primary" />
-              </div>
-              <h1 className="text-2xl font-bold font-display text-foreground">
-                Criar Organização
-              </h1>
-            </div>
-            <p className="text-sm text-muted-foreground leading-relaxed ml-[52px]">
-              Configure sua empresa para começar a gerenciar seus recursos humanos.
-            </p>
-          </div>
+  if (loading || !currentTenant) return null;
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main form — takes 2 columns */}
-            <Card className="lg:col-span-2 border-border/50 shadow-md">
-              <CardContent className="p-6 sm:p-8">
-                <form onSubmit={handleCreate} className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Nome da Organização <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="name"
-                        placeholder="Ex: Grupo Alpha, Contabilidade XYZ"
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                        required
-                        className="h-11"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="doc" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        CNPJ / CPF <span className="text-muted-foreground/50">(opcional)</span>
-                      </Label>
-                      <Input
-                        id="doc"
-                        placeholder="00.000.000/0000-00"
-                        value={document}
-                        onChange={e => setDocument(e.target.value)}
-                        className="h-11"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <Button type="submit" className="w-full sm:w-auto h-11 px-8 gap-2 text-sm font-semibold" disabled={createMutation.isPending}>
-                      <Plus className="h-4 w-4" />
-                      {createMutation.isPending ? 'Criando...' : 'Criar Organização'}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-
-            {/* Side info card */}
-            <Card className="border-border/50 shadow-md bg-muted/30">
-              <CardContent className="p-6 space-y-5">
-                <h2 className="text-sm font-semibold text-foreground">O que você terá acesso</h2>
-                {[
-                  { icon: Users, label: 'Colaboradores', desc: 'Gerencie admissões, cargos e equipes.' },
-                  { icon: Shield, label: 'Compliance', desc: 'Regras trabalhistas e conformidade.' },
-                  { icon: BarChart3, label: 'Relatórios', desc: 'Dashboards e indicadores em tempo real.' },
-                ].map(({ icon: Icon, label, desc }) => (
-                  <div key={label} className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                      <Icon className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{label}</p>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Onboarding flow (post-creation) ──
+  // ── Onboarding flow — direct to setup (tenant already created by SuperAdmin) ──
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto px-6 py-8">
@@ -292,7 +171,7 @@ export default function TenantOnboarding() {
               Configuração Inicial
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {name || 'Sua organização'} — Plano Professional
+              {currentTenant.name} — Bem-vindo ao seu espaço de trabalho
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -318,7 +197,6 @@ export default function TenantOnboarding() {
 
         {/* Two-column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Stepper — left column */}
           <div className="lg:col-span-3">
             <OnboardingStepper
               flow={onboarding.flow}
@@ -328,7 +206,6 @@ export default function TenantOnboarding() {
             />
           </div>
 
-          {/* Checklist — right column (compact) */}
           <div className="lg:col-span-2">
             <div className="lg:sticky lg:top-8 space-y-4">
               <OnboardingChecklist
@@ -351,7 +228,7 @@ export default function TenantOnboarding() {
         open={showWizard}
         onOpenChange={setShowWizard}
         planTier="professional"
-        tenantName={name || 'Sua Organização'}
+        tenantName={currentTenant.name}
         availableModules={onboarding.availableModules}
         recommendedModules={onboarding.recommendedModules}
         suggestedRoles={onboarding.suggestedRoles}

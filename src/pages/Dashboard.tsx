@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { Users, Briefcase, TrendingUp, Building2, Layers, Calendar, Lock, Sparkles, ShieldCheck, Brain } from 'lucide-react';
 import { CognitiveInsightsCard } from '@/components/dashboard/CognitiveInsightsCard';
 import { OnboardingProgressCard } from '@/components/dashboard/OnboardingProgressCard';
@@ -26,7 +26,7 @@ const CHART_COLORS = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { currentTenant } = useTenant();
+  const { currentTenant, needsOnboarding, loading: tenantLoading } = useTenant();
   const { scope, setGroupScope, setCompanyScope } = useScope();
   const { profile: expProfile, isPlanAtLeast, isUIFeatureEnabled } = useExperienceProfile();
 
@@ -37,6 +37,13 @@ export default function Dashboard() {
   const { data: companies = [] } = useCompanies();
   const { data: groups = [] } = useCompanyGroups();
   const { data: adjustments = [] } = useSalaryAdjustmentsByTenant();
+
+  // Redirect to onboarding if tenant has no companies yet
+  useEffect(() => {
+    if (!tenantLoading && currentTenant && needsOnboarding) {
+      navigate('/onboarding', { replace: true });
+    }
+  }, [tenantLoading, currentTenant, needsOnboarding, navigate]);
 
   // Filter data based on scope
   const scopedEmployeesSimple = useMemo(() => {

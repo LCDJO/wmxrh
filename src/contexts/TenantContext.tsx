@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import type { Tables } from '@/integrations/supabase/types';
@@ -11,6 +11,7 @@ interface TenantContextType {
   tenants: Tenant[];
   membership: TenantMembership | null;
   loading: boolean;
+  needsOnboarding: boolean;
   setCurrentTenant: (tenant: Tenant) => void;
   refreshTenants: () => Promise<void>;
 }
@@ -23,16 +24,30 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [membership, setMembership] = useState<TenantMembership | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const claimAttempted = useRef(false);
 
   const refreshTenants = async () => {
     if (!user) {
       setTenants([]);
       setCurrentTenant(null);
       setMembership(null);
+      setNeedsOnboarding(false);
       setLoading(false);
+      claimAttempted.current = false;
       return;
     }
 
+    // Step 1: Claim any invited memberships (only once per session)
+    if (!claimAttempted.current && user.email) {
+      claimAttempted.current = true;
+      await supabase.rpc('claim_invited_memberships', {
+        p_user_id: user.id,
+        p_email: user.email,
+      });
+    }
+
+    // Step 2: Fetch active memberships
     const { data: memberships } = await supabase
       .from('tenant_memberships')
       .select('*, tenants(*)')
@@ -48,10 +63,16 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
       const currentMembership = memberships.find((m: any) => m.tenant_id === found.id);
       setMembership(currentMembership || null);
+
+      // Step 3: Check if current tenant needs onboarding (no companies)
+      const { data: needsOb } = await supabase
+        .rpc('check_tenant_needs_onboarding', { p_tenant_id: found.id });
+      setNeedsOnboarding(needsOb === true);
     } else {
       setTenants([]);
       setCurrentTenant(null);
       setMembership(null);
+      setNeedsOnboarding(false);
     }
     setLoading(false);
   };
@@ -66,7 +87,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <TenantContext.Provider value={{ currentTenant, tenants, membership, loading, setCurrentTenant: handleSetTenant, refreshTenants }}>
+    <TenantContext.Provider value={{ currentTenant, tenants, membership, loading, needsOnboarding, setCurrentTenant: handleSetTenant, refreshTenants }}>
       {children}
     </TenantContext.Provider>
   );
