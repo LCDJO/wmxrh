@@ -47,6 +47,7 @@ import OccupationalCompliance from "./pages/OccupationalCompliance";
 import NrComplianceDashboard from "./pages/NrComplianceDashboard";
 import SafetyAutomation from "./pages/SafetyAutomation";
 import LegalIntelligenceDashboard from "./pages/LegalIntelligenceDashboard";
+import EsocialGovernanceDashboard from "./pages/EsocialGovernanceDashboard";
 import EpiCatalog from "./pages/EpiCatalog";
 import EpiDelivery from "./pages/EpiDelivery";
 import EpiDashboard from "./pages/EpiDashboard";
@@ -307,6 +308,9 @@ function AppRoutes() {
           } />
           <Route path="/legal-intelligence" element={
             <ProtectedRoute navKey="legal_dashboard"><LegalIntelligenceDashboard /></ProtectedRoute>
+          } />
+          <Route path="/esocial-governance" element={
+            <ProtectedRoute navKey="esocial"><EsocialGovernanceDashboard /></ProtectedRoute>
           } />
           <Route path="/payroll-simulation" element={
             <ProtectedRoute navKey="compensation"><PayrollSimulation /></ProtectedRoute>
