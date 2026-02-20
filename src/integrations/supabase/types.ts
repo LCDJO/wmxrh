@@ -3406,6 +3406,7 @@ export type Database = {
           categoria: string
           created_at: string
           descricao: string | null
+          exige_termo_assinatura: boolean
           fabricante: string | null
           foto_url: string | null
           id: string
@@ -3415,8 +3416,11 @@ export type Database = {
           nome: string
           nr_referencia: number | null
           nr_treinamento_codigo: number | null
+          periodicidade_substituicao_dias: number | null
           requer_treinamento: boolean | null
+          risco_relacionado: string[]
           tenant_id: string
+          tipo: string
           updated_at: string
           validade_meses: number | null
         }
@@ -3426,6 +3430,7 @@ export type Database = {
           categoria?: string
           created_at?: string
           descricao?: string | null
+          exige_termo_assinatura?: boolean
           fabricante?: string | null
           foto_url?: string | null
           id?: string
@@ -3435,8 +3440,11 @@ export type Database = {
           nome: string
           nr_referencia?: number | null
           nr_treinamento_codigo?: number | null
+          periodicidade_substituicao_dias?: number | null
           requer_treinamento?: boolean | null
+          risco_relacionado?: string[]
           tenant_id: string
+          tipo?: string
           updated_at?: string
           validade_meses?: number | null
         }
@@ -3446,6 +3454,7 @@ export type Database = {
           categoria?: string
           created_at?: string
           descricao?: string | null
+          exige_termo_assinatura?: boolean
           fabricante?: string | null
           foto_url?: string | null
           id?: string
@@ -3455,8 +3464,11 @@ export type Database = {
           nome?: string
           nr_referencia?: number | null
           nr_treinamento_codigo?: number | null
+          periodicidade_substituicao_dias?: number | null
           requer_treinamento?: boolean | null
+          risco_relacionado?: string[]
           tenant_id?: string
+          tipo?: string
           updated_at?: string
           validade_meses?: number | null
         }
