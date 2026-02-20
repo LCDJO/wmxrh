@@ -1356,6 +1356,64 @@ export type Database = {
           },
         ]
       }
+      career_tracks: {
+        Row: {
+          ativo: boolean
+          cargo_destino_id: string
+          cargo_origem_id: string
+          created_at: string
+          id: string
+          requisitos: string | null
+          tempo_minimo_meses: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cargo_destino_id: string
+          cargo_origem_id: string
+          created_at?: string
+          id?: string
+          requisitos?: string | null
+          tempo_minimo_meses?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cargo_destino_id?: string
+          cargo_origem_id?: string
+          created_at?: string
+          id?: string
+          requisitos?: string | null
+          tempo_minimo_meses?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_tracks_cargo_destino_id_fkey"
+            columns: ["cargo_destino_id"]
+            isOneToOne: false
+            referencedRelation: "career_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_tracks_cargo_origem_id_fkey"
+            columns: ["cargo_origem_id"]
+            isOneToOne: false
+            referencedRelation: "career_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_tracks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cbo_catalog: {
         Row: {
           area_ocupacional: string | null
