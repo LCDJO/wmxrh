@@ -14,7 +14,15 @@ import type {
   RegulatoryAlert,
   CreateRegulatoryAlertDTO,
   ImpactSeverity,
+  RegulatoryAlertType,
 } from './types';
+
+function inferAlertType(normCodigo: string): RegulatoryAlertType {
+  if (/^NR-/i.test(normCodigo)) return 'NR_UPDATED';
+  if (/^CCT/i.test(normCodigo)) return 'CCT_UPDATED';
+  if (/esocial/i.test(normCodigo)) return 'ESOCIAL_LAYOUT_CHANGED';
+  return 'LEGISLATION_UPDATED';
+}
 
 export interface AlertGenerationResult {
   alerts: CreateRegulatoryAlertDTO[];
@@ -42,6 +50,7 @@ export function generateAlerts(
 
     alerts.push({
       tenant_id: tenantId,
+      alert_type: inferAlertType(impact.norm_codigo),
       norm_codigo: impact.norm_codigo,
       titulo: buildAlertTitle(impact.norm_codigo, impact.area_impactada, impact.severidade),
       mensagem: `${impact.descricao}\n\nEntidades afetadas: ${entityNames}${suffix}.\n\n${impact.acao_recomendada ?? ''}`,

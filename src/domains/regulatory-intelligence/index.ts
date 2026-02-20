@@ -40,6 +40,7 @@ export type {
   ImpactArea,
   AlertStatus,
   UpdateSourceType,
+  RegulatoryAlertType,
   RegulatoryNorm,
   NormVersion,
   RegulatoryMonitorConfig,
