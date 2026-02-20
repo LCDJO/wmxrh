@@ -19,6 +19,7 @@ import { onIAMEvent } from '@/domains/iam/iam.events';
 import { onIBLEvent } from '@/domains/security/kernel/ibl/domain-events';
 import { onSecurityEvent } from '@/domains/security/security-events';
 import { onPlatformEvent } from '@/domains/platform/platform-events';
+import { onLegalAiEvent, legalAiEvents } from '@/domains/legal-ai-interpretation/legal-ai-interpretation.events';
 
 // ── Helpers ──
 
@@ -148,6 +149,58 @@ export function registerNotificationListeners() {
           },
         );
       }
+    }),
+  );
+
+  // ── Legal AI Intelligence Events ──
+  teardowns.push(
+    onLegalAiEvent(legalAiEvents.INTERPRETATION_GENERATED, (payload: any) => {
+      const p = payload as Record<string, any>;
+      fireToPolicy(
+        'LegislationInterpreted',
+        { type: 'tenant', tenantId: p.tenant_id ?? '' },
+        {
+          title: 'Legislação interpretada',
+          description: `Nova interpretação gerada para ${p.norm_codigo ?? 'norma'}: ${p.titulo ?? 'sem título'}.`,
+          type: 'info',
+          source_module: 'intelligence',
+          action_url: '/legal-intelligence',
+        },
+      );
+    }),
+  );
+
+  teardowns.push(
+    onLegalAiEvent(legalAiEvents.HUMAN_REVIEW_REQUIRED, (payload: any) => {
+      const p = payload as Record<string, any>;
+      fireToPolicy(
+        'CriticalLegalChange',
+        { type: 'tenant', tenantId: p.tenant_id ?? '' },
+        {
+          title: 'Mudança legal crítica',
+          description: `Alteração crítica detectada em ${p.norm_codigo ?? 'norma'}. Revisão humana necessária.`,
+          type: 'critical',
+          source_module: 'intelligence',
+          action_url: '/legal-intelligence',
+        },
+      );
+    }),
+  );
+
+  teardowns.push(
+    onLegalAiEvent(legalAiEvents.ACTION_PLAN_CREATED, (payload: any) => {
+      const p = payload as Record<string, any>;
+      fireToPolicy(
+        'ActionPlanCreated',
+        { type: 'tenant', tenantId: p.tenant_id ?? '' },
+        {
+          title: 'Plano de ação criado',
+          description: `Plano de adequação gerado para ${p.norm_codigo ?? 'norma'} com ${p.acoes_count ?? '?'} ações.`,
+          type: 'warning',
+          source_module: 'intelligence',
+          action_url: '/legal-intelligence',
+        },
+      );
     }),
   );
 
