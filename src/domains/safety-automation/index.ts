@@ -160,3 +160,25 @@ export {
 export type {
   SafetyAuditLogEntry,
 } from './audit-log.service';
+
+// Future Capabilities (Stubs)
+export {
+  CorrectiveActionAIServiceStub,
+  LMSIntegrationServiceStub,
+  IoTSensorServiceStub,
+  MitigationPlanServiceStub,
+} from './future-capabilities';
+export type {
+  CorrectiveActionSuggestion,
+  CorrectiveActionAIService,
+  LMSCourseMapping,
+  LMSEnrollmentRequest,
+  LMSIntegrationService,
+  SensorType,
+  SensorReading,
+  SensorAlert,
+  IoTSensorService,
+  MitigationStep,
+  MitigationPlan,
+  MitigationPlanService,
+} from './future-capabilities';
