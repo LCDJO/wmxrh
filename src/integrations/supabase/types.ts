@@ -7567,6 +7567,74 @@ export type Database = {
           },
         ]
       }
+      safety_playbooks: {
+        Row: {
+          acoes: Json
+          condicao: Json
+          cooldown_hours: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          evento_origem: string
+          id: string
+          is_active: boolean
+          is_system: boolean
+          last_triggered_at: string | null
+          min_severity: string
+          name: string
+          priority: number
+          tenant_id: string
+          trigger_count: number
+          updated_at: string
+        }
+        Insert: {
+          acoes?: Json
+          condicao?: Json
+          cooldown_hours?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          evento_origem: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          last_triggered_at?: string | null
+          min_severity?: string
+          name: string
+          priority?: number
+          tenant_id: string
+          trigger_count?: number
+          updated_at?: string
+        }
+        Update: {
+          acoes?: Json
+          condicao?: Json
+          cooldown_hours?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          evento_origem?: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          last_triggered_at?: string | null
+          min_severity?: string
+          name?: string
+          priority?: number
+          tenant_id?: string
+          trigger_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_playbooks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       safety_tasks: {
         Row: {
           completed_at: string | null
