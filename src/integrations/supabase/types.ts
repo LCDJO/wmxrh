@@ -3526,6 +3526,7 @@ export type Database = {
           external_document_id: string | null
           hash_documento: string | null
           id: string
+          lot_id: string | null
           lote: string | null
           metadata: Json | null
           motivo: string
@@ -3554,6 +3555,7 @@ export type Database = {
           external_document_id?: string | null
           hash_documento?: string | null
           id?: string
+          lot_id?: string | null
           lote?: string | null
           metadata?: Json | null
           motivo?: string
@@ -3582,6 +3584,7 @@ export type Database = {
           external_document_id?: string | null
           hash_documento?: string | null
           id?: string
+          lot_id?: string | null
           lote?: string | null
           metadata?: Json | null
           motivo?: string
@@ -3615,6 +3618,13 @@ export type Database = {
             columns: ["epi_catalog_id"]
             isOneToOne: false
             referencedRelation: "epi_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_deliveries_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "epi_lots"
             referencedColumns: ["id"]
           },
           {
