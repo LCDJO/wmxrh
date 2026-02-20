@@ -3605,6 +3605,78 @@ export type Database = {
           },
         ]
       }
+      epi_incidents: {
+        Row: {
+          created_at: string
+          data: string
+          delivery_id: string | null
+          employee_id: string
+          epi_catalog_id: string
+          id: string
+          justificativa: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          safety_signal_id: string | null
+          severity: string
+          status: string
+          tenant_id: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          delivery_id?: string | null
+          employee_id: string
+          epi_catalog_id: string
+          id?: string
+          justificativa: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          safety_signal_id?: string | null
+          severity?: string
+          status?: string
+          tenant_id: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          delivery_id?: string | null
+          employee_id?: string
+          epi_catalog_id?: string
+          id?: string
+          justificativa?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          safety_signal_id?: string | null
+          severity?: string
+          status?: string
+          tenant_id?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_incidents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_incidents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       epi_requirements: {
         Row: {
           atendido_em: string | null
