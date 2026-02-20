@@ -99,3 +99,16 @@ export type {
   CrawlError,
   DocumentVersionStore,
 } from './legal-crawler.service';
+
+// ── Legal Diff Engine ──
+export { computeLegalDiff } from './legal-diff.engine';
+
+export type {
+  TipoMudanca,
+  GravidadeMudanca,
+  AreaImpacto,
+  LegalArticleDiff,
+  LegalChangeSummary,
+  ImpactoEstimado,
+  AcaoRecomendada,
+} from './legal-diff.engine';
