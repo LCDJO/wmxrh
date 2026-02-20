@@ -26,6 +26,9 @@ import type {
   ClientCommTrigger,
   ClientCommAction,
   ClientCommResult,
+  TenantDashboardView,
+  TenantActionPlanItem,
+  EsocialPendency,
 } from './types';
 import { emitEsocialGovEvent, esocialGovernanceEvents } from './esocial-governance.events';
 
@@ -404,4 +407,77 @@ export function dispatchClientComm(trigger: ClientCommTrigger, context?: Record<
 
   emitEsocialGovEvent(esocialGovernanceEvents.CLIENT_COMM_DISPATCHED, result);
   return result;
+}
+
+// ── Tenant Dashboard View ──
+
+/** Build a complete dashboard view for a specific tenant. */
+export function getTenantDashboardView(tenantId: string): TenantDashboardView {
+  const tenant = DEMO_TENANT_OVERVIEWS.find(t => t.tenant_id === tenantId);
+  const tenantAlerts = DEMO_ALERTS.filter(a => !a.resolved && (a.tenant_id === tenantId || a.tenant_id === null));
+  const certInfo = getTenantESocialStatus(tenantId);
+
+  const pendencias: EsocialPendency[] = [];
+  if (tenant && tenant.eventos_rejeitados > 0) {
+    pendencias.push({
+      id: `p-${tenantId}-1`, tipo: 'evento_pendente',
+      descricao: `${tenant.eventos_rejeitados} evento(s) rejeitado(s) aguardando correção`,
+      evento_codigo: 'S-2240', prazo: tenant.proximo_prazo, severidade: 'alta', created_at: new Date().toISOString(),
+    });
+  }
+  if (tenant && tenant.empresas_bloqueadas > 0) {
+    pendencias.push({
+      id: `p-${tenantId}-2`, tipo: 'erro_validacao',
+      descricao: `${tenant.empresas_bloqueadas} empresa(s) bloqueada(s) por inconsistência`,
+      evento_codigo: null, prazo: null, severidade: 'critica', created_at: new Date().toISOString(),
+    });
+  }
+  if (!certInfo.certificado_valido) {
+    pendencias.push({
+      id: `p-${tenantId}-3`, tipo: 'layout_desatualizado',
+      descricao: 'Certificado digital não configurado ou inválido',
+      evento_codigo: null, prazo: null, severidade: 'critica', created_at: new Date().toISOString(),
+    });
+  }
+
+  const planoAcao: TenantActionPlanItem[] = [];
+  if (tenant?.eventos_rejeitados && tenant.eventos_rejeitados > 0) {
+    planoAcao.push({
+      id: `pa-${tenantId}-1`, titulo: 'Corrigir eventos rejeitados',
+      descricao: 'Revisar dados cadastrais (CPF/CNIS) e reenviar eventos S-2240 rejeitados.',
+      prioridade: 'urgente', prazo: tenant.proximo_prazo, status: 'pendente', evento_relacionado: 'S-2240',
+    });
+  }
+  if (tenant?.empresas_pendentes && tenant.empresas_pendentes > 0) {
+    planoAcao.push({
+      id: `pa-${tenantId}-2`, titulo: 'Regularizar empresas pendentes',
+      descricao: 'Completar configuração eSocial das empresas com dados faltantes.',
+      prioridade: 'alta', prazo: null, status: 'pendente', evento_relacionado: null,
+    });
+  }
+  planoAcao.push({
+    id: `pa-${tenantId}-3`, titulo: 'Verificar compatibilidade com layout futuro',
+    descricao: 'Preparar mapeamentos para o layout S-1.3 antes da obrigatoriedade em 06/2026.',
+    prioridade: 'media', prazo: '2026-05-15', status: 'pendente', evento_relacionado: null,
+  });
+
+  return {
+    tenant_id: tenantId,
+    tenant_name: tenant?.tenant_name ?? 'Desconhecido',
+    status_integracao: tenant?.status ?? 'nao_configurado',
+    layout_version: tenant?.layout_version ?? 'S-1.2',
+    certificado_status: certInfo.certificado_valido ? 'valido' : 'nao_configurado',
+    certificado_validade: certInfo.validade_certificado,
+    empresas_total: tenant?.empresas_total ?? 0,
+    empresas_em_dia: tenant?.empresas_em_dia ?? 0,
+    empresas_pendentes: tenant?.empresas_pendentes ?? 0,
+    empresas_bloqueadas: tenant?.empresas_bloqueadas ?? 0,
+    eventos_pendentes: tenant?.eventos_pendentes ?? 0,
+    eventos_rejeitados: tenant?.eventos_rejeitados ?? 0,
+    ultimo_envio: tenant?.ultimo_envio ?? null,
+    proximo_prazo: tenant?.proximo_prazo ?? null,
+    pendencias,
+    alertas: tenantAlerts,
+    plano_acao: planoAcao,
+  };
 }
