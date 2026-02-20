@@ -14,6 +14,7 @@ export const esocialGovernanceEvents = {
   COMPLIANCE_GAP_DETECTED: 'esocial_gov.compliance_gap_detected',
   ALERT_GENERATED: 'esocial_gov.alert_generated',
   ALERT_RESOLVED: 'esocial_gov.alert_resolved',
+  LAYOUT_MISMATCH_DETECTED: 'esocial_gov.layout_mismatch_detected',
 } as const;
 
 export function emitEsocialGovEvent(event: string, payload?: unknown): void {

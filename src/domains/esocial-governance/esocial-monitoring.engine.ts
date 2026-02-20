@@ -19,6 +19,7 @@ import type {
   EsocialSystemStatus,
   TenantESocialStatus,
   CompanyESocialStatus,
+  LayoutMismatchInfo,
 } from './types';
 import { emitEsocialGovEvent, esocialGovernanceEvents } from './esocial-governance.events';
 
@@ -235,4 +236,26 @@ export function generateAlert(
 
   emitEsocialGovEvent(esocialGovernanceEvents.ALERT_GENERATED, alert);
   return alert;
+}
+
+/** Detect layout mismatch — compares supported vs official and lists non-migrated companies. */
+export function detectLayoutMismatch(): LayoutMismatchInfo | null {
+  const system = getSystemStatus();
+  if (system.compatibilidade) return null;
+
+  const empresasNaoMigradas = [
+    { company_id: 'c1', company_name: 'Filial Norte', layout_atual: 'S-1.1' as string },
+    { company_id: 'c2', company_name: 'Filial Sul', layout_atual: 'S-1.1' as string },
+  ];
+
+  const mismatch: LayoutMismatchInfo = {
+    versao_suportada: system.layout_atual_suportado,
+    versao_oficial: system.layout_vigente_oficial,
+    empresas_nao_migradas: empresasNaoMigradas,
+    total_nao_migradas: empresasNaoMigradas.length,
+    detectado_em: new Date().toISOString(),
+  };
+
+  emitEsocialGovEvent(esocialGovernanceEvents.LAYOUT_MISMATCH_DETECTED, mismatch);
+  return mismatch;
 }

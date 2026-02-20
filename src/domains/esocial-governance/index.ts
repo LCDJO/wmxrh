@@ -25,6 +25,7 @@ export {
   getCompanyESocialStatus,
   getActiveAlerts,
   generateAlert,
+  detectLayoutMismatch,
 } from './esocial-monitoring.engine';
 
 export {
@@ -52,4 +53,5 @@ export type {
   TenantESocialStatus,
   CertificadoStatus,
   CompanyESocialStatus,
+  LayoutMismatchInfo,
 } from './types';
