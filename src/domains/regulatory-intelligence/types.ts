@@ -23,6 +23,11 @@ export type ImpactArea =
   | 'esocial';
 export type AlertStatus = 'pendente' | 'visualizado' | 'em_andamento' | 'resolvido' | 'ignorado';
 export type UpdateSourceType = 'dou' | 'mte' | 'ibge' | 'manual' | 'ai_detected';
+export type RegulatoryAlertType =
+  | 'LEGISLATION_UPDATED'
+  | 'NR_UPDATED'
+  | 'CCT_UPDATED'
+  | 'ESOCIAL_LAYOUT_CHANGED';
 
 // ── Core Entities ──
 
@@ -109,6 +114,7 @@ export interface AffectedEntity {
 export interface RegulatoryAlert {
   id: string;
   tenant_id: string;
+  alert_type: RegulatoryAlertType;
   impact_id: string | null;
   norm_codigo: string;
   titulo: string;
@@ -169,6 +175,7 @@ export interface CreateNormVersionDTO {
 
 export interface CreateRegulatoryAlertDTO {
   tenant_id: string;
+  alert_type: RegulatoryAlertType;
   impact_id?: string | null;
   norm_codigo: string;
   titulo: string;

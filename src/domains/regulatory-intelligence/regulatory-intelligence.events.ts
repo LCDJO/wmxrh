@@ -30,6 +30,16 @@ export const regulatoryEvents = {
   NORM_REVOKED: 'regulatory:norm_revoked',
   /** Monitor check completed */
   MONITOR_CHECK_COMPLETED: 'regulatory:monitor_check_completed',
+
+  // ── Typed Alert Events ──
+  /** Legislation updated (CLT, Lei, Decreto, etc.) */
+  LEGISLATION_UPDATED: 'regulatory:legislation_updated',
+  /** NR norm updated */
+  NR_UPDATED: 'regulatory:nr_updated',
+  /** CCT (Convenção Coletiva) updated */
+  CCT_UPDATED: 'regulatory:cct_updated',
+  /** eSocial layout changed */
+  ESOCIAL_LAYOUT_CHANGED: 'regulatory:esocial_layout_changed',
 } as const;
 
 export function emitRegulatoryEvent(event: string, payload: Record<string, unknown>): void {
