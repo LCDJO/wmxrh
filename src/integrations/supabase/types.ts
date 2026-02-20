@@ -4122,6 +4122,105 @@ export type Database = {
           },
         ]
       }
+      epi_inventory_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          diferenca: number | null
+          epi_catalog_id: string | null
+          id: string
+          inventory_id: string | null
+          ip_address: string | null
+          lot_id: string | null
+          metadata: Json | null
+          motivo: string | null
+          quantidade_antes: number
+          quantidade_depois: number
+          reference_id: string | null
+          reference_type: string | null
+          tenant_id: string
+          usuario_email: string | null
+          usuario_id: string | null
+          warehouse_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          diferenca?: number | null
+          epi_catalog_id?: string | null
+          id?: string
+          inventory_id?: string | null
+          ip_address?: string | null
+          lot_id?: string | null
+          metadata?: Json | null
+          motivo?: string | null
+          quantidade_antes?: number
+          quantidade_depois?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          tenant_id: string
+          usuario_email?: string | null
+          usuario_id?: string | null
+          warehouse_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          diferenca?: number | null
+          epi_catalog_id?: string | null
+          id?: string
+          inventory_id?: string | null
+          ip_address?: string | null
+          lot_id?: string | null
+          metadata?: Json | null
+          motivo?: string | null
+          quantidade_antes?: number
+          quantidade_depois?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          tenant_id?: string
+          usuario_email?: string | null
+          usuario_id?: string | null
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_inventory_audit_log_epi_catalog_id_fkey"
+            columns: ["epi_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "epi_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_audit_log_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "epi_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_audit_log_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "epi_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_inventory_audit_log_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "epi_warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       epi_inventory_movements: {
         Row: {
           created_at: string
