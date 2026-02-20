@@ -3332,6 +3332,382 @@ export type Database = {
           },
         ]
       }
+      epi_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          delivery_id: string | null
+          details: string | null
+          employee_id: string | null
+          entity_id: string | null
+          entity_type: string | null
+          executor: string
+          executor_user_id: string | null
+          id: string
+          metadata: Json | null
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          delivery_id?: string | null
+          details?: string | null
+          employee_id?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          executor?: string
+          executor_user_id?: string | null
+          id?: string
+          metadata?: Json | null
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          delivery_id?: string | null
+          details?: string | null
+          employee_id?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          executor?: string
+          executor_user_id?: string | null
+          id?: string
+          metadata?: Json | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_audit_log_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "epi_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_audit_log_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      epi_catalog: {
+        Row: {
+          ca_numero: string | null
+          ca_validade: string | null
+          categoria: string
+          created_at: string
+          descricao: string | null
+          fabricante: string | null
+          foto_url: string | null
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          modelo: string | null
+          nome: string
+          nr_referencia: number | null
+          nr_treinamento_codigo: number | null
+          requer_treinamento: boolean | null
+          tenant_id: string
+          updated_at: string
+          validade_meses: number | null
+        }
+        Insert: {
+          ca_numero?: string | null
+          ca_validade?: string | null
+          categoria?: string
+          created_at?: string
+          descricao?: string | null
+          fabricante?: string | null
+          foto_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          modelo?: string | null
+          nome: string
+          nr_referencia?: number | null
+          nr_treinamento_codigo?: number | null
+          requer_treinamento?: boolean | null
+          tenant_id: string
+          updated_at?: string
+          validade_meses?: number | null
+        }
+        Update: {
+          ca_numero?: string | null
+          ca_validade?: string | null
+          categoria?: string
+          created_at?: string
+          descricao?: string | null
+          fabricante?: string | null
+          foto_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          modelo?: string | null
+          nome?: string
+          nr_referencia?: number | null
+          nr_treinamento_codigo?: number | null
+          requer_treinamento?: boolean | null
+          tenant_id?: string
+          updated_at?: string
+          validade_meses?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_catalog_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      epi_deliveries: {
+        Row: {
+          ca_numero: string | null
+          company_id: string | null
+          created_at: string
+          data_devolucao: string | null
+          data_entrega: string
+          data_validade: string | null
+          employee_id: string
+          entregue_por: string | null
+          epi_catalog_id: string
+          id: string
+          lote: string | null
+          metadata: Json | null
+          motivo: string
+          motivo_devolucao: string | null
+          observacoes: string | null
+          quantidade: number
+          risk_exposure_id: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          ca_numero?: string | null
+          company_id?: string | null
+          created_at?: string
+          data_devolucao?: string | null
+          data_entrega?: string
+          data_validade?: string | null
+          employee_id: string
+          entregue_por?: string | null
+          epi_catalog_id: string
+          id?: string
+          lote?: string | null
+          metadata?: Json | null
+          motivo?: string
+          motivo_devolucao?: string | null
+          observacoes?: string | null
+          quantidade?: number
+          risk_exposure_id?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          ca_numero?: string | null
+          company_id?: string | null
+          created_at?: string
+          data_devolucao?: string | null
+          data_entrega?: string
+          data_validade?: string | null
+          employee_id?: string
+          entregue_por?: string | null
+          epi_catalog_id?: string
+          id?: string
+          lote?: string | null
+          metadata?: Json | null
+          motivo?: string
+          motivo_devolucao?: string | null
+          observacoes?: string | null
+          quantidade?: number
+          risk_exposure_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_deliveries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_deliveries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_deliveries_epi_catalog_id_fkey"
+            columns: ["epi_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "epi_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_deliveries_risk_exposure_id_fkey"
+            columns: ["risk_exposure_id"]
+            isOneToOne: false
+            referencedRelation: "employee_risk_exposures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      epi_risk_mappings: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          epi_catalog_id: string
+          id: string
+          nr_aplicavel: number | null
+          obrigatorio: boolean | null
+          risk_agent: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          epi_catalog_id: string
+          id?: string
+          nr_aplicavel?: number | null
+          obrigatorio?: boolean | null
+          risk_agent: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          epi_catalog_id?: string
+          id?: string
+          nr_aplicavel?: number | null
+          obrigatorio?: boolean | null
+          risk_agent?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_risk_mappings_epi_catalog_id_fkey"
+            columns: ["epi_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "epi_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_risk_mappings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      epi_signatures: {
+        Row: {
+          assinado_em: string
+          assinatura_data: Json | null
+          assinatura_hash: string | null
+          created_at: string
+          delivery_id: string
+          documento_url: string | null
+          employee_id: string
+          id: string
+          invalidado_em: string | null
+          invalidado_por: string | null
+          ip_address: string | null
+          is_valid: boolean | null
+          metadata: Json | null
+          motivo_invalidacao: string | null
+          tenant_id: string
+          termo_aceite: string
+          tipo_assinatura: string
+          user_agent: string | null
+        }
+        Insert: {
+          assinado_em?: string
+          assinatura_data?: Json | null
+          assinatura_hash?: string | null
+          created_at?: string
+          delivery_id: string
+          documento_url?: string | null
+          employee_id: string
+          id?: string
+          invalidado_em?: string | null
+          invalidado_por?: string | null
+          ip_address?: string | null
+          is_valid?: boolean | null
+          metadata?: Json | null
+          motivo_invalidacao?: string | null
+          tenant_id: string
+          termo_aceite?: string
+          tipo_assinatura?: string
+          user_agent?: string | null
+        }
+        Update: {
+          assinado_em?: string
+          assinatura_data?: Json | null
+          assinatura_hash?: string | null
+          created_at?: string
+          delivery_id?: string
+          documento_url?: string | null
+          employee_id?: string
+          id?: string
+          invalidado_em?: string | null
+          invalidado_por?: string | null
+          ip_address?: string | null
+          is_valid?: boolean | null
+          metadata?: Json | null
+          motivo_invalidacao?: string | null
+          tenant_id?: string
+          termo_aceite?: string
+          tipo_assinatura?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_signatures_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "epi_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_signatures_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_signatures_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       esocial_event_mappings: {
         Row: {
           auto_generate: boolean
@@ -10400,6 +10776,17 @@ export type Database = {
           employee_name: string
           severity: string
           violation_type: string
+        }[]
+      }
+      scan_expired_epis: {
+        Args: { _tenant_id: string }
+        Returns: {
+          data_validade: string
+          delivery_id: string
+          dias_vencido: number
+          employee_id: string
+          employee_name: string
+          epi_nome: string
         }[]
       }
       seed_default_labor_rules: {
