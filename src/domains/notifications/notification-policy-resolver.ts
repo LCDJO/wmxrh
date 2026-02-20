@@ -53,7 +53,10 @@ export type NotificationEventType =
   | 'UserInvited'
   | 'RolePermissionsUpdated'
   | 'UnauthorizedAccessAttempt'
-  | 'ContextSwitched';
+  | 'ContextSwitched'
+  | 'LegislationInterpreted'
+  | 'CriticalLegalChange'
+  | 'ActionPlanCreated';
 
 /**
  * Default role mapping per event type.
@@ -79,6 +82,11 @@ export const EVENT_ROLE_MAP: Record<NotificationEventType, string[]> = {
   RolePermissionsUpdated: ['admin', 'owner', 'tenant_admin', 'security'],
   UnauthorizedAccessAttempt: ['admin', 'owner', 'tenant_admin', 'security'],
   ContextSwitched: [], // personal — only the actor
+
+  // Legal AI Intelligence → HR + Compliance + Admins
+  LegislationInterpreted: ['admin', 'owner', 'hr_manager', 'company_admin'],
+  CriticalLegalChange: ['admin', 'owner', 'hr_manager', 'company_admin', 'security'],
+  ActionPlanCreated: ['admin', 'owner', 'hr_manager', 'company_admin'],
 };
 
 // ══════════════════════════════════════════════════════════════
