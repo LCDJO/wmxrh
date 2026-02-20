@@ -27,6 +27,7 @@ export { analyzePositionImpacts } from './position-impact.engine';
 export { generateActionPlan } from './action-plan.engine';
 export { generateWorkflows } from './workflow-generation.engine';
 export { analyzeLegalChange } from './legal-ai-analyzer.engine';
+export { mapLegalImpact } from './impact-mapping.engine';
 
 export type {
   LegalInterpretation,
@@ -34,6 +35,16 @@ export type {
   NivelGravidade,
   TipoImpacto,
 } from './legal-ai-analyzer.engine';
+
+export type {
+  CompanyLegalImpact,
+  CargoAfetado,
+  RiscoJuridico,
+  ImpactMappingResult,
+  ImpactMappingInput,
+  CompanyData,
+  CargoData,
+} from './impact-mapping.engine';
 
 // ── Event Consumer (Regulatory Intelligence → Legal AI) ──
 export { startRegulatoryEventConsumer, stopRegulatoryEventConsumer } from './regulatory-event-consumer';
