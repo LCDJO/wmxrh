@@ -4,12 +4,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTenant } from '@/contexts/TenantContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
   Building2, Users, Route, AlertTriangle, ShieldAlert,
-  DollarSign, Briefcase, TrendingUp,
+  DollarSign, Briefcase, TrendingUp, Plus,
 } from 'lucide-react';
 
 interface PccsDashboardStats {
@@ -71,6 +73,7 @@ function StatCard({
 
 export default function PccsDashboard() {
   const { currentTenant } = useTenant();
+  const navigate = useNavigate();
 
   const { data: stats, isLoading } = useQuery<PccsDashboardStats>({
     queryKey: ['pccs-dashboard', currentTenant?.id],
@@ -107,11 +110,17 @@ export default function PccsDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard PCCS</h1>
-        <p className="text-sm text-muted-foreground">
-          Plano de Cargos, Carreiras e Salários — Visão consolidada
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard PCCS</h1>
+          <p className="text-sm text-muted-foreground">
+            Plano de Cargos, Carreiras e Salários — Visão consolidada
+          </p>
+        </div>
+        <Button onClick={() => navigate('/pccs-wizard')}>
+          <Plus className="h-4 w-4 mr-1" />
+          Novo Cargo
+        </Button>
       </div>
 
       {/* ── KPI Row 1: Org Structure ── */}
