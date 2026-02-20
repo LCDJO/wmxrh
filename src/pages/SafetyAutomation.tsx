@@ -290,6 +290,38 @@ export default function SafetyAutomation() {
         {/* ── Dashboard ── */}
         <TabsContent value="dashboard">
           <div className="space-y-6">
+            {/* Empty state explainer */}
+            {workflows.length === 0 && tasks.length === 0 && (
+              <Card className="border-dashed border-2 border-primary/20 bg-primary/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5 text-primary" />
+                    Como funciona a Automação de Segurança?
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-muted-foreground">
+                  <p>
+                    Atualmente <strong className="text-foreground">não há workflows ativos</strong>. Os workflows são criados automaticamente quando o motor de automação detecta sinais de risco, como:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1.5 ml-2">
+                    <li><strong className="text-foreground">Exames vencidos</strong> — ASO periódico ou admissional com data expirada</li>
+                    <li><strong className="text-foreground">Score de risco elevado</strong> — colaboradores com exposição a agentes nocivos</li>
+                    <li><strong className="text-foreground">Treinamentos NR pendentes</strong> — capacitações obrigatórias não realizadas</li>
+                    <li><strong className="text-foreground">Bloqueios operacionais</strong> — colaboradores impedidos por falta de conformidade</li>
+                  </ul>
+                  <p>
+                    Quando um sinal é processado, o sistema gera <strong className="text-foreground">tarefas corretivas</strong>, notifica gestores e pode aplicar bloqueios preventivos automaticamente.
+                  </p>
+                  <div className="flex items-center gap-2 pt-2 text-xs">
+                    <Badge variant="outline" className="gap-1">
+                      <Workflow className="h-3 w-3" />
+                      Status possíveis: Aberto → Em Andamento → Resolvido
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Company-level cards */}
             <div>
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
