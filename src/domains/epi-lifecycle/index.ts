@@ -61,3 +61,12 @@ export {
   scanAndGenerateRequirements,
 } from './requirement.engine';
 export type { EpiRequirement, EpiRequirementWithDetails } from './requirement.engine';
+
+// EPI Signature Integration (Agreement Engine + DocumentVault)
+export {
+  sendEpiDeliveryForSignature,
+  processSignedEpiDelivery,
+  quickSignEpiDelivery,
+  getSignedDocumentUrl,
+} from './epi-signature.integration';
+export type { SendForSignatureInput } from './epi-signature.integration';

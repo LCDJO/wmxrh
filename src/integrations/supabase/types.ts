@@ -3484,15 +3484,19 @@ export type Database = {
       }
       epi_deliveries: {
         Row: {
+          assinatura_status: string
           ca_numero: string | null
           company_id: string | null
           created_at: string
           data_devolucao: string | null
           data_entrega: string
           data_validade: string | null
+          documento_assinado_url: string | null
           employee_id: string
           entregue_por: string | null
           epi_catalog_id: string
+          external_document_id: string | null
+          hash_documento: string | null
           id: string
           lote: string | null
           metadata: Json | null
@@ -3501,20 +3505,26 @@ export type Database = {
           observacoes: string | null
           quantidade: number
           risk_exposure_id: string | null
+          signature_provider: string | null
           status: string
+          storage_path: string | null
           tenant_id: string
           updated_at: string
         }
         Insert: {
+          assinatura_status?: string
           ca_numero?: string | null
           company_id?: string | null
           created_at?: string
           data_devolucao?: string | null
           data_entrega?: string
           data_validade?: string | null
+          documento_assinado_url?: string | null
           employee_id: string
           entregue_por?: string | null
           epi_catalog_id: string
+          external_document_id?: string | null
+          hash_documento?: string | null
           id?: string
           lote?: string | null
           metadata?: Json | null
@@ -3523,20 +3533,26 @@ export type Database = {
           observacoes?: string | null
           quantidade?: number
           risk_exposure_id?: string | null
+          signature_provider?: string | null
           status?: string
+          storage_path?: string | null
           tenant_id: string
           updated_at?: string
         }
         Update: {
+          assinatura_status?: string
           ca_numero?: string | null
           company_id?: string | null
           created_at?: string
           data_devolucao?: string | null
           data_entrega?: string
           data_validade?: string | null
+          documento_assinado_url?: string | null
           employee_id?: string
           entregue_por?: string | null
           epi_catalog_id?: string
+          external_document_id?: string | null
+          hash_documento?: string | null
           id?: string
           lote?: string | null
           metadata?: Json | null
@@ -3545,7 +3561,9 @@ export type Database = {
           observacoes?: string | null
           quantidade?: number
           risk_exposure_id?: string | null
+          signature_provider?: string | null
           status?: string
+          storage_path?: string | null
           tenant_id?: string
           updated_at?: string
         }
