@@ -15,6 +15,9 @@ export const esocialGovernanceEvents = {
   ALERT_GENERATED: 'esocial_gov.alert_generated',
   ALERT_RESOLVED: 'esocial_gov.alert_resolved',
   LAYOUT_MISMATCH_DETECTED: 'esocial_gov.layout_mismatch_detected',
+  CERTIFICATE_EXPIRING: 'esocial_gov.certificate_expiring',
+  CERTIFICATE_EXPIRED: 'esocial_gov.certificate_expired',
+  CERTIFICATE_INVALID: 'esocial_gov.certificate_invalid',
 } as const;
 
 export function emitEsocialGovEvent(event: string, payload?: unknown): void {

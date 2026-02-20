@@ -64,6 +64,28 @@ export interface TenantESocialStatus {
 }
 
 export type CertificadoStatus = 'valido' | 'expirando' | 'expirado' | 'nao_configurado';
+export type CertificadoTipo = 'A1' | 'A3';
+
+export interface CertificateInfo {
+  company_id: string;
+  company_name: string;
+  tipo: CertificadoTipo;
+  status: CertificadoStatus;
+  validade: string | null;
+  dias_restantes: number | null;
+  serial_number: string | null;
+  emitido_por: string | null;
+}
+
+export interface CertificateMonitorResult {
+  total_certificados: number;
+  validos: number;
+  expirando: number;
+  expirados: number;
+  nao_configurados: number;
+  certificados: CertificateInfo[];
+  alertas_gerados: number;
+}
 
 export interface CompanyESocialStatus {
   company_id: string;

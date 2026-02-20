@@ -20,6 +20,8 @@ import type {
   TenantESocialStatus,
   CompanyESocialStatus,
   LayoutMismatchInfo,
+  CertificateInfo,
+  CertificateMonitorResult,
 } from './types';
 import { emitEsocialGovEvent, esocialGovernanceEvents } from './esocial-governance.events';
 
@@ -258,4 +260,51 @@ export function detectLayoutMismatch(): LayoutMismatchInfo | null {
 
   emitEsocialGovEvent(esocialGovernanceEvents.LAYOUT_MISMATCH_DETECTED, mismatch);
   return mismatch;
+}
+
+// ── Certificate Monitor ──
+
+const DEMO_CERTIFICATES: CertificateInfo[] = [
+  { company_id: 'c1', company_name: 'Alpha Matriz', tipo: 'A1', status: 'valido', validade: '2027-06-15T00:00:00Z', dias_restantes: 480, serial_number: 'A1-00123', emitido_por: 'AC Certisign' },
+  { company_id: 'c2', company_name: 'Beta Filial SP', tipo: 'A1', status: 'expirando', validade: '2026-03-18T00:00:00Z', dias_restantes: 26, serial_number: 'A1-00456', emitido_por: 'AC Serasa' },
+  { company_id: 'c3', company_name: 'Beta Filial RJ', tipo: 'A3', status: 'expirado', validade: '2026-01-10T00:00:00Z', dias_restantes: -41, serial_number: 'A3-00789', emitido_por: 'AC Valid' },
+  { company_id: 'c4', company_name: 'Delta Logística', tipo: 'A1', status: 'nao_configurado', validade: null, dias_restantes: null, serial_number: null, emitido_por: null },
+];
+
+/** Run certificate monitoring and generate alerts for expiring/expired/invalid certs. */
+export function runCertificateMonitor(): CertificateMonitorResult {
+  let alertasGerados = 0;
+
+  for (const cert of DEMO_CERTIFICATES) {
+    if (cert.status === 'expirando') {
+      emitEsocialGovEvent(esocialGovernanceEvents.CERTIFICATE_EXPIRING, cert);
+      generateAlert('COMPLIANCE_GAP', 'warning',
+        `Certificado ${cert.tipo} expirando — ${cert.company_name}`,
+        `Certificado expira em ${cert.dias_restantes} dias (${cert.validade}). Renove antes do vencimento.`,
+        undefined, cert.company_id);
+      alertasGerados++;
+    } else if (cert.status === 'expirado') {
+      emitEsocialGovEvent(esocialGovernanceEvents.CERTIFICATE_EXPIRED, cert);
+      generateAlert('COMPLIANCE_GAP', 'critical',
+        `Certificado ${cert.tipo} expirado — ${cert.company_name}`,
+        `Certificado expirou em ${cert.validade}. Transmissão eSocial bloqueada.`,
+        undefined, cert.company_id);
+      alertasGerados++;
+    } else if (cert.status === 'nao_configurado') {
+      emitEsocialGovEvent(esocialGovernanceEvents.CERTIFICATE_INVALID, cert);
+      alertasGerados++;
+    }
+  }
+
+  const validos = DEMO_CERTIFICATES.filter(c => c.status === 'valido').length;
+  const expirando = DEMO_CERTIFICATES.filter(c => c.status === 'expirando').length;
+  const expirados = DEMO_CERTIFICATES.filter(c => c.status === 'expirado').length;
+  const naoConfig = DEMO_CERTIFICATES.filter(c => c.status === 'nao_configurado').length;
+
+  return {
+    total_certificados: DEMO_CERTIFICATES.length,
+    validos, expirando, expirados, nao_configurados: naoConfig,
+    certificados: DEMO_CERTIFICATES,
+    alertas_gerados: alertasGerados,
+  };
 }
