@@ -124,6 +124,18 @@ export interface EsocialPlatformKPIs {
   alertas_criticos: number;
 }
 
+// ── Global System Status ──
+
+export type EsocialWebserviceStatus = 'online' | 'offline' | 'degradado' | 'manutencao';
+
+export interface EsocialSystemStatus {
+  layout_atual_suportado: EsocialLayoutVersion;
+  layout_vigente_oficial: EsocialLayoutVersion;
+  data_ultima_verificacao: string;
+  status_webservice: EsocialWebserviceStatus;
+  compatibilidade: boolean;
+}
+
 // ── Governance Config ──
 
 export interface EsocialGovernanceConfig {

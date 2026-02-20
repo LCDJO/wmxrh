@@ -14,6 +14,7 @@
  */
 
 export {
+  getSystemStatus,
   getGovernanceConfig,
   getLayoutVersions,
   getCurrentLayout,
@@ -44,4 +45,6 @@ export type {
   EsocialAlert,
   EsocialPlatformKPIs,
   EsocialGovernanceConfig,
+  EsocialWebserviceStatus,
+  EsocialSystemStatus,
 } from './types';
