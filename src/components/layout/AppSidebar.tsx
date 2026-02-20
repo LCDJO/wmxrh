@@ -368,8 +368,7 @@ export function AppSidebar() {
         )}
       </div>
 
-      {/* ── Context Selector ── */}
-      <ContextSelector collapsed={collapsed} />
+
 
       {/* ── Role badges ── */}
       {!collapsed && effectiveRoles.length > 0 && (
