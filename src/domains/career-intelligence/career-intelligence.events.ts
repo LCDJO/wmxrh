@@ -13,6 +13,7 @@ export const careerIntelligenceEvents = {
   RISK_ALERT_CREATED: 'career:risk_alert_created',
   RISK_ALERT_RESOLVED: 'career:risk_alert_resolved',
   SALARY_BELOW_BENCHMARK: 'career:salary_below_benchmark',
+  MEDICAL_PROFILE_GENERATED: 'career:position_medical_profile_generated',
 } as const;
 
 export function emitCareerEvent(event: string, payload: Record<string, unknown>): void {
