@@ -176,6 +176,16 @@ export async function recalculateEmployeeRiskScore(
   // Generate critical alert if employee has missing EPIs while exposed to risk
   if (factors.missing_epis > 0) {
     try {
+      // Emit specific EPI block event
+      emitSafetyEvent({
+        type: 'EmployeeOperationBlockedByEPI',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        employee_id: employeeId,
+        missing_mandatory_epis: factors.missing_epis,
+        reason: `Colaborador exposto a risco com ${factors.missing_epis} EPI(s) obrigatório(s) pendente(s)`,
+      });
+
       emitSafetyEvent({
         type: 'SafetyExecutionCompleted',
         timestamp: Date.now(),
