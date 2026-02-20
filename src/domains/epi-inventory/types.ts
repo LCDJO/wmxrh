@@ -245,6 +245,30 @@ export interface EpiAsset {
 }
 
 // ═══════════════════════════════════════════════════════
+// ASSET RETURN / DISCARD
+// ═══════════════════════════════════════════════════════
+
+export type EpiReturnMotivo = 'troca' | 'desgaste' | 'desligamento' | 'vencimento';
+export type EpiReturnCondicao = 'reutilizavel' | 'danificado' | 'vencido';
+
+export interface EpiAssetReturn {
+  id: string;
+  tenant_id: string;
+  asset_id?: string | null;
+  delivery_id?: string | null;
+  employee_id: string;
+  epi_catalog_id: string;
+  motivo: EpiReturnMotivo;
+  condicao: EpiReturnCondicao;
+  data_retorno: string;
+  reintegrado_estoque: boolean;
+  observacoes?: string | null;
+  executor_user_id?: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+// ═══════════════════════════════════════════════════════
 // ALERTS & THRESHOLDS
 // ═══════════════════════════════════════════════════════
 

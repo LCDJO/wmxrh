@@ -3335,6 +3335,93 @@ export type Database = {
           },
         ]
       }
+      epi_asset_returns: {
+        Row: {
+          asset_id: string | null
+          condicao: string
+          created_at: string
+          data_retorno: string
+          delivery_id: string | null
+          employee_id: string
+          epi_catalog_id: string
+          executor_user_id: string | null
+          id: string
+          metadata: Json | null
+          motivo: string
+          observacoes: string | null
+          reintegrado_estoque: boolean
+          tenant_id: string
+        }
+        Insert: {
+          asset_id?: string | null
+          condicao: string
+          created_at?: string
+          data_retorno?: string
+          delivery_id?: string | null
+          employee_id: string
+          epi_catalog_id: string
+          executor_user_id?: string | null
+          id?: string
+          metadata?: Json | null
+          motivo: string
+          observacoes?: string | null
+          reintegrado_estoque?: boolean
+          tenant_id: string
+        }
+        Update: {
+          asset_id?: string | null
+          condicao?: string
+          created_at?: string
+          data_retorno?: string
+          delivery_id?: string | null
+          employee_id?: string
+          epi_catalog_id?: string
+          executor_user_id?: string | null
+          id?: string
+          metadata?: Json | null
+          motivo?: string
+          observacoes?: string | null
+          reintegrado_estoque?: boolean
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_asset_returns_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "epi_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_asset_returns_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "epi_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_asset_returns_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_asset_returns_epi_catalog_id_fkey"
+            columns: ["epi_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "epi_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_asset_returns_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       epi_assets: {
         Row: {
           created_at: string
