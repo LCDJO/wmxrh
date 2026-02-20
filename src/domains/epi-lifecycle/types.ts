@@ -23,6 +23,9 @@ export interface EpiCatalogItem {
   requer_treinamento: boolean;
   nr_treinamento_codigo?: number | null;
   foto_url?: string | null;
+  vida_util_dias?: number | null;
+  exige_lote: boolean;
+  rastreavel_individualmente: boolean;
   is_active: boolean;
   metadata: Record<string, unknown>;
   created_at: string;
