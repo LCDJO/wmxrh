@@ -3425,6 +3425,7 @@ export type Database = {
           categoria: string
           created_at: string
           descricao: string | null
+          exige_lote: boolean
           exige_termo_assinatura: boolean
           fabricante: string | null
           foto_url: string | null
@@ -3436,12 +3437,14 @@ export type Database = {
           nr_referencia: number | null
           nr_treinamento_codigo: number | null
           periodicidade_substituicao_dias: number | null
+          rastreavel_individualmente: boolean
           requer_treinamento: boolean | null
           risco_relacionado: string[]
           tenant_id: string
           tipo: string
           updated_at: string
           validade_meses: number | null
+          vida_util_dias: number | null
         }
         Insert: {
           ca_numero?: string | null
@@ -3449,6 +3452,7 @@ export type Database = {
           categoria?: string
           created_at?: string
           descricao?: string | null
+          exige_lote?: boolean
           exige_termo_assinatura?: boolean
           fabricante?: string | null
           foto_url?: string | null
@@ -3460,12 +3464,14 @@ export type Database = {
           nr_referencia?: number | null
           nr_treinamento_codigo?: number | null
           periodicidade_substituicao_dias?: number | null
+          rastreavel_individualmente?: boolean
           requer_treinamento?: boolean | null
           risco_relacionado?: string[]
           tenant_id: string
           tipo?: string
           updated_at?: string
           validade_meses?: number | null
+          vida_util_dias?: number | null
         }
         Update: {
           ca_numero?: string | null
@@ -3473,6 +3479,7 @@ export type Database = {
           categoria?: string
           created_at?: string
           descricao?: string | null
+          exige_lote?: boolean
           exige_termo_assinatura?: boolean
           fabricante?: string | null
           foto_url?: string | null
@@ -3484,12 +3491,14 @@ export type Database = {
           nr_referencia?: number | null
           nr_treinamento_codigo?: number | null
           periodicidade_substituicao_dias?: number | null
+          rastreavel_individualmente?: boolean
           requer_treinamento?: boolean | null
           risco_relacionado?: string[]
           tenant_id?: string
           tipo?: string
           updated_at?: string
           validade_meses?: number | null
+          vida_util_dias?: number | null
         }
         Relationships: [
           {
