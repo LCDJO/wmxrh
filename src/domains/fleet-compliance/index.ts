@@ -20,4 +20,6 @@ export type {
   FleetBehaviorEvent,
   DrivingViolationType,
   DrivingViolation,
+  FleetEnforcementPoint,
+  CreateFleetEnforcementPointDTO,
 } from './types';
