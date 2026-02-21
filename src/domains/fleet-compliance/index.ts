@@ -13,6 +13,11 @@ export type {
   FleetDevice,
   FleetDeviceType,
   CreateFleetDeviceDTO,
+  FleetDrivingRules,
+  CreateFleetDrivingRulesDTO,
+  BehaviorEventType,
+  BehaviorSeverity,
+  FleetBehaviorEvent,
   DrivingViolationType,
   DrivingViolation,
 } from './types';

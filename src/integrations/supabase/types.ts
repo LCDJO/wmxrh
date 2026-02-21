@@ -5755,6 +5755,77 @@ export type Database = {
           },
         ]
       }
+      fleet_behavior_events: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          details: Json
+          device_id: string
+          employee_id: string | null
+          event_timestamp: string
+          event_type: string
+          id: string
+          severity: string
+          source_event_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          details?: Json
+          device_id: string
+          employee_id?: string | null
+          event_timestamp: string
+          event_type: string
+          id?: string
+          severity: string
+          source_event_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          details?: Json
+          device_id?: string
+          employee_id?: string | null
+          event_timestamp?: string
+          event_type?: string
+          id?: string
+          severity?: string
+          source_event_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_behavior_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_behavior_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_behavior_events_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "raw_tracking_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_behavior_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_devices: {
         Row: {
           company_id: string
@@ -5815,6 +5886,63 @@ export type Database = {
           },
           {
             foreignKeyName: "fleet_devices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fleet_driving_rules: {
+        Row: {
+          allowed_hours_end: string
+          allowed_hours_start: string
+          company_id: string
+          created_at: string
+          geofence_polygon: Json | null
+          id: string
+          is_active: boolean
+          planned_route: Json | null
+          speed_limit_kmh: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          allowed_hours_end?: string
+          allowed_hours_start?: string
+          company_id: string
+          created_at?: string
+          geofence_polygon?: Json | null
+          id?: string
+          is_active?: boolean
+          planned_route?: Json | null
+          speed_limit_kmh?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          allowed_hours_end?: string
+          allowed_hours_start?: string
+          company_id?: string
+          created_at?: string
+          geofence_polygon?: Json | null
+          id?: string
+          is_active?: boolean
+          planned_route?: Json | null
+          speed_limit_kmh?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_driving_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_driving_rules_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
