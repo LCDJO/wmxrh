@@ -153,3 +153,31 @@ export interface FleetBehaviorEvent {
 // Legacy alias
 export type DrivingViolationType = BehaviorEventType;
 export type DrivingViolation = FleetBehaviorEvent;
+
+// ════════════════════════════════════════════════════════════════
+// ELECTRONIC ENFORCEMENT POINTS (fiscalização eletrônica)
+// ════════════════════════════════════════════════════════════════
+
+export interface FleetEnforcementPoint {
+  id: string;
+  tenant_id: string;
+  company_id: string | null;
+  name: string | null;
+  latitude: number;
+  longitude: number;
+  radius_meters: number;
+  speed_limit_kmh: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateFleetEnforcementPointDTO {
+  tenant_id: string;
+  company_id?: string | null;
+  name?: string | null;
+  latitude: number;
+  longitude: number;
+  radius_meters?: number;
+  speed_limit_kmh: number;
+}
