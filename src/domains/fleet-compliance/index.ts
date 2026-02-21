@@ -38,3 +38,7 @@ export type {
 } from './types';
 
 export { isFleetBlocked } from './types';
+
+// ── Workforce Intelligence Integration ──
+export { generateFleetInsights } from './fleet-workforce-integration.engine';
+export type { FleetWiIntegrationInput } from './fleet-workforce-integration.engine';
