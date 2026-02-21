@@ -21,6 +21,46 @@ export type {
   PlatformLayerEvent,
 } from './platform/platform-layer.registry';
 
+// ── Platform: Traccar Integration Core ──
+export {
+  normalizeTraccarEvent,
+  computeIntegrityHashSync,
+  computeIntegrityHashAsync,
+  validateWebhookRequest,
+  buildDispatchManifest,
+} from './platform/traccar-integration.core';
+export type {
+  TraccarCanonicalEvent,
+  TraccarOsmAndPayload,
+  TraccarWebhookPayload,
+  TraccarWebhookValidation,
+  TraccarDispatchResult,
+} from './platform/traccar-integration.core';
+
+// ── Tenant: Traccar Config & Policies ──
+export {
+  evaluateDisciplinaryAction,
+  isWithinEnforcementZone,
+} from './tenant/traccar-config.types';
+export type {
+  TenantTraccarConfig,
+  TraccarProtocol,
+  CreateTenantTraccarConfigDTO,
+  TenantDeviceMapping,
+  CreateDeviceMappingDTO,
+  TenantSpeedLimitPolicy,
+  CreateSpeedLimitPolicyDTO,
+  TenantEnforcementPoint,
+  EnforcementType,
+  EnforcementSource,
+  CreateEnforcementPointDTO,
+  TenantDisciplinaryPolicy,
+  DisciplinaryEscalationStep,
+  DisciplinaryAction,
+  CreateDisciplinaryPolicyDTO,
+  DisciplinaryEvaluation,
+} from './tenant/traccar-config.types';
+
 // ── Tenant Layer ──
 export {
   TENANT_DOMAINS,
