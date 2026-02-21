@@ -11,12 +11,11 @@ const corsHeaders = {
  * eSocial Event Processor
  *
  * Processes pending eSocial events:
- *   1. Loads 'pending' events from DB
- *   2. Validates payload structure
- *   3. Marks as 'processing' → simulates transmission → marks 'accepted' or 'rejected'
- *
- * In production, step 3 would call the government eSocial WebService.
- * Currently uses a simulation adapter for development.
+ *   1. Authenticates caller via JWT
+ *   2. Validates tenant membership
+ *   3. Loads 'pending' events from DB
+ *   4. Validates payload structure
+ *   5. Marks as 'processing' → simulates transmission → marks 'accepted' or 'rejected'
  */
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -25,24 +24,73 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    // ── Authentication ──
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = claimsData.claims.sub as string;
+
+    // ── Parse request body ──
     let tenantId: string | null = null;
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}));
       tenantId = body.tenant_id ?? null;
     }
 
-    // Load pending events
-    let query = supabase
+    if (!tenantId) {
+      return new Response(
+        JSON.stringify({ error: "tenant_id is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Authorization: verify tenant membership ──
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    const { data: membership } = await adminClient
+      .from("tenant_memberships")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("tenant_id", tenantId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (!membership) {
+      return new Response(
+        JSON.stringify({ error: "Access denied: not a member of this tenant" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Process events (using admin client for service-level operations) ──
+    let query = adminClient
       .from("esocial_events")
       .select("*")
       .eq("status", "pending")
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: true })
       .limit(50);
-
-    if (tenantId) query = query.eq("tenant_id", tenantId);
 
     const { data: events, error: fetchError } = await query;
     if (fetchError) throw fetchError;
@@ -61,7 +109,7 @@ serve(async (req) => {
     for (const event of events) {
       try {
         // Mark as processing
-        await supabase
+        await adminClient
           .from("esocial_events")
           .update({ status: "processing", sent_at: new Date().toISOString() })
           .eq("id", event.id);
@@ -70,9 +118,8 @@ serve(async (req) => {
         const validationResult = validatePayload(event);
 
         if (validationResult.valid) {
-          // Simulate government acceptance
           const receipt = `REC-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-          await supabase
+          await adminClient
             .from("esocial_events")
             .update({
               status: "accepted",
@@ -87,8 +134,7 @@ serve(async (req) => {
             .eq("id", event.id);
           accepted++;
         } else {
-          // Reject with validation errors
-          await supabase
+          await adminClient
             .from("esocial_events")
             .update({
               status: "rejected",
@@ -101,7 +147,7 @@ serve(async (req) => {
         }
       } catch (eventError: any) {
         console.error(`[esocial-processor] event ${event.id}:`, eventError);
-        await supabase
+        await adminClient
           .from("esocial_events")
           .update({
             status: "error",
@@ -114,12 +160,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({
-        processed: events.length,
-        accepted,
-        rejected,
-        errors,
-      }),
+      JSON.stringify({ processed: events.length, accepted, rejected, errors }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e: any) {
@@ -147,7 +188,6 @@ function validatePayload(event: any): { valid: boolean; errors: string[] } {
     return { valid: false, errors };
   }
 
-  // Event-specific validations
   switch (event.event_type) {
     case "S-2200": {
       const evt = eSocial.evtAdmissao;
@@ -174,7 +214,6 @@ function validatePayload(event: any): { valid: boolean; errors: string[] } {
       break;
     }
     default:
-      // Unknown event types pass validation (no schema yet)
       break;
   }
 
