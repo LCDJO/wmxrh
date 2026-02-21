@@ -16,6 +16,7 @@ import { usePlatformPermissions } from '@/domains/platform/use-platform-permissi
 import type { LandingPage } from '@/domains/platform-growth/types';
 import { LandingPublishButton, deriveDeployStatus } from '@/components/platform/landing/LandingPublishButton';
 import { PromoteLandingButton } from '@/components/platform/meta-ads/PromoteLandingButton';
+import { LandingCampaignStatus } from '@/components/platform/meta-ads/LandingCampaignStatus';
 
 export default function GrowthLandingPages() {
   const [pages, setPages] = useState<LandingPage[]>([]);
@@ -53,7 +54,10 @@ export default function GrowthLandingPages() {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">{page.name}</h3>
-                  <p className="text-xs text-muted-foreground">/{page.slug} • {page.blocks.length} blocos</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs text-muted-foreground">/{page.slug} • {page.blocks.length} blocos</p>
+                    <LandingCampaignStatus landingPageId={page.id} />
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
