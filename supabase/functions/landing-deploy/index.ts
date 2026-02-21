@@ -107,38 +107,45 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // Auth check
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Verify platform role
-    const { data: platformUser } = await supabase
-      .from('platform_users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!platformUser || !['platform_super_admin', 'platform_operations', 'platform_marketing_team', 'platform_marketing_director'].includes(platformUser.role)) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const body = await req.json();
     const { action, landing_page_id, tenant_id } = body;
+
+    // Actions that don't require authentication
+    const publicActions = ['lookup_domain', 'validate_cloudflare'];
+
+    let user: any = null;
+    if (!publicActions.includes(action)) {
+      // Auth check
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(
+        authHeader.replace('Bearer ', '')
+      );
+      if (authError || !authUser) {
+        return new Response(JSON.stringify({ error: 'Invalid token' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      user = authUser;
+
+      // Verify platform role
+      const { data: platformUser } = await supabase
+        .from('platform_users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (!platformUser || !['platform_super_admin', 'platform_operations', 'platform_marketing_team', 'platform_marketing_director'].includes(platformUser.role)) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     // ── ACTION: lookup_domain (no token needed — public DNS analysis) ──
     if (action === 'lookup_domain') {
