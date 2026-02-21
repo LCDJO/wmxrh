@@ -42,3 +42,30 @@ export { isFleetBlocked } from './types';
 // ── Workforce Intelligence Integration ──
 export { generateFleetInsights } from './fleet-workforce-integration.engine';
 export type { FleetWiIntegrationInput } from './fleet-workforce-integration.engine';
+
+// ── Behavioral Score Engine ──
+export { computeBehavioralScore, computeBatchScores } from './behavioral-score.engine';
+export type { BehavioralScoreInput, BehavioralScoreResult } from './behavioral-score.engine';
+
+// ── Accident Prediction (heuristic fallback) ──
+export { estimateAccidentRisk } from './accident-prediction.types';
+export type {
+  AccidentPredictionFeatures,
+  AccidentPrediction,
+  AccidentRiskLevel,
+  AccidentRiskFactor,
+  AccidentPredictionService,
+} from './accident-prediction.types';
+
+// ── DETRAN & Fine Integration (future) ──
+export type {
+  DetranState,
+  DetranProviderConfig,
+  DetranVehicleRecord,
+  DetranDriverRecord,
+  DetranAdapter,
+  TrafficFine,
+  FineStatus,
+  FineSeverity,
+  FineAssignmentRule,
+} from './detran-integration.types';
