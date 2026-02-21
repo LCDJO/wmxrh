@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.landing-deploy]
 verify_jwt = false
+
+[functions.meta-ads-engine]
+verify_jwt = false

@@ -7859,6 +7859,122 @@ export type Database = {
           },
         ]
       }
+      meta_ad_campaigns: {
+        Row: {
+          campaign_name: string
+          created_at: string
+          created_by: string
+          daily_budget_cents: number
+          error_message: string | null
+          id: string
+          landing_page_id: string
+          meta_ad_id: string | null
+          meta_adset_id: string | null
+          meta_campaign_id: string | null
+          status: string
+          targeting: Json | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_name: string
+          created_at?: string
+          created_by: string
+          daily_budget_cents?: number
+          error_message?: string | null
+          id?: string
+          landing_page_id: string
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          status?: string
+          targeting?: Json | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_name?: string
+          created_at?: string
+          created_by?: string
+          daily_budget_cents?: number
+          error_message?: string | null
+          id?: string
+          landing_page_id?: string
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          status?: string
+          targeting?: Json | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_ad_campaigns_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_ad_campaigns_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_ads_connections: {
+        Row: {
+          access_token: string
+          ad_account_id: string
+          connected_by: string
+          created_at: string
+          id: string
+          is_active: boolean
+          page_id: string | null
+          pixel_id: string | null
+          tenant_id: string
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          ad_account_id: string
+          connected_by: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          page_id?: string | null
+          pixel_id?: string | null
+          tenant_id: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          ad_account_id?: string
+          connected_by?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          page_id?: string | null
+          pixel_id?: string | null
+          tenant_id?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_ads_connections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_versions: {
         Row: {
           breaking_changes: boolean

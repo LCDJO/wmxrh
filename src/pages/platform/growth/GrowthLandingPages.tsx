@@ -15,6 +15,7 @@ import { landingPageBuilder } from '@/domains/platform-growth';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import type { LandingPage } from '@/domains/platform-growth/types';
 import { LandingPublishButton, deriveDeployStatus } from '@/components/platform/landing/LandingPublishButton';
+import { PromoteLandingButton } from '@/components/platform/meta-ads/PromoteLandingButton';
 
 export default function GrowthLandingPages() {
   const [pages, setPages] = useState<LandingPage[]>([]);
@@ -73,6 +74,15 @@ export default function GrowthLandingPages() {
                   disabled={!canPublish}
                   onStatusChange={() => landingPageBuilder.getAll().then(setPages)}
                 />
+                {deriveDeployStatus(page as any) === 'online' && (page as any).deploy_url && (
+                  <PromoteLandingButton
+                    pageId={page.id}
+                    pageName={page.name}
+                    tenantId={(page as any).tenant_id || ''}
+                    deployUrl={(page as any).deploy_url}
+                    disabled={!canPublish}
+                  />
+                )}
               </div>
             </div>
 
