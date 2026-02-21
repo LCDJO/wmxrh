@@ -5826,6 +5826,89 @@ export type Database = {
           },
         ]
       }
+      fleet_compliance_incidents: {
+        Row: {
+          behavior_event_id: string | null
+          company_id: string | null
+          created_at: string
+          device_id: string
+          employee_id: string | null
+          evidence: Json
+          id: string
+          notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          severity: string
+          status: string
+          tenant_id: string
+          updated_at: string
+          violation_type: string
+        }
+        Insert: {
+          behavior_event_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          device_id: string
+          employee_id?: string | null
+          evidence?: Json
+          id?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          violation_type: string
+        }
+        Update: {
+          behavior_event_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          device_id?: string
+          employee_id?: string | null
+          evidence?: Json
+          id?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          violation_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_compliance_incidents_behavior_event_id_fkey"
+            columns: ["behavior_event_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_behavior_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_compliance_incidents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_compliance_incidents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_compliance_incidents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_devices: {
         Row: {
           company_id: string

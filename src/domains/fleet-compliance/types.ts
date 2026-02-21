@@ -181,3 +181,27 @@ export interface CreateFleetEnforcementPointDTO {
   radius_meters?: number;
   speed_limit_kmh: number;
 }
+
+// ════════════════════════════════════════════════════════════════
+// COMPLIANCE INCIDENTS
+// ════════════════════════════════════════════════════════════════
+
+export type IncidentStatus = 'pending' | 'reviewed' | 'warning_issued' | 'closed';
+
+export interface FleetComplianceIncident {
+  id: string;
+  tenant_id: string;
+  employee_id: string | null;
+  device_id: string;
+  company_id: string | null;
+  violation_type: string;
+  severity: BehaviorSeverity;
+  evidence: Record<string, unknown>;
+  status: IncidentStatus;
+  behavior_event_id: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
