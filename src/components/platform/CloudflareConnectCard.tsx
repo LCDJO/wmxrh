@@ -47,11 +47,18 @@ interface CloudflareConnectCardProps {
 }
 
 interface AnalysisResult {
-  valid: boolean;
+  // From lookup_domain
+  domain?: string;
+  nameservers?: string[];
+  a_records?: string[];
+  dns_provider?: string;
+  is_cloudflare?: boolean;
+  // From validate_cloudflare
+  valid?: boolean;
   token_status?: string;
   account?: { id: string; name: string } | null;
-  zones: Array<{ id: string; name: string; status: string; name_servers: string[]; plan: string }>;
-  matched_zone: { id: string; name: string; status: string; name_servers: string[]; plan: string } | null;
+  zones?: Array<{ id: string; name: string; status: string; name_servers: string[]; plan: string }>;
+  matched_zone?: { id: string; name: string; status: string; name_servers: string[]; plan: string } | null;
   error?: string;
 }
 
@@ -97,14 +104,12 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
     setAnalysisResult(null);
     const steps: AnalysisStep[] = [
       { label: `Analisando ${form.domain_principal}`, status: 'loading' },
-      { label: 'Validando API Token', status: 'pending' },
       { label: 'Detectando DNS provider', status: 'pending' },
       { label: 'Preparando configuração', status: 'pending' },
     ];
     setAnalysisSteps([...steps]);
     setStep(1);
 
-    // Simulate progressive steps
     await new Promise(r => setTimeout(r, 800));
     steps[0].status = 'done';
     steps[1].status = 'loading';
@@ -112,37 +117,23 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
 
     try {
       const { data, error } = await supabase.functions.invoke('landing-deploy', {
-        body: {
-          action: 'validate_cloudflare',
-          api_token: form.cloudflare_api_token,
-          domain: form.domain_principal,
-        },
+        body: { action: 'lookup_domain', domain: form.domain_principal },
       });
 
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
 
+      await new Promise(r => setTimeout(r, 600));
       steps[1].status = 'done';
-      steps[1].detail = data.token_status === 'active' ? 'Token válido' : data.token_status;
+      steps[1].detail = data.is_cloudflare ? 'Cloudflare' : (data.dns_provider || 'Detectado');
       steps[2].status = 'loading';
       setAnalysisSteps([...steps]);
 
-      await new Promise(r => setTimeout(r, 600));
-      steps[2].status = 'done';
-      steps[2].detail = data.matched_zone ? `Cloudflare (${data.matched_zone.plan || 'Free'})` : 'Cloudflare';
-      steps[3].status = 'loading';
-      setAnalysisSteps([...steps]);
-
       await new Promise(r => setTimeout(r, 500));
-      steps[3].status = 'done';
+      steps[2].status = 'done';
       setAnalysisSteps([...steps]);
 
       setAnalysisResult(data);
-
-      // Auto-fill zone ID
-      if (data.matched_zone) {
-        setForm(f => ({ ...f, cloudflare_zone_id: data.matched_zone.id }));
-      }
     } catch (err: any) {
       const failIdx = steps.findIndex(s => s.status === 'loading');
       if (failIdx >= 0) {
@@ -150,7 +141,27 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
         steps[failIdx].detail = err.message;
       }
       setAnalysisSteps([...steps]);
-      setAnalysisResult({ valid: false, zones: [], matched_zone: null, error: err.message });
+      setAnalysisResult({ error: err.message });
+    }
+    setAnalyzing(false);
+  };
+
+  const runTokenValidation = async () => {
+    setAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('landing-deploy', {
+        body: { action: 'validate_cloudflare', api_token: form.cloudflare_api_token, domain: form.domain_principal },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      setAuthorized(true);
+      setAnalysisResult(prev => ({ ...prev, ...data }));
+      if (data.matched_zone) {
+        setForm(f => ({ ...f, cloudflare_zone_id: data.matched_zone.id }));
+      }
+    } catch (err: any) {
+      toast({ title: 'Erro na autorização', description: err.message, variant: 'destructive' });
     }
     setAnalyzing(false);
   };
@@ -216,59 +227,28 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
     return token.slice(0, 4) + '••••••••' + token.slice(-4);
   };
 
-  const canAnalyze = !!form.domain_principal && !!form.cloudflare_api_token;
-  const analysisSuccess = analysisResult?.valid && analysisResult?.matched_zone;
+  const canAnalyze = !!form.domain_principal;
+  const analysisSuccess = !analysisResult?.error && !!analysisResult?.domain;
 
-  // Step 0: Domain + Token input
-  // Step 1: Analysis (auto-fetch)
-  // Step 2: Confirm & Save
+  // Step 0: Domain only
   const renderStep0 = () => (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Informe seu domínio e o API Token da Cloudflare. Na próxima etapa, detectaremos automaticamente sua configuração.
+        Informe o domínio que deseja conectar. Na próxima etapa, analisaremos automaticamente a configuração DNS.
       </p>
-      <div className="p-3 rounded-md border bg-muted/30 space-y-3">
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold">Domínio Principal</Label>
-          <p className="text-xs text-muted-foreground">O domínio raiz para subdomínios das landing pages.</p>
-          <Input
-            value={form.domain_principal}
-            onChange={e => setForm(f => ({ ...f, domain_principal: e.target.value }))}
-            placeholder="minha-plataforma.com"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold">API Token</Label>
-          <p className="text-xs text-muted-foreground">
-            Crie em{' '}
-            <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer" className="text-primary underline inline-flex items-center gap-0.5">
-              API Tokens <ExternalLink className="h-2.5 w-2.5" />
-            </a>{' '}
-            → template <strong>"Edit zone DNS"</strong>.
-          </p>
-          <div className="relative">
-            <Input
-              type={showToken ? 'text' : 'password'}
-              value={form.cloudflare_api_token}
-              onChange={e => setForm(f => ({ ...f, cloudflare_api_token: e.target.value }))}
-              placeholder="cole o API Token aqui"
-              className="font-mono text-xs pr-10"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-              onClick={() => setShowToken(!showToken)}
-            >
-              {showToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            </Button>
-          </div>
-        </div>
+      <div className="p-3 rounded-md border bg-muted/30 space-y-2">
+        <Label className="text-xs font-semibold">Domínio Principal</Label>
+        <p className="text-xs text-muted-foreground">O domínio raiz para subdomínios das landing pages.</p>
+        <Input
+          value={form.domain_principal}
+          onChange={e => setForm(f => ({ ...f, domain_principal: e.target.value }))}
+          placeholder="minha-plataforma.com"
+        />
       </div>
     </div>
   );
 
+  // Step 1: DNS analysis (no token)
   const renderStep1 = () => (
     <div className="space-y-5">
       <div className="flex flex-col items-center py-4 space-y-4">
@@ -291,9 +271,7 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
                   <span className="ml-2 font-medium text-foreground">
                     {s.status === 'done' && s.detail.includes('Cloudflare') ? (
                       <Badge variant="outline" className="text-[10px] ml-1 border-primary/30 text-primary">{s.detail}</Badge>
-                    ) : (
-                      s.detail
-                    )}
+                    ) : s.detail}
                   </span>
                 )}
               </p>
@@ -306,27 +284,21 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
           {analysisResult.error}
         </div>
       )}
-      {analysisSuccess && analysisResult.matched_zone && (
+      {analysisSuccess && (
         <div className="p-3 rounded-md border bg-muted/30 space-y-2 mt-2">
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <span className="text-muted-foreground">Zone ID</span>
-              <p className="font-mono font-medium">{analysisResult.matched_zone.id.slice(0, 12)}…</p>
+              <span className="text-muted-foreground">DNS Provider</span>
+              <p className="font-medium">{analysisResult.dns_provider}</p>
             </div>
             <div>
-              <span className="text-muted-foreground">Status</span>
-              <p className="font-medium capitalize">{analysisResult.matched_zone.status}</p>
+              <span className="text-muted-foreground">Cloudflare</span>
+              <p className="font-medium">{analysisResult.is_cloudflare ? '✓ Sim' : '✗ Não'}</p>
             </div>
-            {analysisResult.matched_zone.name_servers?.length > 0 && (
+            {analysisResult.nameservers && analysisResult.nameservers.length > 0 && (
               <div className="col-span-2">
                 <span className="text-muted-foreground">Nameservers</span>
-                <p className="font-mono text-[11px]">{analysisResult.matched_zone.name_servers.join(', ')}</p>
-              </div>
-            )}
-            {analysisResult.account && (
-              <div className="col-span-2">
-                <span className="text-muted-foreground">Conta</span>
-                <p className="font-medium">{analysisResult.account.name}</p>
+                <p className="font-mono text-[11px]">{analysisResult.nameservers.join(', ')}</p>
               </div>
             )}
           </div>
@@ -335,10 +307,10 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
     </div>
   );
 
-
+  // Step 2: Authorize — Cloudflare logo + token input
   const renderStep2 = () => (
     <div className="space-y-6">
-      <div className="flex flex-col items-center py-6 space-y-5">
+      <div className="flex flex-col items-center py-4 space-y-5">
         {/* Cloudflare logo */}
         <div className="flex items-center justify-center">
           <svg viewBox="0 0 48 48" className="h-14 w-14" fill="none">
@@ -356,45 +328,72 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
           </p>
         </div>
 
-        <Button
-          size="lg"
-          className="w-full max-w-xs gap-2"
-          onClick={() => setAuthorized(true)}
-          disabled={authorized}
-        >
-          {authorized ? (
-            <>
-              <CheckCircle2 className="h-5 w-5" />
-              Autorizado
-            </>
-          ) : (
-            <>
-              <CloudCog className="h-5 w-5" />
-              Autorizar com Cloudflare
-            </>
-          )}
-        </Button>
-
         {!authorized && (
-          <button
-            type="button"
-            className="text-xs text-primary underline hover:text-primary/80"
-            onClick={() => { setAuthorized(true); setStep(3); }}
-          >
-            Ir para configuração manual
-          </button>
+          <div className="w-full max-w-xs space-y-3">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold">API Token</Label>
+              <p className="text-xs text-muted-foreground">
+                Crie em{' '}
+                <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer" className="text-primary underline inline-flex items-center gap-0.5">
+                  API Tokens <ExternalLink className="h-2.5 w-2.5" />
+                </a>{' '}
+                → template <strong>"Edit zone DNS"</strong>.
+              </p>
+              <div className="relative">
+                <Input
+                  type={showToken ? 'text' : 'password'}
+                  value={form.cloudflare_api_token}
+                  onChange={e => setForm(f => ({ ...f, cloudflare_api_token: e.target.value }))}
+                  placeholder="cole o API Token aqui"
+                  className="font-mono text-xs pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                  onClick={() => setShowToken(!showToken)}
+                >
+                  {showToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+            </div>
+
+            <Button
+              size="lg"
+              className="w-full gap-2"
+              onClick={runTokenValidation}
+              disabled={!form.cloudflare_api_token || analyzing}
+            >
+              {analyzing ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <CloudCog className="h-5 w-5" />
+              )}
+              Autorizar com Cloudflare
+            </Button>
+          </div>
         )}
 
         {authorized && (
-          <div className="flex items-center gap-2 text-xs text-emerald-600">
-            <CheckCircle2 className="h-4 w-4" />
-            Permissão concedida com sucesso
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2 text-sm text-emerald-600">
+              <CheckCircle2 className="h-5 w-5" />
+              Autorizado com sucesso
+            </div>
+            {analysisResult?.account && (
+              <p className="text-xs text-muted-foreground">Conta: {analysisResult.account.name}</p>
+            )}
+            {analysisResult?.matched_zone && (
+              <p className="text-xs text-muted-foreground">Zone: {analysisResult.matched_zone.name} ({analysisResult.matched_zone.plan})</p>
+            )}
           </div>
         )}
       </div>
     </div>
   );
 
+  // Step 3: Confirm
   const renderStep3 = () => (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Confirme os dados detectados automaticamente e finalize a integração.</p>
@@ -403,11 +402,13 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
           <Globe className="h-4 w-4 text-primary" />
           <span className="font-medium">{form.domain_principal}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm">
-          <Server className="h-4 w-4 text-primary" />
-          <span className="text-muted-foreground">Zone ID:</span>
-          <span className="font-mono text-xs">{form.cloudflare_zone_id.slice(0, 16)}…</span>
-        </div>
+        {form.cloudflare_zone_id && (
+          <div className="flex items-center gap-2 text-sm">
+            <Server className="h-4 w-4 text-primary" />
+            <span className="text-muted-foreground">Zone ID:</span>
+            <span className="font-mono text-xs">{form.cloudflare_zone_id.slice(0, 16)}…</span>
+          </div>
+        )}
         <div className="flex items-center gap-2 text-sm">
           <Shield className="h-4 w-4 text-primary" />
           <span className="text-muted-foreground">API Token:</span>
@@ -424,7 +425,7 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
     </div>
   );
 
-  const stepTitles = ['1. Credenciais', '2. Análise do Domínio', '3. Autorização', '4. Confirmar'];
+  const stepTitles = ['1. Domínio', '2. Análise DNS', '3. Autorização', '4. Confirmar'];
   const totalSteps = 4;
 
   const handleNext = () => {
@@ -567,10 +568,16 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
                 Cancelar
               </Button>
               {step < totalSteps - 1 ? (
-                <Button onClick={handleNext} disabled={!canProceed || analyzing}>
-                  {analyzing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                  {step === 0 ? 'Analisar Domínio' : 'Próximo'}
-                </Button>
+                step === 2 ? (
+                  <Button onClick={() => setStep(3)} disabled={!authorized}>
+                    Próximo
+                  </Button>
+                ) : (
+                  <Button onClick={handleNext} disabled={!canProceed || analyzing}>
+                    {analyzing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                    {step === 0 ? 'Analisar Domínio' : 'Próximo'}
+                  </Button>
+                )
               ) : (
                 <Button onClick={handleSave} disabled={!canProceed || saving}>
                   {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}

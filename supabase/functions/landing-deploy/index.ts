@@ -140,7 +140,52 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, landing_page_id, tenant_id } = body;
 
-    // ── ACTION: validate_cloudflare (no wlConfig needed) ──
+    // ── ACTION: lookup_domain (no token needed — public DNS analysis) ──
+    if (action === 'lookup_domain') {
+      const { domain } = body;
+      if (!domain) {
+        return new Response(JSON.stringify({ error: 'domain is required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      try {
+        // Use DNS-over-HTTPS to detect NS records
+        const dnsRes = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=NS`, {
+          headers: { 'Accept': 'application/dns-json' },
+        });
+        const dnsData = await dnsRes.json();
+        const nsRecords = (dnsData.Answer || [])
+          .filter((r: any) => r.type === 2)
+          .map((r: any) => r.data?.replace(/\.$/, ''));
+
+        const isCloudflare = nsRecords.some((ns: string) => ns?.includes('cloudflare'));
+
+        // Also check A records
+        const aRes = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=A`, {
+          headers: { 'Accept': 'application/dns-json' },
+        });
+        const aData = await aRes.json();
+        const aRecords = (aData.Answer || [])
+          .filter((r: any) => r.type === 1)
+          .map((r: any) => r.data);
+
+        return new Response(JSON.stringify({
+          domain,
+          nameservers: nsRecords,
+          a_records: aRecords,
+          dns_provider: isCloudflare ? 'Cloudflare' : 'Outro',
+          is_cloudflare: isCloudflare,
+        }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // ── ACTION: validate_cloudflare (requires token) ──
     if (action === 'validate_cloudflare') {
       const { api_token, domain } = body;
       if (!api_token || !domain) {
@@ -149,7 +194,6 @@ Deno.serve(async (req) => {
         });
       }
       try {
-        // 1. Verify token is valid
         const verifyRes = await fetch('https://api.cloudflare.com/client/v4/user/tokens/verify', {
           headers: { 'Authorization': `Bearer ${api_token}`, 'Content-Type': 'application/json' },
         });
@@ -160,28 +204,15 @@ Deno.serve(async (req) => {
           });
         }
 
-        // 2. List zones and find the matching domain
         const zonesRes = await fetch(`https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(domain)}&status=active`, {
           headers: { 'Authorization': `Bearer ${api_token}`, 'Content-Type': 'application/json' },
         });
         const zonesData = await zonesRes.json();
-        if (!zonesData.success) {
-          return new Response(JSON.stringify({ error: 'Falha ao listar zones', details: zonesData.errors }), {
-            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-
         const zones = (zonesData.result || []).map((z: any) => ({
-          id: z.id,
-          name: z.name,
-          status: z.status,
-          name_servers: z.name_servers,
-          plan: z.plan?.name,
+          id: z.id, name: z.name, status: z.status, name_servers: z.name_servers, plan: z.plan?.name,
         }));
-
         const matchedZone = zones.find((z: any) => z.name === domain) || zones[0] || null;
 
-        // 3. Get account info
         const accountRes = await fetch('https://api.cloudflare.com/client/v4/accounts?page=1&per_page=5', {
           headers: { 'Authorization': `Bearer ${api_token}`, 'Content-Type': 'application/json' },
         });
