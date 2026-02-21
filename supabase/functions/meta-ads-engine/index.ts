@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
 const META_API = 'https://graph.facebook.com/v21.0';
@@ -264,7 +264,53 @@ Deno.serve(async (req) => {
       return jsonResponse({ campaigns: campaigns ?? [] });
     }
 
-    return jsonResponse({ error: 'Invalid action. Use: save_connection, promote_landing, get_connection, list_campaigns' }, 400);
+    // ── ACTION: get_ad_accounts ──
+    if (action === 'get_ad_accounts') {
+      const { tenant_id } = body;
+      const { data: conn } = await supabase
+        .from('meta_ads_connections')
+        .select('access_token')
+        .eq('tenant_id', tenant_id)
+        .eq('is_active', true)
+        .single();
+
+      if (!conn) return jsonResponse({ error: 'Meta Ads não conectado.' }, 400);
+
+      const result = await metaFetch('/me/adaccounts?fields=id,name,account_status,currency,timezone_name', conn.access_token);
+      return jsonResponse({ ad_accounts: result.data ?? [] });
+    }
+
+    // ── ACTION: get_pixels ──
+    if (action === 'get_pixels') {
+      const { tenant_id } = body;
+      const { data: conn } = await supabase
+        .from('meta_ads_connections')
+        .select('access_token, ad_account_id')
+        .eq('tenant_id', tenant_id)
+        .eq('is_active', true)
+        .single();
+
+      if (!conn) return jsonResponse({ error: 'Meta Ads não conectado.' }, 400);
+
+      const result = await metaFetch(`/${conn.ad_account_id}/adspixels?fields=id,name,is_unavailable`, conn.access_token);
+      return jsonResponse({ pixels: result.data ?? [] });
+    }
+
+    // ── ACTION: get_campaign_status ──
+    if (action === 'get_campaign_status') {
+      const { landing_page_id } = body;
+      const { data: campaign } = await supabase
+        .from('meta_ad_campaigns')
+        .select('id, meta_campaign_id, status, error_message, campaign_name, daily_budget_cents, created_at')
+        .eq('landing_page_id', landing_page_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      return jsonResponse({ campaign: campaign ?? null });
+    }
+
+    return jsonResponse({ error: 'Invalid action. Use: save_connection, promote_landing, get_connection, list_campaigns, get_ad_accounts, get_pixels, get_campaign_status' }, 400);
 
   } catch (err: any) {
     console.error('meta-ads-engine error:', err);
