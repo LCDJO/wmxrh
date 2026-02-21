@@ -6098,6 +6098,70 @@ export type Database = {
           },
         ]
       }
+      fleet_employee_agreement_status: {
+        Row: {
+          agreement_type: string
+          created_at: string
+          document_url: string | null
+          employee_id: string
+          expires_at: string | null
+          id: string
+          required_agreement_id: string
+          signed_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          agreement_type: string
+          created_at?: string
+          document_url?: string | null
+          employee_id: string
+          expires_at?: string | null
+          id?: string
+          required_agreement_id: string
+          signed_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          agreement_type?: string
+          created_at?: string
+          document_url?: string | null
+          employee_id?: string
+          expires_at?: string | null
+          id?: string
+          required_agreement_id?: string
+          signed_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_employee_agreement_status_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_employee_agreement_status_required_agreement_id_fkey"
+            columns: ["required_agreement_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_required_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_employee_agreement_status_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_enforcement_points: {
         Row: {
           company_id: string | null
@@ -6192,6 +6256,64 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "fleet_provider_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fleet_required_agreements: {
+        Row: {
+          agreement_template_id: string
+          agreement_type: string
+          company_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          is_blocking: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          agreement_template_id: string
+          agreement_type: string
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_blocking?: boolean
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          agreement_template_id?: string
+          agreement_type?: string
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_blocking?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_required_agreements_agreement_template_id_fkey"
+            columns: ["agreement_template_id"]
+            isOneToOne: false
+            referencedRelation: "agreement_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_required_agreements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_required_agreements_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

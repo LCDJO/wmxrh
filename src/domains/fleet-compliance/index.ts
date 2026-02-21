@@ -29,4 +29,10 @@ export type {
   FleetWarning,
   DisciplinaryEventType,
   FleetDisciplinaryRecord,
+  FleetAgreementType,
+  AgreementSignStatus,
+  FleetRequiredAgreement,
+  FleetEmployeeAgreementStatus,
 } from './types';
+
+export { isFleetBlocked } from './types';
