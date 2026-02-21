@@ -8,6 +8,8 @@
 export type {
   RawTrackingEvent,
   IngestTrackingEventDTO,
+  FleetProviderConfig,
+  CreateFleetProviderConfigDTO,
   FleetDevice,
   DrivingViolationType,
   DrivingViolation,
