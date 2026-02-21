@@ -48,6 +48,7 @@ import NrComplianceDashboard from "./pages/NrComplianceDashboard";
 import SafetyAutomation from "./pages/SafetyAutomation";
 import LegalIntelligenceDashboard from "./pages/LegalIntelligenceDashboard";
 import EsocialGovernanceDashboard from "./pages/EsocialGovernanceDashboard";
+import FleetDashboard from "./pages/FleetDashboard";
 import EpiCatalog from "./pages/EpiCatalog";
 import EpiDelivery from "./pages/EpiDelivery";
 import EpiDashboard from "./pages/EpiDashboard";
@@ -355,6 +356,9 @@ function AppRoutes() {
            } />
           <Route path="/pccs-wizard" element={
             <ProtectedRoute navKey="positions"><PccsWizard /></ProtectedRoute>
+          } />
+          <Route path="/fleet-dashboard" element={
+            <ProtectedRoute navKey="dashboard"><FleetDashboard /></ProtectedRoute>
           } />
           <Route path="/iam" element={<Navigate to="/settings/users" replace />} />
           <Route path="/settings/users" element={

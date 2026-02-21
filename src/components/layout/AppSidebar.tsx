@@ -16,7 +16,7 @@ import {
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
   Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook, Store,
-  HardHat, Activity, Stethoscope,
+  HardHat, Activity, Stethoscope, Car,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -125,6 +125,9 @@ const navSections: NavSection[] = [
           { to: '/nr-compliance', icon: ShieldAlert, label: 'NR Compliance', key: 'health' as NavKey },
           { to: '/safety-automation', icon: Zap, label: 'Automação SST', key: 'health' as NavKey },
         ],
+      },
+      {
+        to: '/fleet-dashboard', icon: Car, label: 'Frota & Compliance', key: 'dashboard' as NavKey,
       },
     ],
   },
