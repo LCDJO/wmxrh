@@ -25,6 +25,35 @@ export interface RawTrackingEvent {
   ingested_at: string;
 }
 
+// ════════════════════════════════════════════════════════════════
+// FLEET PROVIDER CONFIG
+// ════════════════════════════════════════════════════════════════
+
+export interface FleetProviderConfig {
+  id: string;
+  tenant_id: string;
+  provider_name: string;
+  api_url: string;
+  api_token: string;
+  webhook_secret: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateFleetProviderConfigDTO {
+  tenant_id: string;
+  provider_name?: string;
+  api_url: string;
+  api_token: string;
+  webhook_secret?: string | null;
+  is_active?: boolean;
+}
+
+// ════════════════════════════════════════════════════════════════
+// INGEST DTO
+// ════════════════════════════════════════════════════════════════
+
 export interface IngestTrackingEventDTO {
   device_id: string;
   latitude: number;
