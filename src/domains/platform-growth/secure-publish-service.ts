@@ -129,7 +129,7 @@ export class SecurePublishService {
       version: version.version,
       publishedBy: userId,
       publisherRole: userRole,
-      url: `/lp/${updated.slug}`,
+      url: `https://${updated.slug}.${window.location.hostname.replace(/^[^.]+\./, '')}`,
     });
 
     emitGrowthEvent({

@@ -164,8 +164,19 @@ export default function LandingPublished() {
                       </Button>
                     )}
                     {status === 'published' && (
-                      <Button variant="ghost" size="sm" className="gap-1.5">
-                        <ExternalLink className="h-3 w-3" /> Abrir
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5"
+                        asChild
+                      >
+                        <a
+                          href={`https://${page.slug}.${window.location.hostname.replace(/^[^.]+\./, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="h-3 w-3" /> Abrir
+                        </a>
                       </Button>
                     )}
                   </div>
