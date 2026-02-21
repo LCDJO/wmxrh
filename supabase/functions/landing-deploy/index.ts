@@ -31,6 +31,19 @@ class CloudflareService {
     };
   }
 
+  /** List existing DNS records matching a name */
+  async listDNS(name: string): Promise<CloudflareDNSRecord[]> {
+    const res = await fetch(
+      `${this.baseUrl}/zones/${this.zoneId}/dns_records?type=CNAME&name=${encodeURIComponent(name)}`,
+      { headers: this.headers() },
+    );
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(`Cloudflare listDNS failed: ${JSON.stringify(data.errors)}`);
+    }
+    return data.result ?? [];
+  }
+
   async createDNS(subdomain: string, target: string): Promise<CloudflareDNSRecord> {
     const res = await fetch(`${this.baseUrl}/zones/${this.zoneId}/dns_records`, {
       method: 'POST',
@@ -162,22 +175,78 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Validate slug
-      if (!page.slug || page.slug.length < 2 || !/^[a-z0-9-]+$/.test(page.slug)) {
-        return new Response(JSON.stringify({ error: 'Invalid slug. Use lowercase, numbers and hyphens only.' }), {
+      // ── SECURITY 1: Validate slug (strict) ──
+      const RESERVED_SLUGS = ['www', 'api', 'app', 'admin', 'mail', 'ftp', 'ns1', 'ns2', 'cdn', 'staging', 'dev', 'test', 'builder'];
+      if (!page.slug || page.slug.length < 2 || page.slug.length > 63 || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(page.slug)) {
+        return new Response(JSON.stringify({ error: 'Slug inválido. Use 2-63 caracteres: letras minúsculas, números e hífens (não pode começar/terminar com hífen).' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (RESERVED_SLUGS.includes(page.slug)) {
+        return new Response(JSON.stringify({ error: `Slug "${page.slug}" é reservado e não pode ser usado.` }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
+      // ── SECURITY 2: Validate domain ownership ──
+      if (tenant_id) {
+        const { data: tenantConfig } = await supabase
+          .from('white_label_config')
+          .select('domain_principal')
+          .eq('tenant_id', tenant_id)
+          .eq('is_active', true)
+          .single();
+        if (tenantConfig && tenantConfig.domain_principal !== domainPrincipal) {
+          return new Response(JSON.stringify({ error: 'Domínio não pertence a este tenant.' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
       const subdomain = `${page.slug}.${domainPrincipal}`;
       const builderHost = wlConfig?.builder_host || Deno.env.get('CLOUDFLARE_BUILDER_HOST') || 'builder.minha-plataforma.com';
-      const target = builderHost; // CNAME target pointing to builder
+      const target = builderHost;
 
-      // Create DNS record
-      const record = await cf.createDNS(page.slug, target);
+      // ── SECURITY 3: Check duplicate DNS in Cloudflare ──
+      const existingRecords = await cf.listDNS(subdomain);
+      if (existingRecords.length > 0) {
+        // Check if it belongs to another landing page in our DB
+        const { data: existingPage } = await supabase
+          .from('landing_pages')
+          .select('id, name')
+          .eq('subdomain', subdomain)
+          .neq('id', landing_page_id)
+          .maybeSingle();
 
-      // Update landing_pages
-      await supabase
+        if (existingPage) {
+          return new Response(JSON.stringify({
+            error: `Subdomínio "${subdomain}" já está em uso pela landing page "${existingPage.name}".`,
+          }), {
+            status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // External conflict — record exists but not in our DB
+        return new Response(JSON.stringify({
+          error: `Registro DNS "${subdomain}" já existe no Cloudflare. Remova-o manualmente ou escolha outro slug.`,
+        }), {
+          status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // ── SECURITY 4: Create DNS with rollback on DB failure ──
+      let record: CloudflareDNSRecord;
+      try {
+        record = await cf.createDNS(page.slug, target);
+      } catch (dnsErr) {
+        console.error('DNS creation failed:', dnsErr);
+        return new Response(JSON.stringify({ error: `Falha ao criar DNS: ${dnsErr.message}` }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Update landing_pages — rollback DNS if DB update fails
+      const { error: updateError } = await supabase
         .from('landing_pages')
         .update({
           subdomain,
@@ -188,7 +257,18 @@ Deno.serve(async (req) => {
         })
         .eq('id', landing_page_id);
 
-      // Create deployment log
+      if (updateError) {
+        // ROLLBACK: remove the DNS record we just created
+        console.error('DB update failed, rolling back DNS:', updateError);
+        try { await cf.deleteDNS(record.id); } catch (rbErr) {
+          console.error('CRITICAL: DNS rollback also failed:', rbErr);
+        }
+        return new Response(JSON.stringify({ error: `Falha ao atualizar banco de dados. DNS revertido. ${updateError.message}` }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Create deployment log (non-critical, don't rollback on failure)
       await supabase
         .from('landing_deployments')
         .insert({
