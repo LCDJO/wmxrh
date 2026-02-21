@@ -24,7 +24,6 @@ interface WebhookConfig {
   tenant_id: string;
   webhook_name: string;
   webhook_url: string | null;
-  secret_value: string | null;
   is_active: boolean;
   description: string | null;
   provider: string | null;
@@ -33,6 +32,7 @@ interface WebhookConfig {
   timeout_seconds: number;
   created_at: string;
   updated_at: string;
+  has_secret?: boolean; // derived flag, not from DB
 }
 
 const WEBHOOK_TEMPLATES = [
@@ -70,13 +70,17 @@ export default function WebhookSettings() {
     setLoading(true);
     const { data, error } = await supabase
       .from('webhook_configurations')
-      .select('*')
+      .select('id, tenant_id, webhook_name, webhook_url, is_active, description, provider, headers, retry_count, timeout_seconds, created_at, updated_at, secret_encrypted')
       .eq('tenant_id', tenantId)
       .order('webhook_name');
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
-      setConfigs((data || []) as unknown as WebhookConfig[]);
+      const mapped = (data || []).map((d: any) => ({
+        ...d,
+        has_secret: !!d.secret_encrypted,
+      })) as unknown as WebhookConfig[];
+      setConfigs(mapped);
     }
     setLoading(false);
   };
@@ -100,7 +104,7 @@ export default function WebhookSettings() {
     setEditingId(cfg.id);
     setFormName(cfg.webhook_name);
     setFormUrl(cfg.webhook_url || '');
-    setFormSecret(cfg.secret_value || '');
+    setFormSecret(''); // Secret is write-only, never displayed
     setFormDescription(cfg.description || '');
     setFormProvider(cfg.provider || '');
     setFormRetry(String(cfg.retry_count));
@@ -113,11 +117,10 @@ export default function WebhookSettings() {
     if (!tenantId || !formName.trim()) return;
     setSaving(true);
 
-    const payload = {
+    const payload: Record<string, any> = {
       tenant_id: tenantId,
       webhook_name: formName.trim(),
       webhook_url: formUrl.trim() || null,
-      secret_value: formSecret.trim() || null,
       description: formDescription.trim() || null,
       provider: formProvider.trim() || null,
       retry_count: parseInt(formRetry) || 3,
@@ -126,11 +129,30 @@ export default function WebhookSettings() {
     };
 
     let error;
+    let savedId: string | null = editingId;
+
     if (editingId) {
       const { tenant_id: _, ...updatePayload } = payload;
-      ({ error } = await supabase.from('webhook_configurations').update(updatePayload).eq('id', editingId));
+      ({ error } = await supabase.from('webhook_configurations').update(updatePayload as any).eq('id', editingId));
     } else {
-      ({ error } = await supabase.from('webhook_configurations').insert(payload));
+      const { data: inserted, error: insertError } = await supabase
+        .from('webhook_configurations')
+        .insert(payload as any)
+        .select('id')
+        .single();
+      error = insertError;
+      savedId = inserted?.id || null;
+    }
+
+    // If secret was provided, encrypt it server-side via RPC
+    if (!error && formSecret.trim() && savedId) {
+      const { error: secretError } = await supabase.rpc('set_webhook_secret', {
+        _webhook_id: savedId,
+        _secret: formSecret.trim(),
+      });
+      if (secretError) {
+        toast({ title: 'Erro ao salvar secret', description: secretError.message, variant: 'destructive' });
+      }
     }
 
     if (error) {
@@ -278,17 +300,12 @@ export default function WebhookSettings() {
                     {/* Secret */}
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">Secret</p>
-                      {cfg.secret_value ? (
+                      {cfg.has_secret ? (
                         <div className="flex items-center gap-1.5">
                           <code className="text-xs bg-muted px-2 py-1 rounded font-mono flex-1 truncate">
-                            {isSecretVisible ? cfg.secret_value : maskSecret(cfg.secret_value)}
+                            ••••••••••••••••
                           </code>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleSecretVisibility(cfg.id)}>
-                            {isSecretVisible ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(cfg.secret_value!)}>
-                            <Copy className="h-3 w-3" />
-                          </Button>
+                          <Badge variant="outline" className="text-[10px]">Encriptado</Badge>
                         </div>
                       ) : (
                         <span className="text-xs text-muted-foreground italic">Não configurado</span>
