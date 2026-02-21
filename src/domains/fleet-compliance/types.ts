@@ -22,6 +22,7 @@ export interface RawTrackingEvent {
   ignition: boolean | null;
   event_timestamp: string;
   raw_payload: Record<string, unknown> | null;
+  integrity_hash: string | null;
   ingested_at: string;
 }
 
@@ -303,4 +304,25 @@ export function isFleetBlocked(
     .filter(r => !signedIds.has(r.id))
     .map(r => r.agreement_type);
   return { blocked: missing.length > 0, missing };
+}
+
+// ════════════════════════════════════════════════════════════════
+// FLEET AUDIT LOG (immutable integrity trail)
+// ════════════════════════════════════════════════════════════════
+
+export type FleetAuditActorType = 'system' | 'user' | 'webhook';
+
+export interface FleetAuditLogEntry {
+  id: string;
+  tenant_id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  actor_id: string | null;
+  actor_type: FleetAuditActorType;
+  old_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
+  integrity_hash: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
 }

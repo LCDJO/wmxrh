@@ -5755,6 +5755,59 @@ export type Database = {
           },
         ]
       }
+      fleet_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_type: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          integrity_hash: string
+          metadata: Json | null
+          new_value: Json | null
+          old_value: Json | null
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_type?: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          integrity_hash: string
+          metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_type?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          integrity_hash?: string
+          metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_behavior_events: {
         Row: {
           company_id: string | null
@@ -10045,6 +10098,7 @@ export type Database = {
           id: string
           ignition: boolean | null
           ingested_at: string
+          integrity_hash: string | null
           latitude: number
           longitude: number
           raw_payload: Json | null
@@ -10057,6 +10111,7 @@ export type Database = {
           id?: string
           ignition?: boolean | null
           ingested_at?: string
+          integrity_hash?: string | null
           latitude: number
           longitude: number
           raw_payload?: Json | null
@@ -10069,6 +10124,7 @@ export type Database = {
           id?: string
           ignition?: boolean | null
           ingested_at?: string
+          integrity_hash?: string | null
           latitude?: number
           longitude?: number
           raw_payload?: Json | null
