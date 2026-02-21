@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Settings, Save, Loader2, RotateCcw } from 'lucide-react';
 import CloudflareConnectCard from '@/components/platform/CloudflareConnectCard';
+import TraccarConnectCard from '@/components/platform/TraccarConnectCard';
 import { MetaAdsConnectCard } from '@/components/platform/meta-ads/MetaAdsConnectCard';
 
 interface PlatformSetting {
@@ -224,6 +225,9 @@ export default function PlatformSaasSettings() {
         onRefresh={fetchWhiteLabel}
         canEdit={can('tenant.create')}
       />
+
+      {/* Traccar GPS */}
+      <TraccarConnectCard canEdit={can('tenant.create')} />
 
       {/* Meta Ads */}
       <MetaAdsConnectCard
