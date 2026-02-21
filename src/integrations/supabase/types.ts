@@ -7166,6 +7166,56 @@ export type Database = {
           },
         ]
       }
+      landing_deployments: {
+        Row: {
+          cloudflare_record_id: string | null
+          created_at: string
+          deployed_at: string | null
+          deployed_by: string | null
+          error_message: string | null
+          full_url: string
+          id: string
+          landing_page_id: string
+          removed_at: string | null
+          status: string
+          subdomain: string
+        }
+        Insert: {
+          cloudflare_record_id?: string | null
+          created_at?: string
+          deployed_at?: string | null
+          deployed_by?: string | null
+          error_message?: string | null
+          full_url: string
+          id?: string
+          landing_page_id: string
+          removed_at?: string | null
+          status?: string
+          subdomain: string
+        }
+        Update: {
+          cloudflare_record_id?: string | null
+          created_at?: string
+          deployed_at?: string | null
+          deployed_by?: string | null
+          error_message?: string | null
+          full_url?: string
+          id?: string
+          landing_page_id?: string
+          removed_at?: string | null
+          status?: string
+          subdomain?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_deployments_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       landing_experiments: {
         Row: {
           created_at: string
@@ -7437,10 +7487,13 @@ export type Database = {
         Row: {
           analytics: Json
           blocks: Json
+          cloudflare_record_id: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
           deleted_by: string | null
+          deploy_url: string | null
+          deployed_at: string | null
           gtm_container_id: string | null
           id: string
           name: string
@@ -7448,16 +7501,20 @@ export type Database = {
           referral_program_id: string | null
           slug: string
           status: string
+          subdomain: string | null
           target_plan_id: string | null
           updated_at: string
         }
         Insert: {
           analytics?: Json
           blocks?: Json
+          cloudflare_record_id?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          deploy_url?: string | null
+          deployed_at?: string | null
           gtm_container_id?: string | null
           id?: string
           name: string
@@ -7465,16 +7522,20 @@ export type Database = {
           referral_program_id?: string | null
           slug: string
           status?: string
+          subdomain?: string | null
           target_plan_id?: string | null
           updated_at?: string
         }
         Update: {
           analytics?: Json
           blocks?: Json
+          cloudflare_record_id?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          deploy_url?: string | null
+          deployed_at?: string | null
           gtm_container_id?: string | null
           id?: string
           name?: string
@@ -7482,6 +7543,7 @@ export type Database = {
           referral_program_id?: string | null
           slug?: string
           status?: string
+          subdomain?: string | null
           target_plan_id?: string | null
           updated_at?: string
         }
@@ -12458,6 +12520,47 @@ export type Database = {
           version?: number
         }
         Relationships: []
+      }
+      white_label_config: {
+        Row: {
+          cloudflare_api_token: string
+          cloudflare_zone_id: string
+          created_at: string
+          domain_principal: string
+          id: string
+          is_active: boolean | null
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          cloudflare_api_token: string
+          cloudflare_zone_id: string
+          created_at?: string
+          domain_principal: string
+          id?: string
+          is_active?: boolean | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cloudflare_api_token?: string
+          cloudflare_zone_id?: string
+          created_at?: string
+          domain_principal?: string
+          id?: string
+          is_active?: boolean | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "white_label_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workforce_insights: {
         Row: {
