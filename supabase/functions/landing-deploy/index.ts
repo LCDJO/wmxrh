@@ -170,7 +170,8 @@ Deno.serve(async (req) => {
       }
 
       const subdomain = `${page.slug}.${domainPrincipal}`;
-      const target = domainPrincipal; // CNAME target
+      const builderHost = wlConfig?.builder_host || Deno.env.get('CLOUDFLARE_BUILDER_HOST') || 'builder.minha-plataforma.com';
+      const target = builderHost; // CNAME target pointing to builder
 
       // Create DNS record
       const record = await cf.createDNS(page.slug, target);
