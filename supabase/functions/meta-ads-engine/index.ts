@@ -141,6 +141,23 @@ Deno.serve(async (req) => {
       const token = conn.access_token;
       const adAccountId = conn.ad_account_id;
 
+      // Get next version number
+      const { data: latestCampaign } = await supabase
+        .from('meta_ad_campaigns')
+        .select('version_number')
+        .eq('landing_page_id', landing_page_id)
+        .order('version_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const nextVersion = (latestCampaign?.version_number ?? 0) + 1;
+
+      // Deactivate previous active versions
+      await supabase
+        .from('meta_ad_campaigns')
+        .update({ is_active_version: false })
+        .eq('landing_page_id', landing_page_id);
+
       // Create campaign record in DB first
       const { data: campaignRecord, error: insertErr } = await supabase
         .from('meta_ad_campaigns')
@@ -152,6 +169,8 @@ Deno.serve(async (req) => {
           targeting: targeting || {},
           created_by: user.id,
           status: 'creating',
+          version_number: nextVersion,
+          is_active_version: true,
         })
         .select('id')
         .single();
@@ -301,8 +320,9 @@ Deno.serve(async (req) => {
       const { landing_page_id } = body;
       const { data: campaign } = await supabase
         .from('meta_ad_campaigns')
-        .select('id, meta_campaign_id, status, error_message, campaign_name, daily_budget_cents, created_at')
+        .select('id, meta_campaign_id, status, error_message, campaign_name, daily_budget_cents, version_number, is_active_version, preview_url, created_at')
         .eq('landing_page_id', landing_page_id)
+        .eq('is_active_version', true)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -310,7 +330,104 @@ Deno.serve(async (req) => {
       return jsonResponse({ campaign: campaign ?? null });
     }
 
-    return jsonResponse({ error: 'Invalid action. Use: save_connection, promote_landing, get_connection, list_campaigns, get_ad_accounts, get_pixels, get_campaign_status' }, 400);
+    // ── ACTION: list_campaign_versions ──
+    if (action === 'list_campaign_versions') {
+      const { landing_page_id } = body;
+      const { data: versions } = await supabase
+        .from('meta_ad_campaigns')
+        .select('id, campaign_name, status, version_number, is_active_version, daily_budget_cents, preview_url, created_at, error_message')
+        .eq('landing_page_id', landing_page_id)
+        .order('version_number', { ascending: false });
+
+      return jsonResponse({ versions: versions ?? [] });
+    }
+
+    // ── ACTION: rollback_campaign ──
+    if (action === 'rollback_campaign') {
+      const { landing_page_id, target_version } = body;
+      if (!landing_page_id || !target_version) {
+        return jsonResponse({ error: 'landing_page_id e target_version são obrigatórios.' }, 400);
+      }
+
+      // Check target version exists
+      const { data: targetCampaign } = await supabase
+        .from('meta_ad_campaigns')
+        .select('id, version_number, campaign_name')
+        .eq('landing_page_id', landing_page_id)
+        .eq('version_number', target_version)
+        .single();
+
+      if (!targetCampaign) {
+        return jsonResponse({ error: `Versão ${target_version} não encontrada.` }, 404);
+      }
+
+      // Deactivate all versions for this landing page
+      await supabase
+        .from('meta_ad_campaigns')
+        .update({ is_active_version: false })
+        .eq('landing_page_id', landing_page_id);
+
+      // Activate the target version
+      await supabase
+        .from('meta_ad_campaigns')
+        .update({ is_active_version: true })
+        .eq('id', targetCampaign.id);
+
+      return jsonResponse({
+        success: true,
+        active_version: target_version,
+        campaign_name: targetCampaign.campaign_name,
+        message: `Rollback para versão ${target_version} realizado com sucesso.`,
+      });
+    }
+
+    // ── ACTION: generate_preview_url ──
+    if (action === 'generate_preview_url') {
+      const { landing_page_id } = body;
+      if (!landing_page_id) {
+        return jsonResponse({ error: 'landing_page_id é obrigatório.' }, 400);
+      }
+
+      // Get landing page preview_token
+      const { data: page } = await supabase
+        .from('landing_pages')
+        .select('id, slug, preview_token')
+        .eq('id', landing_page_id)
+        .single();
+
+      if (!page) {
+        return jsonResponse({ error: 'Landing page não encontrada.' }, 404);
+      }
+
+      // Get tenant domain config
+      const { data: tenantConfig } = await supabase
+        .from('white_label_domains')
+        .select('domain')
+        .limit(1)
+        .maybeSingle();
+
+      const baseDomain = tenantConfig?.domain || 'builder.seudominio.com';
+      const previewUrl = `https://preview-${page.preview_token}.${baseDomain}`;
+
+      // Store preview URL on the active campaign if exists
+      const { data: activeCampaign } = await supabase
+        .from('meta_ad_campaigns')
+        .select('id')
+        .eq('landing_page_id', landing_page_id)
+        .eq('is_active_version', true)
+        .maybeSingle();
+
+      if (activeCampaign) {
+        await supabase
+          .from('meta_ad_campaigns')
+          .update({ preview_url: previewUrl })
+          .eq('id', activeCampaign.id);
+      }
+
+      return jsonResponse({ preview_url: previewUrl, token: page.preview_token });
+    }
+
+    return jsonResponse({ error: 'Invalid action.' }, 400);
 
   } catch (err: any) {
     console.error('meta-ads-engine error:', err);

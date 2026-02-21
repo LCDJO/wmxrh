@@ -7497,6 +7497,7 @@ export type Database = {
           gtm_container_id: string | null
           id: string
           name: string
+          preview_token: string | null
           published_at: string | null
           referral_program_id: string | null
           slug: string
@@ -7518,6 +7519,7 @@ export type Database = {
           gtm_container_id?: string | null
           id?: string
           name: string
+          preview_token?: string | null
           published_at?: string | null
           referral_program_id?: string | null
           slug: string
@@ -7539,6 +7541,7 @@ export type Database = {
           gtm_container_id?: string | null
           id?: string
           name?: string
+          preview_token?: string | null
           published_at?: string | null
           referral_program_id?: string | null
           slug?: string
@@ -7867,14 +7870,17 @@ export type Database = {
           daily_budget_cents: number
           error_message: string | null
           id: string
+          is_active_version: boolean
           landing_page_id: string
           meta_ad_id: string | null
           meta_adset_id: string | null
           meta_campaign_id: string | null
+          preview_url: string | null
           status: string
           targeting: Json | null
           tenant_id: string
           updated_at: string
+          version_number: number
         }
         Insert: {
           campaign_name: string
@@ -7883,14 +7889,17 @@ export type Database = {
           daily_budget_cents?: number
           error_message?: string | null
           id?: string
+          is_active_version?: boolean
           landing_page_id: string
           meta_ad_id?: string | null
           meta_adset_id?: string | null
           meta_campaign_id?: string | null
+          preview_url?: string | null
           status?: string
           targeting?: Json | null
           tenant_id: string
           updated_at?: string
+          version_number?: number
         }
         Update: {
           campaign_name?: string
@@ -7899,14 +7908,17 @@ export type Database = {
           daily_budget_cents?: number
           error_message?: string | null
           id?: string
+          is_active_version?: boolean
           landing_page_id?: string
           meta_ad_id?: string | null
           meta_adset_id?: string | null
           meta_campaign_id?: string | null
+          preview_url?: string | null
           status?: string
           targeting?: Json | null
           tenant_id?: string
           updated_at?: string
+          version_number?: number
         }
         Relationships: [
           {
