@@ -5,15 +5,16 @@
 import { useState, useEffect } from 'react';
 import {
   Globe, Eye, Users, Target, Percent, BarChart3, ArrowUpRight,
-  Layout, ExternalLink, Plus, Upload, Send,
+  Layout, ExternalLink, Plus, Send,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { landingPageBuilder } from '@/domains/platform-growth';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import type { LandingPage } from '@/domains/platform-growth/types';
+import { LandingPublishButton, deriveDeployStatus } from '@/components/platform/landing/LandingPublishButton';
 
 export default function GrowthLandingPages() {
   const [pages, setPages] = useState<LandingPage[]>([]);
@@ -65,18 +66,13 @@ export default function GrowthLandingPages() {
                     <Send className="h-3 w-3" />Submeter
                   </Button>
                 )}
-                {canPublish && page.status === 'approved' && (
-                  <Button size="sm" variant="outline" className="gap-1 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10">
-                    <Upload className="h-3 w-3" />Publicar
-                  </Button>
-                )}
-                <Badge variant="outline" className={cn('text-[10px]',
-                  page.status === 'published' ? 'border-emerald-500/30 text-emerald-400' :
-                  page.status === 'approved' ? 'border-blue-500/30 text-blue-400' :
-                  'border-amber-500/30 text-amber-400'
-                )}>
-                  {page.status === 'approved' ? 'aprovado' : page.status}
-                </Badge>
+                <LandingPublishButton
+                  pageId={page.id}
+                  currentStatus={deriveDeployStatus(page as any)}
+                  deployUrl={(page as any).deploy_url}
+                  disabled={!canPublish}
+                  onStatusChange={() => landingPageBuilder.getAll().then(setPages)}
+                />
               </div>
             </div>
 
