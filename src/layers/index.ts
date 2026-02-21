@@ -28,10 +28,15 @@ export {
   isTenantDomain,
   emitTenantLayerEvent,
   onTenantLayerEvent,
+  assertTenantIsolation,
+  TenantIsolationError,
+  getCapabilitiesByCategory,
+  getTenantDomainCategory,
 } from './tenant/tenant-layer.registry';
 export type {
   TenantDomainKey,
   TenantCapability,
+  TenantCapabilityCategory,
   TenantLayerEvent,
 } from './tenant/tenant-layer.registry';
 
