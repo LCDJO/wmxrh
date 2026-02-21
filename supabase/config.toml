@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.ai-conversion-designer]
 verify_jwt = false
+
+[functions.landing-deploy]
+verify_jwt = false
