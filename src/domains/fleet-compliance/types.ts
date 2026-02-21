@@ -253,3 +253,54 @@ export interface FleetDisciplinaryRecord {
   metadata: Record<string, unknown>;
   created_at: string;
 }
+
+// ════════════════════════════════════════════════════════════════
+// REQUIRED AGREEMENTS (termos obrigatórios)
+// ════════════════════════════════════════════════════════════════
+
+export type FleetAgreementType = 'vehicle_usage' | 'fine_responsibility' | 'gps_monitoring';
+export type AgreementSignStatus = 'pending' | 'sent' | 'signed' | 'refused' | 'expired';
+
+export interface FleetRequiredAgreement {
+  id: string;
+  tenant_id: string;
+  company_id: string | null;
+  agreement_template_id: string;
+  agreement_type: FleetAgreementType;
+  is_blocking: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FleetEmployeeAgreementStatus {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  required_agreement_id: string;
+  agreement_type: string;
+  status: AgreementSignStatus;
+  signed_at: string | null;
+  expires_at: string | null;
+  document_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Check if employee has all blocking agreements signed.
+ * If any blocking agreement is not signed → block fleet usage.
+ */
+export function isFleetBlocked(
+  required: FleetRequiredAgreement[],
+  statuses: FleetEmployeeAgreementStatus[]
+): { blocked: boolean; missing: FleetAgreementType[] } {
+  const blocking = required.filter(r => r.is_blocking && r.is_active);
+  const signedIds = new Set(
+    statuses.filter(s => s.status === 'signed').map(s => s.required_agreement_id)
+  );
+  const missing = blocking
+    .filter(r => !signedIds.has(r.id))
+    .map(r => r.agreement_type);
+  return { blocked: missing.length > 0, missing };
+}
