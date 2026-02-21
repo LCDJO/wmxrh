@@ -5755,6 +5755,73 @@ export type Database = {
           },
         ]
       }
+      fleet_devices: {
+        Row: {
+          company_id: string
+          created_at: string
+          deleted_at: string | null
+          device_type: string
+          employee_id: string | null
+          id: string
+          is_active: boolean
+          model: string | null
+          plate: string | null
+          serial_number: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          deleted_at?: string | null
+          device_type: string
+          employee_id?: string | null
+          id?: string
+          is_active?: boolean
+          model?: string | null
+          plate?: string | null
+          serial_number: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          device_type?: string
+          employee_id?: string | null
+          id?: string
+          is_active?: boolean
+          model?: string | null
+          plate?: string | null
+          serial_number?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_devices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_devices_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_devices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_provider_configs: {
         Row: {
           api_token: string

@@ -65,19 +65,35 @@ export interface IngestTrackingEventDTO {
 }
 
 // ════════════════════════════════════════════════════════════════
-// DEVICE ↔ EMPLOYEE MAPPING (future)
+// DEVICE REGISTRY
 // ════════════════════════════════════════════════════════════════
+
+export type FleetDeviceType = 'moto' | 'carro' | 'celular';
 
 export interface FleetDevice {
   id: string;
   tenant_id: string;
-  device_id: string;
-  device_name: string;
-  vehicle_plate: string | null;
+  company_id: string;
+  device_type: FleetDeviceType;
+  plate: string | null;
+  model: string | null;
+  serial_number: string;
   employee_id: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface CreateFleetDeviceDTO {
+  tenant_id: string;
+  company_id: string;
+  device_type: FleetDeviceType;
+  plate?: string | null;
+  model?: string | null;
+  serial_number: string;
+  employee_id?: string | null;
+  is_active?: boolean;
 }
 
 // ════════════════════════════════════════════════════════════════

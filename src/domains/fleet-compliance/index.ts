@@ -11,6 +11,8 @@ export type {
   FleetProviderConfig,
   CreateFleetProviderConfigDTO,
   FleetDevice,
+  FleetDeviceType,
+  CreateFleetDeviceDTO,
   DrivingViolationType,
   DrivingViolation,
 } from './types';
