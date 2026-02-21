@@ -80,6 +80,45 @@ export type {
   TenantLayerEvent,
 } from './tenant/tenant-layer.registry';
 
+// ── Platform: Parametrization ──
+export {
+  getEngineRegistry,
+  isEngineEnabled,
+  setEngineState,
+  getLegislativeConfig,
+  updateLegislativeConfig,
+  getPlatformFlags,
+  isPlatformFlagEnabled,
+  setPlatformFlag,
+} from './platform/platform-parametrization';
+export type {
+  PlatformEngineKey,
+  PlatformEngineConfig,
+  LegislativeAlertType,
+  LegislativeUpdateConfig,
+  LegislativeSource,
+  LegislativeAlertRouting,
+  PlatformFeatureFlag,
+} from './platform/platform-parametrization';
+
+// ── Tenant: Parametrization ──
+export {
+  isWithinWorkSchedule,
+  getDefaultBehavioralScoreConfig,
+} from './tenant/tenant-parametrization';
+export type {
+  TenantOperationalRules,
+  CreateOperationalRulesDTO,
+  TenantSpeedConfig,
+  SpeedZone,
+  TenantWarningPolicy,
+  WarningEscalationStep,
+  TenantWorkSchedule,
+  DailySchedule,
+  TenantBehavioralScoreConfig,
+  CreateBehavioralScoreConfigDTO,
+} from './tenant/tenant-parametrization';
+
 // ── Layer Boundary Engine ──
 export {
   evaluateLayerAccess,
