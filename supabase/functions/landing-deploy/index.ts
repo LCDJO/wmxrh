@@ -140,6 +140,70 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, landing_page_id, tenant_id } = body;
 
+    // ── ACTION: validate_cloudflare (no wlConfig needed) ──
+    if (action === 'validate_cloudflare') {
+      const { api_token, domain } = body;
+      if (!api_token || !domain) {
+        return new Response(JSON.stringify({ error: 'api_token and domain are required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      try {
+        // 1. Verify token is valid
+        const verifyRes = await fetch('https://api.cloudflare.com/client/v4/user/tokens/verify', {
+          headers: { 'Authorization': `Bearer ${api_token}`, 'Content-Type': 'application/json' },
+        });
+        const verifyData = await verifyRes.json();
+        if (!verifyData.success) {
+          return new Response(JSON.stringify({ error: 'Token inválido', details: verifyData.errors }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // 2. List zones and find the matching domain
+        const zonesRes = await fetch(`https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(domain)}&status=active`, {
+          headers: { 'Authorization': `Bearer ${api_token}`, 'Content-Type': 'application/json' },
+        });
+        const zonesData = await zonesRes.json();
+        if (!zonesData.success) {
+          return new Response(JSON.stringify({ error: 'Falha ao listar zones', details: zonesData.errors }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const zones = (zonesData.result || []).map((z: any) => ({
+          id: z.id,
+          name: z.name,
+          status: z.status,
+          name_servers: z.name_servers,
+          plan: z.plan?.name,
+        }));
+
+        const matchedZone = zones.find((z: any) => z.name === domain) || zones[0] || null;
+
+        // 3. Get account info
+        const accountRes = await fetch('https://api.cloudflare.com/client/v4/accounts?page=1&per_page=5', {
+          headers: { 'Authorization': `Bearer ${api_token}`, 'Content-Type': 'application/json' },
+        });
+        const accountData = await accountRes.json();
+        const account = accountData.result?.[0] || null;
+
+        return new Response(JSON.stringify({
+          valid: true,
+          token_status: verifyData.result?.status,
+          account: account ? { id: account.id, name: account.name } : null,
+          zones,
+          matched_zone: matchedZone,
+        }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Get white label config for this tenant (or global fallback)
     const { data: wlConfig } = await supabase
       .from('white_label_config')
