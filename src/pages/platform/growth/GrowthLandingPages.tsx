@@ -17,6 +17,7 @@ import type { LandingPage } from '@/domains/platform-growth/types';
 import { LandingPublishButton, deriveDeployStatus } from '@/components/platform/landing/LandingPublishButton';
 import { PromoteLandingButton } from '@/components/platform/meta-ads/PromoteLandingButton';
 import { LandingCampaignStatus } from '@/components/platform/meta-ads/LandingCampaignStatus';
+import { CampaignRollbackPanel } from '@/components/platform/meta-ads/CampaignRollbackPanel';
 
 export default function GrowthLandingPages() {
   const [pages, setPages] = useState<LandingPage[]>([]);
@@ -79,13 +80,20 @@ export default function GrowthLandingPages() {
                   onStatusChange={() => landingPageBuilder.getAll().then(setPages)}
                 />
                 {deriveDeployStatus(page as any) === 'online' && (page as any).deploy_url && (
-                  <PromoteLandingButton
-                    pageId={page.id}
-                    pageName={page.name}
-                    tenantId={(page as any).tenant_id || ''}
-                    deployUrl={(page as any).deploy_url}
-                    disabled={!canPublish}
-                  />
+                  <>
+                    <PromoteLandingButton
+                      pageId={page.id}
+                      pageName={page.name}
+                      tenantId={(page as any).tenant_id || ''}
+                      deployUrl={(page as any).deploy_url}
+                      disabled={!canPublish}
+                    />
+                    <CampaignRollbackPanel
+                      landingPageId={page.id}
+                      pageName={page.name}
+                      disabled={!canPublish}
+                    />
+                  </>
                 )}
               </div>
             </div>
