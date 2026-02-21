@@ -9389,6 +9389,53 @@ export type Database = {
           },
         ]
       }
+      raw_tracking_events: {
+        Row: {
+          device_id: string
+          event_timestamp: string
+          id: string
+          ignition: boolean | null
+          ingested_at: string
+          latitude: number
+          longitude: number
+          raw_payload: Json | null
+          speed: number
+          tenant_id: string
+        }
+        Insert: {
+          device_id: string
+          event_timestamp: string
+          id?: string
+          ignition?: boolean | null
+          ingested_at?: string
+          latitude: number
+          longitude: number
+          raw_payload?: Json | null
+          speed?: number
+          tenant_id: string
+        }
+        Update: {
+          device_id?: string
+          event_timestamp?: string
+          id?: string
+          ignition?: boolean | null
+          ingested_at?: string
+          latitude?: number
+          longitude?: number
+          raw_payload?: Json | null
+          speed?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_tracking_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       referral_links: {
         Row: {
           code: string
