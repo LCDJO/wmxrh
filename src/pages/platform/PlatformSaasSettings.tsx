@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Settings, Save, Loader2, RotateCcw } from 'lucide-react';
 import CloudflareConnectCard from '@/components/platform/CloudflareConnectCard';
+import { MetaAdsConnectCard } from '@/components/platform/meta-ads/MetaAdsConnectCard';
 
 interface PlatformSetting {
   id: string;
@@ -221,6 +222,12 @@ export default function PlatformSaasSettings() {
       <CloudflareConnectCard
         config={wlConfig}
         onRefresh={fetchWhiteLabel}
+        canEdit={can('tenant.create')}
+      />
+
+      {/* Meta Ads */}
+      <MetaAdsConnectCard
+        tenantId={wlConfig?.tenant_id || ''}
         canEdit={can('tenant.create')}
       />
 
