@@ -22,4 +22,6 @@ export type {
   DrivingViolation,
   FleetEnforcementPoint,
   CreateFleetEnforcementPointDTO,
+  IncidentStatus,
+  FleetComplianceIncident,
 } from './types';
