@@ -33,6 +33,8 @@ export type {
   AgreementSignStatus,
   FleetRequiredAgreement,
   FleetEmployeeAgreementStatus,
+  FleetAuditActorType,
+  FleetAuditLogEntry,
 } from './types';
 
 export { isFleetBlocked } from './types';
