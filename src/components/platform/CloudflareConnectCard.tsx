@@ -74,6 +74,7 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([]);
+  const [authorized, setAuthorized] = useState(false);
 
   const isConnected = !!config && !!config.cloudflare_api_token;
 
@@ -87,6 +88,7 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
     setShowToken(false);
     setAnalysisResult(null);
     setAnalysisSteps([]);
+    setAuthorized(false);
     setShowDialog(true);
   };
 
@@ -333,7 +335,67 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
     </div>
   );
 
+
   const renderStep2 = () => (
+    <div className="space-y-6">
+      <div className="flex flex-col items-center py-6 space-y-5">
+        {/* Cloudflare logo */}
+        <div className="flex items-center justify-center">
+          <svg viewBox="0 0 48 48" className="h-14 w-14" fill="none">
+            <path d="M33.6 28.8c.2-.6.1-1.2-.2-1.6-.3-.4-.8-.6-1.3-.7l-16.4-.2c-.1 0-.2-.1-.3-.1-.1-.1-.1-.2 0-.3.1-.2.2-.3.4-.3l16.5-.2c1.5-.1 3.1-1.3 3.7-2.7l.8-2c0-.1.1-.2 0-.3C35.6 15.6 30.8 12 25.2 12c-5 0-9.3 3-11.2 7.3-.9-.7-2.1-1-3.3-.9-2.2.3-4 2-4.3 4.2-.1.6 0 1.2.1 1.8C3.3 24.6 1 27.1 1 30.1c0 .3 0 .6.1.9.1.1.1.2.3.2h31.7c.2 0 .4-.1.4-.3l.1-2.1z" fill="#F6821F"/>
+            <path d="M38.4 24.4h-.3c-.1 0-.2.1-.2.2l-.5 1.8c-.2.6-.1 1.2.2 1.6.3.4.8.6 1.3.7l3.6.2c.1 0 .2.1.3.1.1.1.1.2 0 .3-.1.2-.2.3-.4.3l-3.7.2c-1.5.1-3.1 1.3-3.7 2.7l-.2.6c-.1.1 0 .2.1.2h12c.2 0 .3-.1.3-.3.3-1 .5-2 .5-3.1.1-3-2.3-5.5-5.2-5.5h-4.1z" fill="#FBAD41"/>
+          </svg>
+        </div>
+
+        <div className="text-center space-y-2 max-w-sm">
+          <p className="text-sm text-muted-foreground">
+            Ao autorizar com sua conta Cloudflare, você concede
+          </p>
+          <p className="text-sm font-semibold">
+            permissão única para conectar seu domínio.
+          </p>
+        </div>
+
+        <Button
+          size="lg"
+          className="w-full max-w-xs gap-2"
+          onClick={() => setAuthorized(true)}
+          disabled={authorized}
+        >
+          {authorized ? (
+            <>
+              <CheckCircle2 className="h-5 w-5" />
+              Autorizado
+            </>
+          ) : (
+            <>
+              <CloudCog className="h-5 w-5" />
+              Autorizar com Cloudflare
+            </>
+          )}
+        </Button>
+
+        {!authorized && (
+          <button
+            type="button"
+            className="text-xs text-primary underline hover:text-primary/80"
+            onClick={() => { setAuthorized(true); setStep(3); }}
+          >
+            Ir para configuração manual
+          </button>
+        )}
+
+        {authorized && (
+          <div className="flex items-center gap-2 text-xs text-emerald-600">
+            <CheckCircle2 className="h-4 w-4" />
+            Permissão concedida com sucesso
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Confirme os dados detectados automaticamente e finalize a integração.</p>
       <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
@@ -351,18 +413,27 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
           <span className="text-muted-foreground">API Token:</span>
           <span className="font-mono text-xs">{maskToken(form.cloudflare_api_token)}</span>
         </div>
+        {analysisResult?.account && (
+          <div className="flex items-center gap-2 text-sm">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            <span className="text-muted-foreground">Conta:</span>
+            <span className="font-medium">{analysisResult.account.name}</span>
+          </div>
+        )}
       </div>
     </div>
   );
 
-  const stepTitles = ['1. Credenciais', '2. Análise do Domínio', '3. Confirmar'];
-  const totalSteps = 3;
+  const stepTitles = ['1. Credenciais', '2. Análise do Domínio', '3. Autorização', '4. Confirmar'];
+  const totalSteps = 4;
 
   const handleNext = () => {
     if (step === 0) {
       runAnalysis();
     } else if (step === 1 && analysisSuccess) {
       setStep(2);
+    } else if (step === 2 && authorized) {
+      setStep(3);
     }
   };
 
@@ -370,6 +441,8 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
     ? canAnalyze
     : step === 1
     ? analysisSuccess && !analyzing
+    : step === 2
+    ? authorized
     : !!form.cloudflare_zone_id;
 
   return (
@@ -475,6 +548,7 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
             {step === 0 && renderStep0()}
             {step === 1 && renderStep1()}
             {step === 2 && renderStep2()}
+            {step === 3 && renderStep3()}
           </div>
 
           <DialogFooter className="flex-row justify-between sm:justify-between gap-2">
