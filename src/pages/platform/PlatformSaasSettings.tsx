@@ -11,7 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, Save, Loader2, RotateCcw, Globe } from 'lucide-react';
+import { Settings, Save, Loader2, RotateCcw } from 'lucide-react';
+import CloudflareConnectCard from '@/components/platform/CloudflareConnectCard';
 
 interface PlatformSetting {
   id: string;
@@ -217,44 +218,11 @@ export default function PlatformSaasSettings() {
       ))}
 
       {/* White Label / Cloudflare */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">White Label — Cloudflare</CardTitle>
-          </div>
-          <CardDescription>Configurações de domínio e DNS via Cloudflare para deploy de landing pages</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {[
-            { key: 'domain_principal', label: 'Domínio Principal', placeholder: 'minha-plataforma.com', description: 'Domínio raiz usado para subdomínios de landing pages' },
-            { key: 'cloudflare_zone_id', label: 'Zone ID (Cloudflare)', placeholder: 'abcdef1234567890...', description: 'ID da zona no painel do Cloudflare' },
-            { key: 'cloudflare_api_token', label: 'API Token (Cloudflare)', placeholder: '••••••••••••••••', description: 'Token de API com permissão de edição DNS', type: 'password' },
-          ].map(field => (
-            <div key={field.key} className="p-4 rounded-lg border bg-card space-y-2">
-              <Label className="font-medium">{field.label}</Label>
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-              <Input
-                type={(field as any).type || 'text'}
-                value={wlForm[field.key as keyof typeof wlForm]}
-                onChange={e => setWlForm(prev => ({ ...prev, [field.key]: e.target.value }))}
-                placeholder={field.placeholder}
-                disabled={!can('tenant.create')}
-                className="max-w-md"
-              />
-            </div>
-          ))}
-          <div className="flex justify-end pt-2">
-            <Button
-              onClick={handleSaveWhiteLabel}
-              disabled={!wlHasChanged || wlSaving || !can('tenant.create')}
-            >
-              {wlSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
-              {wlConfig ? 'Salvar White Label' : 'Criar White Label'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <CloudflareConnectCard
+        config={wlConfig}
+        onRefresh={fetchWhiteLabel}
+        canEdit={can('tenant.create')}
+      />
 
       {settings.length === 0 && (
         <Card>
