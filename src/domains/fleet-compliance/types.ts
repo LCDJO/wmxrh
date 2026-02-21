@@ -205,3 +205,51 @@ export interface FleetComplianceIncident {
   created_at: string;
   updated_at: string;
 }
+
+// ════════════════════════════════════════════════════════════════
+// FLEET WARNINGS (advertências)
+// ════════════════════════════════════════════════════════════════
+
+export type WarningType = 'verbal' | 'written' | 'suspension' | 'termination';
+export type SignatureStatus = 'pending' | 'sent' | 'signed' | 'refused' | 'expired';
+
+export interface FleetWarning {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  company_id: string | null;
+  incident_id: string;
+  warning_type: WarningType;
+  description: string;
+  document_url: string | null;
+  signature_request_id: string | null;
+  signature_status: SignatureStatus;
+  signed_at: string | null;
+  issued_by: string | null;
+  issued_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ════════════════════════════════════════════════════════════════
+// DISCIPLINARY HISTORY (immutable audit trail)
+// ════════════════════════════════════════════════════════════════
+
+export type DisciplinaryEventType =
+  | 'warning_issued'
+  | 'warning_signed'
+  | 'warning_refused'
+  | 'escalation'
+  | 'note_added';
+
+export interface FleetDisciplinaryRecord {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  warning_id: string | null;
+  incident_id: string | null;
+  event_type: DisciplinaryEventType;
+  description: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}

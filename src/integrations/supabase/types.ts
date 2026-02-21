@@ -5976,6 +5976,71 @@ export type Database = {
           },
         ]
       }
+      fleet_disciplinary_history: {
+        Row: {
+          created_at: string
+          description: string
+          employee_id: string
+          event_type: string
+          id: string
+          incident_id: string | null
+          metadata: Json | null
+          tenant_id: string
+          warning_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          employee_id: string
+          event_type: string
+          id?: string
+          incident_id?: string | null
+          metadata?: Json | null
+          tenant_id: string
+          warning_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          employee_id?: string
+          event_type?: string
+          id?: string
+          incident_id?: string | null
+          metadata?: Json | null
+          tenant_id?: string
+          warning_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_disciplinary_history_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_disciplinary_history_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_compliance_incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_disciplinary_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_disciplinary_history_warning_id_fkey"
+            columns: ["warning_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_warnings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_driving_rules: {
         Row: {
           allowed_hours_end: string
@@ -6127,6 +6192,89 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "fleet_provider_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fleet_warnings: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          description: string
+          document_url: string | null
+          employee_id: string
+          id: string
+          incident_id: string
+          issued_at: string
+          issued_by: string | null
+          signature_request_id: string | null
+          signature_status: string
+          signed_at: string | null
+          tenant_id: string
+          updated_at: string
+          warning_type: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          description: string
+          document_url?: string | null
+          employee_id: string
+          id?: string
+          incident_id: string
+          issued_at?: string
+          issued_by?: string | null
+          signature_request_id?: string | null
+          signature_status?: string
+          signed_at?: string | null
+          tenant_id: string
+          updated_at?: string
+          warning_type?: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          description?: string
+          document_url?: string | null
+          employee_id?: string
+          id?: string
+          incident_id?: string
+          issued_at?: string
+          issued_by?: string | null
+          signature_request_id?: string | null
+          signature_status?: string
+          signed_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+          warning_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_warnings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_warnings_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_warnings_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_compliance_incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_warnings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
