@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, Save, Loader2, RotateCcw } from 'lucide-react';
+import { Settings, Save, Loader2, RotateCcw, Globe } from 'lucide-react';
 
 interface PlatformSetting {
   id: string;
@@ -22,6 +22,15 @@ interface PlatformSetting {
   category: string;
 }
 
+interface WhiteLabelConfig {
+  id: string;
+  domain_principal: string;
+  cloudflare_zone_id: string;
+  cloudflare_api_token: string;
+  is_active: boolean | null;
+  tenant_id: string | null;
+}
+
 export default function PlatformSaasSettings() {
   const { can } = usePlatformPermissions();
   const { toast } = useToast();
@@ -29,6 +38,11 @@ export default function PlatformSaasSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
+
+  // White Label state
+  const [wlConfig, setWlConfig] = useState<WhiteLabelConfig | null>(null);
+  const [wlForm, setWlForm] = useState({ domain_principal: '', cloudflare_zone_id: '', cloudflare_api_token: '' });
+  const [wlSaving, setWlSaving] = useState(false);
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
@@ -44,7 +58,56 @@ export default function PlatformSaasSettings() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchSettings(); }, [fetchSettings]);
+  const fetchWhiteLabel = useCallback(async () => {
+    const { data } = await supabase.from('white_label_config').select('*').limit(1).maybeSingle();
+    if (data) {
+      setWlConfig(data as WhiteLabelConfig);
+      setWlForm({
+        domain_principal: data.domain_principal || '',
+        cloudflare_zone_id: data.cloudflare_zone_id || '',
+        cloudflare_api_token: data.cloudflare_api_token || '',
+      });
+    }
+  }, []);
+
+  useEffect(() => { fetchSettings(); fetchWhiteLabel(); }, [fetchSettings, fetchWhiteLabel]);
+
+  const handleSaveWhiteLabel = async () => {
+    setWlSaving(true);
+    if (wlConfig) {
+      const { error } = await supabase.from('white_label_config').update({
+        domain_principal: wlForm.domain_principal,
+        cloudflare_zone_id: wlForm.cloudflare_zone_id,
+        cloudflare_api_token: wlForm.cloudflare_api_token,
+      }).eq('id', wlConfig.id);
+      if (error) {
+        toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'White Label salvo', description: 'Configurações Cloudflare atualizadas.' });
+        fetchWhiteLabel();
+      }
+    } else {
+      const { error } = await supabase.from('white_label_config').insert({
+        domain_principal: wlForm.domain_principal,
+        cloudflare_zone_id: wlForm.cloudflare_zone_id,
+        cloudflare_api_token: wlForm.cloudflare_api_token,
+        is_active: true,
+      });
+      if (error) {
+        toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'White Label criado', description: 'Configurações Cloudflare salvas.' });
+        fetchWhiteLabel();
+      }
+    }
+    setWlSaving(false);
+  };
+
+  const wlHasChanged = wlConfig
+    ? wlForm.domain_principal !== wlConfig.domain_principal ||
+      wlForm.cloudflare_zone_id !== wlConfig.cloudflare_zone_id ||
+      wlForm.cloudflare_api_token !== wlConfig.cloudflare_api_token
+    : wlForm.domain_principal !== '' || wlForm.cloudflare_zone_id !== '' || wlForm.cloudflare_api_token !== '';
 
   const handleSave = async (setting: PlatformSetting) => {
     setSaving(setting.key);
@@ -152,6 +215,46 @@ export default function PlatformSaasSettings() {
           </CardContent>
         </Card>
       ))}
+
+      {/* White Label / Cloudflare */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Globe className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">White Label — Cloudflare</CardTitle>
+          </div>
+          <CardDescription>Configurações de domínio e DNS via Cloudflare para deploy de landing pages</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[
+            { key: 'domain_principal', label: 'Domínio Principal', placeholder: 'minha-plataforma.com', description: 'Domínio raiz usado para subdomínios de landing pages' },
+            { key: 'cloudflare_zone_id', label: 'Zone ID (Cloudflare)', placeholder: 'abcdef1234567890...', description: 'ID da zona no painel do Cloudflare' },
+            { key: 'cloudflare_api_token', label: 'API Token (Cloudflare)', placeholder: '••••••••••••••••', description: 'Token de API com permissão de edição DNS', type: 'password' },
+          ].map(field => (
+            <div key={field.key} className="p-4 rounded-lg border bg-card space-y-2">
+              <Label className="font-medium">{field.label}</Label>
+              <p className="text-xs text-muted-foreground">{field.description}</p>
+              <Input
+                type={(field as any).type || 'text'}
+                value={wlForm[field.key as keyof typeof wlForm]}
+                onChange={e => setWlForm(prev => ({ ...prev, [field.key]: e.target.value }))}
+                placeholder={field.placeholder}
+                disabled={!can('tenant.create')}
+                className="max-w-md"
+              />
+            </div>
+          ))}
+          <div className="flex justify-end pt-2">
+            <Button
+              onClick={handleSaveWhiteLabel}
+              disabled={!wlHasChanged || wlSaving || !can('tenant.create')}
+            >
+              {wlSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+              {wlConfig ? 'Salvar White Label' : 'Criar White Label'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {settings.length === 0 && (
         <Card>
