@@ -8498,6 +8498,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           custo_total_empresa: number
+          deleted_at: string | null
           employee_id: string
           encargos_estimados: number
           fator_custo: number
@@ -8527,6 +8528,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           custo_total_empresa?: number
+          deleted_at?: string | null
           employee_id: string
           encargos_estimados?: number
           fator_custo?: number
@@ -8556,6 +8558,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           custo_total_empresa?: number
+          deleted_at?: string | null
           employee_id?: string
           encargos_estimados?: number
           fator_custo?: number
@@ -12251,7 +12254,7 @@ export type Database = {
           is_active: boolean
           provider: string | null
           retry_count: number | null
-          secret_value: string | null
+          secret_encrypted: string | null
           tenant_id: string
           timeout_seconds: number | null
           updated_at: string
@@ -12266,7 +12269,7 @@ export type Database = {
           is_active?: boolean
           provider?: string | null
           retry_count?: number | null
-          secret_value?: string | null
+          secret_encrypted?: string | null
           tenant_id: string
           timeout_seconds?: number | null
           updated_at?: string
@@ -12281,7 +12284,7 @@ export type Database = {
           is_active?: boolean
           provider?: string | null
           retry_count?: number | null
-          secret_value?: string | null
+          secret_encrypted?: string | null
           tenant_id?: string
           timeout_seconds?: number | null
           updated_at?: string
@@ -12736,6 +12739,7 @@ export type Database = {
       get_platform_metrics: { Args: never; Returns: Json }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_type_from_jwt: { Args: never; Returns: string }
+      get_webhook_secret: { Args: { _webhook_id: string }; Returns: string }
       has_platform_financial_read_access: {
         Args: { _user_id: string }
         Returns: boolean
@@ -12878,6 +12882,10 @@ export type Database = {
           p_user_name: string
         }
         Returns: Json
+      }
+      set_webhook_secret: {
+        Args: { _secret: string; _webhook_id: string }
+        Returns: undefined
       }
       sync_experience_profile: {
         Args: { p_tenant_id: string }

@@ -155,18 +155,21 @@ Deno.serve(async (req: Request) => {
   // ── Webhook Secret Validation (DB → env var fallback) ──
   let expectedSecret = Deno.env.get("AGREEMENT_WEBHOOK_SECRET") || null;
 
-  // Try to load from webhook_configurations table (overrides env var)
+  // Try to load decrypted secret from DB via RPC (overrides env var)
   try {
     const { data: dbConfig } = await supabase
       .from("webhook_configurations")
-      .select("secret_value, is_active")
+      .select("id, is_active")
       .eq("webhook_name", "agreement_webhook")
       .eq("is_active", true)
       .limit(1)
       .maybeSingle();
 
-    if (dbConfig?.secret_value) {
-      expectedSecret = dbConfig.secret_value;
+    if (dbConfig?.id) {
+      const { data: decryptedSecret } = await supabase.rpc("get_webhook_secret", { _webhook_id: dbConfig.id });
+      if (decryptedSecret) {
+        expectedSecret = decryptedSecret;
+      }
     }
   } catch {
     // If DB lookup fails, fall back to env var silently
