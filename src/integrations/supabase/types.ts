@@ -12603,6 +12603,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      can_view_salary_history: {
+        Args: {
+          _company_group_id?: string
+          _company_id?: string
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       check_tenant_needs_onboarding: {
         Args: { p_tenant_id: string }
         Returns: boolean
