@@ -514,12 +514,12 @@ export default function EmployeeDetail() {
                 </div>
                 {benefits.length > 0 ? (
                   <div className="space-y-3">
-                    {benefits.map((b: { id: string; is_active: boolean; benefit_plans?: { name?: string; benefit_type?: string }; enrollment_date: string; card_number?: string; monthly_value?: number }) => (
+                    {benefits.map((b) => (
                       <div key={b.id} className={`flex items-center justify-between p-4 rounded-lg border ${b.is_active ? 'border-primary/20 bg-accent/20' : 'border-border'}`}>
                         <div>
-                          <p className="text-sm font-medium text-card-foreground">{b.benefit_plans?.name || 'Plano'}</p>
+                          <p className="text-sm font-medium text-card-foreground">{b.benefit_plans?.name ?? 'Plano'}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Tipo: {b.benefit_plans?.benefit_type || '—'} · Matrícula: {new Date(b.enrollment_date).toLocaleDateString('pt-BR')}
+                            Tipo: {b.benefit_plans?.benefit_type ?? '—'} · Matrícula: {new Date(b.enrollment_date).toLocaleDateString('pt-BR')}
                           </p>
                           {b.card_number && <p className="text-xs text-muted-foreground">Cartão: {b.card_number}</p>}
                         </div>

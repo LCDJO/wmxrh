@@ -325,8 +325,8 @@ export function createAutoImportOrchestrator(): AutoImportOrchestratorAPI {
     async startImport(tenantId, jobConfig) {
       return {
         id: `import_${Date.now()}`,
-        tenant_id: tenantId,
         ...jobConfig,
+        tenant_id: tenantId,
         status: 'pending' as const,
         processed_rows: 0,
         error_rows: 0,

@@ -90,13 +90,13 @@ async function fetchEmployees(scope: QueryScope): Promise<EmployeeSnapshot[]> {
     id: e.id,
     name: e.name,
     department: (e.departments as { name?: string } | null)?.name,
-    department_id: e.department_id,
+    department_id: e.department_id ?? undefined,
     position: (e.positions as { title?: string } | null)?.title,
-    position_id: e.position_id,
+    position_id: e.position_id ?? undefined,
     company_id: e.company_id,
-    company_group_id: e.company_group_id,
+    company_group_id: e.company_group_id ?? undefined,
     status: e.status,
-    hire_date: e.hire_date,
+    hire_date: e.hire_date ?? undefined,
     base_salary: e.base_salary ?? 0,
     current_salary: e.current_salary ?? 0,
   }));
@@ -197,8 +197,8 @@ async function fetchNrTrainings(tenantId: string, scope: QueryScope): Promise<Nr
     nr_number: r.nr_number,
     training_name: r.training_name ?? `NR-${r.nr_number}`,
     status: r.status ?? 'assigned',
-    data_validade: r.data_validade,
+    data_validade: r.data_validade ?? undefined,
     blocking_level: r.blocking_level ?? 'none',
-    company_id: r.company_id,
+    company_id: r.company_id ?? undefined,
   }));
 }

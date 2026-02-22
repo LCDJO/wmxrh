@@ -145,11 +145,11 @@ export const notificationPolicyResolver = {
 
         if (members) {
           for (const m of members) {
-            if (targetRoles.includes(m.role)) {
+            if (m.user_id && targetRoles.includes(m.role)) {
               recipients.set(m.user_id, `membership:${m.role}`);
             }
             // Tenant admins/owners always receive in any sub-scope
-            if (['admin', 'owner'].includes(m.role) && scope.type !== 'tenant') {
+            if (m.user_id && ['admin', 'owner'].includes(m.role) && scope.type !== 'tenant') {
               recipients.set(m.user_id, `inherited:${m.role}`);
             }
           }

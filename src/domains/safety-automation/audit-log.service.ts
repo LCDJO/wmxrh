@@ -43,11 +43,11 @@ export async function logSafetyAuditAction(
 ): Promise<string | null> {
   const { data, error } = await supabase.rpc('log_safety_automation_action', {
     p_tenant_id: tenantId,
-    p_workflow_id: opts?.workflowId ?? null,
+    p_workflow_id: opts?.workflowId ?? '',
     p_action: action,
     p_executor: executor,
-    p_entity_type: opts?.entityType ?? null,
-    p_entity_id: opts?.entityId ?? null,
+    p_entity_type: opts?.entityType ?? undefined,
+    p_entity_id: opts?.entityId ?? undefined,
     p_metadata: (opts?.metadata ?? {}) as unknown as Json,
   });
 

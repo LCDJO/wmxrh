@@ -204,7 +204,7 @@ export function NavigationSuggestionsPanel({ collapsed }: Props) {
                 <p className="text-[11px] font-medium text-sidebar-foreground leading-tight">{s.title}</p>
                 <p className="text-[10px] text-sidebar-foreground/50 mt-0.5 line-clamp-2">{s.description}</p>
               </div>
-              {s.action_label && s.metadata?.route && (
+              {s.action_label && s.metadata?.route !== undefined && (
                 <button
                   onClick={() => addPin({ to: s.metadata!.route as string, label: s.title })}
                   className="h-6 w-6 rounded flex items-center justify-center bg-primary/10 hover:bg-primary/20 text-primary transition-colors shrink-0"

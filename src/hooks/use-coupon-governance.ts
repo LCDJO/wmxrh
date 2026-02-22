@@ -69,16 +69,16 @@ export function useCouponGovernance() {
 
       for (const r of redemptionsRes.data ?? []) {
         const tid = r.tenant_id;
-        const existing = tenantMap.get(tid) ?? {
+        const existing: { tenant_id: string; tenant_name: string; total_discount: number; coupon_count: number; coupons_used: string[] } = tenantMap.get(tid) ?? {
           tenant_id: tid,
-          tenant_name: (r as any).tenants?.name ?? tid.slice(0, 8),
+          tenant_name: (r as Record<string, unknown> & { tenants?: { name?: string } })?.tenants?.name ?? tid.slice(0, 8),
           total_discount: 0,
           coupon_count: 0,
-          coupons_used: [],
+          coupons_used: [] as string[],
         };
         existing.total_discount += Number(r.discount_applied_brl ?? 0);
         existing.coupon_count += 1;
-        const code = (r as any).coupons?.code;
+        const code = (r as Record<string, unknown> & { coupons?: { code?: string } })?.coupons?.code;
         if (code && !existing.coupons_used.includes(code)) {
           existing.coupons_used.push(code);
         }

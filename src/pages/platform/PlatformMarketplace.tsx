@@ -120,8 +120,8 @@ export default function PlatformMarketplace() {
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1"><Download className="h-3 w-3" />{app?.install_count || 0}</span>
                         <span className="flex items-center gap-1"><Star className="h-3 w-3" />{app?.rating_avg?.toFixed(1) || '—'} ({app?.rating_count || 0})</span>
-                        {listing.supported_modules?.length > 0 && (
-                          <span>{listing.supported_modules.length} módulos</span>
+                        {(listing.supported_modules?.length ?? 0) > 0 && (
+                          <span>{listing.supported_modules!.length} módulos</span>
                         )}
                       </div>
                     </CardContent>

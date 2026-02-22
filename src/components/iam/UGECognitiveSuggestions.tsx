@@ -226,30 +226,30 @@ function SuggestionCard({ suggestion }: { suggestion: CognitiveSuggestion }) {
             {/* Metadata */}
             {suggestion.metadata && (
               <div className="space-y-1">
-                {isRoleSimp && suggestion.metadata.merge_candidates && (
+                {isRoleSimp && Array.isArray(suggestion.metadata.merge_candidates) && (
                   <div className="flex flex-wrap gap-1">
                     <span className="text-[10px] text-muted-foreground">Merge:</span>
-                    {(suggestion.metadata.merge_candidates as string[]).map((c, i) => (
+                    {(suggestion.metadata.merge_candidates as string[]).map((c: string, i: number) => (
                       <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
-                        {c}
+                        {String(c)}
                       </Badge>
                     ))}
                   </div>
                 )}
-                {!isRoleSimp && suggestion.metadata.permission_code && (
+                {!isRoleSimp && typeof suggestion.metadata.permission_code === 'string' && (
                   <div className="flex items-center gap-1">
                     <span className="text-[10px] text-muted-foreground">Permissão:</span>
                     <Badge variant="outline" className="text-[9px] px-1 py-0 font-mono">
-                      {suggestion.metadata.permission_code as string}
+                      {String(suggestion.metadata.permission_code)}
                     </Badge>
-                    {suggestion.metadata.reason && (
+                    {typeof suggestion.metadata.reason === 'string' && (
                       <Badge variant="outline" className="text-[9px] px-1 py-0 bg-amber-500/10 text-amber-400 border-amber-500/30">
-                        {suggestion.metadata.reason as string}
+                        {String(suggestion.metadata.reason)}
                       </Badge>
                     )}
                   </div>
                 )}
-                {suggestion.metadata.granted_by_roles && (
+                {Array.isArray(suggestion.metadata.granted_by_roles) && (
                   <div className="flex flex-wrap gap-1">
                     <span className="text-[10px] text-muted-foreground">Via:</span>
                     {(suggestion.metadata.granted_by_roles as string[]).map((r, i) => (

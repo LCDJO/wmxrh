@@ -220,7 +220,7 @@ export const trainingIntegrations = {
           // Filter employees by CBO match if specified
           let matchingEmployees = employees;
           if (cbo_codigo) {
-            const positionIds = employees.map(e => e.position_id).filter(Boolean);
+            const positionIds = employees.map(e => e.position_id).filter((id): id is string => id != null);
             if (positionIds.length > 0) {
               const { data: positions } = await supabase
                 .from('positions')

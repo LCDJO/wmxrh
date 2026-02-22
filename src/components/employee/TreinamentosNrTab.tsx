@@ -110,7 +110,7 @@ function TrainingSection({ title, items, emptyText, icon: Icon, iconClass }: {
         <div className="space-y-2">
           {items.map((t) => {
             const cfg = STATUS_CONFIG[t.status] || STATUS_CONFIG.assigned;
-            const blocking = BLOCKING_CONFIG[t.blocking_level];
+            const blocking = t.blocking_level ? BLOCKING_CONFIG[t.blocking_level] : undefined;
             const days = t.data_validade ? daysUntil(t.data_validade) : null;
 
             return (

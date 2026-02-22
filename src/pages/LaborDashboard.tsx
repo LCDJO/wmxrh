@@ -61,10 +61,11 @@ export default function LaborDashboard() {
   // Food benefit costs
   const foodBenefitCost = useMemo(() => {
     const foodTypes = ['va', 'vr', 'cesta', 'flex'];
+    const nameMap: Record<string, string> = { va: 'Vale Alimentação', vr: 'Vale Refeição', cesta: 'Cesta Básica', flex: 'Flex' };
     return benefitPlans
       .filter(p => foodTypes.includes(p.benefit_type) && p.is_active)
       .map(p => ({
-        name: { va: 'Vale Alimentação', vr: 'Vale Refeição', cesta: 'Cesta Básica', flex: 'Flex' }[p.benefit_type] || p.benefit_type.toUpperCase(),
+        name: nameMap[p.benefit_type] || p.benefit_type.toUpperCase(),
         valor: p.base_value,
         empresa: p.employer_percentage || 100,
       }));

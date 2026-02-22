@@ -48,7 +48,7 @@ class LandingPerformanceRanker {
     const { data, error } = await supabase.functions.invoke('top-conversions', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
-      body: null,
+      body: undefined,
     });
 
     if (error) throw new Error(`top-conversions error: ${error.message}`);

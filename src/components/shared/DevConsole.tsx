@@ -181,9 +181,9 @@ export function DevConsole() {
                     >
                       <div 
                         className="flex items-start gap-2 cursor-pointer"
-                        onClick={() => log.data && toggleExpand(log.id)}
+                        onClick={() => log.data !== undefined && toggleExpand(log.id)}
                       >
-                        {log.data && (
+                        {log.data !== undefined && (
                           <div className="mt-0.5">
                             {isExpanded ? (
                               <ChevronDown className="h-3 w-3" />
@@ -205,9 +205,9 @@ export function DevConsole() {
                             </span>
                           </div>
                           <p className="text-sm mt-1 break-words">{log.message}</p>
-                          {isExpanded && log.data && (
+                          {isExpanded && log.data !== undefined && (
                             <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-x-auto">
-                              {JSON.stringify(log.data, null, 2)}
+                              {JSON.stringify(log.data as Record<string, unknown>, null, 2)}
                             </pre>
                           )}
                         </div>

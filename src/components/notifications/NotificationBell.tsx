@@ -24,9 +24,11 @@ export function NotificationBell() {
     if (unreadCount > prevCount.current) {
       setRinging(true);
       const t = setTimeout(() => setRinging(false), 900);
+      prevCount.current = unreadCount;
       return () => clearTimeout(t);
     }
     prevCount.current = unreadCount;
+    return undefined;
   }, [unreadCount]);
 
   const handleAction = (route: string) => {

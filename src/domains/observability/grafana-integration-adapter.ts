@@ -511,9 +511,9 @@ class TraceCollector {
     let result = [...this.spans];
     if (opts?.trace_id) result = result.filter(s => s.trace_id === opts.trace_id);
     if (opts?.service) result = result.filter(s => s.service === opts.service);
-    if (opts?.operation) result = result.filter(s => s.operation.includes(opts.operation));
+    if (opts?.operation) result = result.filter(s => s.operation.includes(opts.operation!));
     if (opts?.status) result = result.filter(s => s.status === opts.status);
-    if (opts?.since) result = result.filter(s => s.start_ms >= opts.since);
+    if (opts?.since) result = result.filter(s => s.start_ms >= opts.since!);
     result.sort((a, b) => b.start_ms - a.start_ms);
     if (opts?.limit) result = result.slice(0, opts.limit);
     return result;

@@ -215,7 +215,7 @@ export class PublicAPIGateway {
 
       return {
         success: true,
-        data,
+        data: data ?? undefined,
         meta: { cached: false, rateLimit: rateResult },
       };
     } catch (err: unknown) {
