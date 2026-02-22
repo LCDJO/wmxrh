@@ -59,6 +59,7 @@ import PlatformAppsReview from '@/pages/platform/PlatformAppsReview';
 import PlatformIntegrationAutomation from '@/pages/platform/PlatformIntegrationAutomation';
 import PlatformAIOperations from '@/pages/platform/PlatformAIOperations';
 import PlatformSupportAnalytics from '@/pages/platform/PlatformSupportAnalytics';
+import PlatformLogs from '@/pages/platform/PlatformLogs';
 import DocumentSignatureIntegrations from '@/pages/DocumentSignatureIntegrations';
 import SettingsGamification from '@/pages/SettingsGamification';
 
@@ -103,6 +104,7 @@ export const platformRoutes: RouteObject[] = [
       { path: 'control-plane', element: guarded(<PlatformControlPlane />, opsAdmin) },
       { path: 'plans', element: <PlatformPlans /> },
       { path: 'audit', element: <PlatformAudit /> },
+      { path: 'logs', element: guarded(<PlatformLogs />, ['platform_super_admin']) },
       { path: 'communications', element: <PlatformCommunications /> },
       { path: 'billing', element: <PlatformBilling /> },
       { path: 'billing/coupons', element: <PlatformCoupons /> },
