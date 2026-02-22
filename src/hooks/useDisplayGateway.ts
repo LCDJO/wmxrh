@@ -13,6 +13,7 @@
  */
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getStickySessionHeaders } from './useDisplayScalability';
 
 export type GatewayStatus =
   | 'disconnected'
@@ -51,6 +52,7 @@ interface UseDisplayGatewayOptions {
   enabled?: boolean;
   heartbeatIntervalMs?: number;
   pollIntervalMs?: number;
+  instanceId?: string;
   onEvent?: (events: GatewayEvent[]) => void;
   onSessionExpired?: () => void;
 }
@@ -60,6 +62,7 @@ export function useDisplayGateway({
   enabled = true,
   heartbeatIntervalMs = 30_000,
   pollIntervalMs = 10_000,
+  instanceId,
   onEvent,
   onSessionExpired,
 }: UseDisplayGatewayOptions) {
@@ -78,13 +81,19 @@ export function useDisplayGateway({
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const base = `https://${projectId}.supabase.co/functions/v1/display-ws-gateway`;
 
-  // ── Gateway API call ──
+  // ── Gateway API call (with sticky session + instance headers) ──
   const gatewayCall = useCallback(
     async (action: string, method: string, params?: Record<string, string>) => {
       const searchParams = new URLSearchParams({ action, token: token ?? '', ...params });
+      const stickyHeaders = instanceId
+        ? getStickySessionHeaders(instanceId, session?.tenantId)
+        : {};
       const resp = await fetch(`${base}?${searchParams}`, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...stickyHeaders,
+        },
       });
       const data = await resp.json();
       if (!resp.ok) {
@@ -96,7 +105,7 @@ export function useDisplayGateway({
       }
       return data;
     },
-    [token, base, onSessionExpired]
+    [token, base, instanceId, session?.tenantId, onSessionExpired]
   );
 
   // ── Poll events through gateway ──

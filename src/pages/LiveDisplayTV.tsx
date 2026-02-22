@@ -33,6 +33,7 @@ import { useDisplayEventPipeline } from '@/hooks/useDisplayEventPipeline';
 import { useDisplayGateway, type GatewayStatus } from '@/hooks/useDisplayGateway';
 import { useDisplayCache } from '@/hooks/useDisplayCache';
 import { useRenderThrottle } from '@/hooks/useRenderThrottle';
+import { useDisplayScalability } from '@/hooks/useDisplayScalability';
 import {
   type DisplayData,
   KpiTile,
@@ -134,10 +135,16 @@ export default function LiveDisplayTV() {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const functionsBase = `https://${projectId}.supabase.co/functions/v1`;
 
+  const tenantIdFromData = data?.display?.tenant_id ?? null;
+
+  // ── Scalability: Instance ID, sticky sessions, broker abstraction ──
+  const scalability = useDisplayScalability({
+    tenantId: tenantIdFromData,
+    displayId: data?.display?.id ?? null,
+  });
+
   // ── Hooks: Event Queue, Pipeline, Gateway ──
   const { stats: queueStats } = useDisplayEventQueue({ maxBufferSize: 500, flushIntervalMs: 300 });
-
-  const tenantIdFromData = data?.display?.tenant_id ?? null;
 
   const { status: pipelineStatus } = useDisplayEventPipeline({
     tenantId: tenantIdFromData,
@@ -151,6 +158,7 @@ export default function LiveDisplayTV() {
     enabled: !!activeToken,
     heartbeatIntervalMs: 30_000,
     pollIntervalMs: 15_000,
+    instanceId: scalability.instanceId,
     onEvent: (events) => { if (events.length > 0) fetchData(); },
     onSessionExpired: () => {
       setActiveToken(null);
@@ -218,7 +226,9 @@ export default function LiveDisplayTV() {
   const fetchData = useCallback(async () => {
     if (!activeToken) return;
     try {
-      const resp = await fetch(`${functionsBase}/live-display-data?token=${encodeURIComponent(activeToken)}`);
+      const resp = await fetch(`${functionsBase}/live-display-data?token=${encodeURIComponent(activeToken)}`, {
+        headers: scalability.stickyHeaders,
+      });
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => ({ error: 'Falha na conexão' }));
         setError(errBody.error ?? 'Erro ao carregar dados');
@@ -539,6 +549,10 @@ export default function LiveDisplayTV() {
               Modo: {gatewaySession.modo?.toUpperCase() ?? data.display.tipo.toUpperCase()}
             </span>
           )}
+          <span className="text-white/10">|</span>
+          <span className="text-white/15 tabular-nums" title={`Instance: ${scalability.instanceId} | Partition: ${scalability.partitionKey} | Broker: ${scalability.activeBroker}`}>
+            Node: {scalability.instanceId.slice(-6)} · {scalability.partitionKey}
+          </span>
         </div>
 
         {/* Center: Rotation indicator */}
