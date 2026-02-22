@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
 import { StatsCard } from '@/components/shared/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,8 @@ import { useFleetCache } from '@/hooks/useFleetCache';
 import { useFleetSecurity } from '@/hooks/useFleetSecurity';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const SEVERITY_COLORS: Record<string, string> = {
   low: 'hsl(210, 100%, 52%)',
@@ -27,6 +29,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   geofence_violation: 'Violação de Geofence',
   route_deviation: 'Desvio de Rota',
   after_hours_use: 'Uso Fora do Horário',
+  harsh_brake: 'Frenagem Brusca',
 };
 
 const SEVERITY_LABELS: Record<string, string> = {
@@ -52,6 +55,140 @@ const STATUS_INDICATOR: Record<ConnectionStatus, { label: string; icon: any; col
 
 const SUBSCRIBED_TYPES: RealtimeEventType[] = ['tracking', 'behavior', 'compliance_incident', 'disciplinary', 'violation'];
 
+// ── Mock data ──
+interface MockVehicle {
+  device_id: string;
+  plate: string;
+  driver: string;
+  lat: number;
+  lng: number;
+  speed: number;
+  ignition: boolean;
+  status: 'moving' | 'idle' | 'stopped' | 'speeding';
+}
+
+function generateMockData() {
+  const baseLat = -23.55;
+  const baseLng = -46.63;
+  const drivers = [
+    'João Silva', 'Maria Santos', 'Carlos Lima', 'Ana Costa', 'Pedro Alves',
+    'Fernanda Reis', 'Lucas Mendes', 'Roberto Dias', 'Juliana Ferreira', 'Rafael Oliveira',
+    'Patrícia Gomes', 'Bruno Souza',
+  ];
+  const plates = [
+    'ABC-1234', 'DEF-5678', 'GHI-9012', 'JKL-3456', 'MNO-7890',
+    'PQR-1122', 'STU-3344', 'VWX-5566', 'YZA-7788', 'BCD-9900',
+    'EFG-2233', 'HIJ-4455',
+  ];
+
+  const vehicles: MockVehicle[] = drivers.map((driver, i) => {
+    const angle = (i / drivers.length) * Math.PI * 2;
+    const radius = 0.02 + Math.random() * 0.06;
+    const speed = Math.random() > 0.3 ? Math.floor(Math.random() * 120) : 0;
+    const status: MockVehicle['status'] =
+      speed > 80 ? 'speeding' : speed > 5 ? 'moving' : speed > 0 ? 'idle' : 'stopped';
+    return {
+      device_id: `v${i + 1}`,
+      plate: plates[i],
+      driver,
+      lat: baseLat + Math.cos(angle) * radius,
+      lng: baseLng + Math.sin(angle) * radius,
+      speed,
+      ignition: speed > 0 || Math.random() > 0.3,
+      status,
+    };
+  });
+
+  const behaviorEvents = [
+    { id: 'be1', event_type: 'overspeed', severity: 'critical', employee_id: 'João Silva', device_id: 'ABC-1234', created_at: new Date(Date.now() - 600000).toISOString(), status: 'pending' },
+    { id: 'be2', event_type: 'overspeed', severity: 'high', employee_id: 'Carlos Lima', device_id: 'GHI-9012', created_at: new Date(Date.now() - 1200000).toISOString(), status: 'pending' },
+    { id: 'be3', event_type: 'geofence_violation', severity: 'medium', employee_id: 'Ana Costa', device_id: 'JKL-3456', created_at: new Date(Date.now() - 1800000).toISOString(), status: 'reviewed' },
+    { id: 'be4', event_type: 'route_deviation', severity: 'low', employee_id: 'Pedro Alves', device_id: 'MNO-7890', created_at: new Date(Date.now() - 2400000).toISOString(), status: 'closed' },
+    { id: 'be5', event_type: 'after_hours_use', severity: 'high', employee_id: 'Fernanda Reis', device_id: 'PQR-1122', created_at: new Date(Date.now() - 3000000).toISOString(), status: 'pending' },
+    { id: 'be6', event_type: 'overspeed', severity: 'medium', employee_id: 'João Silva', device_id: 'ABC-1234', created_at: new Date(Date.now() - 3600000).toISOString(), status: 'warning_issued' },
+    { id: 'be7', event_type: 'geofence_violation', severity: 'critical', employee_id: 'Lucas Mendes', device_id: 'STU-3344', created_at: new Date(Date.now() - 4200000).toISOString(), status: 'pending' },
+    { id: 'be8', event_type: 'overspeed', severity: 'high', employee_id: 'Roberto Dias', device_id: 'VWX-5566', created_at: new Date(Date.now() - 4800000).toISOString(), status: 'reviewed' },
+    { id: 'be9', event_type: 'route_deviation', severity: 'medium', employee_id: 'Carlos Lima', device_id: 'GHI-9012', created_at: new Date(Date.now() - 5400000).toISOString(), status: 'pending' },
+    { id: 'be10', event_type: 'after_hours_use', severity: 'low', employee_id: 'Maria Santos', device_id: 'DEF-5678', created_at: new Date(Date.now() - 6000000).toISOString(), status: 'closed' },
+    { id: 'be11', event_type: 'overspeed', severity: 'critical', employee_id: 'João Silva', device_id: 'ABC-1234', created_at: new Date(Date.now() - 7200000).toISOString(), status: 'pending' },
+    { id: 'be12', event_type: 'geofence_violation', severity: 'high', employee_id: 'Patrícia Gomes', device_id: 'EFG-2233', created_at: new Date(Date.now() - 8400000).toISOString(), status: 'pending' },
+  ];
+
+  const incidents = behaviorEvents.map((e) => ({
+    ...e,
+    violation_type: e.event_type,
+  }));
+
+  return { vehicles, behaviorEvents, incidents };
+}
+
+const MOCK = generateMockData();
+
+// ── Fleet Map (Leaflet) ──
+function FleetMap({ vehicles }: { vehicles: MockVehicle[] }) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const leafletRef = useRef<L.Map | null>(null);
+
+  useEffect(() => {
+    if (!mapRef.current || leafletRef.current) return;
+
+    const map = L.map(mapRef.current, {
+      center: [-23.55, -46.63],
+      zoom: 12,
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+    }).addTo(map);
+
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    const statusColor: Record<string, string> = {
+      moving: '#22c55e',
+      idle: '#f59e0b',
+      stopped: '#6b7280',
+      speeding: '#ef4444',
+    };
+
+    vehicles.forEach((v) => {
+      const color = statusColor[v.status] || '#6b7280';
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="
+          width:28px;height:28px;border-radius:50%;
+          background:${color};border:2px solid white;
+          display:flex;align-items:center;justify-content:center;
+          font-size:10px;font-weight:700;color:white;
+          box-shadow:0 2px 8px rgba(0,0,0,0.4);
+        ">${v.speed}</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      });
+
+      L.marker([v.lat, v.lng], { icon }).addTo(map)
+        .bindPopup(`
+          <div style="font-size:12px;line-height:1.6">
+            <strong>${v.plate}</strong> — ${v.driver}<br/>
+            Velocidade: <strong>${v.speed} km/h</strong><br/>
+            Status: <strong>${v.status}</strong><br/>
+            Ignição: ${v.ignition ? '🟢 Ligada' : '⚪ Desligada'}
+          </div>
+        `);
+    });
+
+    leafletRef.current = map;
+
+    return () => {
+      map.remove();
+      leafletRef.current = null;
+    };
+  }, [vehicles]);
+
+  return <div ref={mapRef} className="h-full w-full rounded-lg" />;
+}
+
 export default function FleetDashboard() {
   const { currentTenant } = useTenant();
   const tenantId = currentTenant?.id ?? null;
@@ -63,19 +200,23 @@ export default function FleetDashboard() {
     enabled: !!tenantId,
   });
 
-  // 24h cache layer for summary, top offenders, alerts
   const fleetCache = useFleetCache({
     tenantId: tenantId ?? '',
     enabled: !!tenantId,
   });
 
-  // Security: Access Graph filtering + role-based visibility
-  const { filterByAccess, filterEmployees, fleetContext, logAction } = useFleetSecurity();
+  const { filterByAccess } = useFleetSecurity();
 
-  // Apply Access Graph filtering to realtime data
-  const behaviorEvents = useMemo(() => filterByAccess(events.behavior?.items ?? []), [events.behavior, filterByAccess]);
-  const incidents = useMemo(() => filterByAccess(events.compliance_incident?.items ?? []), [events.compliance_incident, filterByAccess]);
-  const latestEvents = events.tracking?.items ?? [];
+  // Use real data if available, otherwise fall back to mock
+  const realBehavior = useMemo(() => filterByAccess(events.behavior?.items ?? []), [events.behavior, filterByAccess]);
+  const realIncidents = useMemo(() => filterByAccess(events.compliance_incident?.items ?? []), [events.compliance_incident, filterByAccess]);
+  const realTracking = events.tracking?.items ?? [];
+
+  const useMock = realBehavior.length === 0 && realIncidents.length === 0 && realTracking.length === 0;
+
+  const behaviorEvents = useMock ? MOCK.behaviorEvents : realBehavior;
+  const incidents = useMock ? MOCK.incidents : realIncidents;
+  const latestEvents = useMock ? MOCK.vehicles : realTracking;
 
   // Stats
   const stats = useMemo(() => {
@@ -135,6 +276,11 @@ export default function FleetDashboard() {
           <p className="text-muted-foreground mt-1">Monitoramento de frota, infrações e alertas em tempo real</p>
         </div>
         <div className="flex items-center gap-3">
+          {useMock && (
+            <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-500">
+              Dados Demonstração
+            </Badge>
+          )}
           <div className={cn("flex items-center gap-1.5 text-xs font-medium", connStatus.color)}>
             {status === 'connected' && <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />}
             <connStatus.icon className="h-3.5 w-3.5" />
@@ -148,7 +294,7 @@ export default function FleetDashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="Eventos Rastreamento" value={latestEvents.length} icon={Car} />
+        <StatsCard title="Veículos Rastreados" value={latestEvents.length} icon={Car} />
         <StatsCard title="Infrações (Tempo Real)" value={stats.totalViolations} icon={AlertTriangle} />
         <StatsCard title="Alertas Pendentes" value={stats.activeAlerts} icon={Activity} />
         <StatsCard
@@ -161,7 +307,6 @@ export default function FleetDashboard() {
 
       {/* Map + Violations by Type */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Real-time map placeholder */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-card-foreground">
@@ -170,23 +315,8 @@ export default function FleetDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-muted rounded-lg h-[300px] flex flex-col items-center justify-center text-muted-foreground gap-3">
-              <MapPin className="h-12 w-12 opacity-40" />
-              <p className="text-sm font-medium">Mapa será integrado com Traccar</p>
-              <p className="text-xs">{latestEvents.length} posições recentes rastreadas</p>
-              {latestEvents.length > 0 && (
-                <div className="text-xs space-y-1 mt-2 max-h-[120px] overflow-y-auto w-full px-4">
-                  {latestEvents.slice(0, 5).map((evt: any, i: number) => (
-                    <div key={i} className="flex justify-between bg-background/50 rounded px-2 py-1">
-                      <span className="font-mono">{evt.device_id}</span>
-                      <span>{evt.speed?.toFixed(0)} km/h</span>
-                      <span className={evt.ignition ? 'text-accent-foreground' : 'text-muted-foreground'}>
-                        {evt.ignition ? '🟢' : '⚪'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="rounded-lg overflow-hidden h-[300px]">
+              <FleetMap vehicles={MOCK.vehicles} />
             </div>
           </CardContent>
         </Card>
@@ -200,29 +330,23 @@ export default function FleetDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {violationsByType.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={violationsByType}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {violationsByType.map((_, index) => (
-                      <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
-                Nenhuma infração registrada
-              </div>
-            )}
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={violationsByType}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {violationsByType.map((_, index) => (
+                    <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
@@ -296,42 +420,32 @@ export default function FleetDashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {rankingByEmployee.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead>Colaborador</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Críticas</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">#</TableHead>
+                <TableHead>Colaborador</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Críticas</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rankingByEmployee.map((entry, i) => (
+                <TableRow key={entry.employee_id}>
+                  <TableCell className="font-mono text-muted-foreground">{i + 1}</TableCell>
+                  <TableCell className="font-medium">{entry.employee_id}</TableCell>
+                  <TableCell className="text-right font-semibold">{entry.total}</TableCell>
+                  <TableCell className="text-right">
+                    {entry.critical > 0 ? (
+                      <Badge variant="destructive">{entry.critical}</Badge>
+                    ) : (
+                      <span className="text-muted-foreground">0</span>
+                    )}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rankingByEmployee.map((entry, i) => (
-                  <TableRow key={entry.employee_id}>
-                    <TableCell className="font-mono text-muted-foreground">{i + 1}</TableCell>
-                    <TableCell className="font-medium">
-                      {entry.employee_id === 'Não identificado'
-                        ? 'Não identificado'
-                        : entry.employee_id.slice(0, 8) + '...'}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">{entry.total}</TableCell>
-                    <TableCell className="text-right">
-                      {entry.critical > 0 ? (
-                        <Badge variant="destructive">{entry.critical}</Badge>
-                      ) : (
-                        <span className="text-muted-foreground">0</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="py-8 text-center text-muted-foreground text-sm">
-              Nenhuma infração registrada para ranking
-            </div>
-          )}
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
@@ -344,44 +458,38 @@ export default function FleetDashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {incidents.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Dispositivo</TableHead>
-                  <TableHead>Gravidade</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Dispositivo</TableHead>
+                <TableHead>Gravidade</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Data</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {incidents.slice(0, 15).map((incident: any) => (
+                <TableRow key={incident.id}>
+                  <TableCell>{EVENT_TYPE_LABELS[incident.violation_type] || incident.violation_type}</TableCell>
+                  <TableCell className="font-mono text-sm">{incident.device_id}</TableCell>
+                  <TableCell>
+                    <Badge variant={incident.severity === 'critical' ? 'destructive' : 'secondary'}>
+                      {SEVERITY_LABELS[incident.severity] || incident.severity}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {STATUS_LABELS[incident.status] || incident.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {new Date(incident.created_at).toLocaleDateString('pt-BR')}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {incidents.slice(0, 15).map((incident: any) => (
-                  <TableRow key={incident.id}>
-                    <TableCell>{EVENT_TYPE_LABELS[incident.violation_type] || incident.violation_type}</TableCell>
-                    <TableCell className="font-mono text-sm">{incident.device_id}</TableCell>
-                    <TableCell>
-                      <Badge variant={incident.severity === 'critical' ? 'destructive' : 'secondary'}>
-                        {SEVERITY_LABELS[incident.severity] || incident.severity}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {STATUS_LABELS[incident.status] || incident.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {new Date(incident.created_at).toLocaleDateString('pt-BR')}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="py-8 text-center text-muted-foreground text-sm">
-              Nenhum incidente registrado
-            </div>
-          )}
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
