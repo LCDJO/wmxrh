@@ -12729,6 +12729,168 @@ export type Database = {
           },
         ]
       }
+      telegram_bot_configs: {
+        Row: {
+          bot_token_encrypted: string | null
+          bot_username: string | null
+          connection_status: string | null
+          created_at: string | null
+          created_by: string | null
+          error_message: string | null
+          id: string
+          is_active: boolean | null
+          last_verified_at: string | null
+          tenant_id: string
+          updated_at: string | null
+          webhook_secret: string | null
+        }
+        Insert: {
+          bot_token_encrypted?: string | null
+          bot_username?: string | null
+          connection_status?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_verified_at?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          webhook_secret?: string | null
+        }
+        Update: {
+          bot_token_encrypted?: string | null
+          bot_username?: string | null
+          connection_status?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_verified_at?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          webhook_secret?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_bot_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_message_queue: {
+        Row: {
+          attempts: number | null
+          chat_id: string
+          created_at: string | null
+          created_by: string | null
+          error_message: string | null
+          id: string
+          max_attempts: number | null
+          message_text: string
+          metadata: Json | null
+          parse_mode: string | null
+          processed_at: string | null
+          scheduled_at: string | null
+          status: string | null
+          tenant_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          chat_id: string
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          message_text: string
+          metadata?: Json | null
+          parse_mode?: string | null
+          processed_at?: string | null
+          scheduled_at?: string | null
+          status?: string | null
+          tenant_id: string
+        }
+        Update: {
+          attempts?: number | null
+          chat_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          message_text?: string
+          metadata?: Json | null
+          parse_mode?: string | null
+          processed_at?: string | null
+          scheduled_at?: string | null
+          status?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_message_queue_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_webhook_logs: {
+        Row: {
+          chat_id: string | null
+          command: string | null
+          created_at: string | null
+          from_username: string | null
+          id: string
+          message_text: string | null
+          processed: boolean | null
+          raw_payload: Json | null
+          response_sent: string | null
+          tenant_id: string
+          update_id: number | null
+        }
+        Insert: {
+          chat_id?: string | null
+          command?: string | null
+          created_at?: string | null
+          from_username?: string | null
+          id?: string
+          message_text?: string | null
+          processed?: boolean | null
+          raw_payload?: Json | null
+          response_sent?: string | null
+          tenant_id: string
+          update_id?: number | null
+        }
+        Update: {
+          chat_id?: string | null
+          command?: string | null
+          created_at?: string | null
+          from_username?: string | null
+          id?: string
+          message_text?: string | null
+          processed?: boolean | null
+          raw_payload?: Json | null
+          response_sent?: string | null
+          tenant_id?: string
+          update_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_webhook_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_announcements: {
         Row: {
           action_url: string | null

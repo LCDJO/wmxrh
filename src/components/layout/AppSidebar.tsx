@@ -15,7 +15,7 @@ import {
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
-  Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook, Store,
+  Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook, Store, Bot,
   HardHat, Activity, Stethoscope, Car, Monitor, Radio,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -167,6 +167,7 @@ const navSections: NavSection[] = [
     label: 'Integrações',
     items: [
       { to: '/apps', icon: Store, label: 'Apps & Integrações', key: 'dashboard' as NavKey },
+      { to: '/integrations/telegram', icon: Bot, label: 'Telegram', key: 'dashboard' as NavKey },
       { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' as NavKey },
       { to: '/esocial-governance', icon: ShieldCheck, label: 'eSocial Governance', key: 'esocial' as NavKey },
     ],
