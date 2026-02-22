@@ -153,7 +153,23 @@ Deno.serve(async (req) => {
     const session = validation.session;
     const channelName = `tenant-${session.tenant_id}`;
 
+    // Map display tipo to session modo
+    const tipoToModo: Record<string, string> = {
+      'frota': 'fleet',
+      'sst': 'sst',
+      'executivo': 'executive',
+      'custom': 'custom',
+    };
+    const modo = tipoToModo[session.display_type] ?? 'executive';
+
+    // Run auto-expiry cleanup before connecting
+    await admin.rpc('expire_inactive_display_sessions');
+
     // Register/update display session
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      ?? req.headers.get('cf-connecting-ip') ?? 'unknown';
+    const userAgent = req.headers.get('user-agent') ?? 'unknown';
+
     const { data: displaySession } = await admin
       .from('display_sessions')
       .upsert(
@@ -163,15 +179,20 @@ Deno.serve(async (req) => {
           channel_name: channelName,
           status: 'active',
           last_heartbeat: new Date().toISOString(),
+          modo: modo,
+          token_temporario: token,
+          expira_em: session.expires_at,
+          display_name: session.display_name,
+          connected_ip: clientIp,
+          user_agent: userAgent,
           metadata: {
-            display_name: session.display_name,
             display_type: session.display_type,
             connected_via: 'ws-gateway',
           },
         },
         { onConflict: 'id' }
       )
-      .select('id')
+      .select('id, modo')
       .single();
 
     // Update display last_seen
@@ -195,6 +216,7 @@ Deno.serve(async (req) => {
       type: 'connected',
       session_id: displaySession?.id ?? null,
       channel: channelName,
+      modo: displaySession?.modo ?? modo,
       display: {
         id: session.display_id,
         name: session.display_name,
@@ -239,6 +261,9 @@ Deno.serve(async (req) => {
       return json({ type: 'error', error: 'Token expired', action: 'reconnect' }, 401);
     }
 
+    // Run auto-expiry on heartbeat
+    const { data: expiredCount } = await admin.rpc('expire_inactive_display_sessions');
+
     // Update session heartbeat
     await admin
       .from('display_sessions')
@@ -252,14 +277,25 @@ Deno.serve(async (req) => {
       .update({ last_seen_at: new Date().toISOString() })
       .eq('id', tokenData.display_id);
 
+    // Get session modo
+    const { data: sessionData } = await admin
+      .from('display_sessions')
+      .select('modo')
+      .eq('display_id', tokenData.display_id)
+      .eq('tenant_id', tokenData.tenant_id)
+      .eq('status', 'active')
+      .maybeSingle();
+
     return json({
       type: 'pong',
       tenant_id: tokenData.tenant_id,
+      modo: sessionData?.modo ?? 'executive',
       expires_at: tokenData.expira_em,
       ttl_seconds: Math.max(
         0,
         Math.floor((new Date(tokenData.expira_em).getTime() - Date.now()) / 1000)
       ),
+      expired_sessions: expiredCount ?? 0,
     });
   }
 

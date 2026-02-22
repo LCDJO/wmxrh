@@ -14038,6 +14038,7 @@ export type Database = {
       cleanup_expired_display_events: { Args: never; Returns: number }
       cleanup_expired_events: { Args: never; Returns: number }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      expire_inactive_display_sessions: { Args: never; Returns: number }
       fn_regulatory_audit_insert: {
         Args: {
           _actor_id: string
