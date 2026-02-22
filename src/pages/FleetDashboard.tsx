@@ -10,6 +10,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useFleetRealtime } from '@/hooks/useFleetRealtime';
 import type { RealtimeEventType, ConnectionStatus } from '@/hooks/useFleetRealtime';
+import { useFleetCache } from '@/hooks/useFleetCache';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -58,6 +59,12 @@ export default function FleetDashboard() {
     eventTypes: SUBSCRIBED_TYPES,
     tenantId,
     maxEvents: 100,
+    enabled: !!tenantId,
+  });
+
+  // 24h cache layer for summary, top offenders, alerts
+  const fleetCache = useFleetCache({
+    tenantId: tenantId ?? '',
     enabled: !!tenantId,
   });
 
@@ -128,7 +135,7 @@ export default function FleetDashboard() {
             <connStatus.icon className="h-3.5 w-3.5" />
             {connStatus.label}
           </div>
-          <Button size="sm" variant="ghost" onClick={refresh} className="gap-1.5 text-xs">
+          <Button size="sm" variant="ghost" onClick={() => { refresh(); fleetCache.invalidateAll(); }} className="gap-1.5 text-xs">
             <RefreshCw className="h-3.5 w-3.5" /> Atualizar
           </Button>
         </div>
