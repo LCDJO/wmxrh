@@ -26,6 +26,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useDisplayRealtime, type ConnectionStatus } from '@/hooks/useDisplayRealtime';
 import { useDisplayEventQueue } from '@/hooks/useDisplayEventQueue';
 import { useDisplayEventPipeline } from '@/hooks/useDisplayEventPipeline';
+import { useDisplayGateway, type GatewayStatus } from '@/hooks/useDisplayGateway';
 
 // ── Types ──
 
@@ -134,8 +135,22 @@ export default function LiveDisplayTV() {
     enabled: !!activeToken && !!data,
     pollIntervalMs: 10_000,
     onEvent: (events) => {
-      // Pipeline events trigger data refresh for the display
       if (events.length > 0) fetchData();
+    },
+  });
+
+  // ── WebSocket Gateway (token-validated, tenant-scoped) ──
+  const { status: gatewayStatus, session: gatewaySession } = useDisplayGateway({
+    token: activeToken,
+    enabled: !!activeToken,
+    heartbeatIntervalMs: 30_000,
+    pollIntervalMs: 15_000,
+    onEvent: (events) => {
+      if (events.length > 0) fetchData();
+    },
+    onSessionExpired: () => {
+      setActiveToken(null);
+      setPairingState({ phase: 'error', message: 'Sessão expirada. Pareie novamente.' });
     },
   });
 
@@ -268,10 +283,12 @@ export default function LiveDisplayTV() {
     };
   }, []);
 
-  // Derive effective connection status (prefer pipeline > realtime > polling)
+  // Derive effective connection status (prefer gateway > pipeline > realtime > polling)
   const effectiveStatus: ConnectionStatus =
+    gatewayStatus === 'connected' ? 'realtime' :
     pipelineStatus === 'realtime' ? 'realtime' :
     connectionStatus === 'realtime' ? 'realtime' :
+    gatewayStatus === 'reconnecting' ? 'reconnecting' :
     connectionStatus === 'connecting' && data ? 'polling' : connectionStatus;
 
   // ═══════════════════════════════════════════════════
