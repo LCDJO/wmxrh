@@ -3025,6 +3025,94 @@ export type Database = {
           },
         ]
       }
+      display_event_queue: {
+        Row: {
+          channel: string
+          created_at: string
+          event_type: string
+          expires_at: string
+          id: string
+          payload: Json
+          priority: number
+          processed: boolean
+          source: string
+          tenant_id: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          event_type?: string
+          expires_at?: string
+          id?: string
+          payload?: Json
+          priority?: number
+          processed?: boolean
+          source?: string
+          tenant_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          event_type?: string
+          expires_at?: string
+          id?: string
+          payload?: Json
+          priority?: number
+          processed?: boolean
+          source?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "display_event_queue_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      display_sessions: {
+        Row: {
+          channel_name: string
+          connected_at: string
+          display_id: string
+          id: string
+          last_heartbeat: string
+          metadata: Json | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          channel_name: string
+          connected_at?: string
+          display_id: string
+          id?: string
+          last_heartbeat?: string
+          metadata?: Json | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          channel_name?: string
+          connected_at?: string
+          display_id?: string
+          id?: string
+          last_heartbeat?: string
+          metadata?: Json | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "display_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_vault: {
         Row: {
           agreement_id: string | null
@@ -13769,6 +13857,7 @@ export type Database = {
         Args: { p_email: string; p_user_id: string }
         Returns: string[]
       }
+      cleanup_expired_display_events: { Args: never; Returns: number }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       fn_regulatory_audit_insert: {
         Args: {

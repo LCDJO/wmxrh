@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { QRCodeSVG } from 'qrcode.react';
 import { useDisplayRealtime, type ConnectionStatus } from '@/hooks/useDisplayRealtime';
 import { useDisplayEventQueue } from '@/hooks/useDisplayEventQueue';
+import { useDisplayEventPipeline } from '@/hooks/useDisplayEventPipeline';
 
 // ── Types ──
 
@@ -124,6 +125,18 @@ export default function LiveDisplayTV() {
   const { stats: queueStats } = useDisplayEventQueue({
     maxBufferSize: 500,
     flushIntervalMs: 300,
+  });
+
+  // ── Event Pipeline (server-side queue → WebSocket → client) ──
+  const tenantIdFromData = data?.display ? (data as any).display.tenant_id ?? null : null;
+  const { status: pipelineStatus, eventCount: pipelineEventCount } = useDisplayEventPipeline({
+    tenantId: tenantIdFromData,
+    enabled: !!activeToken && !!data,
+    pollIntervalMs: 10_000,
+    onEvent: (events) => {
+      // Pipeline events trigger data refresh for the display
+      if (events.length > 0) fetchData();
+    },
   });
 
   // ── Phase 1: Request pairing code ──
@@ -255,8 +268,11 @@ export default function LiveDisplayTV() {
     };
   }, []);
 
-  // Derive effective connection status
-  const effectiveStatus: ConnectionStatus = connectionStatus === 'connecting' && data ? 'polling' : connectionStatus;
+  // Derive effective connection status (prefer pipeline > realtime > polling)
+  const effectiveStatus: ConnectionStatus =
+    pipelineStatus === 'realtime' ? 'realtime' :
+    connectionStatus === 'realtime' ? 'realtime' :
+    connectionStatus === 'connecting' && data ? 'polling' : connectionStatus;
 
   // ═══════════════════════════════════════════════════
   // RENDER: Pairing screens
