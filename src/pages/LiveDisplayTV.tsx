@@ -31,6 +31,8 @@ import { useDisplayRealtime, type ConnectionStatus } from '@/hooks/useDisplayRea
 import { useDisplayEventQueue } from '@/hooks/useDisplayEventQueue';
 import { useDisplayEventPipeline } from '@/hooks/useDisplayEventPipeline';
 import { useDisplayGateway, type GatewayStatus } from '@/hooks/useDisplayGateway';
+import { useDisplayCache } from '@/hooks/useDisplayCache';
+import { useRenderThrottle } from '@/hooks/useRenderThrottle';
 import {
   type DisplayData,
   KpiTile,
@@ -89,12 +91,26 @@ export default function LiveDisplayTV() {
 
   const [pairingState, setPairingState] = useState<PairingState | null>(null);
   const [activeToken, setActiveToken] = useState<string | null>(tokenFromUrl);
-  const [data, setData] = useState<DisplayData | null>(null);
+  const [rawData, setRawData] = useState<DisplayData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
   const backoffRef = useRef(10_000);
   const clock = useLiveClock();
+
+  // ── Performance: Local cache + render throttle ──
+  const cache = useDisplayCache<DisplayData>({ key: activeToken ?? 'default', ttlMs: 300_000 });
+
+  // Initialize from cache on mount
+  useEffect(() => {
+    if (!rawData && activeToken) {
+      const cached = cache.read();
+      if (cached) setRawData(cached);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Throttle renders to max 2/sec for smooth TV display
+  const data = useRenderThrottle(rawData, 500);
 
   // ── Rotation Mode ──
   const rotationEnabled = data?.display?.rotacao_automatica ?? false;
@@ -198,7 +214,8 @@ export default function LiveDisplayTV() {
         return;
       }
       const result = await resp.json();
-      setData(result);
+      setRawData(result);
+      cache.write(result);
       setError(null);
       setLastUpdate(new Date());
       backoffRef.current = 10_000;
