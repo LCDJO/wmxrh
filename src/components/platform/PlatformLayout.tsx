@@ -126,7 +126,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Segurança',
     items: [
-      { to: '/platform/governance-dashboard', label: 'Governance Dashboard', icon: BarChart3, requiredPermission: 'security.view' },
+      { to: '/platform/governance', label: 'Governance Dashboard', icon: BarChart3, requiredPermission: 'security.view' },
       {
         to: '/platform/security/governance',
         label: 'Governança',
