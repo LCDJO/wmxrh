@@ -1,11 +1,11 @@
-import { useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
 import { StatsCard } from '@/components/shared/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  Car, AlertTriangle, MapPin, Gauge, Clock, Shield, Users, Activity, Wifi, WifiOff, RefreshCw
+  Car, AlertTriangle, MapPin, Gauge, Clock, Shield, Users, Activity, Wifi, WifiOff, RefreshCw, Maximize2, Minimize2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useFleetRealtime } from '@/hooks/useFleetRealtime';
@@ -125,7 +125,7 @@ function generateMockData() {
 const MOCK = generateMockData();
 
 // ── Fleet Map (Leaflet) ──
-function FleetMap({ vehicles }: { vehicles: MockVehicle[] }) {
+function FleetMap({ vehicles, expanded, onToggleExpand }: { vehicles: MockVehicle[]; expanded?: boolean; onToggleExpand?: () => void }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletRef = useRef<L.Map | null>(null);
 
@@ -186,10 +186,31 @@ function FleetMap({ vehicles }: { vehicles: MockVehicle[] }) {
     };
   }, [vehicles]);
 
-  return <div ref={mapRef} className="h-full w-full rounded-lg" />;
+  // Invalidate map size when expanded changes
+  useEffect(() => {
+    if (leafletRef.current) {
+      setTimeout(() => leafletRef.current?.invalidateSize(), 300);
+    }
+  }, [expanded]);
+
+  return (
+    <div className="relative h-full w-full">
+      <div ref={mapRef} className="h-full w-full rounded-lg" />
+      {onToggleExpand && (
+        <button
+          onClick={onToggleExpand}
+          className="absolute top-2 right-2 z-[1000] p-1.5 rounded-md bg-background/80 backdrop-blur-sm border border-border hover:bg-accent transition-colors"
+          title={expanded ? 'Reduzir mapa' : 'Expandir mapa'}
+        >
+          {expanded ? <Minimize2 className="h-4 w-4 text-foreground" /> : <Maximize2 className="h-4 w-4 text-foreground" />}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function FleetDashboard() {
+  const [mapExpanded, setMapExpanded] = useState(false);
   const { currentTenant } = useTenant();
   const tenantId = currentTenant?.id ?? null;
 
@@ -306,8 +327,8 @@ export default function FleetDashboard() {
       </div>
 
       {/* Map + Violations by Type */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      <div className={cn("grid gap-6", mapExpanded ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2")}>
+        <Card className={mapExpanded ? "col-span-full" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-card-foreground">
               <MapPin className="h-5 w-5" />
@@ -315,8 +336,8 @@ export default function FleetDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg overflow-hidden h-[300px]">
-              <FleetMap vehicles={MOCK.vehicles} />
+            <div className={cn("rounded-lg overflow-hidden transition-all duration-300", mapExpanded ? "h-[600px]" : "h-[300px]")}>
+              <FleetMap vehicles={MOCK.vehicles} expanded={mapExpanded} onToggleExpand={() => setMapExpanded(e => !e)} />
             </div>
           </CardContent>
         </Card>
