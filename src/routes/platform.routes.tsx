@@ -13,6 +13,8 @@ import PlatformSecurity from '@/pages/platform/PlatformSecurity';
 import PlatformCommunications from '@/pages/platform/PlatformCommunications';
 import PlatformAudit from '@/pages/platform/PlatformAudit';
 import PlatformUsers from '@/pages/platform/PlatformUsers';
+import PlatformUsersDashboard from '@/pages/platform/PlatformUsersDashboard';
+import PlatformSecurityDashboard from '@/pages/platform/PlatformSecurityDashboard';
 import PlatformPlans from '@/pages/platform/PlatformPlans';
 import PlatformIAM from '@/pages/platform/PlatformIAM';
 import PlatformSecurityRoles from '@/pages/platform/PlatformSecurityRoles';
@@ -89,7 +91,9 @@ export const platformRoutes: RouteObject[] = [
       { path: 'tenants', element: <PlatformTenants /> },
       { path: 'modules', element: <PlatformModules /> },
       { path: 'users', element: <PlatformUsers /> },
+      { path: 'users/dashboard', element: <PlatformUsersDashboard /> },
       { path: 'security', element: <PlatformSecurity /> },
+      { path: 'security/dashboard', element: <PlatformSecurityDashboard /> },
       { path: 'security/roles', element: <PlatformSecurityRoles /> },
       { path: 'security/permissions', element: <PlatformSecurityPermissions /> },
       { path: 'security/access-graph', element: <PlatformSecurityAccessGraph /> },
