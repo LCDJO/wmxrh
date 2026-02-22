@@ -4,11 +4,12 @@
  * Reads saved menu order from localStorage to dynamically reorder sidebar navigation.
  */
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformIdentity, type PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import type { PlatformPermission } from '@/domains/platform/platform-permissions';
-import { getSavedMenuOrder, applyOrder } from '@/lib/platform-menu-order';
+import { getSavedMenuOrder, applyOrder, type SavedMenuOrder } from '@/lib/platform-menu-order';
 import {
   LayoutDashboard,
   Building2,
@@ -425,8 +426,11 @@ export default function PlatformLayout() {
   const [expandedChild, setExpandedChild] = useState<string | null>(null);
   const alertService = useAgentAlerts(user?.id ?? '');
 
-  // Apply saved menu order, then filter by permissions — now section-aware
-  const savedOrder = useMemo(() => getSavedMenuOrder(), []);
+  // Reset any saved menu order so the default NAV_SECTIONS order is used
+  useEffect(() => {
+    localStorage.removeItem('platform_menu_order');
+  }, []);
+  const savedOrder: SavedMenuOrder | null = null;
 
   const visibleSections = useMemo(() => {
     return NAV_SECTIONS.map(section => {
@@ -444,17 +448,7 @@ export default function PlatformLayout() {
         };
       });
 
-      // Reorder based on saved menu structure
-      if (savedOrder) {
-        items = applyOrder(items, savedOrder.rootOrder, i => i.to);
-        items = items.map(item => {
-          if (!item.children || !savedOrder.childrenOrder[item.to]) return item;
-          return {
-            ...item,
-            children: applyOrder(item.children, savedOrder.childrenOrder[item.to], c => c.to),
-          };
-        });
-      }
+      // Menu order reset — always use default NAV_SECTIONS order
 
       return { ...section, items };
     }).filter(section => section.items.length > 0);
