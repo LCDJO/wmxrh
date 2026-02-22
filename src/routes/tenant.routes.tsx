@@ -38,6 +38,7 @@ import SafetyAutomation from '@/pages/SafetyAutomation';
 import LegalIntelligenceDashboard from '@/pages/LegalIntelligenceDashboard';
 import EsocialGovernanceDashboard from '@/pages/EsocialGovernanceDashboard';
 import FleetDashboard from '@/pages/FleetDashboard';
+import LiveDisplayAdmin from '@/pages/LiveDisplayAdmin';
 import EpiCatalog from '@/pages/EpiCatalog';
 import EpiDelivery from '@/pages/EpiDelivery';
 import EpiDashboard from '@/pages/EpiDashboard';
@@ -110,6 +111,8 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/pccs-wizard', element: pr('positions', <PccsWizard />) },
       // ── Fleet ──
       { path: '/fleet-dashboard', element: pr('dashboard', <FleetDashboard />) },
+      // ── Live Display ──
+      { path: '/live-display', element: pr('dashboard', <LiveDisplayAdmin />) },
       // ── Agreements / Communication ──
       { path: '/agreements', element: pr('employees', <AgreementManagement />) },
       { path: '/communication-center', element: <TenantCommunicationCenter /> },

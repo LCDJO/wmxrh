@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
+import LiveDisplayTV from "./pages/LiveDisplayTV";
 import { authRoutes } from "./routes/auth.routes";
 import { platformRoutes } from "./routes/platform.routes";
 import { tenantRoutes } from "./routes/tenant.routes";
@@ -45,14 +46,18 @@ function AppRoutes() {
     return <FullScreenLoader label="Carregando..." />;
   }
 
+  // ── Public TV route (no auth needed) ──
+  const tvRoute: RouteObject[] = [{ path: '/tv', element: <LiveDisplayTV /> }];
+
   // ── Unauthenticated ──
   if (!user) {
-    return useRoutes(authRoutes);
+    return useRoutes([...authRoutes, ...tvRoute]);
   }
 
   // ── Build authenticated route set ──
   const sharedRoutes: RouteObject[] = [
     ...platformRoutes,
+    ...tvRoute,
     { path: '/lp/:slug', element: <LandingPagePreview /> },
     { path: '/auth/login', element: <Navigate to="/" replace /> },
     { path: '/reset-password', element: <ResetPassword /> },

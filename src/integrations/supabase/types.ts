@@ -8564,6 +8564,133 @@ export type Database = {
           },
         ]
       }
+      live_display_tokens: {
+        Row: {
+          created_at: string
+          display_id: string
+          expires_at: string
+          id: string
+          is_active: boolean
+          paired_at: string | null
+          paired_ip: string | null
+          paired_user_agent: string | null
+          tenant_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          display_id: string
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          paired_at?: string | null
+          paired_ip?: string | null
+          paired_user_agent?: string | null
+          tenant_id: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          display_id?: string
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          paired_at?: string | null
+          paired_ip?: string | null
+          paired_user_agent?: string | null
+          tenant_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_display_tokens_display_id_fkey"
+            columns: ["display_id"]
+            isOneToOne: false
+            referencedRelation: "live_displays"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_display_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_displays: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          department_id: string | null
+          description: string | null
+          id: string
+          last_seen_at: string | null
+          layout: Database["public"]["Enums"]["display_layout"]
+          name: string
+          refresh_interval_seconds: number
+          status: Database["public"]["Enums"]["display_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          department_id?: string | null
+          description?: string | null
+          id?: string
+          last_seen_at?: string | null
+          layout?: Database["public"]["Enums"]["display_layout"]
+          name: string
+          refresh_interval_seconds?: number
+          status?: Database["public"]["Enums"]["display_status"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          department_id?: string | null
+          description?: string | null
+          id?: string
+          last_seen_at?: string | null
+          layout?: Database["public"]["Enums"]["display_layout"]
+          name?: string
+          refresh_interval_seconds?: number
+          status?: Database["public"]["Enums"]["display_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_displays_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_displays_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_displays_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_ad_campaigns: {
         Row: {
           campaign_name: string
@@ -13979,6 +14106,8 @@ export type Database = {
       benefit_type: "va" | "vr" | "vt" | "health" | "dental" | "cesta" | "flex"
       compliance_rule_severity: "info" | "warning" | "critical"
       compliance_rule_status: "active" | "disabled" | "archived"
+      display_layout: "operations" | "compliance" | "overview"
+      display_status: "active" | "paused" | "disconnected"
       employee_event_type:
         | "company_transfer"
         | "position_change"
@@ -14271,6 +14400,8 @@ export const Constants = {
       benefit_type: ["va", "vr", "vt", "health", "dental", "cesta", "flex"],
       compliance_rule_severity: ["info", "warning", "critical"],
       compliance_rule_status: ["active", "disabled", "archived"],
+      display_layout: ["operations", "compliance", "overview"],
+      display_status: ["active", "paused", "disconnected"],
       employee_event_type: [
         "company_transfer",
         "position_change",
