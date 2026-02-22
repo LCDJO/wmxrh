@@ -70,6 +70,22 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ── CONNECTION LOG: status check ──
+    if (session.status === "active") {
+      const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+        ?? req.headers.get("cf-connecting-ip")
+        ?? "unknown";
+      admin.from("display_connection_logs").insert({
+        display_id: null,
+        token_id: session.id,
+        tenant_id: null,
+        event_type: "pair_confirmed",
+        ip_address: clientIp,
+        user_agent: req.headers.get("user-agent") ?? "unknown",
+        metadata: {},
+      }).then(() => {}).catch(() => {});
+    }
+
     // SECURITY: Only return token when active, never leak tenant/display info
     return new Response(
       JSON.stringify({
