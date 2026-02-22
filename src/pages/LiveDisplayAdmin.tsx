@@ -15,7 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Monitor, Plus, QrCode, Trash2, Copy, Tv, AlertTriangle, CheckCircle2, WifiOff, RotateCw, Link2 } from 'lucide-react';
+import { Monitor, Plus, QrCode, Trash2, Copy, Tv, AlertTriangle, CheckCircle2, WifiOff, RotateCw, Link2, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { DISPLAY_TIPOS } from '@/modules/live-display';
 import type { DisplayBoardTipo } from '@/modules/live-display';
@@ -51,6 +51,7 @@ export default function LiveDisplayAdmin() {
   const [formRotacao, setFormRotacao] = useState(false);
   const [formIntervalo, setFormIntervalo] = useState(30);
   const [creating, setCreating] = useState(false);
+  const [previewDisplay, setPreviewDisplay] = useState<LiveDisplay | null>(null);
 
   const tenantId = currentTenant?.id;
 
@@ -252,6 +253,9 @@ export default function LiveDisplayAdmin() {
                     <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={() => { setPairingDisplayId(display.id); setShowPairing(true); }}>
                       <Link2 className="h-3.5 w-3.5" /> Parear
                     </Button>
+                    <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={() => setPreviewDisplay(display)}>
+                      <Eye className="h-3.5 w-3.5" /> Mostrar Conteúdo
+                    </Button>
                     <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => deleteDisplay(display.id)}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -369,6 +373,29 @@ export default function LiveDisplayAdmin() {
               {pairing ? 'Pareando...' : 'Confirmar Pareamento'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Preview Dialog */}
+      <Dialog open={!!previewDisplay} onOpenChange={(v) => { if (!v) setPreviewDisplay(null); }}>
+        <DialogContent className="sm:max-w-5xl p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-5 pb-3">
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-primary" />
+              Pré-visualização — {previewDisplay?.nome}
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {previewDisplay ? (DISPLAY_TIPOS[previewDisplay.tipo as DisplayBoardTipo]?.label ?? previewDisplay.tipo) : ''}
+              </Badge>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="relative w-full bg-black rounded-b-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+            {previewDisplay && (
+              <iframe
+                src={`/tv?tipo=${previewDisplay.tipo}&preview=true`}
+                className="w-full h-full border-0"
+                title={`Preview ${previewDisplay.nome}`}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
