@@ -1,25 +1,28 @@
 /**
- * LiveDisplayTV — Enterprise-scalable full-screen TV mode.
+ * LiveDisplayTV — Full-screen TV Dashboard
  *
- * ENTERPRISE:
- *   ✅ Event queue with deduplication & backpressure
- *   ✅ Shared Realtime channel per tenant (multi-TV)
- *   ✅ Risk heatmap aggregating Fleet, SST, Compliance, Workforce
- *   ✅ GPU-accelerated CSS transitions
- *   ✅ Large-screen optimized (4K-ready)
- *   ✅ Dark mode native
- *   ✅ requestAnimationFrame gauge animations
- *   ✅ Memoized sub-components
+ * Layout 16:9 otimizado:
+ *   ┌──────────────── HEADER ──────────────────┐
+ *   │ Empresa     Data/Hora     Score Operac.   │
+ *   ├──────────────────┬────────────────────────┤
+ *   │                  │  Top Infrações         │
+ *   │   MAPA AO VIVO   │  Bloqueados            │
+ *   │   + HEATMAP      │  Advertências Recentes │
+ *   │   + ALERTAS      │                        │
+ *   ├──────────────────┴────────────────────────┤
+ *   │ WS Status  │  v1.0  │  Última atualização │
+ *   └──────────────────────────────────────────-┘
+ *
+ * DARK MODE obrigatório. Tipografia grande. Alto contraste.
+ * Sem menus laterais. Sem botões administrativos.
  */
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import {
-  Users, AlertTriangle, Activity, Shield, Tv, WifiOff,
-  Zap, Clock, Loader2, MapPin, Gauge, FileWarning,
-  Lock, DollarSign, Scale, BarChart3,
-  Car, Heart, ShieldAlert, Wifi, Flame,
+  AlertTriangle, Tv, WifiOff, Loader2, Wifi, Activity,
+  Clock, BarChart3, Scale, Zap, Lock, FileWarning,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QRCodeSVG } from 'qrcode.react';
@@ -27,51 +30,18 @@ import { useDisplayRealtime, type ConnectionStatus } from '@/hooks/useDisplayRea
 import { useDisplayEventQueue } from '@/hooks/useDisplayEventQueue';
 import { useDisplayEventPipeline } from '@/hooks/useDisplayEventPipeline';
 import { useDisplayGateway, type GatewayStatus } from '@/hooks/useDisplayGateway';
-
-// ── Types ──
-
-interface RiskHeatmapEntry {
-  fleet: number;
-  sst: number;
-  compliance: number;
-  workforce: number;
-  total: number;
-  headcount: number;
-}
-
-interface DisplayData {
-  display: { id: string; nome: string; tipo: string; rotacao_automatica: boolean; intervalo_rotacao: number; layout_config: any };
-  timestamp: string;
-  workforce?: { total: number; active: number; inactive: number; by_department: Record<string, number> };
-  fleet_events?: any[];
-  live_positions?: any[];
-  speed_alerts?: any[];
-  nr_overdue_exams?: any[];
-  active_blocks?: any[];
-  sst_summary?: { overdue_count: number; critical_overdue: number; active_blocks_count: number };
-  recent_warnings?: any[];
-  compliance_incidents?: any[];
-  compliance_summary?: { total_warnings: number; pending_incidents: number; critical_incidents: number };
-  executive?: {
-    operational_score: number;
-    legal_risk: { score: number; level: string };
-    projected_cost_brl: number;
-    workforce_total: number;
-    active_devices: number;
-    total_violations: number;
-    total_warnings: number;
-    total_blocks: number;
-  };
-  risk_heatmap?: Record<string, RiskHeatmapEntry>;
-  critical_alerts?: any[];
-}
-
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: 'bg-red-500/20 text-red-400 border-red-500/30',
-  high: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  medium: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  low: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-};
+import {
+  type DisplayData,
+  KpiTile,
+  TVCard,
+  AnimatedGauge,
+  FlashingAlert,
+  TopInfractions,
+  BlockedEmployees,
+  RecentWarnings,
+  useAnimatedNumber,
+} from '@/components/tv/TVComponents';
+import { TVMapCenter } from '@/components/tv/TVMapCenter';
 
 type PairingState =
   | { phase: 'requesting' }
@@ -79,31 +49,29 @@ type PairingState =
   | { phase: 'paired'; token: string }
   | { phase: 'error'; message: string };
 
-// ── Smooth number animation hook ──
-function useAnimatedNumber(target: number, duration = 600): number {
-  const [current, setCurrent] = useState(target);
-  const rafRef = useRef<number>();
-
+// ── Live Clock ──
+function useLiveClock() {
+  const [now, setNow] = useState(new Date());
   useEffect(() => {
-    const start = current;
-    const startTime = performance.now();
-
-    const animate = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCurrent(Math.round(start + (target - start) * eased));
-      if (progress < 1) rafRef.current = requestAnimationFrame(animate);
-    };
-
-    if (target !== start) {
-      rafRef.current = requestAnimationFrame(animate);
-    }
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [target, duration]);
-
-  return current;
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return now;
 }
+
+// ── TV Styles (injected once) ──
+const TV_STYLES = `
+  .tv-root { transform: translateZ(0); font-family: 'Inter', system-ui, sans-serif; }
+  .tv-fade-in { animation: tvFadeIn 0.4s ease-out; will-change: opacity, transform; }
+  .tv-slide-up { animation: tvSlideUp 0.3s ease-out; will-change: opacity, transform; }
+  .tv-value-change { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+  @keyframes tvFadeIn { from { opacity: 0; transform: translateY(4px) translateZ(0); } to { opacity: 1; transform: translateY(0) translateZ(0); } }
+  @keyframes tvSlideUp { from { opacity: 0; transform: translateY(8px) translateZ(0); } to { opacity: 1; transform: translateY(0) translateZ(0); } }
+  @keyframes tvPulseGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.3); } 50% { box-shadow: 0 0 12px 4px rgba(52,211,153,0.15); } }
+  .tv-pulse-glow { animation: tvPulseGlow 2s infinite; }
+  @keyframes flashCritical { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .tv-flash-critical { animation: flashCritical 1.2s ease-in-out infinite; }
+`;
 
 export default function LiveDisplayTV() {
   const [params] = useSearchParams();
@@ -118,43 +86,36 @@ export default function LiveDisplayTV() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
   const backoffRef = useRef(10_000);
+  const clock = useLiveClock();
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const functionsBase = `https://${projectId}.supabase.co/functions/v1`;
 
-  // ── Event Queue (dedup + backpressure) ──
-  const { stats: queueStats } = useDisplayEventQueue({
-    maxBufferSize: 500,
-    flushIntervalMs: 300,
-  });
+  // ── Hooks: Event Queue, Pipeline, Gateway ──
+  const { stats: queueStats } = useDisplayEventQueue({ maxBufferSize: 500, flushIntervalMs: 300 });
 
-  // ── Event Pipeline (server-side queue → WebSocket → client) ──
-  const tenantIdFromData = data?.display ? (data as any).display.tenant_id ?? null : null;
-  const { status: pipelineStatus, eventCount: pipelineEventCount } = useDisplayEventPipeline({
+  const tenantIdFromData = data?.display?.tenant_id ?? null;
+
+  const { status: pipelineStatus } = useDisplayEventPipeline({
     tenantId: tenantIdFromData,
     enabled: !!activeToken && !!data,
     pollIntervalMs: 10_000,
-    onEvent: (events) => {
-      if (events.length > 0) fetchData();
-    },
+    onEvent: (events) => { if (events.length > 0) fetchData(); },
   });
 
-  // ── WebSocket Gateway (token-validated, tenant-scoped) ──
   const { status: gatewayStatus, session: gatewaySession } = useDisplayGateway({
     token: activeToken,
     enabled: !!activeToken,
     heartbeatIntervalMs: 30_000,
     pollIntervalMs: 15_000,
-    onEvent: (events) => {
-      if (events.length > 0) fetchData();
-    },
+    onEvent: (events) => { if (events.length > 0) fetchData(); },
     onSessionExpired: () => {
       setActiveToken(null);
       setPairingState({ phase: 'error', message: 'Sessão expirada. Pareie novamente.' });
     },
   });
 
-  // ── Phase 1: Request pairing code ──
+  // ── Pairing Phase 1: Request ──
   const requestPairing = useCallback(async () => {
     setPairingState({ phase: 'requesting' });
     try {
@@ -185,7 +146,7 @@ export default function LiveDisplayTV() {
     if (isDisplayRoute && !activeToken) requestPairing();
   }, [isDisplayRoute, activeToken, requestPairing]);
 
-  // ── Phase 2: Poll for pairing confirmation ──
+  // ── Pairing Phase 2: Poll confirmation ──
   useEffect(() => {
     if (pairingState?.phase !== 'waiting') return;
     const poll = async () => {
@@ -233,16 +194,15 @@ export default function LiveDisplayTV() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ── Shared Realtime channel (enterprise multi-TV) ──
+  // ── Realtime + Polling fallback ──
   const { status: connectionStatus } = useDisplayRealtime({
-    tenantId: data?.display ? (data as any).display.tenant_id ?? null : null,
+    tenantId: tenantIdFromData,
     displayId: data?.display?.id ?? null,
     pollIntervalMs: (data?.display?.intervalo_rotacao ?? 30) * 1000,
     onDataRefresh: fetchData,
     enabled: !!activeToken && !!data,
   });
 
-  // Fallback polling when realtime not providing tenant_id (edge func doesn't expose it)
   useEffect(() => {
     if (!activeToken || !data) return;
     const interval = (data.display.intervalo_rotacao ?? 30) * 1000;
@@ -250,40 +210,29 @@ export default function LiveDisplayTV() {
     return () => clearInterval(timer);
   }, [activeToken, data?.display?.intervalo_rotacao, fetchData]);
 
-  // ── SECURITY: Lock down TV display ──
+  // ── Lock TV ──
   useEffect(() => {
     const dblClickHandler = () => {
       if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
       else document.exitFullscreen?.();
     };
-    const contextMenuHandler = (e: MouseEvent) => { e.preventDefault(); };
-    const keydownHandler = (e: KeyboardEvent) => {
-      if (
-        e.key === 'F12' ||
-        (e.ctrlKey && e.key === 'l') ||
-        (e.ctrlKey && e.key === 'u') ||
-        (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))
-      ) {
-        e.preventDefault();
-      }
+    const ctxHandler = (e: MouseEvent) => e.preventDefault();
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === 'F12' || (e.ctrlKey && (e.key === 'l' || e.key === 'u')) || (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))) e.preventDefault();
     };
-
     document.body.style.userSelect = 'none';
-    (document.body.style as any).webkitUserSelect = 'none';
     document.addEventListener('dblclick', dblClickHandler);
-    document.addEventListener('contextmenu', contextMenuHandler);
-    document.addEventListener('keydown', keydownHandler);
-
+    document.addEventListener('contextmenu', ctxHandler);
+    document.addEventListener('keydown', keyHandler);
     return () => {
       document.body.style.userSelect = '';
-      (document.body.style as any).webkitUserSelect = '';
       document.removeEventListener('dblclick', dblClickHandler);
-      document.removeEventListener('contextmenu', contextMenuHandler);
-      document.removeEventListener('keydown', keydownHandler);
+      document.removeEventListener('contextmenu', ctxHandler);
+      document.removeEventListener('keydown', keyHandler);
     };
   }, []);
 
-  // Derive effective connection status (prefer gateway > pipeline > realtime > polling)
+  // Effective connection status
   const effectiveStatus: ConnectionStatus =
     gatewayStatus === 'connected' ? 'realtime' :
     pipelineStatus === 'realtime' ? 'realtime' :
@@ -291,28 +240,30 @@ export default function LiveDisplayTV() {
     gatewayStatus === 'reconnecting' ? 'reconnecting' :
     connectionStatus === 'connecting' && data ? 'polling' : connectionStatus;
 
-  // ═══════════════════════════════════════════════════
-  // RENDER: Pairing screens
-  // ═══════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════
+  // PAIRING SCREENS
+  // ═══════════════════════════════════════════════════════
 
   if (isDisplayRoute && !activeToken) {
     if (!pairingState || pairingState.phase === 'requesting') {
       return (
-        <div className="min-h-screen bg-[#0a0a12] flex items-center justify-center text-white">
+        <div className="min-h-screen bg-[#060610] flex items-center justify-center text-white">
+          <style>{TV_STYLES}</style>
           <div className="text-center space-y-4 animate-pulse">
             <Loader2 className="h-16 w-16 mx-auto text-primary animate-spin" />
-            <h1 className="text-xl font-bold">Gerando código de pareamento...</h1>
+            <h1 className="text-2xl font-bold">Gerando código de pareamento...</h1>
           </div>
         </div>
       );
     }
     if (pairingState.phase === 'error') {
       return (
-        <div className="min-h-screen bg-[#0a0a12] flex items-center justify-center text-white">
+        <div className="min-h-screen bg-[#060610] flex items-center justify-center text-white">
+          <style>{TV_STYLES}</style>
           <div className="text-center space-y-6">
-            <AlertTriangle className="h-16 w-16 mx-auto text-red-400" />
-            <h1 className="text-2xl font-bold">{pairingState.message}</h1>
-            <button onClick={requestPairing} className="px-6 py-3 bg-primary/20 hover:bg-primary/30 text-primary rounded-xl transition-colors text-sm font-semibold">
+            <AlertTriangle className="h-20 w-20 mx-auto text-red-400" />
+            <h1 className="text-3xl font-bold">{pairingState.message}</h1>
+            <button onClick={requestPairing} className="px-8 py-4 bg-primary/20 hover:bg-primary/30 text-primary rounded-xl transition-colors text-lg font-semibold">
               Tentar novamente
             </button>
           </div>
@@ -322,28 +273,29 @@ export default function LiveDisplayTV() {
     if (pairingState.phase === 'waiting') {
       const pairUrl = `${window.location.origin}/live-display/pair?code=${pairingState.pairing_code}`;
       return (
-        <div className="min-h-screen bg-[#0a0a12] flex items-center justify-center text-white">
-          <div className="text-center space-y-8 max-w-lg">
+        <div className="min-h-screen bg-[#060610] flex items-center justify-center text-white">
+          <style>{TV_STYLES}</style>
+          <div className="text-center space-y-8 max-w-xl">
             <div className="flex items-center justify-center gap-3">
               <div className="h-3 w-3 rounded-full bg-primary animate-pulse" />
-              <h1 className="text-2xl lg:text-3xl 2xl:text-4xl font-bold">Pareamento de Display</h1>
+              <h1 className="text-3xl 2xl:text-4xl font-bold">Pareamento de Display</h1>
             </div>
-            <p className="text-white/50 text-sm 2xl:text-base">Escaneie o QR Code ou insira o código no painel administrativo.</p>
-            <div className="bg-white p-6 2xl:p-8 rounded-2xl inline-block mx-auto">
-              <QRCodeSVG value={pairUrl} size={240} level="H" />
+            <p className="text-white/50 text-base">Escaneie o QR Code ou insira o código no painel administrativo.</p>
+            <div className="bg-white p-8 rounded-2xl inline-block mx-auto">
+              <QRCodeSVG value={pairUrl} size={280} level="H" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <p className="text-white/40 text-xs uppercase tracking-wider">Código de pareamento</p>
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-3">
                 {pairingState.pairing_code.split('').map((char, i) => (
-                  <span key={i} className="w-12 h-14 lg:w-14 lg:h-16 2xl:w-16 2xl:h-20 bg-white/10 border border-white/20 rounded-xl flex items-center justify-center text-2xl lg:text-3xl 2xl:text-4xl font-mono font-bold text-primary">
+                  <span key={i} className="w-16 h-20 bg-white/10 border border-white/20 rounded-xl flex items-center justify-center text-4xl font-mono font-bold text-primary">
                     {char}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="flex items-center justify-center gap-2 text-white/30 text-xs">
-              <Loader2 className="h-3 w-3 animate-spin" />
+            <div className="flex items-center justify-center gap-2 text-white/30 text-sm">
+              <Loader2 className="h-4 w-4 animate-spin" />
               <span>Aguardando confirmação do administrador...</span>
             </div>
           </div>
@@ -352,17 +304,18 @@ export default function LiveDisplayTV() {
     }
   }
 
-  // ═══════════════════════════════════════════════════
-  // RENDER: Loading / Error states
-  // ═══════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════
+  // LOADING / ERROR STATES
+  // ═══════════════════════════════════════════════════════
 
   if (!activeToken) {
     return (
-      <div className="min-h-screen bg-[#0a0a12] flex items-center justify-center text-white">
+      <div className="min-h-screen bg-[#060610] flex items-center justify-center text-white">
+        <style>{TV_STYLES}</style>
         <div className="text-center space-y-4">
-          <WifiOff className="h-16 w-16 mx-auto opacity-40" />
-          <h1 className="text-2xl font-bold">Token não fornecido</h1>
-          <p className="text-white/50">Acesse <span className="text-primary font-mono">/display</span> para parear este monitor.</p>
+          <WifiOff className="h-20 w-20 mx-auto opacity-40" />
+          <h1 className="text-3xl font-bold">Token não fornecido</h1>
+          <p className="text-white/50 text-lg">Acesse <span className="text-primary font-mono">/display</span> para parear este monitor.</p>
         </div>
       </div>
     );
@@ -370,11 +323,12 @@ export default function LiveDisplayTV() {
 
   if (error && !data) {
     return (
-      <div className="min-h-screen bg-[#0a0a12] flex items-center justify-center text-white">
+      <div className="min-h-screen bg-[#060610] flex items-center justify-center text-white">
+        <style>{TV_STYLES}</style>
         <div className="text-center space-y-4">
-          <AlertTriangle className="h-16 w-16 mx-auto text-red-400" />
-          <h1 className="text-2xl font-bold">Erro de Conexão</h1>
-          <p className="text-white/50">{error}</p>
+          <AlertTriangle className="h-20 w-20 mx-auto text-red-400" />
+          <h1 className="text-3xl font-bold">Erro de Conexão</h1>
+          <p className="text-white/50 text-lg">{error}</p>
         </div>
       </div>
     );
@@ -382,566 +336,204 @@ export default function LiveDisplayTV() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-[#0a0a12] flex items-center justify-center text-white">
+      <div className="min-h-screen bg-[#060610] flex items-center justify-center text-white">
+        <style>{TV_STYLES}</style>
         <div className="text-center space-y-4 animate-pulse">
-          <Tv className="h-16 w-16 mx-auto text-primary" />
-          <h1 className="text-xl font-bold">Conectando display...</h1>
+          <Tv className="h-20 w-20 mx-auto text-primary" />
+          <h1 className="text-2xl font-bold">Conectando display...</h1>
         </div>
       </div>
     );
   }
 
-  const tipo = data.display.tipo;
+  // ═══════════════════════════════════════════════════════
+  // MAIN TV DASHBOARD — 16:9 LAYOUT
+  // ═══════════════════════════════════════════════════════
+
+  const exec = data.executive;
   const alerts = data.critical_alerts ?? [];
-
-  return (
-    <div className="min-h-screen bg-[#0a0a12] text-white p-4 lg:p-6 2xl:p-8 overflow-hidden tv-container">
-      <style>{`
-        .tv-container { transform: translateZ(0); }
-        .tv-fade-in { animation: tvFadeIn 0.4s ease-out; will-change: opacity, transform; }
-        .tv-slide-up { animation: tvSlideUp 0.3s ease-out; will-change: opacity, transform; }
-        .tv-value-change { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes tvFadeIn { from { opacity: 0; transform: translateY(4px) translateZ(0); } to { opacity: 1; transform: translateY(0) translateZ(0); } }
-        @keyframes tvSlideUp { from { opacity: 0; transform: translateY(8px) translateZ(0); } to { opacity: 1; transform: translateY(0) translateZ(0); } }
-        @keyframes tvPulseGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.3); } 50% { box-shadow: 0 0 12px 4px rgba(52,211,153,0.15); } }
-        .tv-pulse-glow { animation: tvPulseGlow 2s infinite; }
-      `}</style>
-
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 lg:mb-6 2xl:mb-8">
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            "flex items-center gap-2 px-3 py-1.5 2xl:px-4 2xl:py-2 rounded-full",
-            effectiveStatus === 'realtime' ? "bg-emerald-500/20 tv-pulse-glow" : "bg-primary/20"
-          )}>
-            <div className={cn(
-              "h-2 w-2 2xl:h-2.5 2xl:w-2.5 rounded-full animate-pulse",
-              effectiveStatus === 'realtime' ? "bg-emerald-400" :
-              effectiveStatus === 'reconnecting' ? "bg-amber-400" : "bg-sky-400"
-            )} />
-            <span className="text-sm 2xl:text-base font-semibold text-primary">
-              {effectiveStatus === 'realtime' ? 'AO VIVO' : effectiveStatus === 'reconnecting' ? 'RECONECTANDO' : 'POLLING'}
-            </span>
-          </div>
-          <h1 className="text-lg lg:text-xl 2xl:text-2xl font-bold text-white/90">{data.display.nome}</h1>
-          <Badge className="bg-white/10 text-white/60 border-white/20 text-[10px] 2xl:text-xs uppercase">{tipo}</Badge>
-        </div>
-        <div className="flex items-center gap-4 text-xs 2xl:text-sm text-white/40">
-          <span className="flex items-center gap-1">
-            {effectiveStatus === 'realtime' ? <Wifi className="h-3 w-3 text-emerald-400" /> :
-             effectiveStatus === 'reconnecting' ? <WifiOff className="h-3 w-3 text-amber-400" /> :
-             <Activity className="h-3 w-3 text-sky-400" />}
-          </span>
-          {lastUpdate && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(lastUpdate, 'HH:mm:ss')}</span>}
-          {error && <span className="text-red-400 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Reconectando</span>}
-        </div>
-      </div>
-
-      {/* Alerts Banner */}
-      {alerts.length > 0 && (
-        <div className="mb-4 2xl:mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-3 2xl:p-4 flex items-start gap-3 overflow-x-auto tv-slide-up">
-          <AlertTriangle className="h-5 w-5 2xl:h-6 2xl:w-6 text-red-400 shrink-0 mt-0.5" />
-          <div className="flex gap-3 min-w-0">
-            {alerts.slice(0, 5).map((alert: any, i: number) => (
-              <div key={alert.id ?? i} className="shrink-0 bg-red-500/10 rounded-lg px-3 py-2 border border-red-500/20 min-w-[200px] 2xl:min-w-[260px]">
-                <p className="text-sm 2xl:text-base font-semibold text-red-300">{alert.incident_type}</p>
-                <p className="text-xs 2xl:text-sm text-red-300/70 truncate">{alert.employees?.name} — {alert.description?.slice(0, 60)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Mode Content */}
-      <div className="tv-fade-in" key={data.timestamp}>
-        {tipo === 'fleet' && <FleetMode data={data} />}
-        {tipo === 'sst' && <SSTMode data={data} />}
-        {tipo === 'compliance' && <ComplianceMode data={data} />}
-        {tipo === 'executivo' && <ExecutiveMode data={data} />}
-      </div>
-
-      {/* Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#0a0a12] to-transparent h-8 flex items-end justify-center pb-1">
-        <p className="text-[10px] text-white/20">Clique duplo para tela cheia</p>
-      </div>
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════
-// FLEET MODE
-// ════════════════════════════════════════════════
-
-const FleetMode = memo(function FleetMode({ data }: { data: DisplayData }) {
   const positions = data.live_positions ?? [];
   const fleetEvents = data.fleet_events ?? [];
   const speedAlerts = data.speed_alerts ?? [];
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 2xl:gap-6 h-[calc(100vh-8rem)]">
-      <div className="col-span-full grid grid-cols-4 gap-3 2xl:gap-4">
-        <KpiTile icon={Car} label="Veículos Ativos" value={positions.length} sub="Posições ao vivo" color="text-sky-400" />
-        <KpiTile icon={Gauge} label="Vel. Média" value={positions.length > 0 ? Math.round(positions.reduce((s: number, p: any) => s + (p.speed ?? 0), 0) / positions.length) : 0} sub="km/h" color="text-emerald-400" />
-        <KpiTile icon={AlertTriangle} label="Alertas Velocidade" value={speedAlerts.length} sub="Excessos detectados" color={speedAlerts.length > 0 ? "text-red-400" : "text-emerald-400"} />
-        <KpiTile icon={Activity} label="Eventos" value={fleetEvents.length} sub="Últimos 50" color="text-amber-400" />
-      </div>
-
-      <TVCard title="Mapa ao Vivo" icon={MapPin} className="lg:col-span-2 lg:row-span-2">
-        <div className="h-full min-h-[300px] flex flex-col">
-          <div className="flex-1 bg-white/5 rounded-lg flex items-center justify-center relative overflow-hidden">
-            <MapPin className="h-12 w-12 opacity-20" />
-            <p className="absolute bottom-4 text-xs text-white/30">Integração Traccar em desenvolvimento</p>
-          </div>
-          {positions.length > 0 && (
-            <div className="mt-3 space-y-1 max-h-[120px] 2xl:max-h-[180px] overflow-y-auto">
-              {positions.slice(0, 8).map((p: any, i: number) => (
-                <div key={i} className="flex items-center justify-between text-xs 2xl:text-sm bg-white/5 rounded px-3 py-1.5 tv-value-change">
-                  <span className="font-mono text-white/60">{p.device_id?.slice(0, 10)}</span>
-                  <span className={cn("font-bold", (p.speed ?? 0) > 80 ? "text-red-400" : "text-emerald-400")}>{p.speed?.toFixed(0) ?? '--'} km/h</span>
-                  <span className={p.ignition ? "text-emerald-400" : "text-white/30"}>{p.ignition ? '● ON' : '○ OFF'}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </TVCard>
-
-      <div className="flex flex-col gap-4 2xl:gap-6">
-        <TVCard title="Alertas de Velocidade" icon={Gauge} className="flex-1">
-          <div className="space-y-2 overflow-y-auto max-h-[200px] 2xl:max-h-[280px]">
-            {speedAlerts.length === 0 ? (
-              <p className="text-white/30 text-sm text-center py-4">Nenhum excesso</p>
-            ) : (
-              speedAlerts.slice(0, 10).map((a: any, i: number) => (
-                <div key={a.id ?? i} className="flex items-center justify-between py-1 border-b border-white/5 last:border-0 tv-slide-up">
-                  <div className="min-w-0">
-                    <p className="text-sm 2xl:text-base text-white/80 truncate">{a.employees?.name ?? 'N/I'}</p>
-                    <p className="text-[10px] 2xl:text-xs text-white/40">{a.speed_kmh} km/h (lim: {a.speed_limit_kmh})</p>
-                  </div>
-                  <span className="text-xs text-white/30">{a.detected_at ? format(new Date(a.detected_at), 'HH:mm') : '--'}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </TVCard>
-
-        <TVCard title="Eventos Recentes" icon={Zap} className="flex-1">
-          <div className="space-y-2 overflow-y-auto max-h-[200px] 2xl:max-h-[280px]">
-            {fleetEvents.slice(0, 10).map((ev: any, i: number) => (
-              <div key={ev.id ?? i} className="flex items-center justify-between py-1 border-b border-white/5 last:border-0 tv-slide-up">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Badge className={cn("text-[10px] shrink-0", SEVERITY_COLORS[ev.severity] ?? SEVERITY_COLORS.low)}>{ev.severity}</Badge>
-                  <span className="text-xs 2xl:text-sm text-white/70 truncate">{ev.event_type}</span>
-                </div>
-                <span className="text-xs text-white/30">{ev.detected_at ? format(new Date(ev.detected_at), 'HH:mm') : '--'}</span>
-              </div>
-            ))}
-          </div>
-        </TVCard>
-      </div>
-    </div>
-  );
-});
-
-// ════════════════════════════════════════════════
-// SST MODE
-// ════════════════════════════════════════════════
-
-const SSTMode = memo(function SSTMode({ data }: { data: DisplayData }) {
-  const exams = data.nr_overdue_exams ?? [];
   const blocks = data.active_blocks ?? [];
-  const summary = data.sst_summary ?? { overdue_count: 0, critical_overdue: 0, active_blocks_count: 0 };
-  const workforce = data.workforce;
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 2xl:gap-6 h-[calc(100vh-8rem)]">
-      <div className="col-span-full grid grid-cols-4 gap-3 2xl:gap-4">
-        <KpiTile icon={Heart} label="NRs Vencidas" value={summary.overdue_count} sub="Exames pendentes" color={summary.overdue_count > 0 ? "text-red-400" : "text-emerald-400"} />
-        <KpiTile icon={ShieldAlert} label="Críticos" value={summary.critical_overdue} sub="Atenção imediata" color={summary.critical_overdue > 0 ? "text-red-400" : "text-emerald-400"} />
-        <KpiTile icon={Lock} label="Bloqueios Ativos" value={summary.active_blocks_count} sub="Operações impedidas" color={summary.active_blocks_count > 0 ? "text-orange-400" : "text-emerald-400"} />
-        <KpiTile icon={Users} label="Colaboradores" value={workforce?.total ?? 0} sub={`${workforce?.active ?? 0} ativos`} color="text-sky-400" />
-      </div>
-
-      <TVCard title="NRs Vencidas / Próximas do Vencimento" icon={FileWarning} className="lg:row-span-2">
-        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-16rem)]">
-          {exams.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-white/30">
-              <Heart className="h-10 w-10 mb-2 opacity-40" />
-              <p className="text-sm">Todos os exames em dia</p>
-            </div>
-          ) : (
-            exams.map((exam: any, i: number) => (
-              <div key={exam.exam_id ?? i} className={cn(
-                "rounded-lg p-3 2xl:p-4 border tv-slide-up",
-                exam.alert_status === 'overdue' ? "bg-red-500/10 border-red-500/30" :
-                exam.alert_status === 'critical' ? "bg-orange-500/10 border-orange-500/30" :
-                "bg-amber-500/10 border-amber-500/30"
-              )}>
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm 2xl:text-base font-semibold text-white/90">{exam.employee_name ?? 'N/I'}</p>
-                  <Badge className={cn("text-[10px] 2xl:text-xs",
-                    exam.alert_status === 'overdue' ? SEVERITY_COLORS.critical :
-                    exam.alert_status === 'critical' ? SEVERITY_COLORS.high :
-                    SEVERITY_COLORS.medium
-                  )}>
-                    {exam.alert_status === 'overdue' ? 'VENCIDO' : exam.alert_status === 'critical' ? 'CRÍTICO' : 'ATENÇÃO'}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between text-xs 2xl:text-sm text-white/50">
-                  <span>{exam.exam_type} — {exam.program_name}</span>
-                  <span>{exam.days_until_due != null ? `${Math.abs(exam.days_until_due)}d ${exam.days_until_due < 0 ? 'vencido' : 'rest.'}` : '--'}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </TVCard>
-
-      <TVCard title="Bloqueios Ativos" icon={Lock} className="lg:row-span-2">
-        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-16rem)]">
-          {blocks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-white/30">
-              <Shield className="h-10 w-10 mb-2 opacity-40" />
-              <p className="text-sm">Nenhum bloqueio ativo</p>
-            </div>
-          ) : (
-            blocks.map((block: any, i: number) => (
-              <div key={block.id ?? i} className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 2xl:p-4 tv-slide-up">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm 2xl:text-base font-semibold text-white/90">{block.employees?.name ?? 'N/I'}</p>
-                  <Badge className={cn("text-[10px] 2xl:text-xs", SEVERITY_COLORS[block.severity] ?? SEVERITY_COLORS.high)}>{block.severity}</Badge>
-                </div>
-                <p className="text-xs 2xl:text-sm text-white/50">{block.violation_type} — {block.description?.slice(0, 80)}</p>
-              </div>
-            ))
-          )}
-        </div>
-      </TVCard>
-    </div>
-  );
-});
-
-// ════════════════════════════════════════════════
-// COMPLIANCE MODE
-// ════════════════════════════════════════════════
-
-const ComplianceMode = memo(function ComplianceMode({ data }: { data: DisplayData }) {
   const warnings = data.recent_warnings ?? [];
-  const incidents = data.compliance_incidents ?? [];
-  const summary = data.compliance_summary ?? { total_warnings: 0, pending_incidents: 0, critical_incidents: 0 };
+  const operationalScore = exec?.operational_score ?? 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 2xl:gap-6 h-[calc(100vh-8rem)]">
-      <div className="col-span-full grid grid-cols-4 gap-3 2xl:gap-4">
-        <KpiTile icon={FileWarning} label="Advertências" value={summary.total_warnings} sub="Recentes" color="text-amber-400" />
-        <KpiTile icon={ShieldAlert} label="Incidentes Críticos" value={summary.critical_incidents} sub="Atenção imediata" color={summary.critical_incidents > 0 ? "text-red-400" : "text-emerald-400"} />
-        <KpiTile icon={Activity} label="Pendentes" value={summary.pending_incidents} sub="Aguardando revisão" color={summary.pending_incidents > 0 ? "text-orange-400" : "text-emerald-400"} />
-        <KpiTile icon={Users} label="Colaboradores" value={data.workforce?.total ?? 0} sub={`${data.workforce?.active ?? 0} ativos`} color="text-sky-400" />
-      </div>
+    <div className="h-screen w-screen bg-[#060610] text-white overflow-hidden flex flex-col tv-root">
+      <style>{TV_STYLES}</style>
 
-      <TVCard title="Advertências Recentes" icon={FileWarning} className="lg:row-span-2">
-        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-16rem)]">
-          {warnings.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-white/30">
-              <Shield className="h-10 w-10 mb-2 opacity-40" />
-              <p className="text-sm">Nenhuma advertência recente</p>
-            </div>
-          ) : (
-            warnings.map((w: any, i: number) => (
-              <div key={w.id ?? i} className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 2xl:p-4 tv-slide-up">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm 2xl:text-base font-semibold text-white/90">{w.employees?.name ?? 'N/I'}</p>
-                  <Badge className="text-[10px] 2xl:text-xs bg-amber-500/20 text-amber-400 border-amber-500/30">
-                    {w.event_type === 'warning_issued' ? 'Emitida' : w.event_type === 'warning_signed' ? 'Assinada' : 'Recusada'}
-                  </Badge>
-                </div>
-                <p className="text-xs 2xl:text-sm text-white/50 truncate">{w.description}</p>
-              </div>
-            ))
-          )}
-        </div>
-      </TVCard>
-
-      <TVCard title="Incidentes Críticos" icon={ShieldAlert} className="lg:row-span-2">
-        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-16rem)]">
-          {incidents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-white/30">
-              <Shield className="h-10 w-10 mb-2 opacity-40" />
-              <p className="text-sm">Nenhum incidente</p>
-            </div>
-          ) : (
-            incidents.map((inc: any, i: number) => (
-              <div key={inc.id ?? i} className="bg-white/5 border border-white/10 rounded-lg p-3 2xl:p-4 tv-slide-up">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Badge className={cn("text-[10px] shrink-0", SEVERITY_COLORS[inc.severity] ?? SEVERITY_COLORS.low)}>{inc.severity}</Badge>
-                    <p className="text-sm 2xl:text-base font-medium text-white/90 truncate">{inc.incident_type}</p>
-                  </div>
-                  <Badge variant="outline" className="text-[10px] text-white/50 border-white/20 shrink-0">{inc.status}</Badge>
-                </div>
-                <p className="text-xs 2xl:text-sm text-white/50 truncate">{inc.employees?.name} — {inc.description?.slice(0, 60)}</p>
-              </div>
-            ))
-          )}
-        </div>
-      </TVCard>
-    </div>
-  );
-});
-
-// ════════════════════════════════════════════════
-// EXECUTIVE MODE (with Risk Heatmap)
-// ════════════════════════════════════════════════
-
-const ExecutiveMode = memo(function ExecutiveMode({ data }: { data: DisplayData }) {
-  const exec = data.executive;
-  const workforce = data.workforce;
-  const heatmap = data.risk_heatmap;
-
-  if (!exec) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-8rem)] text-white/30">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 2xl:gap-6 h-[calc(100vh-8rem)]">
-      {/* KPIs Row */}
-      <div className="col-span-full grid grid-cols-3 lg:grid-cols-6 gap-3 2xl:gap-4">
-        <KpiTile icon={Users} label="Colaboradores" value={exec.workforce_total} sub={`${workforce?.active ?? 0} ativos`} color="text-sky-400" />
-        <KpiTile icon={Car} label="Veículos" value={exec.active_devices} sub="Rastreados" color="text-sky-400" />
-        <KpiTile icon={AlertTriangle} label="Infrações" value={exec.total_violations} sub="Comportamentais" color="text-amber-400" />
-        <KpiTile icon={FileWarning} label="Advertências" value={exec.total_warnings} sub="Formais" color="text-orange-400" />
-        <KpiTile icon={Lock} label="Bloqueios" value={exec.total_blocks} sub="Ativos" color={exec.total_blocks > 0 ? "text-red-400" : "text-emerald-400"} />
-        <KpiTile icon={DollarSign} label="Custo Projetado" value={exec.projected_cost_brl} sub="R$ estimado" color="text-red-400" isCurrency />
-      </div>
-
-      {/* Gauges */}
-      <AnimatedGauge
-        title="Score Operacional"
-        icon={BarChart3}
-        value={exec.operational_score}
-        maxValue={100}
-        label={exec.operational_score >= 80 ? 'Excelente' : exec.operational_score >= 60 ? 'Bom' : exec.operational_score >= 40 ? 'Atenção' : 'Crítico'}
-        unit="de 100"
-      />
-
-      <AnimatedGauge
-        title="Risco Jurídico"
-        icon={Scale}
-        value={exec.legal_risk.score}
-        maxValue={100}
-        label={`Risco ${exec.legal_risk.level === 'critical' ? 'Crítico' : exec.legal_risk.level === 'high' ? 'Alto' : exec.legal_risk.level === 'medium' ? 'Médio' : 'Baixo'}`}
-        unit="pontos"
-        invertColor
-      />
-
-      <TVCard title="Custo Projetado" icon={DollarSign}>
-        <div className="flex flex-col items-center justify-center py-6 2xl:py-8 gap-4">
-          <DollarSign className="h-10 w-10 2xl:h-12 2xl:w-12 text-red-400/50" />
-          <p className="text-4xl 2xl:text-5xl font-bold text-white tv-value-change">
-            R$ {exec.projected_cost_brl.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
-          </p>
-          <p className="text-xs 2xl:text-sm text-white/40 text-center">
-            {exec.total_violations} infrações · {exec.total_warnings} advertências · {exec.total_blocks} bloqueios
-          </p>
-        </div>
-      </TVCard>
-
-      {/* ── RISK HEATMAP ── */}
-      {heatmap && Object.keys(heatmap).length > 0 && (
-        <TVCard title="Heatmap de Risco por Departamento" icon={Flame} className="lg:col-span-3">
-          <RiskHeatmap data={heatmap} />
-        </TVCard>
-      )}
-
-      {/* Workforce grid (fallback if no heatmap) */}
-      {(!heatmap || Object.keys(heatmap).length === 0) && workforce && (
-        <TVCard title="Workforce por Departamento" icon={Users} className="lg:col-span-3">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 2xl:gap-3 max-h-[180px] 2xl:max-h-[240px] overflow-y-auto">
-            {Object.entries(workforce.by_department).sort(([, a], [, b]) => b - a).map(([dept, count]) => (
-              <div key={dept} className="bg-white/5 rounded-lg px-3 py-2 2xl:px-4 2xl:py-3 flex items-center justify-between tv-value-change">
-                <span className="text-xs 2xl:text-sm text-white/70 truncate">{dept}</span>
-                <span className="text-sm 2xl:text-base font-bold text-white ml-2">{count}</span>
-              </div>
-            ))}
+      {/* ════════════════════════════════════════════════
+          HEADER — Company, DateTime, Score
+          ════════════════════════════════════════════════ */}
+      <header className="flex items-center justify-between px-6 py-3 border-b border-white/5 shrink-0">
+        {/* Left: Company + Status */}
+        <div className="flex items-center gap-4">
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-1.5 rounded-full",
+            effectiveStatus === 'realtime' ? "bg-emerald-500/15 tv-pulse-glow" : "bg-white/5"
+          )}>
+            <div className={cn(
+              "h-2.5 w-2.5 rounded-full",
+              effectiveStatus === 'realtime' ? "bg-emerald-400 animate-pulse" :
+              effectiveStatus === 'reconnecting' ? "bg-amber-400 animate-pulse" : "bg-sky-400"
+            )} />
+            <span className={cn(
+              "text-sm font-bold uppercase tracking-wider",
+              effectiveStatus === 'realtime' ? "text-emerald-400" : "text-white/50"
+            )}>
+              {effectiveStatus === 'realtime' ? 'AO VIVO' : effectiveStatus === 'reconnecting' ? 'RECONECTANDO' : 'POLLING'}
+            </span>
           </div>
-        </TVCard>
-      )}
-    </div>
-  );
-});
-
-// ════════════════════════════════════════════════
-// RISK HEATMAP COMPONENT
-// ════════════════════════════════════════════════
-
-const RiskHeatmap = memo(function RiskHeatmap({ data }: { data: Record<string, RiskHeatmapEntry> }) {
-  const domains = ['fleet', 'sst', 'compliance', 'workforce'] as const;
-  const domainLabels: Record<string, string> = {
-    fleet: 'Frota',
-    sst: 'SST',
-    compliance: 'Compliance',
-    workforce: 'Workforce',
-  };
-
-  const departments = Object.entries(data)
-    .sort(([, a], [, b]) => b.total - a.total);
-
-  const getRiskColor = (value: number): string => {
-    if (value >= 70) return 'bg-red-500/60';
-    if (value >= 40) return 'bg-orange-500/50';
-    if (value >= 20) return 'bg-amber-500/40';
-    if (value > 0) return 'bg-emerald-500/30';
-    return 'bg-white/5';
-  };
-
-  const getRiskTextColor = (value: number): string => {
-    if (value >= 70) return 'text-red-300';
-    if (value >= 40) return 'text-orange-300';
-    if (value >= 20) return 'text-amber-300';
-    return 'text-emerald-300';
-  };
-
-  return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[600px]">
-        {/* Header */}
-        <div className="grid gap-1 mb-2" style={{ gridTemplateColumns: '1fr repeat(4, 80px) 60px 70px' }}>
-          <div className="text-[10px] 2xl:text-xs text-white/40 uppercase tracking-wider px-2">Departamento</div>
-          {domains.map(d => (
-            <div key={d} className="text-[10px] 2xl:text-xs text-white/40 uppercase tracking-wider text-center">{domainLabels[d]}</div>
-          ))}
-          <div className="text-[10px] 2xl:text-xs text-white/40 uppercase tracking-wider text-center">Total</div>
-          <div className="text-[10px] 2xl:text-xs text-white/40 uppercase tracking-wider text-center">HC</div>
+          <h1 className="text-xl 2xl:text-2xl font-bold text-white/90 tracking-tight">{data.display.nome}</h1>
         </div>
 
-        {/* Rows */}
-        <div className="space-y-1 max-h-[200px] 2xl:max-h-[280px] overflow-y-auto">
-          {departments.map(([dept, entry]) => (
-            <div key={dept} className="grid gap-1 items-center tv-slide-up" style={{ gridTemplateColumns: '1fr repeat(4, 80px) 60px 70px' }}>
-              <div className="text-xs 2xl:text-sm text-white/80 truncate px-2 font-medium">{dept}</div>
-              {domains.map(d => (
-                <div
-                  key={d}
-                  className={cn(
-                    "rounded px-2 py-1.5 text-center text-xs 2xl:text-sm font-bold transition-colors duration-500",
-                    getRiskColor(entry[d]),
-                    getRiskTextColor(entry[d])
-                  )}
-                  style={{ transform: 'translateZ(0)' }}
-                >
-                  {entry[d]}
-                </div>
+        {/* Center: Date & Time */}
+        <div className="flex items-center gap-6">
+          <div className="text-center">
+            <p className="text-3xl 2xl:text-4xl font-bold text-white tabular-nums tracking-tight">
+              {format(clock, 'HH:mm:ss')}
+            </p>
+            <p className="text-xs text-white/40 uppercase tracking-wider">
+              {format(clock, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Operational Score */}
+        <div className="flex items-center gap-4">
+          {exec && (
+            <div className="flex items-center gap-3">
+              <AnimatedGauge
+                title="Score"
+                icon={BarChart3}
+                value={operationalScore}
+                maxValue={100}
+                label={operationalScore >= 80 ? 'Excelente' : operationalScore >= 60 ? 'Bom' : operationalScore >= 40 ? 'Atenção' : 'Crítico'}
+                unit="pts"
+                compact
+              />
+              {exec.legal_risk && (
+                <AnimatedGauge
+                  title="Risco"
+                  icon={Scale}
+                  value={exec.legal_risk.score}
+                  maxValue={100}
+                  label={exec.legal_risk.level === 'critical' ? 'Crítico' : exec.legal_risk.level === 'high' ? 'Alto' : 'OK'}
+                  unit="risco"
+                  invertColor
+                  compact
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* ════════════════════════════════════════════════
+          ALERTS BANNER — Flashing if critical
+          ════════════════════════════════════════════════ */}
+      {alerts.length > 0 && (
+        <div className="px-6 py-2 shrink-0">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-2.5 flex items-center gap-4 overflow-x-auto">
+            <AlertTriangle className="h-6 w-6 text-red-400 shrink-0 tv-flash-critical" />
+            <div className="flex gap-3 min-w-0">
+              {alerts.slice(0, 5).map((alert: any, i: number) => (
+                <FlashingAlert key={alert.id ?? i} alert={alert} />
               ))}
-              <div className={cn(
-                "rounded px-2 py-1.5 text-center text-xs 2xl:text-sm font-bold border transition-colors duration-500",
-                entry.total >= 70 ? "bg-red-500/30 border-red-500/40 text-red-300" :
-                entry.total >= 40 ? "bg-orange-500/20 border-orange-500/30 text-orange-300" :
-                entry.total >= 20 ? "bg-amber-500/15 border-amber-500/25 text-amber-300" :
-                "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
-              )}>
-                {entry.total}
-              </div>
-              <div className="text-xs 2xl:text-sm text-white/50 text-center">{entry.headcount}</div>
             </div>
-          ))}
-        </div>
-
-        {/* Legend */}
-        <div className="flex items-center gap-4 mt-3 pt-2 border-t border-white/5">
-          <span className="text-[10px] text-white/30 uppercase">Risco:</span>
-          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-500/30" /><span className="text-[10px] text-white/40">Baixo (0-19)</span></div>
-          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-amber-500/40" /><span className="text-[10px] text-white/40">Médio (20-39)</span></div>
-          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-orange-500/50" /><span className="text-[10px] text-white/40">Alto (40-69)</span></div>
-          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-500/60" /><span className="text-[10px] text-white/40">Crítico (70+)</span></div>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-// ════════════════════════════════════════════════
-// ANIMATED GAUGE
-// ════════════════════════════════════════════════
-
-function AnimatedGauge({ title, icon: Icon, value, maxValue, label, unit, invertColor }: {
-  title: string; icon: any; value: number; maxValue: number; label: string; unit: string; invertColor?: boolean;
-}) {
-  const animatedValue = useAnimatedNumber(value);
-  const circumference = 2 * Math.PI * 52;
-
-  const getColor = (v: number) => {
-    if (invertColor) return v >= 70 ? '#f87171' : v >= 40 ? '#fb923c' : v >= 20 ? '#fbbf24' : '#34d399';
-    return v >= 80 ? '#34d399' : v >= 60 ? '#fbbf24' : v >= 40 ? '#fb923c' : '#f87171';
-  };
-
-  const getTextColor = (v: number) => {
-    if (invertColor) return v >= 70 ? 'text-red-400' : v >= 40 ? 'text-orange-400' : v >= 20 ? 'text-amber-400' : 'text-emerald-400';
-    return v >= 80 ? 'text-emerald-400' : v >= 60 ? 'text-amber-400' : v >= 40 ? 'text-orange-400' : 'text-red-400';
-  };
-
-  return (
-    <TVCard title={title} icon={Icon} className="flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4 py-6 2xl:py-8">
-        <div className="relative w-40 h-40 2xl:w-48 2xl:h-48 flex items-center justify-center" style={{ willChange: 'transform' }}>
-          <svg viewBox="0 0 120 120" className="w-full h-full" style={{ transform: 'rotate(-90deg) translateZ(0)' }}>
-            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
-            <circle
-              cx="60" cy="60" r="52" fill="none"
-              stroke={getColor(animatedValue)}
-              strokeWidth="8"
-              strokeLinecap="round"
-              strokeDasharray={`${(animatedValue / maxValue) * circumference} ${circumference}`}
-              style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.4s ease' }}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={cn("text-4xl 2xl:text-5xl font-bold tv-value-change", getTextColor(animatedValue))}>{animatedValue}</span>
-            <span className="text-xs 2xl:text-sm text-white/40">{unit}</span>
           </div>
         </div>
-        <p className={cn("text-sm 2xl:text-base font-semibold uppercase", getTextColor(value))}>{label}</p>
-      </div>
-    </TVCard>
+      )}
+
+      {/* ════════════════════════════════════════════════
+          MAIN CONTENT — Map + Side Panel
+          ════════════════════════════════════════════════ */}
+      <main className="flex-1 flex gap-4 px-6 py-3 min-h-0">
+        {/* CENTER: Map + Heatmap overlay */}
+        <TVMapCenter
+          positions={positions}
+          heatmap={data.risk_heatmap}
+          className="flex-1"
+        />
+
+        {/* RIGHT SIDE PANEL */}
+        <aside className="w-80 2xl:w-96 shrink-0 flex flex-col gap-3 min-h-0">
+          {/* KPI strip */}
+          <div className="grid grid-cols-2 gap-2 shrink-0">
+            <KpiTile icon={AlertTriangle} label="Infrações" value={exec?.total_violations ?? fleetEvents.length} sub="Hoje" color="text-amber-400" />
+            <KpiTile icon={Lock} label="Bloqueios" value={exec?.total_blocks ?? blocks.length} sub="Ativos" color={blocks.length > 0 ? "text-red-400" : "text-emerald-400"} />
+          </div>
+
+          {/* Top infractions */}
+          <TVCard title="Top Infrações do Dia" icon={Zap} className="flex-1 min-h-0 overflow-hidden">
+            <TopInfractions events={[...fleetEvents, ...speedAlerts].sort((a: any, b: any) => {
+              const sev: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+              return (sev[a.severity] ?? 3) - (sev[b.severity] ?? 3);
+            })} />
+          </TVCard>
+
+          {/* Blocked employees */}
+          <TVCard title="Colaboradores Bloqueados" icon={Lock} className="shrink-0 max-h-[28%] overflow-hidden">
+            <BlockedEmployees blocks={blocks} />
+          </TVCard>
+
+          {/* Recent warnings */}
+          <TVCard title="Advertências Recentes" icon={FileWarning} className="shrink-0 max-h-[28%] overflow-hidden">
+            <RecentWarnings warnings={warnings} />
+          </TVCard>
+        </aside>
+      </main>
+
+      {/* ════════════════════════════════════════════════
+          FOOTER — Connection, Version, Last Update
+          ════════════════════════════════════════════════ */}
+      <footer className="flex items-center justify-between px-6 py-2 border-t border-white/5 shrink-0 text-[10px] 2xl:text-xs text-white/25">
+        {/* Left: WebSocket status */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            {effectiveStatus === 'realtime' ? (
+              <Wifi className="h-3 w-3 text-emerald-400/60" />
+            ) : effectiveStatus === 'reconnecting' ? (
+              <WifiOff className="h-3 w-3 text-amber-400/60" />
+            ) : (
+              <Activity className="h-3 w-3 text-sky-400/60" />
+            )}
+            <span>
+              {effectiveStatus === 'realtime' ? 'WebSocket Conectado' :
+               effectiveStatus === 'reconnecting' ? 'Reconectando...' :
+               'Polling Ativo'}
+            </span>
+          </div>
+          {gatewaySession && (
+            <span className="text-white/15">
+              Modo: {gatewaySession.modo?.toUpperCase() ?? data.display.tipo.toUpperCase()}
+            </span>
+          )}
+        </div>
+
+        {/* Center: Version */}
+        <div className="flex items-center gap-3">
+          <span>Display Engine v2.0</span>
+          <span className="text-white/10">|</span>
+          <span>Clique duplo → Tela cheia</span>
+        </div>
+
+        {/* Right: Last update */}
+        <div className="flex items-center gap-3">
+          {lastUpdate && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              Atualizado: {format(lastUpdate, 'HH:mm:ss')}
+            </span>
+          )}
+          {error && (
+            <span className="text-red-400/60 flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" /> Reconectando
+            </span>
+          )}
+        </div>
+      </footer>
+    </div>
   );
 }
-
-// ════════════════════════════════════════════════
-// SHARED COMPONENTS
-// ════════════════════════════════════════════════
-
-const KpiTile = memo(function KpiTile({ icon: Icon, label, value, sub, color, isCurrency }: {
-  icon: any; label: string; value: number; sub: string; color: string; isCurrency?: boolean;
-}) {
-  const animatedValue = useAnimatedNumber(value);
-
-  return (
-    <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-3 lg:p-4 2xl:p-5" style={{ willChange: 'transform', transform: 'translateZ(0)' }}>
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] 2xl:text-xs text-white/50 uppercase tracking-wider">{label}</span>
-        <Icon className={cn("h-4 w-4 2xl:h-5 2xl:w-5", color)} />
-      </div>
-      <p className="text-xl lg:text-2xl 2xl:text-3xl font-bold text-white tv-value-change">
-        {isCurrency ? `R$ ${animatedValue.toLocaleString('pt-BR')}` : animatedValue}
-      </p>
-      <p className="text-[10px] 2xl:text-xs text-white/40 mt-0.5">{sub}</p>
-    </div>
-  );
-});
-
-const TVCard = memo(function TVCard({ title, icon: Icon, children, className }: {
-  title: string; icon: any; children: React.ReactNode; className?: string;
-}) {
-  return (
-    <div className={cn("bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-4 2xl:p-5 overflow-hidden", className)} style={{ transform: 'translateZ(0)' }}>
-      <div className="flex items-center gap-2 mb-3 2xl:mb-4">
-        <Icon className="h-4 w-4 2xl:h-5 2xl:w-5 text-white/50" />
-        <h3 className="text-xs 2xl:text-sm font-semibold text-white/70 uppercase tracking-wider">{title}</h3>
-      </div>
-      {children}
-    </div>
-  );
-});
