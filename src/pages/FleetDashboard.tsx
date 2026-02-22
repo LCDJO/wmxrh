@@ -11,6 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { useFleetRealtime } from '@/hooks/useFleetRealtime';
 import type { RealtimeEventType, ConnectionStatus } from '@/hooks/useFleetRealtime';
 import { useFleetCache } from '@/hooks/useFleetCache';
+import { useFleetSecurity } from '@/hooks/useFleetSecurity';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -68,8 +69,12 @@ export default function FleetDashboard() {
     enabled: !!tenantId,
   });
 
-  const behaviorEvents = events.behavior?.items ?? [];
-  const incidents = events.compliance_incident?.items ?? [];
+  // Security: Access Graph filtering + role-based visibility
+  const { filterByAccess, filterEmployees, fleetContext, logAction } = useFleetSecurity();
+
+  // Apply Access Graph filtering to realtime data
+  const behaviorEvents = useMemo(() => filterByAccess(events.behavior?.items ?? []), [events.behavior, filterByAccess]);
+  const incidents = useMemo(() => filterByAccess(events.compliance_incident?.items ?? []), [events.compliance_incident, filterByAccess]);
   const latestEvents = events.tracking?.items ?? [];
 
   // Stats
