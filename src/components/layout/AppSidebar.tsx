@@ -16,7 +16,7 @@ import {
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
   Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook, Store,
-  HardHat, Activity, Stethoscope, Car, Monitor,
+  HardHat, Activity, Stethoscope, Car, Monitor, Radio,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -131,6 +131,9 @@ const navSections: NavSection[] = [
       },
       {
         to: '/live-display', icon: Monitor, label: 'Live Display (TV)', key: 'dashboard' as NavKey,
+      },
+      {
+        to: '/command-center', icon: Radio, label: 'Command Center', key: 'dashboard' as NavKey,
       },
     ],
   },
