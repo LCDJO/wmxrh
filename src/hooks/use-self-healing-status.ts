@@ -71,17 +71,19 @@ export function useSelfHealingStatus(): SelfHealingStatus {
   useEffect(() => {
     refresh();
 
+    let cleanup: (() => void) | undefined;
     try {
       const { getSelfHealingEngine } = require('@/domains/self-healing/self-healing-engine') as {
         getSelfHealingEngine: () => { onUpdate: (fn: () => void) => () => void } | null;
       };
       const engine = getSelfHealingEngine();
       if (engine) {
-        return engine.onUpdate(refresh);
+        cleanup = engine.onUpdate(refresh);
       }
     } catch {
       // Engine not ready
     }
+    return () => { cleanup?.(); };
   }, [refresh]);
 
   return status;
