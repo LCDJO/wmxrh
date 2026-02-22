@@ -387,12 +387,13 @@ export default function LiveDisplayAdmin() {
               </Badge>
             </DialogTitle>
           </DialogHeader>
-          <div className="relative w-full bg-black rounded-b-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+          <div className="relative w-full bg-black rounded-b-lg overflow-hidden" style={{ aspectRatio: '16/9', minHeight: '400px' }}>
             {previewDisplay && (
               <iframe
                 src={`/tv?tipo=${previewDisplay.tipo}&preview=true`}
-                className="w-full h-full border-0"
+                className="border-0 absolute inset-0 w-full h-full"
                 title={`Preview ${previewDisplay.nome}`}
+                allow="fullscreen"
               />
             )}
           </div>
