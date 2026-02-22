@@ -22,7 +22,7 @@ import { PermissionAdvisor } from './permission-advisor';
 import { NavigationAdvisor } from './navigation-advisor';
 import { RoleSuggestionEngine } from './role-suggestion-engine';
 import { PlanUpgradeAdvisor } from './plan-upgrade-advisor';
-import type { CognitiveIntent, CognitiveResponse, AdvisorPayload } from './types';
+import type { CognitiveIntent, CognitiveResponse, AdvisorPayload, PlatformSnapshot } from './types';
 
 export class CognitiveInsightsService {
   private collector = new CognitiveContextCollector();
@@ -89,7 +89,7 @@ export class CognitiveInsightsService {
     });
 
     if (error) {
-      const msg = typeof error === 'object' && 'message' in error ? (error as any).message : String(error);
+      const msg = typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string }).message : String(error);
       throw new Error(msg);
     }
     if (data?.error) throw new Error(data.error);
@@ -186,13 +186,13 @@ export class CognitiveInsightsService {
   // ── Private ──────────────────────────────────────────────────────
 
   private async routeToAdvisor(intent: CognitiveIntent, callerRole: string, params?: Record<string, unknown>): Promise<AdvisorPayload | null> {
-    const snapshot = (this.collector as any).snapshotCache;
+    const snapshot = (this.collector as unknown as { snapshotCache: PlatformSnapshot | null }).snapshotCache;
     if (!snapshot) return null;
 
     // PRIVACY: anonymise emails in snapshot before advisor processing
-    const anonSnapshot = {
+    const anonSnapshot: PlatformSnapshot = {
       ...snapshot,
-      users: snapshot.users.map((u: any) => ({
+      users: snapshot.users.map(u => ({
         ...u,
         email: `user_${btoa(u.email || '').slice(0, 8)}`,
       })),

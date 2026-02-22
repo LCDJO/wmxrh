@@ -126,8 +126,8 @@ export default function PlatformCoupons() {
       const { data, error } = await query;
       if (error) throw error;
       setCoupons((data ?? []) as unknown as CouponRow[]);
-    } catch (err: any) {
-      toast.error(`Erro ao carregar cupons: ${err.message}`);
+    } catch (err: unknown) {
+      toast.error(`Erro ao carregar cupons: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -179,8 +179,8 @@ export default function PlatformCoupons() {
       setShowCreate(false);
       resetForm();
       fetchCoupons();
-    } catch (err: any) {
-      toast.error(`Erro ao criar cupom: ${err.message}`);
+    } catch (err: unknown) {
+      toast.error(`Erro ao criar cupom: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setSaving(false);
     }
@@ -196,8 +196,8 @@ export default function PlatformCoupons() {
       if (error) throw error;
       toast.success(`Cupom ${coupon.code} ${newStatus === 'active' ? 'ativado' : 'desativado'}.`);
       fetchCoupons();
-    } catch (err: any) {
-      toast.error(`Erro: ${err.message}`);
+    } catch (err: unknown) {
+      toast.error(`Erro: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 

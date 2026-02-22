@@ -100,8 +100,8 @@ export function ReleaseDiffViewer({ canPublish = true }: { canPublish?: boolean 
         description: `${MODULE_CATALOG.length} módulos registrados.`,
       });
       await fetchReleases();
-    } catch (err: any) {
-      toast.error('Erro ao criar release inicial', { description: err?.message });
+    } catch (err: unknown) {
+      toast.error('Erro ao criar release inicial', { description: err instanceof Error ? err.message : undefined });
     } finally {
       setSeeding(false);
     }

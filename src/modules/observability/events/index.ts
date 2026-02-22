@@ -9,7 +9,7 @@ export function registerObservabilityEventHandlers(sandbox: SandboxContext): () 
 
   // Listen for module lifecycle events to auto-register health tracking
   unsubs.push(
-    sandbox.on('platform:module_registered', (payload: any) => {
+    sandbox.on('platform:module_registered', (payload: { key: string; [k: string]: unknown }) => {
       sandbox.emit(OBSERVABILITY_EVENTS.HEALTH_CHECK_COMPLETED, {
         module: payload.key,
         status: 'registered',

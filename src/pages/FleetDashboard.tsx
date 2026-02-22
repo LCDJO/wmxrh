@@ -39,6 +39,41 @@ const STATUS_LABELS: Record<string, string> = {
   closed: 'Encerrado',
 };
 
+interface FleetDevice {
+  id: string;
+  is_active: boolean;
+  [key: string]: unknown;
+}
+
+interface FleetBehaviorEvent {
+  id: string;
+  event_type: string;
+  severity: string;
+  employee_id: string | null;
+  device_id: string;
+  event_timestamp: string;
+  [key: string]: unknown;
+}
+
+interface FleetIncident {
+  id: string;
+  status: string;
+  severity: string;
+  violation_type: string;
+  device_id: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+interface TrackingEvent {
+  device_id: string;
+  latitude: number | null;
+  longitude: number | null;
+  speed: number | null;
+  ignition: boolean | null;
+  event_timestamp: string;
+}
+
 export default function FleetDashboard() {
   const { currentTenant } = useTenant();
   const tenantId = currentTenant?.id;
@@ -114,17 +149,17 @@ export default function FleetDashboard() {
 
   // Stats
   const stats = useMemo(() => {
-    const activeDevices = devices.filter((d: any) => d.is_active).length;
+    const activeDevices = devices.filter((d: FleetDevice) => d.is_active).length;
     const totalViolations = behaviorEvents.length;
-    const activeAlerts = incidents.filter((i: any) => i.status === 'pending').length;
-    const criticalCount = behaviorEvents.filter((e: any) => e.severity === 'critical').length;
+    const activeAlerts = incidents.filter((i: FleetIncident) => i.status === 'pending').length;
+    const criticalCount = behaviorEvents.filter((e: FleetBehaviorEvent) => e.severity === 'critical').length;
     return { activeDevices, totalViolations, activeAlerts, criticalCount };
   }, [devices, behaviorEvents, incidents]);
 
   // Violations by type (pie chart)
   const violationsByType = useMemo(() => {
     const counts: Record<string, number> = {};
-    behaviorEvents.forEach((e: any) => {
+    behaviorEvents.forEach((e: FleetBehaviorEvent) => {
       counts[e.event_type] = (counts[e.event_type] || 0) + 1;
     });
     return Object.entries(counts).map(([type, count]) => ({
@@ -136,7 +171,7 @@ export default function FleetDashboard() {
   // Ranking by employee (top 10)
   const rankingByEmployee = useMemo(() => {
     const counts: Record<string, { employee_id: string; total: number; critical: number }> = {};
-    behaviorEvents.forEach((e: any) => {
+    behaviorEvents.forEach((e: FleetBehaviorEvent) => {
       const eid = e.employee_id || 'Não identificado';
       if (!counts[eid]) counts[eid] = { employee_id: eid, total: 0, critical: 0 };
       counts[eid].total++;
@@ -150,7 +185,7 @@ export default function FleetDashboard() {
   // Violations by severity (bar chart)
   const violationsBySeverity = useMemo(() => {
     const counts: Record<string, number> = { low: 0, medium: 0, high: 0, critical: 0 };
-    behaviorEvents.forEach((e: any) => {
+    behaviorEvents.forEach((e: FleetBehaviorEvent) => {
       counts[e.severity] = (counts[e.severity] || 0) + 1;
     });
     return Object.entries(counts).map(([sev, count]) => ({
@@ -199,7 +234,7 @@ export default function FleetDashboard() {
               <p className="text-xs">{latestEvents.length} posições recentes rastreadas</p>
               {latestEvents.length > 0 && (
                 <div className="text-xs space-y-1 mt-2 max-h-[120px] overflow-y-auto w-full px-4">
-                  {latestEvents.slice(0, 5).map((evt: any, i: number) => (
+                  {latestEvents.slice(0, 5).map((evt: TrackingEvent, i: number) => (
                     <div key={i} className="flex justify-between bg-background/50 rounded px-2 py-1">
                       <span className="font-mono">{evt.device_id}</span>
                       <span>{evt.speed?.toFixed(0)} km/h</span>
@@ -280,12 +315,12 @@ export default function FleetDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {incidents.filter((i: any) => i.status === 'pending').length > 0 ? (
+            {incidents.filter((i: FleetIncident) => i.status === 'pending').length > 0 ? (
               <div className="space-y-3 max-h-[250px] overflow-y-auto">
                 {incidents
-                  .filter((i: any) => i.status === 'pending')
+                  .filter((i: FleetIncident) => i.status === 'pending')
                   .slice(0, 10)
-                  .map((incident: any) => (
+                  .map((incident: FleetIncident) => (
                     <div key={incident.id} className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
                       <div className="space-y-1">
                         <p className="text-sm font-medium text-foreground">
@@ -379,7 +414,7 @@ export default function FleetDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {incidents.slice(0, 15).map((incident: any) => (
+                {incidents.slice(0, 15).map((incident: FleetIncident) => (
                   <TableRow key={incident.id}>
                     <TableCell>{EVENT_TYPE_LABELS[incident.violation_type] || incident.violation_type}</TableCell>
                     <TableCell className="font-mono text-sm">{incident.device_id}</TableCell>

@@ -39,7 +39,7 @@ const STATUS_CLASS: Record<string, string> = {
   failed: 'text-destructive',
 };
 
-function formatVersion(v: any): string {
+function formatVersion(v: string | { major: number; minor: number; patch: number } | null | undefined): string {
   if (!v) return '?';
   if (typeof v === 'string') return v;
   return `v${v.major}.${v.minor}.${v.patch}`;

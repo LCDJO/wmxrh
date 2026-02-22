@@ -80,8 +80,9 @@ export const agreementAutomationService = {
           company_id: companyId,
         }, ctx);
         result.dispatched++;
-      } catch (err: any) {
-        result.errors.push(`Template ${template.id}: ${err.message}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        result.errors.push(`Template ${template.id}: ${message}`);
       }
     }
 
@@ -119,7 +120,7 @@ export const agreementAutomationService = {
       .eq('tenant_id', ctx.tenant_id)
       .in('status', ['pending', 'sent', 'signed']);
 
-    const existingTemplateIds = new Set((existing || []).map((e: any) => e.template_id));
+    const existingTemplateIds = new Set((existing || []).map((e: { template_id: string }) => e.template_id));
 
     const missing = positionTemplates.filter(t => !existingTemplateIds.has(t.id));
 
@@ -139,8 +140,9 @@ export const agreementAutomationService = {
           company_id: companyId,
         }, ctx);
         result.dispatched++;
-      } catch (err: any) {
-        result.errors.push(`Template ${template.id}: ${err.message}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        result.errors.push(`Template ${template.id}: ${message}`);
       }
     }
 
@@ -177,7 +179,7 @@ export const agreementAutomationService = {
       .eq('tenant_id', ctx.tenant_id)
       .in('status', ['pending', 'sent', 'signed']);
 
-    const existingTemplateIds = new Set((existing || []).map((e: any) => e.template_id));
+    const existingTemplateIds = new Set((existing || []).map((e: { template_id: string }) => e.template_id));
 
     const missing = riskTemplates.filter(t => !existingTemplateIds.has(t.id));
 
@@ -197,8 +199,9 @@ export const agreementAutomationService = {
           company_id: companyId,
         }, ctx);
         result.dispatched++;
-      } catch (err: any) {
-        result.errors.push(`Template ${template.id}: ${err.message}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        result.errors.push(`Template ${template.id}: ${message}`);
       }
     }
 

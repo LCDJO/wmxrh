@@ -111,7 +111,7 @@ export default function EpiDelivery() {
     queryFn: async () => {
       if (!currentTenantId) return [];
       const { data, error } = await supabase
-        .from('epi_deliveries' as any)
+        .from('epi_deliveries' as 'epi_deliveries' & string)
         .select(`*, employees:employee_id(name, email), epi_catalog:epi_catalog_id(nome, ca_numero, ca_validade)`)
         .eq('tenant_id', currentTenantId)
         .order('data_entrega', { ascending: false });
@@ -144,12 +144,12 @@ export default function EpiDelivery() {
     queryFn: async () => {
       if (!currentTenantId) return [];
       const { data } = await supabase
-        .from('epi_catalog' as any)
+        .from('epi_catalog' as 'epi_catalog' & string)
         .select('id, nome, ca_numero, ca_validade, validade_meses')
         .eq('tenant_id', currentTenantId)
         .eq('is_active', true)
         .order('nome');
-      return (data ?? []) as any[];
+      return (data ?? []) as { id: string; nome: string; ca_numero: string | null; ca_validade: string | null; validade_meses: number | null }[];
     },
     enabled: !!currentTenantId,
   });
@@ -157,15 +157,15 @@ export default function EpiDelivery() {
   // ── Create delivery mutation (auto-sends for signature) ──
   const createMutation = useMutation({
     mutationFn: async (input: DeliveryForm) => {
-      const selectedEpi = epiItems.find((e: any) => e.id === input.epi_catalog_id);
-      const selectedEmployee = employees.find((e: any) => e.id === input.employee_id);
+      const selectedEpi = epiItems.find((e: { id: string }) => e.id === input.epi_catalog_id);
+      const selectedEmployee = employees.find((e: { id: string }) => e.id === input.employee_id);
       const validadeMeses = selectedEpi?.validade_meses ?? 12;
       const dataValidade = new Date(input.data_entrega);
       dataValidade.setMonth(dataValidade.getMonth() + validadeMeses);
 
       // 1. Create delivery
       const { data: delivery, error } = await supabase
-        .from('epi_deliveries' as any)
+        .from('epi_deliveries' as 'epi_deliveries' & string)
         .insert({
           tenant_id: currentTenantId,
           employee_id: input.employee_id,
@@ -184,7 +184,7 @@ export default function EpiDelivery() {
         .single();
 
       if (error) throw error;
-      const deliveryData = delivery as any;
+      const deliveryData = delivery as { id: string; [key: string]: unknown };
 
       // 2. Auto-send for digital signature
       try {
@@ -213,7 +213,7 @@ export default function EpiDelivery() {
       setDialogOpen(false);
       setForm({ ...emptyForm });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   // ── Quick sign mutation ──
@@ -226,7 +226,7 @@ export default function EpiDelivery() {
       toast.success('Assinatura registrada com sucesso');
       qc.invalidateQueries({ queryKey: ['epi-deliveries'] });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   // ── Send for signature mutation ──
@@ -250,7 +250,7 @@ export default function EpiDelivery() {
       toast.success('Termo enviado para assinatura digital');
       qc.invalidateQueries({ queryKey: ['epi-deliveries'] });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   // ── View signed document ──
@@ -266,12 +266,12 @@ export default function EpiDelivery() {
   // ── Update status mutation ──
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const updateData: any = { status };
+      const updateData: Record<string, string> = { status };
       if (status === 'devolvido') {
         updateData.data_devolucao = new Date().toISOString().split('T')[0];
       }
       const { error } = await supabase
-        .from('epi_deliveries' as any)
+        .from('epi_deliveries' as 'epi_deliveries' & string)
         .update(updateData)
         .eq('id', id);
       if (error) throw error;
@@ -280,7 +280,7 @@ export default function EpiDelivery() {
       toast.success('Status atualizado');
       qc.invalidateQueries({ queryKey: ['epi-deliveries'] });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   // ── Filter ──

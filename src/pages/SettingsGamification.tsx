@@ -66,8 +66,8 @@ export default function SettingsGamification() {
       }
       setLevelDialog(false);
       await load();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
     }
@@ -78,8 +78,8 @@ export default function SettingsGamification() {
       await engine.gamification.deleteLevel(id);
       toast.success('Nível removido');
       await load();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -88,8 +88,8 @@ export default function SettingsGamification() {
     try {
       await engine.gamification.updatePointWeight(id, { points });
       toast.success('Peso atualizado');
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : String(err));
     }
   };
 

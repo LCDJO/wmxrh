@@ -133,11 +133,12 @@ export function createModulePermissionAdapter(
   }
 
   function startAutoRegistration(): () => void {
-    return events.on('module:manifest_registered', (payload: any) => {
-      if (payload?.key) {
+    return events.on('module:manifest_registered', (payload: unknown) => {
+      const p = payload as { key?: string } | undefined;
+      if (p?.key) {
         // The manifest was just registered in the loader — find it and register perms
         // We emit a request event; the PlatformCore wires this in boot
-        events.emit('permissions:auto_register_requested', 'PermissionAdapter', { key: payload.key });
+        events.emit('permissions:auto_register_requested', 'PermissionAdapter', { key: p.key });
       }
     });
   }

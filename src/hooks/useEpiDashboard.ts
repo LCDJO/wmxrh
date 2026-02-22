@@ -43,13 +43,13 @@ export function useEpiCompanyStats(companyId?: string | null) {
       const in30d = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
 
       let deliveredQ = supabase
-        .from('epi_deliveries' as any)
+        .from('epi_deliveries' as 'epi_deliveries' & string)
         .select('id', { count: 'exact', head: true })
         .eq('tenant_id', tenantId)
         .eq('status', 'entregue');
 
       let expiredQ = supabase
-        .from('epi_deliveries' as any)
+        .from('epi_deliveries' as 'epi_deliveries' & string)
         .select('id', { count: 'exact', head: true })
         .eq('tenant_id', tenantId)
         .in('status', ['entregue', 'vencido'])
@@ -57,7 +57,7 @@ export function useEpiCompanyStats(companyId?: string | null) {
         .lt('data_validade', today);
 
       let nearExpiryCAQ = supabase
-        .from('epi_catalog' as any)
+        .from('epi_catalog' as 'epi_catalog' & string)
         .select('id', { count: 'exact', head: true })
         .eq('tenant_id', tenantId)
         .eq('is_active', true)
@@ -71,7 +71,7 @@ export function useEpiCompanyStats(companyId?: string | null) {
 
       // Unsigned: deliveries with status 'entregue' that have no valid signature
       let unsignedQ = supabase
-        .from('epi_deliveries' as any)
+        .from('epi_deliveries' as 'epi_deliveries' & string)
         .select('id')
         .eq('tenant_id', tenantId)
         .eq('status', 'entregue');
@@ -89,14 +89,14 @@ export function useEpiCompanyStats(companyId?: string | null) {
 
       // Check signatures for delivered EPIs
       let unsignedCount = 0;
-      const deliveryIds = ((allDeliveries.data ?? []) as any[]).map(d => d.id);
+      const deliveryIds = ((allDeliveries.data ?? []) as { id: string }[]).map(d => d.id);
       if (deliveryIds.length > 0) {
         const { data: sigs } = await supabase
-          .from('epi_signatures' as any)
+          .from('epi_signatures' as 'epi_signatures' & string)
           .select('delivery_id')
           .in('delivery_id', deliveryIds)
           .eq('is_valid', true);
-        const signedIds = new Set((sigs ?? []).map((s: any) => s.delivery_id));
+        const signedIds = new Set((sigs ?? []).map((s: { delivery_id: string }) => s.delivery_id));
         unsignedCount = deliveryIds.filter(id => !signedIds.has(id)).length;
       }
 
@@ -137,24 +137,24 @@ export function useEpiCompanyRanking() {
 
       // Get all deliveries for this tenant grouped by company
       const { data: deliveries } = await supabase
-        .from('epi_deliveries' as any)
+        .from('epi_deliveries' as 'epi_deliveries' & string)
         .select('id, company_id, status, data_validade')
         .eq('tenant_id', tenantId);
 
       // Get signatures
-      const allDeliveryIds = ((deliveries ?? []) as any[]).map(d => d.id);
+      const allDeliveryIds = ((deliveries ?? []) as { id: string }[]).map(d => d.id);
       let signedIds = new Set<string>();
       if (allDeliveryIds.length > 0) {
         const { data: sigs } = await supabase
-          .from('epi_signatures' as any)
+          .from('epi_signatures' as 'epi_signatures' & string)
           .select('delivery_id')
           .in('delivery_id', allDeliveryIds)
           .eq('is_valid', true);
-        signedIds = new Set((sigs ?? []).map((s: any) => s.delivery_id));
+        signedIds = new Set((sigs ?? []).map((s: { delivery_id: string }) => s.delivery_id));
       }
 
       const ranking: EpiCompanyRanking[] = companies.map((c) => {
-        const compDeliveries = ((deliveries ?? []) as any[]).filter(d => d.company_id === c.id);
+        const compDeliveries = ((deliveries ?? []) as { id: string; company_id: string; status: string; data_validade: string | null }[]).filter(d => d.company_id === c.id);
         const delivered = compDeliveries.filter(d => d.status === 'entregue');
         const expired = compDeliveries.filter(d =>
           d.data_validade && new Date(d.data_validade) < new Date(today) &&

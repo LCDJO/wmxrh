@@ -86,12 +86,12 @@ async function fetchEmployees(scope: QueryScope): Promise<EmployeeSnapshot[]> {
   ).eq('status', 'active').is('deleted_at', null);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []).map((e: any) => ({
+  return (data ?? []).map((e) => ({
     id: e.id,
     name: e.name,
-    department: e.departments?.name,
+    department: (e.departments as { name?: string } | null)?.name,
     department_id: e.department_id,
-    position: e.positions?.title,
+    position: (e.positions as { title?: string } | null)?.title,
     position_id: e.position_id,
     company_id: e.company_id,
     company_group_id: e.company_group_id,
@@ -113,7 +113,7 @@ async function fetchSimulations(scope: QueryScope): Promise<SimulationSnapshot[]
   // Deduplicate: keep latest simulation per employee
   const seen = new Set<string>();
   const unique: SimulationSnapshot[] = [];
-  for (const row of (data ?? []) as any[]) {
+  for (const row of (data ?? [])) {
     if (seen.has(row.employee_id)) continue;
     seen.add(row.employee_id);
     unique.push({
@@ -138,21 +138,21 @@ async function fetchSimulations(scope: QueryScope): Promise<SimulationSnapshot[]
 
 async function fetchExamAlerts(tenantId: string) {
   const { data, error } = await supabase
-    .from('pcmso_exam_alerts' as any)
+    .from('pcmso_exam_alerts' as 'pcmso_exam_alerts' & string)
     .select('*')
     .eq('tenant_id', tenantId);
   if (error) throw error;
-  return (data ?? []).map((r: any) => toMedicalExamStatusView({
-    employee_id: r.employee_id,
-    employee_name: r.employee_name,
-    company_id: r.company_id,
-    exam_date: r.exam_date,
-    exam_type: r.exam_type,
-    result: r.result,
-    next_exam_date: r.next_exam_date,
-    days_until_due: r.days_until_due,
-    alert_status: r.alert_status,
-    program_name: r.program_name,
+  return ((data ?? []) as unknown as Record<string, unknown>[]).map((r) => toMedicalExamStatusView({
+    employee_id: r.employee_id as string,
+    employee_name: r.employee_name as string,
+    company_id: r.company_id as string,
+    exam_date: r.exam_date as string,
+    exam_type: r.exam_type as string,
+    result: r.result as string,
+    next_exam_date: r.next_exam_date as string | null,
+    days_until_due: r.days_until_due as number | null,
+    alert_status: r.alert_status as string,
+    program_name: r.program_name as string | null,
   }));
 }
 
@@ -164,7 +164,7 @@ async function fetchRiskExposures(scope: QueryScope) {
   ).is('deleted_at', null).eq('is_active', true);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []).map((r: any) => toRiskExposureView(r));
+  return (data ?? []).map((r) => toRiskExposureView(r as unknown as Parameters<typeof toRiskExposureView>[0]));
 }
 
 async function fetchBenefits(scope: QueryScope): Promise<BenefitSnapshot[]> {
@@ -174,11 +174,11 @@ async function fetchBenefits(scope: QueryScope): Promise<BenefitSnapshot[]> {
   ).eq('is_active', true).is('deleted_at', null);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []).map((r: any) => ({
+  return (data ?? []).map((r) => ({
     employee_id: r.employee_id,
-    plan_name: r.benefit_plans?.name ?? 'Plano',
-    benefit_type: r.benefit_plans?.benefit_type ?? 'other',
-    monthly_value: r.monthly_value ?? r.benefit_plans?.base_value ?? 0,
+    plan_name: (r.benefit_plans as { name?: string; benefit_type?: string; base_value?: number } | null)?.name ?? 'Plano',
+    benefit_type: (r.benefit_plans as { name?: string; benefit_type?: string; base_value?: number } | null)?.benefit_type ?? 'other',
+    monthly_value: r.monthly_value ?? (r.benefit_plans as { base_value?: number } | null)?.base_value ?? 0,
     employer_cost: (r.monthly_value ?? 0) * ((r.employer_pays_pct ?? 100) / 100),
     is_active: r.is_active,
   }));
@@ -192,7 +192,7 @@ async function fetchNrTrainings(tenantId: string, scope: QueryScope): Promise<Nr
   if (scope.companyId) q = q.eq('company_id', scope.companyId);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []).map((r: any) => ({
+  return (data ?? []).map((r) => ({
     employee_id: r.employee_id,
     nr_number: r.nr_number,
     training_name: r.training_name ?? `NR-${r.nr_number}`,
