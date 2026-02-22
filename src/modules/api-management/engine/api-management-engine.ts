@@ -608,7 +608,7 @@ export const ApiVersionRouter = {
       .map(([major, v]) => ({
         version: `v${major}`,
         status: v.status,
-        releasedAt: v.released_at,
+        releasedAt: v.released_at ?? undefined,
       }));
   },
 };

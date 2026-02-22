@@ -157,9 +157,9 @@ export function AccessPreview({ selectedNodeId, nodes, edges, roles, permissions
               ))}
             </div>
 
-            {selectedNode.meta?.module && (
+            {typeof selectedNode.meta?.module === 'string' && (
               <div className="text-[10px] text-muted-foreground space-y-0.5 pt-2 border-t border-border">
-                <p>Módulo: <span className="font-medium text-foreground">{MODULE_LABELS[selectedNode.meta.module as string] || String(selectedNode.meta.module)}</span></p>
+                <p>Módulo: <span className="font-medium text-foreground">{MODULE_LABELS[String(selectedNode.meta.module)] || String(selectedNode.meta.module)}</span></p>
                 <p>Resource: <span className="font-mono text-foreground">{String(selectedNode.meta.resource)}</span></p>
                 <p>Action: <span className="font-mono text-foreground">{String(selectedNode.meta.action)}</span></p>
               </div>

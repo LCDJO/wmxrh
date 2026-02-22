@@ -89,7 +89,7 @@ function RunCard({ run, onRerun, onCancel }: { run: WorkflowRun; onRerun?: (r: W
             <Badge variant="outline" className={cn('text-[9px] h-4 px-1.5', statusCfg.color)}>
               {statusCfg.label}
             </Badge>
-            {run.metadata?.isSandbox && (
+            {run.metadata?.isSandbox === true && (
               <Badge className="text-[9px] h-4 px-1.5 bg-amber-500/20 text-amber-600">SANDBOX</Badge>
             )}
           </div>

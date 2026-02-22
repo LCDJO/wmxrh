@@ -321,7 +321,7 @@ function buildCareerMappingUpdates(
     if (input.areas_impactadas.includes('treinamentos') || input.areas_impactadas.includes('seguranca_trabalho')) {
       updates.push({
         career_position_id: cargo.cargo_id,
-        cbo_codigo: cargo.cbo_codigo,
+        cbo_codigo: cargo.cbo_codigo ?? '',
         campo: 'exige_treinamento',
         valor_anterior: null,
         valor_novo: true,
@@ -334,7 +334,7 @@ function buildCareerMappingUpdates(
     if (input.areas_impactadas.includes('epi')) {
       updates.push({
         career_position_id: cargo.cargo_id,
-        cbo_codigo: cargo.cbo_codigo,
+        cbo_codigo: cargo.cbo_codigo ?? '',
         campo: 'exige_epi',
         valor_anterior: null,
         valor_novo: true,
@@ -347,7 +347,7 @@ function buildCareerMappingUpdates(
     if (input.areas_impactadas.includes('saude_ocupacional')) {
       updates.push({
         career_position_id: cargo.cargo_id,
-        cbo_codigo: cargo.cbo_codigo,
+        cbo_codigo: cargo.cbo_codigo ?? '',
         campo: 'exige_exame_medico',
         valor_anterior: null,
         valor_novo: true,
@@ -360,7 +360,7 @@ function buildCareerMappingUpdates(
     if (input.nrs_afetadas.length > 0) {
       updates.push({
         career_position_id: cargo.cargo_id,
-        cbo_codigo: cargo.cbo_codigo,
+        cbo_codigo: cargo.cbo_codigo ?? '',
         campo: 'nr_codigo',
         valor_anterior: null,
         valor_novo: input.nrs_afetadas.join(', '),

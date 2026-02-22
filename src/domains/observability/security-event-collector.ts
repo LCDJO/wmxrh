@@ -42,7 +42,7 @@ class SecurityEventCollector {
     let result = [...this.events];
     if (opts?.type) result = result.filter(e => e.type === opts.type);
     if (opts?.result) result = result.filter(e => e.result === opts.result);
-    if (opts?.since) result = result.filter(e => e.timestamp >= opts.since);
+    if (opts?.since) result = result.filter(e => e.timestamp >= opts.since!);
     result.sort((a, b) => b.timestamp - a.timestamp);
     if (opts?.limit) result = result.slice(0, opts.limit);
     return result;

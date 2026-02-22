@@ -154,7 +154,8 @@ export function registerNotificationListeners() {
 
   // ── Legal AI Intelligence Events ──
   teardowns.push(
-    onLegalAiEvent(legalAiEvents.INTERPRETATION_GENERATED, (payload: Record<string, unknown>) => {
+    onLegalAiEvent(legalAiEvents.INTERPRETATION_GENERATED, (...args: unknown[]) => {
+      const payload = (args[0] ?? {}) as Record<string, unknown>;
       const p = payload;
       fireToPolicy(
         'LegislationInterpreted',
@@ -171,7 +172,8 @@ export function registerNotificationListeners() {
   );
 
   teardowns.push(
-    onLegalAiEvent(legalAiEvents.HUMAN_REVIEW_REQUIRED, (payload: Record<string, unknown>) => {
+    onLegalAiEvent(legalAiEvents.HUMAN_REVIEW_REQUIRED, (...args: unknown[]) => {
+      const payload = (args[0] ?? {}) as Record<string, unknown>;
       const p = payload;
       fireToPolicy(
         'CriticalLegalChange',
@@ -188,7 +190,8 @@ export function registerNotificationListeners() {
   );
 
   teardowns.push(
-    onLegalAiEvent(legalAiEvents.ACTION_PLAN_CREATED, (payload: Record<string, unknown>) => {
+    onLegalAiEvent(legalAiEvents.ACTION_PLAN_CREATED, (...args: unknown[]) => {
+      const payload = (args[0] ?? {}) as Record<string, unknown>;
       const p = payload;
       fireToPolicy(
         'ActionPlanCreated',

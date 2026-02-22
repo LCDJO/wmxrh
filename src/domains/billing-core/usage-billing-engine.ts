@@ -288,7 +288,7 @@ function createUsagePricingCalculator(): UsagePricingCalculatorAPI {
 
       if (error) throw new Error(`PricingCalculator.getRulesForModule: ${error.message}`);
       return (data ?? []).map((t) => ({
-        module_id: t.module_id,
+        module_id: t.module_id ?? '',
         metric_type: t.metric_type as 'users' | 'api_calls' | 'storage' | 'executions',
         price_per_unit: Number(t.price_per_unit),
         included_quota: Number(t.included_quantity),

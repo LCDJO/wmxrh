@@ -18,7 +18,7 @@ export default function RevenuePerLandingWidget() {
       try {
         const { data: result, error } = await supabase.functions.invoke('top-conversions', {
           method: 'GET',
-          body: null,
+          body: undefined,
         });
         if (!error && result?.top_by_revenue) {
           setData(result.top_by_revenue);

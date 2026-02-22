@@ -114,7 +114,7 @@ class GatewayPerformanceTracker {
     let result = [...this.samples];
     if (opts?.category) result = result.filter(s => s.category === opts.category);
     if (opts?.source) result = result.filter(s => s.source === opts.source);
-    if (opts?.since) result = result.filter(s => s.timestamp >= opts.since);
+    if (opts?.since) result = result.filter(s => s.timestamp >= opts.since!);
     result.sort((a, b) => b.timestamp - a.timestamp);
     if (opts?.limit) result = result.slice(0, opts.limit);
     return result;

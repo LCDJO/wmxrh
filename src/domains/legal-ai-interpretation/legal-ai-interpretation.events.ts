@@ -2,7 +2,7 @@
  * Legal AI Interpretation Engine — Domain Events
  */
 
-type EventHandler = (...args: unknown[]) => void;
+export type EventHandler = (...args: unknown[]) => void;
 const handlers = new Map<string, Set<EventHandler>>();
 
 export const legalAiEvents = {

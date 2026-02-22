@@ -40,12 +40,12 @@ export async function insertLegalInterpretationLog(
   const { data, error } = await supabase.rpc('insert_legal_interpretation_log', {
     p_tenant_id: entry.tenant_id,
     p_mudanca_id: entry.mudanca_id,
-    p_norm_codigo: entry.norm_codigo ?? null,
+    p_norm_codigo: entry.norm_codigo ?? '',
     p_resumo: entry.resumo,
     p_impacto: entry.impacto as unknown as Json,
     p_acoes_geradas: entry.acoes_geradas as unknown as Json,
     p_risco_nivel: entry.risco_nivel ?? 'medio',
-    p_modelo_utilizado: entry.modelo_utilizado ?? null,
+    p_modelo_utilizado: entry.modelo_utilizado ?? undefined,
   });
 
   if (error) throw new Error(`[LegalInterpretationLog] insert failed: ${error.message}`);

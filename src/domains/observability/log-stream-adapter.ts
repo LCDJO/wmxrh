@@ -94,7 +94,7 @@ class LogStreamAdapter {
     }
     if (opts?.source) result = result.filter(e => e.source === opts.source);
     if (opts?.module_id) result = result.filter(e => e.module_id === opts.module_id);
-    if (opts?.since) result = result.filter(e => e.timestamp >= opts.since);
+    if (opts?.since) result = result.filter(e => e.timestamp >= opts.since!);
     if (opts?.search) {
       const q = opts.search.toLowerCase();
       result = result.filter(e => e.message.toLowerCase().includes(q));

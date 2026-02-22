@@ -50,7 +50,7 @@ export default function IncidentsPanel() {
     }
   }, []);
 
-  useEffect(() => {
+  useEffect((): (() => void) | undefined => {
     refresh();
     try {
       const { getSelfHealingEngine } = require('@/domains/self-healing/self-healing-engine') as {
@@ -59,6 +59,7 @@ export default function IncidentsPanel() {
       const engine = getSelfHealingEngine();
       if (engine) return engine.onUpdate(refresh);
     } catch { /* noop */ }
+    return undefined;
   }, [refresh]);
 
   const incidents = allIncidents.length > 0

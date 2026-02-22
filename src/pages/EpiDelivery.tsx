@@ -166,7 +166,7 @@ export default function EpiDelivery() {
       // 1. Create delivery
       const { data: delivery, error } = await supabase
         .from('epi_deliveries' as 'epi_deliveries' & string)
-        .insert({
+        .insert([{
           tenant_id: currentTenantId,
           employee_id: input.employee_id,
           epi_catalog_id: input.epi_catalog_id,
@@ -179,7 +179,7 @@ export default function EpiDelivery() {
           observacoes: input.observacoes || null,
           status: 'entregue',
           assinatura_status: 'pending',
-        })
+        }] as Record<string, unknown>[])
         .select()
         .single();
 

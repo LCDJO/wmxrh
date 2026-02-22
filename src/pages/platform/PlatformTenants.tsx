@@ -257,7 +257,7 @@ export default function PlatformTenants() {
     setTenantDetails(null);
     try {
       const { data, error } = await supabase.functions.invoke('tenant-details', {
-        body: null,
+        body: undefined,
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -292,11 +292,11 @@ export default function PlatformTenants() {
     setSaving(true);
     const { data, error } = await supabase.rpc('platform_create_tenant', {
       p_name: form.name.trim(),
-      p_document: form.document.trim() || null,
-      p_email: form.email.trim() || null,
-      p_phone: form.phone.trim() || null,
-      p_admin_email: form.adminEmail.trim() || null,
-      p_admin_name: form.adminName.trim() || null,
+      p_document: form.document.trim() || undefined,
+      p_email: form.email.trim() || undefined,
+      p_phone: form.phone.trim() || undefined,
+      p_admin_email: form.adminEmail.trim() || undefined,
+      p_admin_name: form.adminName.trim() || undefined,
     });
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });

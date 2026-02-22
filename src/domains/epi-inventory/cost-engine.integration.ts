@@ -34,8 +34,8 @@ export async function getEpiCostsForPayroll(
   const { data, error } = await supabase.rpc('get_epi_cost_summary_by_company', {
     _tenant_id: tenantId,
     _company_id: companyId,
-    _period_from: periodFrom ?? null,
-    _period_to: periodTo ?? null,
+    _period_from: periodFrom ?? undefined,
+    _period_to: periodTo ?? undefined,
   });
 
   if (error) throw new Error(`Erro ao buscar custos EPI para folha: ${error.message}`);

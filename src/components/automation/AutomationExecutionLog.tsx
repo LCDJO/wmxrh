@@ -53,13 +53,13 @@ export function AutomationExecutionLog({ ruleId, open, onOpenChange }: Props) {
                   {resultIcon(exec.result as string)}
                   <div className="flex-1 space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{exec.trigger_event as string}</span>
+                      <span className="font-medium">{String(exec.trigger_event)}</span>
                       <Badge variant={exec.conditions_met ? 'default' : 'secondary'} className="text-[10px]">
                         {exec.conditions_met ? 'Match' : 'No Match'}
                       </Badge>
                     </div>
-                    {exec.error_message && (
-                      <p className="text-destructive">{exec.error_message as string}</p>
+                    {typeof exec.error_message === 'string' && exec.error_message && (
+                      <p className="text-destructive">{String(exec.error_message)}</p>
                     )}
                     <p className="text-muted-foreground">
                       {new Date(exec.executed_at as string).toLocaleString('pt-BR')}
