@@ -16,7 +16,7 @@ import {
 import { cn } from '@/lib/utils';
 
 interface DisplayData {
-  display: { id: string; name: string; layout: string; refresh_interval_seconds: number };
+  display: { id: string; nome: string; tipo: string; rotacao_automatica: boolean; intervalo_rotacao: number; layout_config: any };
   timestamp: string;
   workforce?: { total: number; active: number; inactive: number; by_department: Record<string, number> };
   fleet_events?: any[];
@@ -70,7 +70,7 @@ export default function LiveDisplayTV() {
 
   useEffect(() => {
     if (!data) return;
-    const interval = (data.display.refresh_interval_seconds ?? 30) * 1000;
+    const interval = (data.display.intervalo_rotacao ?? 30) * 1000;
     intervalRef.current = setInterval(fetchData, interval);
     return () => clearInterval(intervalRef.current);
   }, [data, fetchData]);
@@ -124,7 +124,7 @@ export default function LiveDisplayTV() {
     );
   }
 
-  const layout = data.display.layout;
+  const tipo = data.display.tipo;
   const workforce = data.workforce;
   const fleetEvents = data.fleet_events ?? [];
   const incidents = data.compliance_incidents ?? [];
@@ -139,7 +139,7 @@ export default function LiveDisplayTV() {
             <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-sm font-semibold text-primary">AO VIVO</span>
           </div>
-          <h1 className="text-lg lg:text-xl font-bold text-white/90">{data.display.name}</h1>
+          <h1 className="text-lg lg:text-xl font-bold text-white/90">{data.display.nome}</h1>
         </div>
         <div className="flex items-center gap-4 text-xs text-white/40">
           {lastUpdate && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(lastUpdate, 'HH:mm:ss')}</span>}
@@ -149,12 +149,13 @@ export default function LiveDisplayTV() {
 
       <div className={cn(
         "grid gap-4 lg:gap-6 h-[calc(100vh-5rem)]",
-        layout === 'overview' && "grid-cols-1 lg:grid-cols-3 grid-rows-[auto_1fr_1fr]",
-        layout === 'operations' && "grid-cols-1 lg:grid-cols-2 grid-rows-[auto_1fr]",
-        layout === 'compliance' && "grid-cols-1 lg:grid-cols-2 grid-rows-[auto_1fr]",
+        tipo === 'executivo' && "grid-cols-1 lg:grid-cols-3 grid-rows-[auto_1fr_1fr]",
+        tipo === 'fleet' && "grid-cols-1 lg:grid-cols-2 grid-rows-[auto_1fr]",
+        tipo === 'compliance' && "grid-cols-1 lg:grid-cols-2 grid-rows-[auto_1fr]",
+        tipo === 'sst' && "grid-cols-1 lg:grid-cols-2 grid-rows-[auto_1fr]",
       )}>
         {/* ── KPI Strip ── */}
-        <div className={cn("col-span-full grid gap-4", layout === 'overview' ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-4")}>
+        <div className="col-span-full grid gap-4 grid-cols-2 lg:grid-cols-4">
           <KpiTile icon={Users} label="Colaboradores" value={workforce?.total ?? 0} sub={`${workforce?.active ?? 0} ativos`} color="text-sky-400" />
           <KpiTile icon={Activity} label="Eventos GPS" value={fleetEvents.length} sub="Últimos registros" color="text-emerald-400" />
           <KpiTile icon={Shield} label="Incidentes" value={incidents.length} sub="Compliance" color="text-amber-400" />
@@ -179,7 +180,7 @@ export default function LiveDisplayTV() {
         )}
 
         {/* ── Workforce by Department ── */}
-        {(layout === 'overview' || layout === 'operations') && workforce && (
+        {(tipo === 'executivo' || tipo === 'fleet') && workforce && (
           <TVCard title="Workforce por Departamento" icon={Users} className="lg:row-span-1">
             <div className="space-y-2 overflow-y-auto max-h-[300px]">
               {Object.entries(workforce.by_department).sort(([, a], [, b]) => b - a).map(([dept, count]) => (
@@ -193,7 +194,7 @@ export default function LiveDisplayTV() {
         )}
 
         {/* ── Fleet Events Feed ── */}
-        {(layout === 'overview' || layout === 'operations') && (
+        {(tipo === 'executivo' || tipo === 'fleet') && (
           <TVCard title="Eventos GPS Recentes" icon={Zap} className="lg:row-span-1">
             <div className="space-y-2 overflow-y-auto max-h-[300px]">
               {fleetEvents.length === 0 ? (
@@ -219,7 +220,7 @@ export default function LiveDisplayTV() {
         )}
 
         {/* ── Compliance Incidents ── */}
-        {(layout === 'overview' || layout === 'compliance') && (
+        {(tipo === 'executivo' || tipo === 'compliance' || tipo === 'sst') && (
           <TVCard title="Incidentes de Compliance" icon={Shield} className="lg:row-span-1">
             <div className="space-y-2 overflow-y-auto max-h-[300px]">
               {incidents.length === 0 ? (

@@ -1,5 +1,5 @@
 /**
- * LiveDisplayAdmin — Manage TV displays, generate QR codes for pairing.
+ * LiveDisplayAdmin — Manage TV displays (DisplayBoard), generate QR codes for pairing.
  * Route: /live-display (tenant)
  */
 import { useState, useEffect, useCallback } from 'react';
@@ -10,17 +10,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { QRCodeSVG } from 'qrcode.react';
-import { Monitor, Plus, QrCode, Trash2, RefreshCw, Copy, Tv, AlertTriangle, CheckCircle2, WifiOff } from 'lucide-react';
+import { Monitor, Plus, QrCode, Trash2, Copy, Tv, AlertTriangle, CheckCircle2, WifiOff, RotateCw } from 'lucide-react';
 import { format } from 'date-fns';
-import { DISPLAY_LAYOUTS } from '@/modules/live-display';
+import { DISPLAY_TIPOS } from '@/modules/live-display';
+import type { DisplayBoardTipo } from '@/modules/live-display';
 import type { Database } from '@/integrations/supabase/types';
 
 type LiveDisplay = Database['public']['Tables']['live_displays']['Row'];
-type LiveDisplayToken = Database['public']['Tables']['live_display_tokens']['Row'];
 
 const STATUS_MAP: Record<string, { label: string; icon: any; color: string }> = {
   active: { label: 'Conectado', icon: CheckCircle2, color: 'text-emerald-500' },
@@ -39,10 +40,12 @@ export default function LiveDisplayAdmin() {
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
 
   // Form state
-  const [formName, setFormName] = useState('');
-  const [formLayout, setFormLayout] = useState<string>('overview');
+  const [formNome, setFormNome] = useState('');
+  const [formTipo, setFormTipo] = useState<DisplayBoardTipo>('executivo');
   const [formCompanyId, setFormCompanyId] = useState<string>('');
   const [formDeptId, setFormDeptId] = useState<string>('');
+  const [formRotacao, setFormRotacao] = useState(false);
+  const [formIntervalo, setFormIntervalo] = useState(30);
   const [creating, setCreating] = useState(false);
 
   const tenantId = currentTenant?.id;
@@ -63,7 +66,6 @@ export default function LiveDisplayAdmin() {
   useEffect(() => {
     if (!tenantId) return;
     fetchDisplays();
-    // Fetch companies and departments for selects
     Promise.all([
       supabase.from('companies').select('id, name').eq('tenant_id', tenantId).is('deleted_at', null),
       supabase.from('departments').select('id, name').eq('tenant_id', tenantId),
@@ -73,7 +75,6 @@ export default function LiveDisplayAdmin() {
     });
   }, [tenantId, fetchDisplays]);
 
-  // Realtime subscription
   useEffect(() => {
     if (!tenantId) return;
     const channel = supabase
@@ -86,50 +87,45 @@ export default function LiveDisplayAdmin() {
   }, [tenantId, fetchDisplays]);
 
   const handleCreate = async () => {
-    if (!tenantId || !formName.trim()) return;
+    if (!tenantId || !formNome.trim()) return;
     setCreating(true);
     const { error } = await supabase.from('live_displays').insert({
       tenant_id: tenantId,
-      name: formName.trim(),
-      layout: formLayout as any,
+      nome: formNome.trim(),
+      tipo: formTipo,
       company_id: formCompanyId || null,
       department_id: formDeptId || null,
+      rotacao_automatica: formRotacao,
+      intervalo_rotacao: formIntervalo,
     });
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Display criado!' });
       setShowCreate(false);
-      setFormName('');
-      setFormLayout('overview');
-      setFormCompanyId('');
-      setFormDeptId('');
+      resetForm();
       fetchDisplays();
     }
     setCreating(false);
   };
 
+  const resetForm = () => {
+    setFormNome(''); setFormTipo('executivo'); setFormCompanyId(''); setFormDeptId('');
+    setFormRotacao(false); setFormIntervalo(30);
+  };
+
   const generateToken = async (display: LiveDisplay) => {
     if (!tenantId) return;
-    // Generate a secure random token
     const tokenValue = crypto.randomUUID() + '-' + crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(); // 1 year
-
-    // Deactivate old tokens
+    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
     await supabase.from('live_display_tokens').update({ is_active: false }).eq('display_id', display.id);
-
     const { error } = await supabase.from('live_display_tokens').insert({
-      display_id: display.id,
-      tenant_id: tenantId,
-      token: tokenValue,
-      expires_at: expiresAt,
+      display_id: display.id, tenant_id: tenantId, token: tokenValue, expires_at: expiresAt,
     });
-
     if (error) {
       toast({ title: 'Erro ao gerar token', description: error.message, variant: 'destructive' });
       return;
     }
-
     const tvUrl = `${window.location.origin}/tv?token=${tokenValue}`;
     setShowQR({ display, token: tokenValue, url: tvUrl });
   };
@@ -164,9 +160,7 @@ export default function LiveDisplayAdmin() {
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map(i => (
-            <Card key={i} className="animate-pulse"><CardContent className="h-40" /></Card>
-          ))}
+          {[1, 2, 3].map(i => <Card key={i} className="animate-pulse"><CardContent className="h-40" /></Card>)}
         </div>
       ) : displays.length === 0 ? (
         <Card>
@@ -183,7 +177,7 @@ export default function LiveDisplayAdmin() {
           {displays.map(display => {
             const status = STATUS_MAP[display.status] ?? STATUS_MAP.disconnected;
             const StatusIcon = status.icon;
-            const layoutInfo = DISPLAY_LAYOUTS[display.layout as keyof typeof DISPLAY_LAYOUTS];
+            const tipoInfo = DISPLAY_TIPOS[display.tipo as DisplayBoardTipo];
 
             return (
               <Card key={display.id} className="group hover:border-primary/30 transition-colors">
@@ -191,7 +185,7 @@ export default function LiveDisplayAdmin() {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
                       <Monitor className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-base">{display.name}</CardTitle>
+                      <CardTitle className="text-base">{display.nome}</CardTitle>
                     </div>
                     <div className="flex items-center gap-1">
                       <StatusIcon className={`h-4 w-4 ${status.color}`} />
@@ -200,15 +194,20 @@ export default function LiveDisplayAdmin() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">{layoutInfo?.label ?? display.layout}</Badge>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="secondary" className="text-xs">{tipoInfo?.label ?? display.tipo}</Badge>
+                    {display.rotacao_automatica && (
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <RotateCw className="h-3 w-3" /> {display.intervalo_rotacao}s
+                      </Badge>
+                    )}
                     {display.company_id && (
                       <Badge variant="outline" className="text-xs">
                         {companies.find(c => c.id === display.company_id)?.name ?? 'Empresa'}
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">{layoutInfo?.description}</p>
+                  <p className="text-xs text-muted-foreground">{tipoInfo?.description}</p>
                   {display.last_seen_at && (
                     <p className="text-xs text-muted-foreground">
                       Último sinal: {format(new Date(display.last_seen_at), 'dd/MM HH:mm')}
@@ -233,19 +232,19 @@ export default function LiveDisplayAdmin() {
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Novo Display</DialogTitle>
+            <DialogTitle>Novo Display Board</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Nome do Display</Label>
-              <Input placeholder="Ex: TV Recepção, Monitor Operações" value={formName} onChange={e => setFormName(e.target.value)} />
+              <Label>Nome</Label>
+              <Input placeholder="Ex: TV Recepção, Monitor Operações" value={formNome} onChange={e => setFormNome(e.target.value)} />
             </div>
             <div>
-              <Label>Layout</Label>
-              <Select value={formLayout} onValueChange={setFormLayout}>
+              <Label>Tipo</Label>
+              <Select value={formTipo} onValueChange={v => setFormTipo(v as DisplayBoardTipo)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(DISPLAY_LAYOUTS).map(([key, val]) => (
+                  {Object.entries(DISPLAY_TIPOS).map(([key, val]) => (
                     <SelectItem key={key} value={key}>{val.label} — {val.description}</SelectItem>
                   ))}
                 </SelectContent>
@@ -271,10 +270,23 @@ export default function LiveDisplayAdmin() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Rotação automática</Label>
+                <p className="text-xs text-muted-foreground">Alterna entre painéis automaticamente</p>
+              </div>
+              <Switch checked={formRotacao} onCheckedChange={setFormRotacao} />
+            </div>
+            {formRotacao && (
+              <div>
+                <Label>Intervalo de rotação (segundos)</Label>
+                <Input type="number" min={10} max={300} value={formIntervalo} onChange={e => setFormIntervalo(Number(e.target.value))} />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={creating || !formName.trim()}>
+            <Button onClick={handleCreate} disabled={creating || !formNome.trim()}>
               {creating ? 'Criando...' : 'Criar Display'}
             </Button>
           </DialogFooter>
@@ -287,7 +299,7 @@ export default function LiveDisplayAdmin() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <QrCode className="h-5 w-5 text-primary" />
-              Parear Display: {showQR?.display.name}
+              Parear Display: {showQR?.display.nome}
             </DialogTitle>
           </DialogHeader>
           {showQR && (

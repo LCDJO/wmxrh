@@ -7,11 +7,14 @@ export const LIVE_DISPLAY_EVENTS = {
   DATA_REFRESHED: `module:${LIVE_DISPLAY_MODULE_ID}:data_refreshed`,
 } as const;
 
-export const DISPLAY_LAYOUTS = {
-  operations: { label: 'Operações', description: 'Mapa GPS, eventos de frota e workforce' },
-  compliance: { label: 'Compliance', description: 'Incidentes, infrações e alertas críticos' },
-  overview: { label: 'Visão Geral', description: 'Todos os widgets em layout consolidado' },
+export const DISPLAY_TIPOS = {
+  fleet: { label: 'Frota', description: 'Eventos GPS, rastreamento e infrações de veículos' },
+  sst: { label: 'SST', description: 'Saúde e segurança do trabalho, EPIs e NRs' },
+  compliance: { label: 'Compliance', description: 'Incidentes, advertências e conformidade' },
+  executivo: { label: 'Executivo', description: 'Visão consolidada de workforce e KPIs' },
 } as const;
+
+export type DisplayBoardTipo = keyof typeof DISPLAY_TIPOS;
 
 import type { SandboxContext } from '@/domains/platform-os/federation/module-sandbox';
 

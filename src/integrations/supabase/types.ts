@@ -8625,14 +8625,15 @@ export type Database = {
           created_by: string | null
           deleted_at: string | null
           department_id: string | null
-          description: string | null
           id: string
+          intervalo_rotacao: number
           last_seen_at: string | null
-          layout: Database["public"]["Enums"]["display_layout"]
-          name: string
-          refresh_interval_seconds: number
+          layout_config: Json
+          nome: string
+          rotacao_automatica: boolean
           status: Database["public"]["Enums"]["display_status"]
           tenant_id: string
+          tipo: Database["public"]["Enums"]["display_board_tipo"]
           updated_at: string
         }
         Insert: {
@@ -8641,14 +8642,15 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           department_id?: string | null
-          description?: string | null
           id?: string
+          intervalo_rotacao?: number
           last_seen_at?: string | null
-          layout?: Database["public"]["Enums"]["display_layout"]
-          name: string
-          refresh_interval_seconds?: number
+          layout_config?: Json
+          nome: string
+          rotacao_automatica?: boolean
           status?: Database["public"]["Enums"]["display_status"]
           tenant_id: string
+          tipo?: Database["public"]["Enums"]["display_board_tipo"]
           updated_at?: string
         }
         Update: {
@@ -8657,14 +8659,15 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           department_id?: string | null
-          description?: string | null
           id?: string
+          intervalo_rotacao?: number
           last_seen_at?: string | null
-          layout?: Database["public"]["Enums"]["display_layout"]
-          name?: string
-          refresh_interval_seconds?: number
+          layout_config?: Json
+          nome?: string
+          rotacao_automatica?: boolean
           status?: Database["public"]["Enums"]["display_status"]
           tenant_id?: string
+          tipo?: Database["public"]["Enums"]["display_board_tipo"]
           updated_at?: string
         }
         Relationships: [
@@ -14106,7 +14109,7 @@ export type Database = {
       benefit_type: "va" | "vr" | "vt" | "health" | "dental" | "cesta" | "flex"
       compliance_rule_severity: "info" | "warning" | "critical"
       compliance_rule_status: "active" | "disabled" | "archived"
-      display_layout: "operations" | "compliance" | "overview"
+      display_board_tipo: "fleet" | "sst" | "compliance" | "executivo"
       display_status: "active" | "paused" | "disconnected"
       employee_event_type:
         | "company_transfer"
@@ -14400,7 +14403,7 @@ export const Constants = {
       benefit_type: ["va", "vr", "vt", "health", "dental", "cesta", "flex"],
       compliance_rule_severity: ["info", "warning", "critical"],
       compliance_rule_status: ["active", "disabled", "archived"],
-      display_layout: ["operations", "compliance", "overview"],
+      display_board_tipo: ["fleet", "sst", "compliance", "executivo"],
       display_status: ["active", "paused", "disconnected"],
       employee_event_type: [
         "company_transfer",

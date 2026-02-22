@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     // Get display config
     const { data: display } = await admin
       .from("live_displays")
-      .select("id, name, layout, company_id, department_id, tenant_id, refresh_interval_seconds")
+      .select("id, nome, tipo, layout_config, rotacao_automatica, intervalo_rotacao, company_id, department_id, tenant_id")
       .eq("id", tokenData.display_id)
       .is("deleted_at", null)
       .maybeSingle();
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
 
     // Build data based on layout
     const result: Record<string, unknown> = {
-      display: { id: display.id, name: display.name, layout: display.layout, refresh_interval_seconds: display.refresh_interval_seconds },
+      display: { id: display.id, nome: display.nome, tipo: display.tipo, rotacao_automatica: display.rotacao_automatica, intervalo_rotacao: display.intervalo_rotacao, layout_config: display.layout_config },
       timestamp: new Date().toISOString(),
     };
 
@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
     };
 
     // ── Fleet behavior events (last 50) ──
-    if (display.layout === "operations" || display.layout === "overview") {
+    if (display.tipo === "fleet" || display.tipo === "executivo") {
       let fleetQuery = admin.from("fleet_behavior_events")
         .select("id, event_type, severity, detected_at, employee_id, employees(name), location_lat, location_lng, speed_kmh, speed_limit_kmh, description")
         .eq("tenant_id", tenantId)
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Compliance incidents (last 30) ──
-    if (display.layout === "compliance" || display.layout === "overview") {
+    if (display.tipo === "compliance" || display.tipo === "executivo" || display.tipo === "sst") {
       let incidentQuery = admin.from("fleet_compliance_incidents")
         .select("id, incident_type, severity, status, description, created_at, employee_id, employees(name)")
         .eq("tenant_id", tenantId)
