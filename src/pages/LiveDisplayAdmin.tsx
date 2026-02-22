@@ -54,7 +54,8 @@ export default function LiveDisplayAdmin() {
   const [formRotacao, setFormRotacao] = useState(false);
   const [formIntervalo, setFormIntervalo] = useState(30);
   const [creating, setCreating] = useState(false);
-  const [previewDisplay, setPreviewDisplay] = useState<LiveDisplay | null>(null);
+  const [previewDisplayId, setPreviewDisplayId] = useState<string | null>(null);
+  const previewDisplay = displays.find(d => d.id === previewDisplayId) ?? null;
   const [editDisplay, setEditDisplay] = useState<LiveDisplay | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -329,7 +330,7 @@ export default function LiveDisplayAdmin() {
                       <div className="flex items-center justify-center gap-1">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button size="icon" variant="outline" className="h-9 w-9 rounded-lg hover:bg-accent hover:border-primary/30 transition-all" onClick={() => setPreviewDisplay(display)}>
+                            <Button size="icon" variant="outline" className="h-9 w-9 rounded-lg hover:bg-accent hover:border-primary/30 transition-all" onClick={() => setPreviewDisplayId(display.id)}>
                               <Eye className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
@@ -488,7 +489,7 @@ export default function LiveDisplayAdmin() {
         </DialogContent>
       </Dialog>
       {/* Preview Dialog */}
-      <Dialog open={!!previewDisplay} onOpenChange={(v) => { if (!v) setPreviewDisplay(null); }}>
+      <Dialog open={!!previewDisplay} onOpenChange={(v) => { if (!v) setPreviewDisplayId(null); }}>
         <DialogContent className="sm:max-w-5xl p-0 overflow-hidden">
           <DialogHeader className="px-6 pt-5 pb-3">
             <DialogTitle className="flex items-center gap-2">
