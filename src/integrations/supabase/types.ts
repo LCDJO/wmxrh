@@ -14037,6 +14037,18 @@ export type Database = {
       }
       cleanup_expired_display_events: { Args: never; Returns: number }
       cleanup_expired_events: { Args: never; Returns: number }
+      compute_risk_heatmap: {
+        Args: {
+          p_days_back?: number
+          p_grid_size?: number
+          p_lat_max?: number
+          p_lat_min?: number
+          p_lng_max?: number
+          p_lng_min?: number
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       expire_inactive_display_sessions: { Args: never; Returns: number }
       fn_regulatory_audit_insert: {
