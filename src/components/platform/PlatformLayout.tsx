@@ -105,6 +105,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Usuários e Permissões',
     items: [
+      { to: '/platform/users/dashboard', label: 'Visão Geral', icon: BarChart3, requiredPermission: 'platform_user.view' },
       { to: '/platform/users', label: 'Usuários', icon: Users, requiredPermission: 'platform_user.view' },
       { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
       {
@@ -113,6 +114,7 @@ const NAV_SECTIONS: NavSection[] = [
         icon: ShieldCheck,
         requiredPermission: 'security.view',
         children: [
+          { to: '/platform/security/dashboard', label: 'Visão Geral' },
           { to: '/platform/security/roles', label: 'Cargos' },
           { to: '/platform/security/permissions', label: 'Permissões' },
           { to: '/platform/security/access-graph', label: 'Access Graph' },
