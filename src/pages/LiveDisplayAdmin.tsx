@@ -2,7 +2,7 @@
  * LiveDisplayAdmin — Manage TV displays (DisplayBoard), pair via code.
  * Route: /live-display (tenant)
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import LiveDisplayPreview from '@/components/tv/LiveDisplayPreview';
 import { useToast } from '@/hooks/use-toast';
 import { Monitor, Plus, QrCode, Trash2, Copy, Tv, AlertTriangle, CheckCircle2, WifiOff, RotateCw, Link2, Eye, Pencil, Power } from 'lucide-react';
 import { format } from 'date-fns';
@@ -55,16 +56,7 @@ export default function LiveDisplayAdmin() {
   const [formIntervalo, setFormIntervalo] = useState(30);
   const [creating, setCreating] = useState(false);
   const [previewDisplayId, setPreviewDisplayId] = useState<string | null>(null);
-  const previewSnapshotRef = useRef<LiveDisplay | null>(null);
-
-  // Snapshot the display when preview opens; keep it stable across re-renders
-  if (previewDisplayId && (!previewSnapshotRef.current || previewSnapshotRef.current.id !== previewDisplayId)) {
-    previewSnapshotRef.current = displays.find(d => d.id === previewDisplayId) ?? null;
-  }
-  if (!previewDisplayId) {
-    previewSnapshotRef.current = null;
-  }
-  const previewDisplay = previewSnapshotRef.current;
+  const previewDisplay = previewDisplayId ? displays.find(d => d.id === previewDisplayId) ?? null : null;
   const [editDisplay, setEditDisplay] = useState<LiveDisplay | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -506,9 +498,9 @@ export default function LiveDisplayAdmin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Preview Dialog */}
-      <Dialog open={!!previewDisplay} onOpenChange={(v) => { if (!v) setPreviewDisplayId(null); }} modal={false}>
-        <DialogContent className="sm:max-w-5xl p-0 overflow-hidden" onInteractOutside={(e) => e.preventDefault()} onFocusOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => { e.preventDefault(); setPreviewDisplayId(null); }}>
+      {/* Preview Dialog — renders inline component, NO iframe */}
+      <Dialog open={!!previewDisplay} onOpenChange={(v) => { if (!v) setPreviewDisplayId(null); }}>
+        <DialogContent className="sm:max-w-5xl p-0 overflow-hidden" onInteractOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader className="px-6 pt-5 pb-3">
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5 text-primary" />
@@ -518,15 +510,11 @@ export default function LiveDisplayAdmin() {
               </Badge>
             </DialogTitle>
           </DialogHeader>
-          <div className="relative w-full bg-black rounded-b-lg overflow-hidden" style={{ aspectRatio: '16/9', minHeight: '400px' }}>
+          <div className="relative w-full rounded-b-lg overflow-hidden" style={{ aspectRatio: '16/9', minHeight: '400px' }}>
             {previewDisplay && (
-              <iframe
-                key={previewDisplay.id}
-                src={`/tv?tipo=${previewDisplay.tipo}&preview=true`}
-                className="border-0 absolute inset-0 w-full h-full"
-                title={`Preview ${previewDisplay.nome}`}
-                allow="fullscreen"
-                loading="eager"
+              <LiveDisplayPreview
+                tipo={previewDisplay.tipo}
+                displayName={previewDisplay.nome}
               />
             )}
           </div>
