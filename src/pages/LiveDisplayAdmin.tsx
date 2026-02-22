@@ -15,7 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Monitor, Plus, QrCode, Trash2, Copy, Tv, AlertTriangle, CheckCircle2, WifiOff, RotateCw, Link2, Eye } from 'lucide-react';
+import { Monitor, Plus, QrCode, Trash2, Copy, Tv, AlertTriangle, CheckCircle2, WifiOff, RotateCw, Link2, Eye, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { DISPLAY_TIPOS } from '@/modules/live-display';
 import type { DisplayBoardTipo } from '@/modules/live-display';
@@ -52,6 +52,8 @@ export default function LiveDisplayAdmin() {
   const [formIntervalo, setFormIntervalo] = useState(30);
   const [creating, setCreating] = useState(false);
   const [previewDisplay, setPreviewDisplay] = useState<LiveDisplay | null>(null);
+  const [editDisplay, setEditDisplay] = useState<LiveDisplay | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const tenantId = currentTenant?.id;
 
@@ -159,6 +161,37 @@ export default function LiveDisplayAdmin() {
     fetchDisplays();
   };
 
+  const openEdit = (display: LiveDisplay) => {
+    setEditDisplay(display);
+    setFormNome(display.nome);
+    setFormTipo(display.tipo as DisplayBoardTipo);
+    setFormCompanyId(display.company_id ?? '');
+    setFormDeptId(display.department_id ?? '');
+    setFormRotacao(display.rotacao_automatica ?? false);
+    setFormIntervalo(display.intervalo_rotacao ?? 30);
+  };
+
+  const handleEdit = async () => {
+    if (!editDisplay || !formNome.trim()) return;
+    setSaving(true);
+    const { error } = await supabase.from('live_displays').update({
+      nome: formNome.trim(),
+      tipo: formTipo,
+      company_id: formCompanyId || null,
+      department_id: formDeptId || null,
+      rotacao_automatica: formRotacao,
+      intervalo_rotacao: formIntervalo,
+    }).eq('id', editDisplay.id);
+    if (error) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Display atualizado!' });
+      setEditDisplay(null);
+      resetForm();
+      fetchDisplays();
+    }
+    setSaving(false);
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -249,12 +282,15 @@ export default function LiveDisplayAdmin() {
                       Último sinal: {format(new Date(display.last_seen_at), 'dd/MM HH:mm')}
                     </p>
                   )}
-                  <div className="flex items-center gap-2 pt-2">
+                  <div className="flex items-center gap-2 pt-2 flex-wrap">
                     <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={() => { setPairingDisplayId(display.id); setShowPairing(true); }}>
                       <Link2 className="h-3.5 w-3.5" /> Parear
                     </Button>
                     <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={() => setPreviewDisplay(display)}>
-                      <Eye className="h-3.5 w-3.5" /> Mostrar Conteúdo
+                      <Eye className="h-3.5 w-3.5" /> Conteúdo
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={() => openEdit(display)}>
+                      <Pencil className="h-3.5 w-3.5" /> Editar
                     </Button>
                     <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => deleteDisplay(display.id)}>
                       <Trash2 className="h-3.5 w-3.5" />
@@ -397,6 +433,74 @@ export default function LiveDisplayAdmin() {
               />
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editDisplay} onOpenChange={(v) => { if (!v) { setEditDisplay(null); resetForm(); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-primary" />
+              Editar Display
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nome</Label>
+              <Input value={formNome} onChange={e => setFormNome(e.target.value)} />
+            </div>
+            <div>
+              <Label>Tipo</Label>
+              <Select value={formTipo} onValueChange={v => setFormTipo(v as DisplayBoardTipo)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(DISPLAY_TIPOS).map(([key, val]) => (
+                    <SelectItem key={key} value={key}>{val.label} — {val.description}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Empresa (opcional)</Label>
+              <Select value={formCompanyId || '__all__'} onValueChange={v => setFormCompanyId(v === '__all__' ? '' : v)}>
+                <SelectTrigger><SelectValue placeholder="Todas as empresas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todas as empresas</SelectItem>
+                  {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Departamento (opcional)</Label>
+              <Select value={formDeptId || '__all__'} onValueChange={v => setFormDeptId(v === '__all__' ? '' : v)}>
+                <SelectTrigger><SelectValue placeholder="Todos os departamentos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todos os departamentos</SelectItem>
+                  {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Rotação automática</Label>
+                <p className="text-xs text-muted-foreground">Alterna entre painéis automaticamente</p>
+              </div>
+              <Switch checked={formRotacao} onCheckedChange={setFormRotacao} />
+            </div>
+            {formRotacao && (
+              <div>
+                <Label>Intervalo de rotação (segundos)</Label>
+                <Input type="number" min={10} max={300} value={formIntervalo} onChange={e => setFormIntervalo(Number(e.target.value))} />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditDisplay(null); resetForm(); }}>Cancelar</Button>
+            <Button onClick={handleEdit} disabled={saving || !formNome.trim()}>
+              {saving ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
