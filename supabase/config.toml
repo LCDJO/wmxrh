@@ -41,3 +41,15 @@ verify_jwt = false
 
 [functions.traccar-ingest]
 verify_jwt = false
+
+[functions.display-pair-confirm]
+verify_jwt = false
+
+[functions.display-pair-request]
+verify_jwt = false
+
+[functions.display-pair-status]
+verify_jwt = false
+
+[functions.display-ws-gateway]
+verify_jwt = false
