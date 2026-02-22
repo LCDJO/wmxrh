@@ -89,16 +89,40 @@ export default function LiveDisplayTV() {
   const [params] = useSearchParams();
   const location = useLocation();
   const tokenFromUrl = params.get('token');
+  const isPreviewMode = params.get('preview') === 'true';
+  const previewTipo = params.get('tipo') ?? 'executivo';
   const isDisplayRoute = location.pathname === '/display';
 
   // ── SECURITY: Block direct URL access without token (non-pairing routes) ──
-  const isValidAccess = isDisplayRoute || !!tokenFromUrl;
+  const isValidAccess = isDisplayRoute || !!tokenFromUrl || isPreviewMode;
+
+  // ── Preview mode: inject demo data and skip pairing/gateway ──
+  const previewDemoData: DisplayData | null = isPreviewMode ? {
+    display: { id: 'preview', nome: 'Pré-visualização', tipo: previewTipo, rotacao_automatica: false, intervalo_rotacao: 30, layout_config: {} },
+    timestamp: new Date().toISOString(),
+    workforce: { total: 128, active: 112, inactive: 16, by_department: { Operações: 45, Logística: 30, Administrativo: 20, Manutenção: 17 } },
+    fleet_events: [
+      { id: '1', tipo: 'excesso_velocidade', descricao: 'Veículo ABC-1234 a 95km/h (limite: 80)', severidade: 'high', created_at: new Date(Date.now() - 300000).toISOString() },
+      { id: '2', tipo: 'freada_brusca', descricao: 'Freada brusca detectada - Veículo DEF-5678', severidade: 'medium', created_at: new Date(Date.now() - 600000).toISOString() },
+    ],
+    live_positions: [],
+    speed_alerts: [],
+    nr_overdue_exams: [{ id: '1', employee_name: 'João Silva', exam_type: 'NR-35', due_date: new Date(Date.now() - 86400000).toISOString() }],
+    active_blocks: [{ id: '1', employee_name: 'Maria Santos', reason: 'ASO vencido', blocked_at: new Date(Date.now() - 172800000).toISOString() }],
+    sst_summary: { overdue_count: 5, critical_overdue: 2, active_blocks_count: 1 },
+    recent_warnings: [{ id: '1', employee_name: 'Carlos Lima', tipo: 'verbal', motivo: 'Uso indevido de EPI', created_at: new Date(Date.now() - 3600000).toISOString() }],
+    compliance_incidents: [],
+    compliance_summary: { total_warnings: 12, pending_incidents: 3, critical_incidents: 1 },
+    executive: { operational_score: 78, legal_risk: { score: 35, level: 'medium' }, projected_cost_brl: 45000, workforce_total: 128, active_devices: 42, total_violations: 8, total_warnings: 12, total_blocks: 1 },
+    risk_heatmap: { Operações: { fleet: 3, sst: 2, compliance: 1, workforce: 45, total: 6, headcount: 45 }, Logística: { fleet: 5, sst: 1, compliance: 2, workforce: 30, total: 8, headcount: 30 } },
+    critical_alerts: [],
+  } : null;
 
   const [pairingState, setPairingState] = useState<PairingState | null>(null);
-  const [activeToken, setActiveToken] = useState<string | null>(tokenFromUrl);
-  const [rawData, setRawData] = useState<DisplayData | null>(null);
+  const [activeToken, setActiveToken] = useState<string | null>(isPreviewMode ? '__preview__' : tokenFromUrl);
+  const [rawData, setRawData] = useState<DisplayData | null>(previewDemoData);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(isPreviewMode ? new Date() : null);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
   const backoffRef = useRef(10_000);
   const clock = useLiveClock();
@@ -149,14 +173,14 @@ export default function LiveDisplayTV() {
 
   const { status: pipelineStatus } = useDisplayEventPipeline({
     tenantId: tenantIdFromData,
-    enabled: !!activeToken && !!data,
+    enabled: !isPreviewMode && !!activeToken && !!data,
     pollIntervalMs: 10_000,
     onEvent: (events) => { if (events.length > 0) fetchData(); },
   });
 
   const { status: gatewayStatus, session: gatewaySession } = useDisplayGateway({
-    token: activeToken,
-    enabled: !!activeToken,
+    token: isPreviewMode ? null : activeToken,
+    enabled: !isPreviewMode && !!activeToken,
     heartbeatIntervalMs: 30_000,
     pollIntervalMs: 15_000,
     instanceId: scalability.instanceId,
@@ -195,8 +219,8 @@ export default function LiveDisplayTV() {
   }, [functionsBase]);
 
   useEffect(() => {
-    if (isDisplayRoute && !activeToken) requestPairing();
-  }, [isDisplayRoute, activeToken, requestPairing]);
+    if (isDisplayRoute && !activeToken && !isPreviewMode) requestPairing();
+  }, [isDisplayRoute, activeToken, requestPairing, isPreviewMode]);
 
   // ── Pairing Phase 2: Poll confirmation ──
   useEffect(() => {
@@ -225,7 +249,7 @@ export default function LiveDisplayTV() {
 
   // ── Phase 3: Fetch display data ──
   const fetchData = useCallback(async () => {
-    if (!activeToken) return;
+    if (!activeToken || isPreviewMode) return;
     try {
       const resp = await fetch(`${functionsBase}/live-display-data?token=${encodeURIComponent(activeToken)}`, {
         headers: scalability.stickyHeaders,
@@ -255,11 +279,11 @@ export default function LiveDisplayTV() {
     displayId: data?.display?.id ?? null,
     pollIntervalMs: (data?.display?.intervalo_rotacao ?? 30) * 1000,
     onDataRefresh: fetchData,
-    enabled: !!activeToken && !!data,
+    enabled: !isPreviewMode && !!activeToken && !!data,
   });
 
   useEffect(() => {
-    if (!activeToken || !data) return;
+    if (!activeToken || !data || isPreviewMode) return;
     const interval = (data.display.intervalo_rotacao ?? 30) * 1000;
     const timer = setInterval(fetchData, interval);
     return () => clearInterval(timer);
