@@ -8567,38 +8567,41 @@ export type Database = {
       live_display_tokens: {
         Row: {
           created_at: string
-          display_id: string
+          display_id: string | null
           expira_em: string
           id: string
           paired_at: string | null
           paired_ip: string | null
           paired_user_agent: string | null
+          pairing_code: string | null
           status: Database["public"]["Enums"]["display_session_status"]
-          tenant_id: string
+          tenant_id: string | null
           token_temporario: string
         }
         Insert: {
           created_at?: string
-          display_id: string
+          display_id?: string | null
           expira_em: string
           id?: string
           paired_at?: string | null
           paired_ip?: string | null
           paired_user_agent?: string | null
+          pairing_code?: string | null
           status?: Database["public"]["Enums"]["display_session_status"]
-          tenant_id: string
+          tenant_id?: string | null
           token_temporario: string
         }
         Update: {
           created_at?: string
-          display_id?: string
+          display_id?: string | null
           expira_em?: string
           id?: string
           paired_at?: string | null
           paired_ip?: string | null
           paired_user_agent?: string | null
+          pairing_code?: string | null
           status?: Database["public"]["Enums"]["display_session_status"]
-          tenant_id?: string
+          tenant_id?: string | null
           token_temporario?: string
         }
         Relationships: [

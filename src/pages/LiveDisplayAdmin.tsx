@@ -1,8 +1,9 @@
 /**
- * LiveDisplayAdmin — Manage TV displays (DisplayBoard), generate QR codes for pairing.
+ * LiveDisplayAdmin — Manage TV displays (DisplayBoard), pair via code.
  * Route: /live-display (tenant)
  */
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { QRCodeSVG } from 'qrcode.react';
-import { Monitor, Plus, QrCode, Trash2, Copy, Tv, AlertTriangle, CheckCircle2, WifiOff, RotateCw } from 'lucide-react';
+import { Monitor, Plus, QrCode, Trash2, Copy, Tv, AlertTriangle, CheckCircle2, WifiOff, RotateCw, Link2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { DISPLAY_TIPOS } from '@/modules/live-display';
 import type { DisplayBoardTipo } from '@/modules/live-display';
@@ -32,10 +32,14 @@ const STATUS_MAP: Record<string, { label: string; icon: any; color: string }> = 
 export default function LiveDisplayAdmin() {
   const { currentTenant } = useTenant();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [displays, setDisplays] = useState<LiveDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [showQR, setShowQR] = useState<{ display: LiveDisplay; token: string; url: string } | null>(null);
+  const [showPairing, setShowPairing] = useState(false);
+  const [pairingCode, setPairingCode] = useState('');
+  const [pairingDisplayId, setPairingDisplayId] = useState('');
+  const [pairing, setPairing] = useState(false);
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
 
@@ -74,6 +78,18 @@ export default function LiveDisplayAdmin() {
       setDepartments(deptRes.data ?? []);
     });
   }, [tenantId, fetchDisplays]);
+
+  // Check if opened via QR code scan (/live-display/pair?code=XXX or /live-display?code=XXX)
+  useEffect(() => {
+    const code = searchParams.get('code');
+    if (code && displays.length > 0) {
+      setPairingCode(code.toUpperCase());
+      setShowPairing(true);
+      // Clear from URL
+      searchParams.delete('code');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, displays, setSearchParams]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -114,20 +130,26 @@ export default function LiveDisplayAdmin() {
     setFormRotacao(false); setFormIntervalo(30);
   };
 
-  const generateToken = async (display: LiveDisplay) => {
-    if (!tenantId) return;
-    const tokenValue = crypto.randomUUID() + '-' + crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-    await supabase.from('live_display_tokens').update({ status: 'expired' as const }).eq('display_id', display.id);
-    const { error } = await supabase.from('live_display_tokens').insert({
-      display_id: display.id, tenant_id: tenantId, token_temporario: tokenValue, expira_em: expiresAt, status: 'pending' as const,
-    });
-    if (error) {
-      toast({ title: 'Erro ao gerar token', description: error.message, variant: 'destructive' });
-      return;
+  const confirmPairing = async () => {
+    if (!pairingCode.trim() || !pairingDisplayId) return;
+    setPairing(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke('display-pair-confirm', {
+        body: { pairing_code: pairingCode.toUpperCase(), display_id: pairingDisplayId },
+      });
+      if (error || result?.error) {
+        toast({ title: 'Erro ao parear', description: result?.error ?? error?.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Display pareado com sucesso!' });
+        setShowPairing(false);
+        setPairingCode('');
+        setPairingDisplayId('');
+        fetchDisplays();
+      }
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e.message, variant: 'destructive' });
     }
-    const tvUrl = `${window.location.origin}/tv?token=${tokenValue}`;
-    setShowQR({ display, token: tokenValue, url: tvUrl });
+    setPairing(false);
   };
 
   const deleteDisplay = async (id: string) => {
@@ -136,10 +158,6 @@ export default function LiveDisplayAdmin() {
     fetchDisplays();
   };
 
-  const copyUrl = (url: string) => {
-    navigator.clipboard.writeText(url);
-    toast({ title: 'URL copiada!' });
-  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -153,9 +171,26 @@ export default function LiveDisplayAdmin() {
             Gerencie displays para TVs e monitores corporativos com dados em tempo real.
           </p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> Novo Display
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowPairing(true)} className="gap-2">
+            <Link2 className="h-4 w-4" /> Parear Display
+          </Button>
+          <Button onClick={() => setShowCreate(true)} className="gap-2">
+            <Plus className="h-4 w-4" /> Novo Display
+          </Button>
+        </div>
+      </div>
+
+      <div className="bg-muted/50 border rounded-lg p-4 flex items-start gap-3">
+        <QrCode className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-foreground">Fluxo de pareamento</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            1. A TV acessa <span className="font-mono text-primary">/display</span> e exibe um QR Code com código de 6 dígitos. 
+            2. Escaneie o QR Code com seu celular ou insira o código aqui no painel. 
+            3. Selecione o display e confirme o pareamento.
+          </p>
+        </div>
       </div>
 
       {loading ? (
@@ -214,8 +249,8 @@ export default function LiveDisplayAdmin() {
                     </p>
                   )}
                   <div className="flex items-center gap-2 pt-2">
-                    <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={() => generateToken(display)}>
-                      <QrCode className="h-3.5 w-3.5" /> QR Code
+                    <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={() => { setPairingDisplayId(display.id); setShowPairing(true); }}>
+                      <Link2 className="h-3.5 w-3.5" /> Parear
                     </Button>
                     <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => deleteDisplay(display.id)}>
                       <Trash2 className="h-3.5 w-3.5" />
@@ -293,31 +328,47 @@ export default function LiveDisplayAdmin() {
         </DialogContent>
       </Dialog>
 
-      {/* QR Code Dialog */}
-      <Dialog open={!!showQR} onOpenChange={() => setShowQR(null)}>
+      {/* Pairing Dialog */}
+      <Dialog open={showPairing} onOpenChange={(v) => { setShowPairing(v); if (!v) { setPairingCode(''); setPairingDisplayId(''); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <QrCode className="h-5 w-5 text-primary" />
-              Parear Display: {showQR?.display.nome}
+              <Link2 className="h-5 w-5 text-primary" />
+              Parear Display
             </DialogTitle>
           </DialogHeader>
-          {showQR && (
-            <div className="flex flex-col items-center gap-4">
-              <div className="bg-white p-4 rounded-xl">
-                <QRCodeSVG value={showQR.url} size={220} level="H" />
-              </div>
-              <p className="text-sm text-muted-foreground text-center">
-                Escaneie o QR Code com a TV ou abra a URL abaixo no navegador do monitor.
-              </p>
-              <div className="flex items-center gap-2 w-full">
-                <Input readOnly value={showQR.url} className="text-xs" />
-                <Button size="sm" variant="outline" onClick={() => copyUrl(showQR.url)}>
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
+          <div className="space-y-4">
+            <div>
+              <Label>Código de pareamento (6 dígitos)</Label>
+              <Input
+                placeholder="Ex: A3K7P2"
+                value={pairingCode}
+                onChange={e => setPairingCode(e.target.value.toUpperCase().slice(0, 6))}
+                className="text-center text-lg font-mono tracking-widest"
+                maxLength={6}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Exibido na tela da TV em /display</p>
             </div>
-          )}
+            <div>
+              <Label>Selecione o Display</Label>
+              <Select value={pairingDisplayId} onValueChange={setPairingDisplayId}>
+                <SelectTrigger><SelectValue placeholder="Escolha um display" /></SelectTrigger>
+                <SelectContent>
+                  {displays.map(d => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.nome} — {DISPLAY_TIPOS[d.tipo as DisplayBoardTipo]?.label ?? d.tipo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPairing(false)}>Cancelar</Button>
+            <Button onClick={confirmPairing} disabled={pairing || pairingCode.length < 6 || !pairingDisplayId} className="gap-2">
+              {pairing ? 'Pareando...' : 'Confirmar Pareamento'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

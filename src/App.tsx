@@ -46,8 +46,11 @@ function AppRoutes() {
     return <FullScreenLoader label="Carregando..." />;
   }
 
-  // ── Public TV route (no auth needed) ──
-  const tvRoute: RouteObject[] = [{ path: '/tv', element: <LiveDisplayTV /> }];
+  // ── Public TV routes (no auth needed) ──
+  const tvRoute: RouteObject[] = [
+    { path: '/tv', element: <LiveDisplayTV /> },
+    { path: '/display', element: <LiveDisplayTV /> },
+  ];
 
   // ── Unauthenticated ──
   if (!user) {
