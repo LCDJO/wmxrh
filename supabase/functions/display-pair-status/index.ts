@@ -2,6 +2,12 @@
  * display-pair-status — Polled by TV to check if pairing was confirmed.
  * No auth needed.
  *
+ * SECURITY:
+ *   ✅ Requires both session_id AND token (dual-key)
+ *   ✅ No tenant data leaked for pending sessions
+ *   ✅ Auto-expires stale sessions
+ *   ✅ Read-only — GET only
+ *
  * GET ?session_id=<id>&token=<token>
  * Returns: { status: "pending"|"active"|"expired", token?: string }
  */
@@ -18,12 +24,19 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (req.method !== "GET") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const url = new URL(req.url);
     const sessionId = url.searchParams.get("session_id");
     const token = url.searchParams.get("token");
 
-    if (!sessionId || !token) {
+    if (!sessionId || !token || token.length < 30) {
       return new Response(
         JSON.stringify({ error: "session_id and token are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -43,12 +56,12 @@ Deno.serve(async (req) => {
 
     if (error || !session) {
       return new Response(
-        JSON.stringify({ status: "expired", error: "Session not found" }),
+        JSON.stringify({ status: "expired" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Check time expiration for pending sessions
+    // Auto-expire stale pending sessions
     if (session.status === "pending" && new Date(session.expira_em) < new Date()) {
       await admin.from("live_display_tokens").update({ status: "expired" }).eq("id", session.id);
       return new Response(
@@ -57,12 +70,20 @@ Deno.serve(async (req) => {
       );
     }
 
+    // SECURITY: Only return token when active, never leak tenant/display info
     return new Response(
       JSON.stringify({
         status: session.status,
         token: session.status === "active" ? session.token_temporario : undefined,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      }
     );
   } catch (e) {
     console.error("[display-pair-status] error:", e);

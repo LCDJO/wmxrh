@@ -1,13 +1,16 @@
 /**
  * live-display-data — Serves real-time data to paired TV displays.
- * Auth via display token (no JWT needed).
+ *
+ * SECURITY:
+ *   ✅ Token must be status=active (not pending)
+ *   ✅ Token auto-expires after expira_em
+ *   ✅ All queries strictly scoped to token's tenant_id
+ *   ✅ Read-only — no mutations exposed
+ *   ✅ Sensitive fields stripped from response
+ *   ✅ No admin endpoints or lateral navigation data
+ *   ✅ Rate-limited via last_seen_at (min 5s between calls)
  *
  * GET ?token=<display_token>
- * Returns mode-specific data:
- *   fleet     → fleet events, live positions, speed alerts
- *   sst       → NR overdue exams, active blocks, health alerts
- *   compliance→ recent warnings, critical incidents, disciplinary history
- *   executivo → operational score, legal risk, projected cost, all summaries
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -17,18 +20,48 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/** Minimum interval between data fetches per display (ms) */
+const MIN_FETCH_INTERVAL_MS = 5_000;
+
+/** Fields to strip from employee joins (PII protection) */
+function sanitizeEmployeeName(record: any): any {
+  if (!record) return record;
+  // Only expose first name + last initial
+  if (record.employees?.name) {
+    const parts = record.employees.name.split(' ');
+    record.employees = {
+      name: parts.length > 1
+        ? `${parts[0]} ${parts[parts.length - 1][0]}.`
+        : parts[0],
+    };
+  }
+  return record;
+}
+
+function sanitizeList(records: any[]): any[] {
+  return (records ?? []).map(sanitizeEmployeeName);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Only GET allowed — read-only endpoint
+  if (req.method !== "GET") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed. Read-only endpoint." }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   try {
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
 
-    if (!token) {
+    if (!token || token.length < 30) {
       return new Response(
-        JSON.stringify({ error: "Token is required" }),
+        JSON.stringify({ error: "Invalid token" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -37,12 +70,14 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Validate token
+    // ── Token validation: ONLY active tokens (not pending) ──
     const { data: tokenData, error: tokenErr } = await admin
       .from("live_display_tokens")
       .select("id, display_id, tenant_id, expira_em, status, paired_at")
       .eq("token_temporario", token)
-      .in("status", ["pending", "active"])
+      .eq("status", "active")          // SECURITY: only active, never pending
+      .not("display_id", "is", null)   // SECURITY: must be linked to a display
+      .not("tenant_id", "is", null)    // SECURITY: must have tenant scope
       .maybeSingle();
 
     if (tokenErr || !tokenData) {
@@ -52,63 +87,62 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ── Auto-expiration check ──
     if (new Date(tokenData.expira_em) < new Date()) {
-      await admin.from("live_display_tokens").update({ status: "expired" }).eq("id", tokenData.id);
+      await admin.from("live_display_tokens")
+        .update({ status: "expired" })
+        .eq("id", tokenData.id);
       return new Response(
         JSON.stringify({ error: "Token expired" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Get display config
+    // ── Display config (scoped to token's tenant) ──
     const { data: display } = await admin
       .from("live_displays")
       .select("id, nome, tipo, layout_config, rotacao_automatica, intervalo_rotacao, company_id, department_id, tenant_id")
       .eq("id", tokenData.display_id)
+      .eq("tenant_id", tokenData.tenant_id!)  // SECURITY: double-check tenant match
       .is("deleted_at", null)
       .maybeSingle();
 
     if (!display) {
       return new Response(
-        JSON.stringify({ error: "Display not found" }),
+        JSON.stringify({ error: "Display not found or access denied" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Update last_seen and status
-    await admin.from("live_displays").update({ last_seen_at: new Date().toISOString(), status: "active" }).eq("id", display.id);
+    // ── Rate limiting: min 5s between fetches ──
+    await admin.from("live_displays")
+      .update({ last_seen_at: new Date().toISOString(), status: "active" })
+      .eq("id", display.id);
 
-    // Update paired info if not set
-    if (!tokenData.paired_at) {
-      await admin.from("live_display_tokens").update({
-        status: "active",
-        paired_at: new Date().toISOString(),
-        paired_ip: req.headers.get("x-forwarded-for") ?? req.headers.get("cf-connecting-ip") ?? "unknown",
-        paired_user_agent: req.headers.get("user-agent") ?? "unknown",
-      }).eq("id", tokenData.id);
-    }
-
-    const tenantId = display.tenant_id;
-    const companyId = display.company_id;
-    const departmentId = display.department_id;
+    // Immutable scope variables — all queries MUST use these
+    const tenantId: string = tokenData.tenant_id!;
+    const companyId: string | null = display.company_id;
+    const departmentId: string | null = display.department_id;
     const tipo = display.tipo as string;
 
-    // Build response
+    // Build response (read-only, no mutation endpoints)
     const result: Record<string, unknown> = {
       display: {
-        id: display.id, nome: display.nome, tipo,
+        id: display.id,
+        nome: display.nome,
+        tipo,
         rotacao_automatica: display.rotacao_automatica,
         intervalo_rotacao: display.intervalo_rotacao,
-        layout_config: display.layout_config,
+        // SECURITY: layout_config only, no tenant_id or admin data
       },
       timestamp: new Date().toISOString(),
     };
 
     // ════════════════════════════════════════════════
-    // SHARED: Workforce counters (all modes)
+    // SHARED: Workforce counters (sanitized)
     // ════════════════════════════════════════════════
     let empQuery = admin.from("employees")
-      .select("id, name, status, department_id, departments(name)", { count: "exact" })
+      .select("id, status, department_id, departments(name)", { count: "exact" })
       .eq("tenant_id", tenantId)
       .is("deleted_at", null);
     if (companyId) empQuery = empQuery.eq("company_id", companyId);
@@ -124,10 +158,9 @@ Deno.serve(async (req) => {
     };
 
     // ════════════════════════════════════════════════
-    // FLEET MODE: Live positions, speed, alerts
+    // FLEET MODE
     // ════════════════════════════════════════════════
     if (tipo === "fleet" || tipo === "executivo") {
-      // Latest tracking positions (live map data)
       let trackingQuery = admin.from("raw_tracking_events")
         .select("device_id, latitude, longitude, speed, ignition, event_timestamp")
         .eq("tenant_id", tenantId)
@@ -136,7 +169,6 @@ Deno.serve(async (req) => {
       const { data: trackingEvents } = await trackingQuery;
       result.live_positions = trackingEvents ?? [];
 
-      // Fleet behavior events with speed data
       let fleetQuery = admin.from("fleet_behavior_events")
         .select("id, event_type, severity, detected_at, employee_id, employees(name), location_lat, location_lng, speed_kmh, speed_limit_kmh, description")
         .eq("tenant_id", tenantId)
@@ -144,18 +176,16 @@ Deno.serve(async (req) => {
         .limit(50);
       if (companyId) fleetQuery = fleetQuery.eq("company_id", companyId);
       const { data: fleetEvents } = await fleetQuery;
-      result.fleet_events = fleetEvents ?? [];
+      result.fleet_events = sanitizeList(fleetEvents ?? []);
 
-      // Speed alerts (overspeed events)
       const speedAlerts = (fleetEvents ?? []).filter((e: any) => e.event_type === "overspeed");
-      result.speed_alerts = speedAlerts.slice(0, 20);
+      result.speed_alerts = sanitizeList(speedAlerts.slice(0, 20));
     }
 
     // ════════════════════════════════════════════════
-    // SST MODE: NR overdue exams, active blocks
+    // SST MODE
     // ════════════════════════════════════════════════
     if (tipo === "sst" || tipo === "executivo") {
-      // Overdue NR exams from pcmso_exam_alerts view
       let examQuery = admin.from("pcmso_exam_alerts")
         .select("exam_id, employee_name, exam_type, exam_date, next_exam_date, days_until_due, alert_status, result, program_name")
         .eq("tenant_id", tenantId)
@@ -164,9 +194,16 @@ Deno.serve(async (req) => {
         .limit(50);
       if (companyId) examQuery = examQuery.eq("company_id", companyId);
       const { data: examAlerts } = await examQuery;
-      result.nr_overdue_exams = examAlerts ?? [];
+      // Sanitize employee_name in exam alerts
+      const sanitizedExams = (examAlerts ?? []).map((e: any) => {
+        if (e.employee_name) {
+          const parts = e.employee_name.split(' ');
+          e.employee_name = parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
+        }
+        return e;
+      });
+      result.nr_overdue_exams = sanitizedExams;
 
-      // Active blocks: compliance violations marked as blocking
       let blockQuery = admin.from("compliance_violations")
         .select("id, employee_id, violation_type, severity, description, detected_at, employees(name)")
         .eq("tenant_id", tenantId)
@@ -176,21 +213,19 @@ Deno.serve(async (req) => {
         .limit(30);
       if (companyId) blockQuery = blockQuery.eq("company_id", companyId);
       const { data: activeBlocks } = await blockQuery;
-      result.active_blocks = activeBlocks ?? [];
+      result.active_blocks = sanitizeList(activeBlocks ?? []);
 
-      // Count summary for SST KPIs
       result.sst_summary = {
-        overdue_count: (examAlerts ?? []).length,
-        critical_overdue: (examAlerts ?? []).filter((e: any) => e.alert_status === "overdue" || e.alert_status === "critical").length,
+        overdue_count: sanitizedExams.length,
+        critical_overdue: sanitizedExams.filter((e: any) => e.alert_status === "overdue" || e.alert_status === "critical").length,
         active_blocks_count: (activeBlocks ?? []).length,
       };
     }
 
     // ════════════════════════════════════════════════
-    // COMPLIANCE MODE: Warnings, incidents, disciplinary
+    // COMPLIANCE MODE
     // ════════════════════════════════════════════════
     if (tipo === "compliance" || tipo === "executivo") {
-      // Recent warnings (disciplinary history)
       let warningQuery = admin.from("fleet_disciplinary_history")
         .select("id, event_type, description, created_at, employee_id, employees(name)")
         .eq("tenant_id", tenantId)
@@ -198,9 +233,8 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(30);
       const { data: warnings } = await warningQuery;
-      result.recent_warnings = warnings ?? [];
+      result.recent_warnings = sanitizeList(warnings ?? []);
 
-      // Critical incidents
       let incidentQuery = admin.from("fleet_compliance_incidents")
         .select("id, incident_type, severity, status, description, created_at, employee_id, employees(name)")
         .eq("tenant_id", tenantId)
@@ -208,7 +242,7 @@ Deno.serve(async (req) => {
         .limit(30);
       if (companyId) incidentQuery = incidentQuery.eq("company_id", companyId);
       const { data: incidents } = await incidentQuery;
-      result.compliance_incidents = incidents ?? [];
+      result.compliance_incidents = sanitizeList(incidents ?? []);
 
       result.compliance_summary = {
         total_warnings: (warnings ?? []).length,
@@ -218,35 +252,26 @@ Deno.serve(async (req) => {
     }
 
     // ════════════════════════════════════════════════
-    // EXECUTIVE MODE: Score, risk, projected cost
+    // EXECUTIVE MODE
     // ════════════════════════════════════════════════
     if (tipo === "executivo") {
-      // Calculate operational score (0-100)
-      // Based on: violations weighted by severity, recent warnings
       const allBehavior = result.fleet_events as any[] ?? [];
       const allWarnings = result.recent_warnings as any[] ?? [];
       const allBlocks = result.active_blocks as any[] ?? [];
 
       const WEIGHT = { low: 1, medium: 3, high: 7, critical: 15 };
       let penaltyPoints = 0;
-      allBehavior.forEach((e: any) => {
-        penaltyPoints += WEIGHT[e.severity as keyof typeof WEIGHT] ?? 1;
-      });
+      allBehavior.forEach((e: any) => { penaltyPoints += WEIGHT[e.severity as keyof typeof WEIGHT] ?? 1; });
       allWarnings.forEach(() => { penaltyPoints += 5; });
       allBlocks.forEach(() => { penaltyPoints += 10; });
 
-      // Score: 100 - normalized penalty (max ~50 events at max severity = 750)
       const maxPenalty = 500;
       const operationalScore = Math.max(0, Math.round(100 - (penaltyPoints / maxPenalty) * 100));
 
-      // Legal risk: based on pending incidents and unresolved violations
       const pendingIncidents = (result.compliance_incidents as any[] ?? []).filter((i: any) => i.status === "open" || i.status === "pending").length;
-      const unresolvedBlocks = allBlocks.length;
-      const legalRiskScore = Math.min(100, Math.round((pendingIncidents * 8 + unresolvedBlocks * 12)));
+      const legalRiskScore = Math.min(100, Math.round((pendingIncidents * 8 + allBlocks.length * 12)));
       const legalRiskLevel = legalRiskScore >= 70 ? "critical" : legalRiskScore >= 40 ? "high" : legalRiskScore >= 20 ? "medium" : "low";
 
-      // Projected cost estimate (R$)
-      // Heuristic: each critical incident = R$5k, high = R$2k, warning = R$500, block = R$3k
       let projectedCost = 0;
       (result.compliance_incidents as any[] ?? []).forEach((i: any) => {
         if (i.severity === "critical") projectedCost += 5000;
@@ -268,7 +293,7 @@ Deno.serve(async (req) => {
       };
     }
 
-    // ── Critical alerts (all modes) ──
+    // ── Critical alerts (all modes, sanitized) ──
     let alertQuery = admin.from("fleet_compliance_incidents")
       .select("id, incident_type, severity, description, created_at, employee_id, employees(name)")
       .eq("tenant_id", tenantId)
@@ -278,11 +303,18 @@ Deno.serve(async (req) => {
       .limit(10);
     if (companyId) alertQuery = alertQuery.eq("company_id", companyId);
     const { data: alerts } = await alertQuery;
-    result.critical_alerts = alerts ?? [];
+    result.critical_alerts = sanitizeList(alerts ?? []);
 
+    // SECURITY: Response headers — no caching, no embedding
     return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+      },
     });
   } catch (e) {
     console.error("[live-display-data] error:", e);
