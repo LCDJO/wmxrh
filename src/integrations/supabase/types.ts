@@ -12729,6 +12729,69 @@ export type Database = {
           },
         ]
       }
+      telegram_bindings: {
+        Row: {
+          chat_id: string
+          chat_type: string
+          created_at: string | null
+          created_by: string | null
+          employee_id: string | null
+          id: string
+          is_active: boolean | null
+          is_verified: boolean | null
+          label: string
+          metadata: Json | null
+          tenant_id: string
+          updated_at: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          chat_id: string
+          chat_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          employee_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          label?: string
+          metadata?: Json | null
+          tenant_id: string
+          updated_at?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          chat_id?: string
+          chat_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          employee_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          label?: string
+          metadata?: Json | null
+          tenant_id?: string
+          updated_at?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_bindings_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_bindings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       telegram_bot_configs: {
         Row: {
           bot_token_encrypted: string | null
@@ -12785,6 +12848,7 @@ export type Database = {
       telegram_message_queue: {
         Row: {
           attempts: number | null
+          binding_id: string | null
           chat_id: string
           created_at: string | null
           created_by: string | null
@@ -12794,13 +12858,16 @@ export type Database = {
           message_text: string
           metadata: Json | null
           parse_mode: string | null
+          priority: number | null
           processed_at: string | null
           scheduled_at: string | null
           status: string | null
+          template_id: string | null
           tenant_id: string
         }
         Insert: {
           attempts?: number | null
+          binding_id?: string | null
           chat_id: string
           created_at?: string | null
           created_by?: string | null
@@ -12810,13 +12877,16 @@ export type Database = {
           message_text: string
           metadata?: Json | null
           parse_mode?: string | null
+          priority?: number | null
           processed_at?: string | null
           scheduled_at?: string | null
           status?: string | null
+          template_id?: string | null
           tenant_id: string
         }
         Update: {
           attempts?: number | null
+          binding_id?: string | null
           chat_id?: string
           created_at?: string | null
           created_by?: string | null
@@ -12826,14 +12896,83 @@ export type Database = {
           message_text?: string
           metadata?: Json | null
           parse_mode?: string | null
+          priority?: number | null
           processed_at?: string | null
           scheduled_at?: string | null
           status?: string | null
+          template_id?: string | null
           tenant_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "telegram_message_queue_binding_id_fkey"
+            columns: ["binding_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_bindings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_message_queue_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_templates"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "telegram_message_queue_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_templates: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          event_label: string
+          event_type: string
+          id: string
+          is_enabled: boolean | null
+          parse_mode: string | null
+          template_text: string
+          tenant_id: string
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          event_label?: string
+          event_type: string
+          id?: string
+          is_enabled?: boolean | null
+          parse_mode?: string | null
+          template_text?: string
+          tenant_id: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          event_label?: string
+          event_type?: string
+          id?: string
+          is_enabled?: boolean | null
+          parse_mode?: string | null
+          template_text?: string
+          tenant_id?: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_templates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
