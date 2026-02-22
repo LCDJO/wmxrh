@@ -222,6 +222,18 @@ const NAV_SECTIONS: NavSection[] = [
         ],
       },
       {
+        to: '/platform/website',
+        label: 'Website',
+        icon: Globe,
+        requiredPermission: 'billing.view',
+        children: [
+          { to: '/platform/website', label: 'Dashboard' },
+          { to: '/platform/website/ai-designer', label: 'AI Designer' },
+          { to: '/platform/website/templates', label: 'Templates' },
+          { to: '/platform/website/versions', label: 'Versionamento' },
+        ],
+      },
+      {
         to: '/platform/marketing',
         label: 'Marketing',
         icon: Megaphone,
@@ -246,18 +258,6 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Canais',
     items: [
-      {
-        to: '/platform/website',
-        label: 'Website',
-        icon: Globe,
-        requiredPermission: 'billing.view',
-        children: [
-          { to: '/platform/website', label: 'Dashboard' },
-          { to: '/platform/website/ai-designer', label: 'AI Designer' },
-          { to: '/platform/website/templates', label: 'Templates' },
-          { to: '/platform/website/versions', label: 'Versionamento' },
-        ],
-      },
       { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
     ],
   },
