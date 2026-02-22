@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +11,8 @@ import { ScopeProvider } from "./contexts/ScopeContext";
 import { PlatformShell } from "./components/platform/PlatformShell";
 import { useAdaptiveUserType } from "./components/layout/AdaptiveSidebar";
 import { DevConsole } from "./components/shared/DevConsole";
+import { ErrorBoundary } from "./components/shared/ErrorBoundary";
+import { toast } from "sonner";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
@@ -79,25 +82,44 @@ function AppRoutes() {
   return useRoutes(routes);
 }
 
+function UnhandledRejectionGuard({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    const handler = (event: PromiseRejectionEvent) => {
+      console.error('[UnhandledRejection]', event.reason);
+      toast.error('Ocorreu um erro inesperado. Tente novamente.');
+      event.preventDefault();
+    };
+    window.addEventListener('unhandledrejection', handler);
+    return () => window.removeEventListener('unhandledrejection', handler);
+  }, []);
+  return <>{children}</>;
+}
+
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <DevConsole />
-      <BrowserRouter>
-        <AuthProvider>
-          <TenantProvider>
-            <ScopeProvider>
-              <PlatformShell>
-                <AppRoutes />
-              </PlatformShell>
-            </ScopeProvider>
-          </TenantProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <DevConsole />
+        <UnhandledRejectionGuard>
+          <BrowserRouter>
+            <AuthProvider>
+              <TenantProvider>
+                <ScopeProvider>
+                  <PlatformShell>
+                    <ErrorBoundary>
+                      <AppRoutes />
+                    </ErrorBoundary>
+                  </PlatformShell>
+                </ScopeProvider>
+              </TenantProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </UnhandledRejectionGuard>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
