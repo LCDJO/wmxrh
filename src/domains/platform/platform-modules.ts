@@ -35,7 +35,7 @@ export const PLATFORM_MODULES: readonly PlatformModule[] = [
   // ── Platform: Infraestrutura SaaS ───────────────────────────
   { key: 'iam',              label: 'IAM',                  description: 'Gestão de usuários, roles, permissões e políticas de acesso',            icon: 'Key',            category: 'platform' },
   { key: 'tenant_admin',     label: 'Admin Tenant',         description: 'Convites, papéis, configurações e toggles de módulos por tenant',        icon: 'Settings',       category: 'platform' },
-  { key: 'billing',          label: 'Billing',              description: 'Planos SaaS, faturas, cupons, ajustes e cobrança baseada em uso',        icon: 'CreditCard',     category: 'platform' },
+  { key: 'billing',          label: 'Financeiro / Fiscal',  description: 'Planos SaaS, faturas, cupons, ajustes, cobrança baseada em uso e gestão fiscal', icon: 'CreditCard', category: 'platform' },
   { key: 'automation',       label: 'Automação',            description: 'Regras de automação baseadas em eventos com condições e ações',          icon: 'Zap',            category: 'platform' },
   { key: 'observability',    label: 'Observabilidade',      description: 'Monitoramento de saúde, rastreamento de erros e métricas',               icon: 'Monitor',        category: 'platform' },
   { key: 'analytics',        label: 'Analytics',            description: 'Dashboards, relatórios e detecção de anomalias',                        icon: 'BarChart3',      category: 'platform' },
