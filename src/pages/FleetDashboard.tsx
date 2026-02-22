@@ -1,15 +1,17 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { StatsCard } from '@/components/shared/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  Car, AlertTriangle, MapPin, Gauge, Clock, Shield, Users, Activity
+  Car, AlertTriangle, MapPin, Gauge, Clock, Shield, Users, Activity, Wifi, WifiOff, RefreshCw
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useFleetRealtime } from '@/hooks/useFleetRealtime';
+import type { RealtimeEventType, ConnectionStatus } from '@/hooks/useFleetRealtime';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const SEVERITY_COLORS: Record<string, string> = {
   low: 'hsl(210, 100%, 52%)',
@@ -39,127 +41,42 @@ const STATUS_LABELS: Record<string, string> = {
   closed: 'Encerrado',
 };
 
-interface FleetDevice {
-  id: string;
-  is_active: boolean;
-  [key: string]: unknown;
-}
+const STATUS_INDICATOR: Record<ConnectionStatus, { label: string; icon: any; color: string }> = {
+  connecting: { label: 'Conectando...', icon: Wifi, color: 'text-amber-500' },
+  connected: { label: 'Ao vivo', icon: Wifi, color: 'text-emerald-500' },
+  disconnected: { label: 'Desconectado', icon: WifiOff, color: 'text-destructive' },
+  polling: { label: 'Polling', icon: RefreshCw, color: 'text-amber-500' },
+};
 
-interface FleetBehaviorEvent {
-  id: string;
-  event_type: string;
-  severity: string;
-  employee_id: string | null;
-  device_id: string;
-  event_timestamp: string;
-  [key: string]: unknown;
-}
-
-interface FleetIncident {
-  id: string;
-  status: string;
-  severity: string;
-  violation_type: string;
-  device_id: string;
-  created_at: string;
-  [key: string]: unknown;
-}
-
-interface TrackingEvent {
-  device_id: string;
-  latitude: number | null;
-  longitude: number | null;
-  speed: number | null;
-  ignition: boolean | null;
-  event_timestamp: string;
-}
+const SUBSCRIBED_TYPES: RealtimeEventType[] = ['tracking', 'behavior', 'compliance_incident', 'disciplinary', 'violation'];
 
 export default function FleetDashboard() {
   const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id;
+  const tenantId = currentTenant?.id ?? null;
 
-  // Devices
-  const { data: devices = [] } = useQuery({
-    queryKey: ['fleet-devices', tenantId],
-    queryFn: async () => {
-      if (!tenantId) return [];
-      const { data, error } = await supabase
-        .from('fleet_devices')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .is('deleted_at', null);
-      if (error) throw error;
-      return data || [];
-    },
+  const { events, status, refresh } = useFleetRealtime({
+    eventTypes: SUBSCRIBED_TYPES,
+    tenantId,
+    maxEvents: 100,
     enabled: !!tenantId,
   });
 
-  // Behavior events (last 30 days)
-  const { data: behaviorEvents = [] } = useQuery({
-    queryKey: ['fleet-behavior-events', tenantId],
-    queryFn: async () => {
-      if (!tenantId) return [];
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const { data, error } = await supabase
-        .from('fleet_behavior_events')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .gte('event_timestamp', thirtyDaysAgo.toISOString())
-        .order('event_timestamp', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
-
-  // Incidents
-  const { data: incidents = [] } = useQuery({
-    queryKey: ['fleet-incidents', tenantId],
-    queryFn: async () => {
-      if (!tenantId) return [];
-      const { data, error } = await supabase
-        .from('fleet_compliance_incidents')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
-
-  // Latest tracking events (for map placeholder)
-  const { data: latestEvents = [] } = useQuery({
-    queryKey: ['fleet-latest-events', tenantId],
-    queryFn: async () => {
-      if (!tenantId) return [];
-      const { data, error } = await supabase
-        .from('raw_tracking_events')
-        .select('device_id, latitude, longitude, speed, ignition, event_timestamp')
-        .eq('tenant_id', tenantId)
-        .order('event_timestamp', { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!tenantId,
-  });
+  const behaviorEvents = events.behavior?.items ?? [];
+  const incidents = events.compliance_incident?.items ?? [];
+  const latestEvents = events.tracking?.items ?? [];
 
   // Stats
   const stats = useMemo(() => {
-    const activeDevices = devices.filter((d: FleetDevice) => d.is_active).length;
     const totalViolations = behaviorEvents.length;
-    const activeAlerts = incidents.filter((i: FleetIncident) => i.status === 'pending').length;
-    const criticalCount = behaviorEvents.filter((e: FleetBehaviorEvent) => e.severity === 'critical').length;
-    return { activeDevices, totalViolations, activeAlerts, criticalCount };
-  }, [devices, behaviorEvents, incidents]);
+    const activeAlerts = incidents.filter((i: any) => i.status === 'pending').length;
+    const criticalCount = behaviorEvents.filter((e: any) => e.severity === 'critical').length;
+    return { totalViolations, activeAlerts, criticalCount };
+  }, [behaviorEvents, incidents]);
 
   // Violations by type (pie chart)
   const violationsByType = useMemo(() => {
     const counts: Record<string, number> = {};
-    behaviorEvents.forEach((e: FleetBehaviorEvent) => {
+    behaviorEvents.forEach((e: any) => {
       counts[e.event_type] = (counts[e.event_type] || 0) + 1;
     });
     return Object.entries(counts).map(([type, count]) => ({
@@ -171,7 +88,7 @@ export default function FleetDashboard() {
   // Ranking by employee (top 10)
   const rankingByEmployee = useMemo(() => {
     const counts: Record<string, { employee_id: string; total: number; critical: number }> = {};
-    behaviorEvents.forEach((e: FleetBehaviorEvent) => {
+    behaviorEvents.forEach((e: any) => {
       const eid = e.employee_id || 'Não identificado';
       if (!counts[eid]) counts[eid] = { employee_id: eid, total: 0, critical: 0 };
       counts[eid].total++;
@@ -185,7 +102,7 @@ export default function FleetDashboard() {
   // Violations by severity (bar chart)
   const violationsBySeverity = useMemo(() => {
     const counts: Record<string, number> = { low: 0, medium: 0, high: 0, critical: 0 };
-    behaviorEvents.forEach((e: FleetBehaviorEvent) => {
+    behaviorEvents.forEach((e: any) => {
       counts[e.severity] = (counts[e.severity] || 0) + 1;
     });
     return Object.entries(counts).map(([sev, count]) => ({
@@ -196,18 +113,31 @@ export default function FleetDashboard() {
   }, [behaviorEvents]);
 
   const PIE_COLORS = ['hsl(0, 72%, 51%)', 'hsl(38, 92%, 50%)', 'hsl(210, 100%, 52%)', 'hsl(160, 84%, 29%)'];
+  const connStatus = STATUS_INDICATOR[status];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold font-display text-foreground">Fleet Compliance Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Monitoramento de frota, infrações e alertas em tempo real</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold font-display text-foreground">Fleet Compliance Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Monitoramento de frota, infrações e alertas em tempo real</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className={cn("flex items-center gap-1.5 text-xs font-medium", connStatus.color)}>
+            {status === 'connected' && <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />}
+            <connStatus.icon className="h-3.5 w-3.5" />
+            {connStatus.label}
+          </div>
+          <Button size="sm" variant="ghost" onClick={refresh} className="gap-1.5 text-xs">
+            <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="Dispositivos Ativos" value={stats.activeDevices} icon={Car} />
-        <StatsCard title="Infrações (30d)" value={stats.totalViolations} icon={AlertTriangle} />
+        <StatsCard title="Eventos Rastreamento" value={latestEvents.length} icon={Car} />
+        <StatsCard title="Infrações (Tempo Real)" value={stats.totalViolations} icon={AlertTriangle} />
         <StatsCard title="Alertas Pendentes" value={stats.activeAlerts} icon={Activity} />
         <StatsCard
           title="Infrações Críticas"
@@ -234,7 +164,7 @@ export default function FleetDashboard() {
               <p className="text-xs">{latestEvents.length} posições recentes rastreadas</p>
               {latestEvents.length > 0 && (
                 <div className="text-xs space-y-1 mt-2 max-h-[120px] overflow-y-auto w-full px-4">
-                  {latestEvents.slice(0, 5).map((evt: TrackingEvent, i: number) => (
+                  {latestEvents.slice(0, 5).map((evt: any, i: number) => (
                     <div key={i} className="flex justify-between bg-background/50 rounded px-2 py-1">
                       <span className="font-mono">{evt.device_id}</span>
                       <span>{evt.speed?.toFixed(0)} km/h</span>
@@ -278,7 +208,7 @@ export default function FleetDashboard() {
               </ResponsiveContainer>
             ) : (
               <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
-                Nenhuma infração registrada nos últimos 30 dias
+                Nenhuma infração registrada
               </div>
             )}
           </CardContent>
@@ -315,12 +245,12 @@ export default function FleetDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {incidents.filter((i: FleetIncident) => i.status === 'pending').length > 0 ? (
+            {incidents.filter((i: any) => i.status === 'pending').length > 0 ? (
               <div className="space-y-3 max-h-[250px] overflow-y-auto">
                 {incidents
-                  .filter((i: FleetIncident) => i.status === 'pending')
+                  .filter((i: any) => i.status === 'pending')
                   .slice(0, 10)
-                  .map((incident: FleetIncident) => (
+                  .map((incident: any) => (
                     <div key={incident.id} className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
                       <div className="space-y-1">
                         <p className="text-sm font-medium text-foreground">
@@ -414,7 +344,7 @@ export default function FleetDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {incidents.slice(0, 15).map((incident: FleetIncident) => (
+                {incidents.slice(0, 15).map((incident: any) => (
                   <TableRow key={incident.id}>
                     <TableCell>{EVENT_TYPE_LABELS[incident.violation_type] || incident.violation_type}</TableCell>
                     <TableCell className="font-mono text-sm">{incident.device_id}</TableCell>
