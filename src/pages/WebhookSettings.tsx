@@ -76,10 +76,21 @@ export default function WebhookSettings() {
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
-      const mapped = (data || []).map((d: any) => ({
-        ...d,
+      const mapped: WebhookConfig[] = (data || []).map((d) => ({
+        id: d.id,
+        tenant_id: d.tenant_id,
+        webhook_name: d.webhook_name,
+        webhook_url: d.webhook_url,
+        is_active: d.is_active,
+        description: d.description,
+        provider: d.provider,
+        headers: (d.headers ?? {}) as Record<string, string>,
+        retry_count: d.retry_count,
+        timeout_seconds: d.timeout_seconds,
+        created_at: d.created_at,
+        updated_at: d.updated_at,
         has_secret: !!d.secret_encrypted,
-      })) as unknown as WebhookConfig[];
+      }));
       setConfigs(mapped);
     }
     setLoading(false);
@@ -117,7 +128,7 @@ export default function WebhookSettings() {
     if (!tenantId || !formName.trim()) return;
     setSaving(true);
 
-    const payload: Record<string, any> = {
+    const payload = {
       tenant_id: tenantId,
       webhook_name: formName.trim(),
       webhook_url: formUrl.trim() || null,
@@ -133,11 +144,11 @@ export default function WebhookSettings() {
 
     if (editingId) {
       const { tenant_id: _, ...updatePayload } = payload;
-      ({ error } = await supabase.from('webhook_configurations').update(updatePayload as any).eq('id', editingId));
+      ({ error } = await supabase.from('webhook_configurations').update(updatePayload).eq('id', editingId));
     } else {
       const { data: inserted, error: insertError } = await supabase
         .from('webhook_configurations')
-        .insert(payload as any)
+        .insert(payload)
         .select('id')
         .single();
       error = insertError;

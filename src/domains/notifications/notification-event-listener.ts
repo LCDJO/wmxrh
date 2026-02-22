@@ -154,14 +154,14 @@ export function registerNotificationListeners() {
 
   // ── Legal AI Intelligence Events ──
   teardowns.push(
-    onLegalAiEvent(legalAiEvents.INTERPRETATION_GENERATED, (payload: any) => {
-      const p = payload as Record<string, any>;
+    onLegalAiEvent(legalAiEvents.INTERPRETATION_GENERATED, (payload: Record<string, unknown>) => {
+      const p = payload;
       fireToPolicy(
         'LegislationInterpreted',
-        { type: 'tenant', tenantId: p.tenant_id ?? '' },
+        { type: 'tenant', tenantId: (p.tenant_id as string) ?? '' },
         {
           title: 'Legislação interpretada',
-          description: `Nova interpretação gerada para ${p.norm_codigo ?? 'norma'}: ${p.titulo ?? 'sem título'}.`,
+          description: `Nova interpretação gerada para ${(p.norm_codigo as string) ?? 'norma'}: ${(p.titulo as string) ?? 'sem título'}.`,
           type: 'info',
           source_module: 'intelligence',
           action_url: '/legal-intelligence',
@@ -171,14 +171,14 @@ export function registerNotificationListeners() {
   );
 
   teardowns.push(
-    onLegalAiEvent(legalAiEvents.HUMAN_REVIEW_REQUIRED, (payload: any) => {
-      const p = payload as Record<string, any>;
+    onLegalAiEvent(legalAiEvents.HUMAN_REVIEW_REQUIRED, (payload: Record<string, unknown>) => {
+      const p = payload;
       fireToPolicy(
         'CriticalLegalChange',
-        { type: 'tenant', tenantId: p.tenant_id ?? '' },
+        { type: 'tenant', tenantId: (p.tenant_id as string) ?? '' },
         {
           title: 'Mudança legal crítica',
-          description: `Alteração crítica detectada em ${p.norm_codigo ?? 'norma'}. Revisão humana necessária.`,
+          description: `Alteração crítica detectada em ${(p.norm_codigo as string) ?? 'norma'}. Revisão humana necessária.`,
           type: 'critical',
           source_module: 'intelligence',
           action_url: '/legal-intelligence',
@@ -188,14 +188,14 @@ export function registerNotificationListeners() {
   );
 
   teardowns.push(
-    onLegalAiEvent(legalAiEvents.ACTION_PLAN_CREATED, (payload: any) => {
-      const p = payload as Record<string, any>;
+    onLegalAiEvent(legalAiEvents.ACTION_PLAN_CREATED, (payload: Record<string, unknown>) => {
+      const p = payload;
       fireToPolicy(
         'ActionPlanCreated',
-        { type: 'tenant', tenantId: p.tenant_id ?? '' },
+        { type: 'tenant', tenantId: (p.tenant_id as string) ?? '' },
         {
           title: 'Plano de ação criado',
-          description: `Plano de adequação gerado para ${p.norm_codigo ?? 'norma'} com ${p.acoes_count ?? '?'} ações.`,
+          description: `Plano de adequação gerado para ${(p.norm_codigo as string) ?? 'norma'} com ${(p.acoes_count as number) ?? '?'} ações.`,
           type: 'warning',
           source_module: 'intelligence',
           action_url: '/legal-intelligence',
@@ -207,7 +207,7 @@ export function registerNotificationListeners() {
   // ── Platform Events ──
   teardowns.push(
     onPlatformEvent((event) => {
-      const meta = event.metadata as Record<string, any> | undefined;
+      const meta = event.metadata as Record<string, string | undefined> | undefined;
       switch (event.type) {
         case 'TenantCreated':
           fireSingle({

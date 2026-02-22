@@ -8,6 +8,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Store, Star, Download, DollarSign } from 'lucide-react';
 
+interface DeveloperApp {
+  name: string;
+  slug: string;
+  app_status: string;
+  install_count: number;
+  rating_avg: number | null;
+  rating_count: number;
+  icon_url: string | null;
+  description: string | null;
+  developer_id: string;
+}
+
+interface MarketplaceListing {
+  id: string;
+  featured: boolean;
+  pricing_model: string;
+  visibility: string;
+  supported_modules: string[] | null;
+  created_at: string;
+  developer_apps: DeveloperApp | null;
+}
+
 export default function PlatformMarketplace() {
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ['platform-marketplace-listings'],
@@ -45,9 +67,9 @@ export default function PlatformMarketplace() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Listings', value: listings.length, icon: Store },
-          { label: 'Featured', value: listings.filter((l: any) => l.featured).length, icon: Star },
-          { label: 'Pagos', value: listings.filter((l: any) => l.pricing_model === 'paid').length, icon: DollarSign },
-          { label: 'Gratuitos', value: listings.filter((l: any) => l.pricing_model === 'free').length, icon: Download },
+          { label: 'Featured', value: (listings as MarketplaceListing[]).filter(l => l.featured).length, icon: Star },
+          { label: 'Pagos', value: (listings as MarketplaceListing[]).filter(l => l.pricing_model === 'paid').length, icon: DollarSign },
+          { label: 'Gratuitos', value: (listings as MarketplaceListing[]).filter(l => l.pricing_model === 'free').length, icon: Download },
         ].map(s => (
           <Card key={s.label}>
             <CardContent className="pt-4 pb-4 flex items-center gap-3">
@@ -70,7 +92,7 @@ export default function PlatformMarketplace() {
             <p className="text-sm text-muted-foreground">Nenhum listing encontrado.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {listings.map((listing: any) => {
+              {(listings as MarketplaceListing[]).map((listing) => {
                 const app = listing.developer_apps;
                 return (
                   <Card key={listing.id} className="hover:shadow-md transition-shadow">

@@ -19,7 +19,7 @@ import { MetaAdsConnectCard } from '@/components/platform/meta-ads/MetaAdsConnec
 interface PlatformSetting {
   id: string;
   key: string;
-  value: any;
+  value: string | number | boolean | Record<string, unknown>;
   label: string;
   description: string | null;
   category: string;
@@ -53,7 +53,7 @@ export default function PlatformSaasSettings() {
     if (data) {
       setSettings(data as PlatformSetting[]);
       const vals: Record<string, string> = {};
-      data.forEach((s: any) => {
+      (data as PlatformSetting[]).forEach((s) => {
         vals[s.key] = typeof s.value === 'string' ? s.value : JSON.stringify(s.value);
       });
       setEditValues(vals);
@@ -115,7 +115,7 @@ export default function PlatformSaasSettings() {
   const handleSave = async (setting: PlatformSetting) => {
     setSaving(setting.key);
     const rawValue = editValues[setting.key];
-    let parsedValue: any;
+    let parsedValue: unknown;
     try {
       parsedValue = JSON.parse(rawValue);
     } catch {
@@ -123,7 +123,7 @@ export default function PlatformSaasSettings() {
     }
     const { error } = await supabase
       .from('platform_settings')
-      .update({ value: parsedValue })
+      .update({ value: parsedValue as import('@/integrations/supabase/types').Json })
       .eq('id', setting.id);
     if (error) {
       toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });

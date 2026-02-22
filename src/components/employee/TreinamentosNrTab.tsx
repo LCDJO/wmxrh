@@ -9,6 +9,15 @@ import { GraduationCap, Clock, CheckCircle2, AlertTriangle, ShieldAlert } from '
 import { Badge } from '@/components/ui/badge';
 import { useNrTrainingByEmployee } from '@/domains/hooks';
 
+interface NrTrainingAssignment {
+  id: string;
+  nr_number: number;
+  training_name: string;
+  status: 'assigned' | 'in_progress' | 'completed' | 'expired' | 'overdue';
+  blocking_level?: 'hard_block' | 'soft_block' | 'warning';
+  data_validade?: string | null;
+}
+
 interface TreinamentosNrTabProps {
   employeeId: string;
 }
@@ -35,10 +44,11 @@ export function TreinamentosNrTab({ employeeId }: TreinamentosNrTabProps) {
   const { data: trainings = [], isLoading } = useNrTrainingByEmployee(employeeId);
 
   const sections = useMemo(() => {
-    const assigned = (trainings as any[]).filter(t => t.status === 'assigned');
-    const inProgress = (trainings as any[]).filter(t => t.status === 'in_progress');
-    const completed = (trainings as any[]).filter(t => t.status === 'completed');
-    const expired = (trainings as any[]).filter(t => t.status === 'expired' || t.status === 'overdue');
+    const items = trainings as NrTrainingAssignment[];
+    const assigned = items.filter(t => t.status === 'assigned');
+    const inProgress = items.filter(t => t.status === 'in_progress');
+    const completed = items.filter(t => t.status === 'completed');
+    const expired = items.filter(t => t.status === 'expired' || t.status === 'overdue');
     return { assigned, inProgress, completed, expired };
   }, [trainings]);
 
@@ -50,7 +60,7 @@ export function TreinamentosNrTab({ employeeId }: TreinamentosNrTabProps) {
     );
   }
 
-  const total = (trainings as any[]).length;
+  const total = (trainings as NrTrainingAssignment[]).length;
 
   return (
     <div className="bg-card rounded-xl shadow-card p-6 space-y-6">
@@ -83,7 +93,7 @@ export function TreinamentosNrTab({ employeeId }: TreinamentosNrTabProps) {
 
 function TrainingSection({ title, items, emptyText, icon: Icon, iconClass }: {
   title: string;
-  items: any[];
+  items: NrTrainingAssignment[];
   emptyText: string;
   icon: typeof GraduationCap;
   iconClass: string;
@@ -98,7 +108,7 @@ function TrainingSection({ title, items, emptyText, icon: Icon, iconClass }: {
         <p className="text-xs text-muted-foreground pl-6">{emptyText}</p>
       ) : (
         <div className="space-y-2">
-          {items.map((t: any) => {
+          {items.map((t) => {
             const cfg = STATUS_CONFIG[t.status] || STATUS_CONFIG.assigned;
             const blocking = BLOCKING_CONFIG[t.blocking_level];
             const days = t.data_validade ? daysUntil(t.data_validade) : null;

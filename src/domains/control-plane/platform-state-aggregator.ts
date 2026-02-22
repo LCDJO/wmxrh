@@ -70,7 +70,7 @@ export class PlatformStateAggregator {
     const metricsCount = metricsCollector.getPoints().length;
 
     // ── 3. SelfHealingEngine ────────────────────────────────────
-    const selfHealingService = this.runtime.services.resolve<any>('SelfHealingEngine');
+    const selfHealingService = this.runtime.services.resolve<{ getState: () => { enabled: boolean; active_incidents: { id: string }[]; resolved_incidents: { id: string }[]; circuit_breakers: { state: string }[] }; getStats: () => { auto_recovered: number; escalated: number; avg_recovery_time_ms: number; uptime_pct: number } }>('SelfHealingEngine');
     let selfHealingData = {
       enabled: false,
       active_incidents: 0,
@@ -90,7 +90,7 @@ export class PlatformStateAggregator {
         active_incidents: shState.active_incidents.length,
         resolved_incidents_total: shState.resolved_incidents.length,
         open_circuit_breakers: shState.circuit_breakers.filter(
-          (cb: any) => cb.state === 'open'
+          (cb) => cb.state === 'open'
         ).length,
         auto_recovered_total: shStats.auto_recovered,
         escalated_total: shStats.escalated,
@@ -155,7 +155,7 @@ export class PlatformStateAggregator {
           built_at: graphSnapshot.builtAt,
           risk_signals_count: riskResult.signals.length,
           high_risk_users: riskResult.userScores.filter(
-            (u: any) => u.level === 'high' || u.level === 'critical'
+            (u) => u.level === 'high' || u.level === 'critical'
           ).length,
         };
       }

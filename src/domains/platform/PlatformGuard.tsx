@@ -58,7 +58,8 @@ export function usePlatformIdentity() {
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
-          const slug = (data as any).platform_roles?.slug ?? data.role;
+          const platformRoles = data.platform_roles as { slug: string } | null | undefined;
+          const slug = platformRoles?.slug ?? data.role;
           setIdentity({
             id: data.id,
             role: slug as PlatformRoleType,
