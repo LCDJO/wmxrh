@@ -12,6 +12,7 @@ import { PlatformShell } from "./components/platform/PlatformShell";
 import { useAdaptiveUserType } from "./components/layout/AdaptiveSidebar";
 import { DevConsole } from "./components/shared/DevConsole";
 import { ErrorBoundary } from "./components/shared/ErrorBoundary";
+import { pushAppError } from "./lib/app-error-store";
 import { toast } from "sonner";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -84,13 +85,33 @@ function AppRoutes() {
 
 function UnhandledRejectionGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    const handler = (event: PromiseRejectionEvent) => {
-      console.error('[UnhandledRejection]', event.reason);
+    const rejectionHandler = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      const message = reason instanceof Error ? reason.message : String(reason);
+      console.error('[UnhandledRejection]', reason);
+      pushAppError({
+        source: 'unhandled_rejection',
+        message,
+        stack: reason instanceof Error ? reason.stack : undefined,
+      });
       toast.error('Ocorreu um erro inesperado. Tente novamente.');
       event.preventDefault();
     };
-    window.addEventListener('unhandledrejection', handler);
-    return () => window.removeEventListener('unhandledrejection', handler);
+
+    const errorHandler = (event: ErrorEvent) => {
+      pushAppError({
+        source: 'global_error',
+        message: event.message,
+        stack: event.error instanceof Error ? event.error.stack : undefined,
+      });
+    };
+
+    window.addEventListener('unhandledrejection', rejectionHandler);
+    window.addEventListener('error', errorHandler);
+    return () => {
+      window.removeEventListener('unhandledrejection', rejectionHandler);
+      window.removeEventListener('error', errorHandler);
+    };
   }, []);
   return <>{children}</>;
 }
