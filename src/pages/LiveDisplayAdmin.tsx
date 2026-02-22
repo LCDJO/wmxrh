@@ -182,9 +182,18 @@ export default function LiveDisplayAdmin() {
   };
 
   const deleteDisplay = async (id: string) => {
-    await supabase.from('live_displays').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+    const { error } = await supabase
+      .from('live_displays')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('tenant_id', tenantId!);
+    if (error) {
+      toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
+      return;
+    }
+    // Remove immediately from local state for instant UI feedback
+    setDisplays(prev => prev.filter(d => d.id !== id));
     toast({ title: 'Display removido' });
-    fetchDisplays();
   };
 
   const openEdit = (display: LiveDisplay) => {
