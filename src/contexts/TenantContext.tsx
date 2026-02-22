@@ -1,11 +1,57 @@
+/**
+ * TenantContext — Resolução e gerenciamento do tenant ativo.
+ *
+ * Responsabilidades:
+ *   1. Resolver a qual tenant o usuário autenticado pertence
+ *   2. Gerenciar troca de tenant (multi-tenant)
+ *   3. Self-registration: criar tenant automaticamente no primeiro login
+ *      quando o usuário forneceu metadata de empresa no cadastro
+ *   4. Claim de convites: associar memberships pré-criadas (por email)
+ *
+ * Fluxo de resolução (executado em refreshTenants):
+ *   ┌─────────────────────────────────────────────────────────┐
+ *   │ 1. Claim invited memberships (RPC, uma vez por sessão)  │
+ *   │ 2. Fetch memberships ativas do usuário                  │
+ *   │    ├─ Se encontrou → seleciona tenant (localStorage)    │
+ *   │    │   └─ Verifica se precisa de onboarding             │
+ *   │    └─ Se não encontrou:                                 │
+ *   │       ├─ Se metadata de empresa → self_register_tenant  │
+ *   │       └─ Se não → estado vazio (sem tenant)             │
+ *   └─────────────────────────────────────────────────────────┘
+ *
+ * Decisões de design:
+ *   - `claimAttempted` (useRef) garante que o RPC `claim_invited_memberships`
+ *     só roda uma vez por sessão, evitando chamadas duplicadas.
+ *   - O tenant selecionado é persistido em `localStorage` para manter
+ *     a preferência entre refreshes da página.
+ *   - `needsOnboarding` é determinado via RPC `check_tenant_needs_onboarding`
+ *     (verifica se o tenant tem pelo menos uma empresa cadastrada).
+ *
+ * @see AuthContext — fornece o `user` que dispara a resolução
+ * @see ScopeContext — consome `currentTenant` e `membership` para resolver roles
+ */
+
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import type { Tables } from '@/integrations/supabase/types';
 
+/** Tipo da tabela `tenants` gerado automaticamente pelo Supabase */
 type Tenant = Tables<'tenants'>;
+/** Tipo da tabela `tenant_memberships` (relação user ↔ tenant com role) */
 type TenantMembership = Tables<'tenant_memberships'>;
 
+/**
+ * Contrato público do TenantContext.
+ *
+ * @property currentTenant   - Tenant atualmente selecionado (null durante loading)
+ * @property tenants         - Lista de todos os tenants que o usuário tem acesso
+ * @property membership      - Membership do usuário no tenant atual (contém role)
+ * @property loading         - `true` até a resolução inicial completar
+ * @property needsOnboarding - `true` se o tenant não tem empresas cadastradas
+ * @property setCurrentTenant - Troca o tenant ativo (persiste em localStorage)
+ * @property refreshTenants  - Re-executa todo o fluxo de resolução
+ */
 interface TenantContextType {
   currentTenant: Tenant | null;
   tenants: Tenant[];
@@ -25,9 +71,21 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [membership, setMembership] = useState<TenantMembership | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+
+  /**
+   * Flag para garantir que `claim_invited_memberships` só executa uma vez.
+   * Evita race conditions quando o useEffect re-executa durante hidratação.
+   */
   const claimAttempted = useRef(false);
 
+  /**
+   * refreshTenants — Fluxo principal de resolução de tenant.
+   *
+   * Chamado automaticamente quando `user` muda (login/logout)
+   * e pode ser chamado manualmente via `refreshTenants()`.
+   */
   const refreshTenants = async () => {
+    // Se não há usuário autenticado, limpar todo o estado
     if (!user) {
       setTenants([]);
       setCurrentTenant(null);
@@ -38,7 +96,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Step 1: Claim any invited memberships (only once per session)
+    // Step 1: Claim memberships convidadas por email (apenas na primeira execução).
+    // O RPC `claim_invited_memberships` converte memberships com status 'invited'
+    // (criadas pelo admin do tenant usando o email) em memberships ativas.
     if (!claimAttempted.current && user.email) {
       claimAttempted.current = true;
       await supabase.rpc('claim_invited_memberships', {
@@ -47,29 +107,35 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    // Step 2: Fetch active memberships
+    // Step 2: Buscar todas as memberships ativas do usuário, com dados do tenant
     const { data: memberships } = await supabase
       .from('tenant_memberships')
       .select('*, tenants(*)')
       .eq('user_id', user.id);
 
     if (memberships && memberships.length > 0) {
+      // Extrair lista de tenants das memberships (join inline)
       const tenantList = memberships.map((m: any) => m.tenants).filter(Boolean) as Tenant[];
       setTenants(tenantList);
 
+      // Restaurar tenant previamente selecionado (localStorage) ou usar o primeiro
       const saved = localStorage.getItem('currentTenantId');
       const found = tenantList.find(t => t.id === saved) || tenantList[0];
       setCurrentTenant(found);
 
+      // Encontrar a membership correspondente ao tenant selecionado
       const currentMembership = memberships.find((m: any) => m.tenant_id === found.id);
       setMembership(currentMembership || null);
 
-      // Step 3: Check if current tenant needs onboarding (no companies)
+      // Step 3: Verificar se o tenant precisa de onboarding (sem empresas cadastradas)
       const { data: needsOb } = await supabase
         .rpc('check_tenant_needs_onboarding', { p_tenant_id: found.id });
       setNeedsOnboarding(needsOb === true);
     } else {
-      // Step 3b: No memberships — check if user has self-registration metadata
+      // Nenhuma membership encontrada — tentar self-registration
+
+      // Step 3b: Se o usuário forneceu metadata de empresa no cadastro,
+      // criar automaticamente o tenant, a empresa e a membership.
       const meta = user.user_metadata;
       if (meta?.company_name && meta?.full_name) {
         const { data: result } = await supabase.rpc('self_register_tenant', {
@@ -82,7 +148,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         });
 
         if (result && !(result as any).already_registered) {
-          // Tenant created — re-fetch memberships
+          // Tenant criado com sucesso — re-buscar memberships para hidratar o estado
           const { data: newMemberships } = await supabase
             .from('tenant_memberships')
             .select('*, tenants(*)')
@@ -94,13 +160,14 @@ export function TenantProvider({ children }: { children: ReactNode }) {
             setCurrentTenant(tenantList[0]);
             localStorage.setItem('currentTenantId', tenantList[0].id);
             setMembership(newMemberships[0] || null);
-            setNeedsOnboarding(true); // fresh tenant, needs onboarding
+            setNeedsOnboarding(true); // Tenant recém-criado sempre precisa de onboarding
             setLoading(false);
             return;
           }
         }
       }
 
+      // Nenhum tenant disponível — estado limpo
       setTenants([]);
       setCurrentTenant(null);
       setMembership(null);
@@ -109,10 +176,15 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   };
 
+  // Disparar resolução sempre que o usuário mudar (login, logout, refresh)
   useEffect(() => {
     refreshTenants();
   }, [user]);
 
+  /**
+   * Troca o tenant ativo e persiste a escolha em localStorage.
+   * Usado pelo seletor de workspace na sidebar.
+   */
   const handleSetTenant = (tenant: Tenant) => {
     setCurrentTenant(tenant);
     localStorage.setItem('currentTenantId', tenant.id);
@@ -125,6 +197,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Hook para consumir o TenantContext.
+ * Lança erro se usado fora do TenantProvider.
+ */
 export function useTenant() {
   const context = useContext(TenantContext);
   if (!context) throw new Error('useTenant must be used within TenantProvider');
