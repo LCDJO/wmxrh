@@ -14458,7 +14458,7 @@ export type Database = {
       compliance_rule_status: "active" | "disabled" | "archived"
       display_board_tipo: "fleet" | "sst" | "compliance" | "executivo"
       display_session_status: "pending" | "active" | "expired"
-      display_status: "active" | "paused" | "disconnected"
+      display_status: "active" | "paused" | "disconnected" | "offline"
       employee_event_type:
         | "company_transfer"
         | "position_change"
@@ -14753,7 +14753,7 @@ export const Constants = {
       compliance_rule_status: ["active", "disabled", "archived"],
       display_board_tipo: ["fleet", "sst", "compliance", "executivo"],
       display_session_status: ["pending", "active", "expired"],
-      display_status: ["active", "paused", "disconnected"],
+      display_status: ["active", "paused", "disconnected", "offline"],
       employee_event_type: [
         "company_transfer",
         "position_change",
