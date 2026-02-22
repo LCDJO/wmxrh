@@ -4,7 +4,7 @@
  * Renders the TV dashboard UI with mock data directly (NO iframe, NO networking hooks).
  * Used by LiveDisplayAdmin to preview display content without focus/CORS issues.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -25,6 +25,15 @@ import {
   ExecutiveOverviewView,
 } from '@/components/tv/TVRotationViews';
 import { buildDisplayMockData } from '@/lib/displayMockData';
+import type { RotationView } from '@/hooks/useRotationMode';
+
+/** Map display board tipo → rotation view */
+const TIPO_TO_VIEW: Record<string, RotationView> = {
+  fleet: 'fleet_live',
+  sst: 'risk_heatmap',
+  compliance: 'compliance_summary',
+  executivo: 'executive_overview',
+};
 
 const TV_STYLES = `
   .tv-root { transform: translateZ(0); font-family: 'Inter', system-ui, sans-serif; }
@@ -50,14 +59,28 @@ export default function LiveDisplayPreview({ tipo, displayName }: LiveDisplayPre
     return () => clearInterval(t);
   }, []);
 
+  const initialView = TIPO_TO_VIEW[tipo] ?? 'executive_overview';
+
   const rotation = useRotationMode({
     enabled: false,
     intervalSeconds: 60,
+    views: [initialView],
   });
 
   const exec = data.executive;
   const alerts = data.critical_alerts ?? [];
   const operationalScore = exec?.operational_score ?? 0;
+
+  // Render the correct view based on tipo
+  const renderView = () => {
+    switch (initialView) {
+      case 'fleet_live': return <FleetLiveView data={data} />;
+      case 'risk_heatmap': return <RiskHeatmapView data={data} />;
+      case 'compliance_summary': return <ComplianceSummaryView data={data} />;
+      case 'executive_overview': return <ExecutiveOverviewView data={data} />;
+      default: return <ExecutiveOverviewView data={data} />;
+    }
+  };
 
   return (
     <div className="h-full w-full bg-[#060610] text-white overflow-hidden flex flex-col tv-root" style={{ minHeight: 400 }}>
@@ -113,10 +136,7 @@ export default function LiveDisplayPreview({ tipo, displayName }: LiveDisplayPre
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex gap-3 px-4 py-2 min-h-0">
-        {rotation.currentView === 'fleet_live' && <FleetLiveView data={data} />}
-        {rotation.currentView === 'risk_heatmap' && <RiskHeatmapView data={data} />}
-        {rotation.currentView === 'compliance_summary' && <ComplianceSummaryView data={data} />}
-        {rotation.currentView === 'executive_overview' && <ExecutiveOverviewView data={data} />}
+        {renderView()}
       </main>
 
       {/* FOOTER */}
