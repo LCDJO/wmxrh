@@ -23,7 +23,7 @@ import { ptBR } from 'date-fns/locale';
 import {
   AlertTriangle, Tv, WifiOff, Loader2, Wifi, Activity,
   Clock, BarChart3, Scale, Zap, Lock, FileWarning,
-  RotateCw, Pause, Play, ChevronLeft, ChevronRight,
+  RotateCw, Pause, Play, ChevronLeft, ChevronRight, Power,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QRCodeSVG } from 'qrcode.react';
@@ -327,6 +327,28 @@ export default function LiveDisplayTV() {
     const timer = setInterval(fetchData, interval);
     return () => clearInterval(timer);
   }, [activeToken, data?.display?.intervalo_rotacao, fetchData]);
+
+  // ── Disconnect handler ──
+  const handleDisconnect = useCallback(async () => {
+    // Try to disconnect via gateway
+    if (activeToken && !isPreviewMode) {
+      try {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const base = `https://${projectId}.supabase.co/functions/v1/display-ws-gateway`;
+        await fetch(`${base}?action=disconnect&token=${encodeURIComponent(activeToken)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+      } catch { /* best effort */ }
+    }
+    cache.clear();
+    setActiveToken(null);
+    setRawData(null);
+    setError(null);
+    setLastUpdate(null);
+    setPairingState(null);
+    // Will trigger requestPairing via the useEffect
+  }, [activeToken, isPreviewMode, cache]);
 
   // ── Lock TV ──
   useEffect(() => {
@@ -703,7 +725,7 @@ export default function LiveDisplayTV() {
           )}
         </div>
 
-        {/* Right: Last update */}
+        {/* Right: Last update + Disconnect */}
         <div className="flex items-center gap-3">
           {lastUpdate && (
             <span className="flex items-center gap-1">
@@ -716,6 +738,14 @@ export default function LiveDisplayTV() {
               <AlertTriangle className="h-3 w-3" /> Reconectando
             </span>
           )}
+          <button
+            onClick={handleDisconnect}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400/70 hover:text-red-400 transition-colors border border-red-500/20 hover:border-red-500/30"
+            title="Desconectar display"
+          >
+            <Power className="h-3 w-3" />
+            <span>Desconectar</span>
+          </button>
         </div>
       </footer>
     </div>
