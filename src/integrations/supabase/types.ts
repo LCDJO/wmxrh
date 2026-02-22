@@ -9764,6 +9764,36 @@ export type Database = {
           },
         ]
       }
+      platform_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read_at: string | null
+          sent_by: string | null
+          subject: string
+          user_email: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          read_at?: string | null
+          sent_by?: string | null
+          subject?: string
+          user_email: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read_at?: string | null
+          sent_by?: string | null
+          subject?: string
+          user_email?: string
+        }
+        Relationships: []
+      }
       platform_permission_definitions: {
         Row: {
           action: string
