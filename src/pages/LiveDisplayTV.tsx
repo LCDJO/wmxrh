@@ -26,6 +26,7 @@ import {
   RotateCw, Pause, Play, ChevronLeft, ChevronRight, Power,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { buildDisplayMockData } from '@/lib/displayMockData';
 import { QRCodeSVG } from 'qrcode.react';
 import { useDisplayRealtime, type ConnectionStatus } from '@/hooks/useDisplayRealtime';
 import { useDisplayEventQueue } from '@/hooks/useDisplayEventQueue';
@@ -97,65 +98,7 @@ export default function LiveDisplayTV() {
   const isValidAccess = isDisplayRoute || !!tokenFromUrl || isPreviewMode;
 
   // ── Preview mode: inject demo data and skip pairing/gateway ──
-  const previewDemoData: DisplayData | null = isPreviewMode ? {
-    display: { id: 'preview', nome: 'Pré-visualização', tipo: previewTipo, rotacao_automatica: false, intervalo_rotacao: 30, layout_config: {} },
-    timestamp: new Date().toISOString(),
-    workforce: { total: 128, active: 112, inactive: 16, by_department: { Operações: 45, Logística: 30, Administrativo: 20, Manutenção: 17, 'Campo': 16 } },
-    fleet_events: [
-      { id: 'fe1', tipo: 'excesso_velocidade', descricao: 'ABC-1234 a 95km/h (limite: 80)', severidade: 'high', severity: 'high', created_at: new Date(Date.now() - 120000).toISOString() },
-      { id: 'fe2', tipo: 'freada_brusca', descricao: 'Freada brusca - DEF-5678', severidade: 'medium', severity: 'medium', created_at: new Date(Date.now() - 300000).toISOString() },
-      { id: 'fe3', tipo: 'desvio_rota', descricao: 'Desvio de rota - GHI-9012', severidade: 'low', severity: 'low', created_at: new Date(Date.now() - 600000).toISOString() },
-      { id: 'fe4', tipo: 'excesso_velocidade', descricao: 'JKL-3456 a 110km/h (zona urbana)', severidade: 'critical', severity: 'critical', created_at: new Date(Date.now() - 60000).toISOString() },
-      { id: 'fe5', tipo: 'aceleracao_brusca', descricao: 'Aceleração brusca - MNO-7890', severidade: 'medium', severity: 'medium', created_at: new Date(Date.now() - 900000).toISOString() },
-    ],
-    live_positions: [
-      { device_id: 'ABC-1234', lat: -23.55, lng: -46.63, speed: 92, heading: 45 },
-      { device_id: 'DEF-5678', lat: -23.56, lng: -46.65, speed: 35, heading: 180 },
-      { device_id: 'GHI-9012', lat: -23.52, lng: -46.61, speed: 0, heading: 0 },
-      { device_id: 'JKL-3456', lat: -23.58, lng: -46.68, speed: 110, heading: 270 },
-      { device_id: 'MNO-7890', lat: -23.54, lng: -46.64, speed: 55, heading: 90 },
-      { device_id: 'PQR-1122', lat: -23.57, lng: -46.66, speed: 42, heading: 135 },
-      { device_id: 'STU-3344', lat: -23.53, lng: -46.62, speed: 0, heading: 0 },
-      { device_id: 'VWX-5566', lat: -23.59, lng: -46.69, speed: 78, heading: 315 },
-    ],
-    speed_alerts: [
-      { id: 'sa1', device_id: 'JKL-3456', speed: 110, limit: 60, created_at: new Date(Date.now() - 60000).toISOString() },
-      { id: 'sa2', device_id: 'ABC-1234', speed: 95, limit: 80, created_at: new Date(Date.now() - 120000).toISOString() },
-      { id: 'sa3', device_id: 'VWX-5566', speed: 78, limit: 60, created_at: new Date(Date.now() - 240000).toISOString() },
-    ],
-    nr_overdue_exams: [
-      { id: 'nr1', employee_name: 'João Silva', exam_type: 'NR-35', due_date: new Date(Date.now() - 86400000).toISOString() },
-      { id: 'nr2', employee_name: 'Pedro Alves', exam_type: 'NR-10', due_date: new Date(Date.now() - 172800000).toISOString() },
-      { id: 'nr3', employee_name: 'Ana Costa', exam_type: 'NR-33', due_date: new Date(Date.now() - 259200000).toISOString() },
-    ],
-    active_blocks: [
-      { id: 'bl1', employee_name: 'Maria Santos', reason: 'ASO vencido', blocked_at: new Date(Date.now() - 172800000).toISOString() },
-      { id: 'bl2', employee_name: 'Roberto Dias', reason: 'NR-35 expirado', blocked_at: new Date(Date.now() - 86400000).toISOString() },
-    ],
-    sst_summary: { overdue_count: 8, critical_overdue: 3, active_blocks_count: 2 },
-    recent_warnings: [
-      { id: 'w1', employee_name: 'Carlos Lima', tipo: 'verbal', motivo: 'Uso indevido de EPI', created_at: new Date(Date.now() - 3600000).toISOString() },
-      { id: 'w2', employee_name: 'Fernanda Reis', tipo: 'escrita', motivo: 'Excesso de velocidade reincidente', created_at: new Date(Date.now() - 7200000).toISOString() },
-      { id: 'w3', employee_name: 'Lucas Mendes', tipo: 'verbal', motivo: 'Desvio de rota não autorizado', created_at: new Date(Date.now() - 14400000).toISOString() },
-    ],
-    compliance_incidents: [
-      { id: 'ci1', tipo: 'infracao_transito', descricao: 'Multa por avanço de sinal', severity: 'high', created_at: new Date(Date.now() - 1800000).toISOString() },
-      { id: 'ci2', tipo: 'documentacao', descricao: 'CNH vencida - motorista ativo', severity: 'critical', created_at: new Date(Date.now() - 3600000).toISOString() },
-    ],
-    compliance_summary: { total_warnings: 15, pending_incidents: 4, critical_incidents: 2 },
-    executive: { operational_score: 78, legal_risk: { score: 35, level: 'medium' }, projected_cost_brl: 45000, workforce_total: 128, active_devices: 8, total_violations: 12, total_warnings: 15, total_blocks: 2 },
-    risk_heatmap: {
-      Operações: { fleet: 4, sst: 3, compliance: 2, workforce: 45, total: 9, headcount: 45 },
-      Logística: { fleet: 6, sst: 1, compliance: 3, workforce: 30, total: 10, headcount: 30 },
-      Manutenção: { fleet: 1, sst: 5, compliance: 1, workforce: 17, total: 7, headcount: 17 },
-      Administrativo: { fleet: 0, sst: 1, compliance: 0, workforce: 20, total: 1, headcount: 20 },
-      Campo: { fleet: 3, sst: 4, compliance: 2, workforce: 16, total: 9, headcount: 16 },
-    },
-    critical_alerts: [
-      { id: 'ca1', message: 'CNH vencida — motorista em operação', severity: 'critical', created_at: new Date(Date.now() - 1800000).toISOString() },
-      { id: 'ca2', message: 'Veículo JKL-3456: 110km/h em zona urbana', severity: 'critical', created_at: new Date(Date.now() - 60000).toISOString() },
-    ],
-  } : null;
+  const previewDemoData: DisplayData | null = isPreviewMode ? buildDisplayMockData(previewTipo) : null;
 
   const [pairingState, setPairingState] = useState<PairingState | null>(null);
   const [activeToken, setActiveToken] = useState<string | null>(isPreviewMode ? '__preview__' : tokenFromUrl);
