@@ -36,9 +36,9 @@ Deno.serve(async (req) => {
     // Validate token
     const { data: tokenData, error: tokenErr } = await admin
       .from("live_display_tokens")
-      .select("id, display_id, tenant_id, expires_at, is_active")
-      .eq("token", token)
-      .eq("is_active", true)
+      .select("id, display_id, tenant_id, expira_em, status, paired_at")
+      .eq("token_temporario", token)
+      .in("status", ["pending", "active"])
       .maybeSingle();
 
     if (tokenErr || !tokenData) {
@@ -48,7 +48,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (new Date(tokenData.expires_at) < new Date()) {
+    if (new Date(tokenData.expira_em) < new Date()) {
+      await admin.from("live_display_tokens").update({ status: "expired" }).eq("id", tokenData.id);
       return new Response(
         JSON.stringify({ error: "Token expired" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -76,6 +77,7 @@ Deno.serve(async (req) => {
     // Update paired info if not set
     if (!tokenData.paired_at) {
       await admin.from("live_display_tokens").update({
+        status: "active",
         paired_at: new Date().toISOString(),
         paired_ip: req.headers.get("x-forwarded-for") ?? req.headers.get("cf-connecting-ip") ?? "unknown",
         paired_user_agent: req.headers.get("user-agent") ?? "unknown",

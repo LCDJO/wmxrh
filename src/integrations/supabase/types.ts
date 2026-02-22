@@ -8568,38 +8568,38 @@ export type Database = {
         Row: {
           created_at: string
           display_id: string
-          expires_at: string
+          expira_em: string
           id: string
-          is_active: boolean
           paired_at: string | null
           paired_ip: string | null
           paired_user_agent: string | null
+          status: Database["public"]["Enums"]["display_session_status"]
           tenant_id: string
-          token: string
+          token_temporario: string
         }
         Insert: {
           created_at?: string
           display_id: string
-          expires_at: string
+          expira_em: string
           id?: string
-          is_active?: boolean
           paired_at?: string | null
           paired_ip?: string | null
           paired_user_agent?: string | null
+          status?: Database["public"]["Enums"]["display_session_status"]
           tenant_id: string
-          token: string
+          token_temporario: string
         }
         Update: {
           created_at?: string
           display_id?: string
-          expires_at?: string
+          expira_em?: string
           id?: string
-          is_active?: boolean
           paired_at?: string | null
           paired_ip?: string | null
           paired_user_agent?: string | null
+          status?: Database["public"]["Enums"]["display_session_status"]
           tenant_id?: string
-          token?: string
+          token_temporario?: string
         }
         Relationships: [
           {
@@ -14110,6 +14110,7 @@ export type Database = {
       compliance_rule_severity: "info" | "warning" | "critical"
       compliance_rule_status: "active" | "disabled" | "archived"
       display_board_tipo: "fleet" | "sst" | "compliance" | "executivo"
+      display_session_status: "pending" | "active" | "expired"
       display_status: "active" | "paused" | "disconnected"
       employee_event_type:
         | "company_transfer"
@@ -14404,6 +14405,7 @@ export const Constants = {
       compliance_rule_severity: ["info", "warning", "critical"],
       compliance_rule_status: ["active", "disabled", "archived"],
       display_board_tipo: ["fleet", "sst", "compliance", "executivo"],
+      display_session_status: ["pending", "active", "expired"],
       display_status: ["active", "paused", "disconnected"],
       employee_event_type: [
         "company_transfer",
