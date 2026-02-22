@@ -16,7 +16,7 @@ import {
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
   Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook, Store,
-  HardHat, Activity, Stethoscope, Car,
+  HardHat, Activity, Stethoscope, Car, Monitor,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -128,6 +128,9 @@ const navSections: NavSection[] = [
       },
       {
         to: '/fleet-dashboard', icon: Car, label: 'Frota & Compliance', key: 'dashboard' as NavKey,
+      },
+      {
+        to: '/live-display', icon: Monitor, label: 'Live Display (TV)', key: 'dashboard' as NavKey,
       },
     ],
   },
