@@ -18,7 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Monitor, Plus, QrCode, Trash2, Copy, Tv, AlertTriangle, CheckCircle2, WifiOff, RotateCw, Link2, Eye, Pencil } from 'lucide-react';
+import { Monitor, Plus, QrCode, Trash2, Copy, Tv, AlertTriangle, CheckCircle2, WifiOff, RotateCw, Link2, Eye, Pencil, Power } from 'lucide-react';
 import { format } from 'date-fns';
 import { DISPLAY_TIPOS } from '@/modules/live-display';
 import type { DisplayBoardTipo } from '@/modules/live-display';
@@ -158,6 +158,28 @@ export default function LiveDisplayAdmin() {
     setPairing(false);
   };
 
+  const disconnectDisplay = async (displayId: string) => {
+    try {
+      // Expire all active tokens for this display
+      await supabase
+        .from('live_display_tokens')
+        .update({ status: 'expired' })
+        .eq('display_id', displayId)
+        .eq('status', 'active');
+
+      // Set display status to disconnected
+      await supabase
+        .from('live_displays')
+        .update({ status: 'disconnected' })
+        .eq('id', displayId);
+
+      toast({ title: 'Display desconectado', description: 'O display voltará à tela de pareamento.' });
+      fetchDisplays();
+    } catch (e: any) {
+      toast({ title: 'Erro ao desconectar', description: e.message, variant: 'destructive' });
+    }
+  };
+
   const deleteDisplay = async (id: string) => {
     await supabase.from('live_displays').update({ deleted_at: new Date().toISOString() }).eq('id', id);
     toast({ title: 'Display removido' });
@@ -288,9 +310,20 @@ export default function LiveDisplayAdmin() {
                     <p className="text-xs text-amber-500">Não pareado</p>
                   )}
                   <div className="space-y-2.5 pt-2">
-                    <Button size="sm" variant="outline" className="gap-1.5 w-full" onClick={() => { setPairingDisplayId(display.id); setShowPairing(true); }}>
-                      <Link2 className="h-3.5 w-3.5" /> Parear
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={() => { setPairingDisplayId(display.id); setShowPairing(true); }}>
+                        <Link2 className="h-3.5 w-3.5" /> Parear
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 flex-1 text-destructive hover:bg-destructive/10 hover:border-destructive/30"
+                        onClick={() => disconnectDisplay(display.id)}
+                        disabled={display.status === 'disconnected'}
+                      >
+                        <Power className="h-3.5 w-3.5" /> Desconectar
+                      </Button>
+                    </div>
                     <Separator />
                     <TooltipProvider delayDuration={200}>
                       <div className="flex items-center justify-center gap-1">
