@@ -16,6 +16,8 @@ import {
   Filter, Navigation, Zap, Clock, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EventDetailPanel, type EventDetail } from '@/components/fleet/EventDetailPanel';
+import { useToast } from '@/hooks/use-toast';
 
 // ── Types ──
 interface MockVehicle {
@@ -184,6 +186,8 @@ export default function FleetLiveView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [eventFilter, setEventFilter] = useState<string>('all');
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventDetail | null>(null);
+  const { toast } = useToast();
 
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
@@ -547,7 +551,25 @@ export default function FleetLiveView() {
                   <button
                     key={a.id}
                     className={cn("w-full text-left flex items-center justify-between rounded-lg p-3 border", style.bg, "border-border")}
-                    onClick={() => setSelectedVehicle(a.vehicleId)}
+                    onClick={() => {
+                      const v = vehicles.find(x => x.id === a.vehicleId);
+                      setSelectedVehicle(a.vehicleId);
+                      setSelectedEvent({
+                        id: a.id,
+                        type: a.type,
+                        plate: a.plate,
+                        driver: a.driver,
+                        vehicleId: a.vehicleId,
+                        severity: a.severity,
+                        message: a.message,
+                        timestamp: a.timestamp,
+                        lat: v?.lat ?? -23.55,
+                        lng: v?.lng ?? -46.63,
+                        speed: a.speed,
+                        limit: a.limit,
+                        heading: v?.heading,
+                      });
+                    }}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <Zap className={cn("h-4 w-4 shrink-0", style.text)} />
@@ -567,6 +589,22 @@ export default function FleetLiveView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Event Detail Panel */}
+      <EventDetailPanel
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        onAction={(action, evt) => {
+          const labels: Record<string, string> = {
+            warning: 'Advertência emitida',
+            task: 'Tarefa criada',
+            training: 'Treinamento solicitado',
+            block: 'Operação bloqueada',
+          };
+          toast({ title: labels[action] ?? action, description: `${evt.driver} — ${evt.plate}` });
+          setSelectedEvent(null);
+        }}
+      />
     </div>
   );
 }
