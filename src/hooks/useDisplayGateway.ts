@@ -23,12 +23,15 @@ export type GatewayStatus =
   | 'expired'
   | 'error';
 
+export type DisplaySessionModo = 'fleet' | 'sst' | 'executive' | 'custom';
+
 export interface GatewaySession {
   sessionId: string | null;
   tenantId: string;
   displayId: string;
   displayName: string;
   displayType: string;
+  modo: DisplaySessionModo;
   channel: string;
   expiresAt: string;
   ttlSeconds: number;
@@ -140,6 +143,7 @@ export function useDisplayGateway({
         displayId: result.display.id,
         displayName: result.display.name,
         displayType: result.display.type,
+        modo: (result.modo as DisplaySessionModo) ?? 'executive',
         channel: result.channel,
         expiresAt: result.expires_at,
         ttlSeconds: Math.floor(
