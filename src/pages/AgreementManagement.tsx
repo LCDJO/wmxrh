@@ -98,7 +98,7 @@ export default function AgreementManagement() {
         .eq('tenant_id', qs!.tenantId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row: Record<string, unknown>) => ({
         ...row,
         employee: Array.isArray(row.employee) ? row.employee[0] : row.employee,
         template: Array.isArray(row.template) ? row.template[0] : row.template,

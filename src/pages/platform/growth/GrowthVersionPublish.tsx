@@ -108,8 +108,8 @@ export default function GrowthVersionPublish() {
           else toast.warning(e.message);
         });
       }
-    } catch (err: any) {
-      toast.error(err.message ?? 'Erro ao publicar.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao publicar.');
     } finally {
       setPublishing(false);
       setPublishOpen(false);
