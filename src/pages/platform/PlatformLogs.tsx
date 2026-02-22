@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * PlatformLogs — Unified log viewer for PlatformSuperAdmin.
  *
@@ -7,7 +8,7 @@
  *
  * Access: platform_super_admin only (enforced via route guard).
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,8 +35,11 @@ import {
   Globe,
   Clock,
   Filter,
+  AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { getAppErrors, clearAppErrors, onAppErrorsChange, type AppError } from '@/lib/app-error-store';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -79,7 +83,7 @@ function actionColor(action: string): string {
 // ── Component ────────────────────────────────────────────────
 
 export default function PlatformLogs() {
-  const [tab, setTab] = useState<'tenant' | 'global'>('tenant');
+  const [tab, setTab] = useState<'tenant' | 'global' | 'app_errors'>('tenant');
   const [logs, setLogs] = useState<AuditLogRow[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<string>('all');
@@ -89,7 +93,8 @@ export default function PlatformLogs() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [entityTypes, setEntityTypes] = useState<string[]>([]);
 
-  // ── Fetch tenants ──
+  // ── App errors (in-memory) ──
+  const appErrors = useSyncExternalStore(onAppErrorsChange, getAppErrors);
   useEffect(() => {
     supabase
       .from('tenants')
@@ -226,7 +231,7 @@ export default function PlatformLogs() {
       </div>
 
       {/* Tabs: Tenant vs Global */}
-      <Tabs value={tab} onValueChange={v => setTab(v as 'tenant' | 'global')}>
+      <Tabs value={tab} onValueChange={v => setTab(v as 'tenant' | 'global' | 'app_errors')}>
         <TabsList>
           <TabsTrigger value="tenant" className="gap-2">
             <Building2 className="h-4 w-4" />
@@ -235,6 +240,15 @@ export default function PlatformLogs() {
           <TabsTrigger value="global" className="gap-2">
             <Globe className="h-4 w-4" />
             Visão Global
+          </TabsTrigger>
+          <TabsTrigger value="app_errors" className="gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Erros de Aplicação
+            {appErrors.length > 0 && (
+              <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">
+                {appErrors.length}
+              </Badge>
+            )}
           </TabsTrigger>
         </TabsList>
 
@@ -298,6 +312,10 @@ export default function PlatformLogs() {
             showTenant
             loading={loading}
           />
+        </TabsContent>
+
+        <TabsContent value="app_errors" className="mt-4">
+          <AppErrorsTable errors={appErrors} />
         </TabsContent>
       </Tabs>
     </div>
@@ -466,5 +484,131 @@ function DetailBlock({ label, data }: { label: string; data: Record<string, unkn
         {JSON.stringify(data, null, 2)}
       </pre>
     </div>
+  );
+}
+
+// ── App Errors Table ─────────────────────────────────────────
+
+const SOURCE_LABELS: Record<string, string> = {
+  error_boundary: 'Error Boundary',
+  unhandled_rejection: 'Promise Rejeitada',
+  global_error: 'Erro Global',
+};
+
+const SOURCE_COLORS: Record<string, string> = {
+  error_boundary: 'bg-destructive/15 text-destructive',
+  unhandled_rejection: 'bg-orange-500/15 text-orange-700 dark:text-orange-400',
+  global_error: 'bg-red-500/15 text-red-700 dark:text-red-400',
+};
+
+function AppErrorsTable({ errors }: { errors: AppError[] }) {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggle = (id: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  if (errors.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-muted-foreground">
+          <AlertTriangle className="h-6 w-6 mx-auto mb-2 opacity-40" />
+          Nenhum erro de aplicação capturado nesta sessão.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-medium">
+          {errors.length} erro(s) capturado(s) nesta sessão
+        </CardTitle>
+        <Button variant="ghost" size="sm" onClick={clearAppErrors} className="gap-1 text-destructive">
+          <Trash2 className="h-3.5 w-3.5" />
+          Limpar
+        </Button>
+      </CardHeader>
+      <ScrollArea className="h-[500px]">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10" />
+              <TableHead>Data/Hora</TableHead>
+              <TableHead>Origem</TableHead>
+              <TableHead>Mensagem</TableHead>
+              <TableHead>Rota</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {errors.map(err => {
+              const isExpanded = expandedIds.has(err.id);
+              const hasStack = !!err.stack || !!err.componentStack;
+
+              return (
+                <React.Fragment key={err.id}>
+                  <TableRow
+                    className={`cursor-pointer hover:bg-muted/50`}
+                    onClick={() => hasStack && toggle(err.id)}
+                  >
+                    <TableCell>
+                      {hasStack && (
+                        isExpanded
+                          ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          : <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs whitespace-nowrap text-muted-foreground">
+                      {format(new Date(err.timestamp), 'dd/MM/yyyy HH:mm:ss')}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`text-xs ${SOURCE_COLORS[err.source] ?? 'bg-secondary text-secondary-foreground'}`}>
+                        {SOURCE_LABELS[err.source] ?? err.source}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm max-w-[400px] truncate">
+                      {err.message}
+                    </TableCell>
+                    <TableCell className="text-xs font-mono text-muted-foreground">
+                      {err.url}
+                    </TableCell>
+                  </TableRow>
+
+                  {isExpanded && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="bg-muted/30 p-0">
+                        <div className="p-4 space-y-3">
+                          {err.stack && (
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground mb-1">Stack Trace</p>
+                              <pre className="text-xs bg-background border rounded p-2 overflow-x-auto max-h-48 whitespace-pre-wrap">
+                                {err.stack}
+                              </pre>
+                            </div>
+                          )}
+                          {err.componentStack && (
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground mb-1">Component Stack</p>
+                              <pre className="text-xs bg-background border rounded p-2 overflow-x-auto max-h-48 whitespace-pre-wrap">
+                                {err.componentStack}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </ScrollArea>
+    </Card>
   );
 }
