@@ -139,7 +139,7 @@ export default function EpiCatalogPage() {
   });
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
-  const openEdit = (item: any) => {
+  const openEdit = (item: EpiForm & { id: string }) => {
     setEditingId(item.id);
     setForm({
       nome: item.nome ?? '',
@@ -180,7 +180,7 @@ export default function EpiCatalogPage() {
     return 'valido';
   };
 
-  const filtered = items.filter((item: any) => {
+  const filtered = items.filter((item) => {
     const q = search.toLowerCase();
     return (
       item.nome?.toLowerCase().includes(q) ||
@@ -189,8 +189,8 @@ export default function EpiCatalogPage() {
     );
   });
 
-  const activeCount = items.filter((i: any) => i.is_active).length;
-  const expiredCaCount = items.filter((i: any) => i.is_active && getCaStatus(i.ca_validade) === 'vencido').length;
+  const activeCount = items.filter((i) => i.is_active).length;
+  const expiredCaCount = items.filter((i) => i.is_active && getCaStatus(i.ca_validade) === 'vencido').length;
 
   return (
     <div className="space-y-6">
@@ -276,7 +276,7 @@ export default function EpiCatalogPage() {
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum EPI encontrado</TableCell></TableRow>
               ) : (
-                filtered.map((item: any) => {
+                filtered.map((item) => {
                   const caStatus = getCaStatus(item.ca_validade);
                   return (
                     <TableRow key={item.id} className={!item.is_active ? 'opacity-50' : ''}>

@@ -122,7 +122,7 @@ export class SupportModuleRollback {
         activated_by: opts.rolled_back_by,
         feature_flags_override: targetVersion.feature_flags as Record<string, boolean | string | number>,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       return {
         success: false,
         tenant_id: opts.tenant_id,
@@ -131,7 +131,7 @@ export class SupportModuleRollback {
         to_version_tag: null,
         preview_session_id: null,
         modules_untouched: [...ISOLATION_GUARANTEED],
-        error: err.message,
+        error: err instanceof Error ? err.message : String(err),
       };
     }
 

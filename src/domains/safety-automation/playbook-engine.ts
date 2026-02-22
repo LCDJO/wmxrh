@@ -58,10 +58,10 @@ const SEVERITY_ORDER: Record<string, number> = {
 
 function resolveField(signal: SafetySignal, field: string): unknown {
   const parts = field.split('.');
-  let current: any = signal;
+  let current: unknown = signal;
   for (const part of parts) {
     if (current == null) return undefined;
-    current = current[part];
+    current = (current as Record<string, unknown>)[part];
   }
   return current;
 }
@@ -198,9 +198,9 @@ export async function executePlaybook(
           break;
       }
       result.actions_executed++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       result.actions_failed++;
-      result.errors.push(`${action.type}: ${err.message ?? 'unknown error'}`);
+      result.errors.push(`${action.type}: ${err instanceof Error ? err.message : 'unknown error'}`);
       if (action.is_blocking) break;
     }
   }

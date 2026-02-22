@@ -25,14 +25,26 @@ function mapEntryType(type: LedgerEntryType): string {
   return map[type] ?? 'adjustment';
 }
 
-function mapRowToEntry(row: any): LedgerEntry {
+interface LedgerRow {
+  id: string;
+  tenant_id: string;
+  invoice_id?: string | null;
+  entry_type: string;
+  amount: number;
+  description?: string | null;
+  source_plan_id?: string | null;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+function mapRowToEntry(row: LedgerRow): LedgerEntry {
   return {
     id: row.id,
     tenant_id: row.tenant_id,
     invoice_id: row.invoice_id ?? null,
     entry_type: row.entry_type as LedgerEntryType,
     amount_brl: Number(row.amount),
-    balance_after_brl: 0, // calculated on read
+    balance_after_brl: 0,
     description: row.description ?? '',
     reference_id: row.source_plan_id ?? null,
     created_at: new Date(row.created_at).getTime(),

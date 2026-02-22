@@ -74,9 +74,9 @@ interface UsageEventMapping {
   event: string;
   metric_key: string;
   metric_type: UsageMetricType;
-  extractQuantity: (payload: any) => number;
-  extractModuleId: (payload: any) => string | undefined;
-  extractTenantId: (payload: any) => string;
+  extractQuantity: (payload: unknown) => number;
+  extractModuleId: (payload: unknown) => string | undefined;
+  extractTenantId: (payload: unknown) => string;
 }
 
 const EVENT_MAPPINGS: UsageEventMapping[] = [

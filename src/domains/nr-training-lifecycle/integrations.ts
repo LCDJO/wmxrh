@@ -113,7 +113,7 @@ async function getApplicableCatalogItems(
   if (!catalog || catalog.length === 0) return [];
 
   // Filter by CBO compatibility
-  return catalog.filter((c: any) => {
+  return catalog.filter((c: { target_cbos?: string[] | null }) => {
     if (!c.target_cbos || c.target_cbos.length === 0) return true; // Universal
     if (!cboCode) return false; // CBO-specific but employee has no CBO
     return c.target_cbos.includes(cboCode);

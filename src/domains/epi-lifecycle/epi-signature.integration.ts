@@ -321,7 +321,7 @@ export async function getSignedDocumentUrl(deliveryId: string): Promise<string |
 // HELPERS
 // ═══════════════════════════════════════════════════════
 
-async function generateDocumentHash(deliveryId: string, delivery: any): Promise<string> {
+async function generateDocumentHash(deliveryId: string, delivery: { employee_id: string; epi_catalog_id: string; data_entrega: string }): Promise<string> {
   const content = JSON.stringify({
     delivery_id: deliveryId,
     employee_id: delivery.employee_id,

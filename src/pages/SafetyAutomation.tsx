@@ -44,7 +44,7 @@ interface AuditInsight {
   action: string;
   entity_type: string;
   entity_id: string | null;
-  metadata: any;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
 
@@ -174,17 +174,17 @@ export default function SafetyAutomation() {
       supabase.from('safety_tasks').select('id, company_id, status, priority, prazo').eq('tenant_id', tenantId),
     ]);
 
-    const wfData = (wfAll.data ?? []) as any[];
-    const taskData = (tasksAll.data ?? []) as any[];
+    const wfData = ((wfAll.data ?? []) as unknown) as { id: string; company_id: string; status: string }[];
+    const taskData = ((tasksAll.data ?? []) as unknown) as { id: string; company_id: string; status: string; priority: string; prazo: string }[];
 
     const stats: CompanyComplianceStats[] = companies.map(c => {
-      const cWf = wfData.filter((w: any) => w.company_id === c.id);
-      const cTasks = taskData.filter((t: any) => t.company_id === c.id);
-      const pending = cTasks.filter((t: any) => t.status === 'pending');
-      const critical = pending.filter((t: any) => t.priority === 'critical' || t.priority === 'high');
-      const overdue = pending.filter((t: any) => t.prazo && new Date(t.prazo) < new Date());
-      const activeWf = cWf.filter((w: any) => w.status === 'open' || w.status === 'in_progress');
-      const doneTotal = cTasks.filter((t: any) => t.status === 'done').length;
+      const cWf = wfData.filter(w => w.company_id === c.id);
+      const cTasks = taskData.filter(t => t.company_id === c.id);
+      const pending = cTasks.filter(t => t.status === 'pending');
+      const critical = pending.filter(t => t.priority === 'critical' || t.priority === 'high');
+      const overdue = pending.filter(t => t.prazo && new Date(t.prazo) < new Date());
+      const activeWf = cWf.filter(w => w.status === 'open' || w.status === 'in_progress');
+      const doneTotal = cTasks.filter(t => t.status === 'done').length;
       const total = cTasks.length || 1;
       const score = Math.round((doneTotal / total) * 100);
 
@@ -195,7 +195,7 @@ export default function SafetyAutomation() {
         pending_tasks: pending.length,
         critical_tasks: critical.length,
         overdue_tasks: overdue.length,
-        risks_mitigating: activeWf.filter((w: any) => w.status === 'in_progress').length,
+        risks_mitigating: activeWf.filter(w => w.status === 'in_progress').length,
         compliance_score: score,
       };
     });
@@ -215,7 +215,7 @@ export default function SafetyAutomation() {
   }
 
   const pendingTasks = tasks.filter(t => t.status === 'pending');
-  const activeWorkflows = workflows.filter((w: any) => w.status === 'open' || w.status === 'in_progress');
+  const activeWorkflows = workflows.filter((w: { status: string }) => w.status === 'open' || w.status === 'in_progress');
 
   return (
     <div className="space-y-6">
@@ -434,7 +434,7 @@ export default function SafetyAutomation() {
               ) : (
                 <ScrollArea className="max-h-[500px]">
                   <div className="space-y-3">
-                    {activeWorkflows.map((wf: any) => (
+                    {activeWorkflows.map((wf: { id: string; title: string; type: string; created_at: string; priority: string; status: string }) => (
                       <div key={wf.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
                         <div className="space-y-1 min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{wf.title}</p>
@@ -470,7 +470,7 @@ export default function SafetyAutomation() {
               ) : (
                 <ScrollArea className="max-h-[500px]">
                   <div className="space-y-3">
-                    {pendingTasks.map((task: any) => {
+                    {pendingTasks.map((task) => {
                       const isOverdue = task.prazo && new Date(task.prazo) < new Date();
                       return (
                         <div key={task.id} className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${isOverdue ? 'border-destructive/30 bg-destructive/5' : 'bg-card hover:bg-muted/30'}`}>
@@ -516,15 +516,15 @@ export default function SafetyAutomation() {
               ) : (
                 <ScrollArea className="max-h-[500px]">
                   <div className="space-y-3">
-                    {actions.map((action: any) => (
+                    {actions.map((action) => (
                       <div key={action.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
                         <div className="space-y-1 min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{action.metadata?.title ?? action.action}</p>
-                          <p className="text-xs text-muted-foreground truncate">{action.metadata?.description ?? ''}</p>
+                          <p className="text-sm font-medium truncate">{String((action.metadata as Record<string, unknown>)?.title ?? action.action)}</p>
+                          <p className="text-xs text-muted-foreground truncate">{String((action.metadata as Record<string, unknown>)?.description ?? '')}</p>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
-                          <Badge variant={action.metadata?.severity === 'critical' ? 'destructive' : 'outline'}>
-                            {action.metadata?.severity ?? 'info'}
+                          <Badge variant={(action.metadata as Record<string, unknown>)?.severity === 'critical' ? 'destructive' : 'outline'}>
+                            {String((action.metadata as Record<string, unknown>)?.severity ?? 'info')}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
                             {new Date(action.created_at).toLocaleDateString('pt-BR')}

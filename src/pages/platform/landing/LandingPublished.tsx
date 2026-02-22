@@ -62,8 +62,8 @@ export default function LandingPublished() {
       });
       toast({ title: 'Publicada!', description: 'Landing page publicada com sucesso.' });
       fetchPages();
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: 'Erro', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     } finally {
       setActing(null);
     }
@@ -79,8 +79,8 @@ export default function LandingPublished() {
         .eq('id', pageId);
       toast({ title: 'Arquivada', description: 'Landing page movida para arquivo.' });
       fetchPages();
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: 'Erro', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     } finally {
       setActing(null);
     }

@@ -138,8 +138,8 @@ export function PromoteLandingButton({
         ad_id: data.ad_id,
       });
       toast({ title: 'Campanha criada!', description: data.message });
-    } catch (err: any) {
-      toast({ title: 'Erro ao promover', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: 'Erro ao promover', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     }
     setPromoting(false);
   };

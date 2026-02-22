@@ -287,9 +287,9 @@ function createUsagePricingCalculator(): UsagePricingCalculatorAPI {
         .eq('is_active', true);
 
       if (error) throw new Error(`PricingCalculator.getRulesForModule: ${error.message}`);
-      return (data ?? []).map((t: any) => ({
+      return (data ?? []).map((t) => ({
         module_id: t.module_id,
-        metric_type: t.metric_type,
+        metric_type: t.metric_type as 'users' | 'api_calls' | 'storage' | 'executions',
         price_per_unit: Number(t.price_per_unit),
         included_quota: Number(t.included_quantity),
         overage_price: Number(t.overage_price),

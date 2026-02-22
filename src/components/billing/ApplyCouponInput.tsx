@@ -84,8 +84,8 @@ export function ApplyCouponInput({
 
       setValidatedCoupon(result.coupon!);
       toast.success(`Cupom ${trimmed} válido!`);
-    } catch (err: any) {
-      setError(err.message ?? 'Erro ao validar cupom.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao validar cupom.');
     } finally {
       setValidating(false);
     }
@@ -120,8 +120,8 @@ export function ApplyCouponInput({
       // Reset
       setCode('');
       setValidatedCoupon(null);
-    } catch (err: any) {
-      setError(err.message ?? 'Erro ao aplicar desconto.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao aplicar desconto.');
     } finally {
       setApplying(false);
     }

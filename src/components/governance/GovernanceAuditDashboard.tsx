@@ -82,8 +82,8 @@ export function GovernanceAuditDashboard({ tenantId, className }: Props) {
       });
       if (error) throw error;
       setAiAnalysis(data?.analysis);
-    } catch (err: any) {
-      toast.error(err.message ?? 'Falha na análise AI.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Falha na análise AI.');
     } finally {
       setAnalyzingAI(false);
     }

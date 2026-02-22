@@ -135,7 +135,7 @@ export default function EmployeeDetail() {
       status: editStatus,
     }, {
       onSuccess: () => { toast({ title: 'Colaborador atualizado!' }); setEditOpen(false); },
-      onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+      onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
     });
   };
 
@@ -514,7 +514,7 @@ export default function EmployeeDetail() {
                 </div>
                 {benefits.length > 0 ? (
                   <div className="space-y-3">
-                    {benefits.map((b: any) => (
+                    {benefits.map((b: { id: string; is_active: boolean; benefit_plans?: { name?: string; benefit_type?: string }; enrollment_date: string; card_number?: string; monthly_value?: number }) => (
                       <div key={b.id} className={`flex items-center justify-between p-4 rounded-lg border ${b.is_active ? 'border-primary/20 bg-accent/20' : 'border-border'}`}>
                         <div>
                           <p className="text-sm font-medium text-card-foreground">{b.benefit_plans?.name || 'Plano'}</p>

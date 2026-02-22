@@ -77,28 +77,28 @@ function mapStatusFromDb(dbStatus: string): TransmissionStatus {
   return map[dbStatus] || 'draft';
 }
 
-function rowToEnvelope(row: any): ESocialEnvelope {
+function rowToEnvelope(row: Record<string, unknown>): ESocialEnvelope {
   return {
-    id: row.id,
-    tenant_id: row.tenant_id,
-    company_id: row.company_id,
-    event_type: row.event_type,
-    category: row.category,
+    id: row.id as string,
+    tenant_id: row.tenant_id as string,
+    company_id: row.company_id as string,
+    event_type: row.event_type as string,
+    category: row.category as ESocialEnvelope['category'],
     layout_version: 'S-1.2',
-    payload: row.payload || {},
-    source_entity_type: row.entity_type || '',
-    source_entity_id: row.entity_id || '',
-    status: mapStatusFromDb(row.status),
-    receipt_number: row.receipt_number,
-    error_message: row.error_message,
+    payload: (row.payload || {}) as Record<string, unknown>,
+    source_entity_type: (row.entity_type as string) || '',
+    source_entity_id: (row.entity_id as string) || '',
+    status: mapStatusFromDb(row.status as string),
+    receipt_number: (row.receipt_number as string) ?? null,
+    error_message: (row.error_message as string) ?? null,
     error_code: null,
-    retry_count: row.retry_count || 0,
-    response_payload: row.response_payload,
+    retry_count: (row.retry_count as number) || 0,
+    response_payload: (row.response_payload as Record<string, unknown>) ?? null,
     validated_at: null,
     queued_at: null,
-    transmitted_at: row.sent_at,
-    accepted_at: row.processed_at,
-    created_at: row.created_at,
+    transmitted_at: (row.sent_at as string) ?? null,
+    accepted_at: (row.processed_at as string) ?? null,
+    created_at: row.created_at as string,
   };
 }
 

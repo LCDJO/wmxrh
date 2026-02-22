@@ -80,8 +80,8 @@ export function PredictiveRiskAnalysis({ tenantId, className }: Props) {
       const result = await requestAIForecast(tenantId, trendAnalysis);
       setForecast(result);
       if (!result) toast.error('Não foi possível gerar previsão.');
-    } catch (err: any) {
-      toast.error(err.message ?? 'Falha na previsão.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Falha na previsão.');
     } finally {
       setForecastLoading(false);
     }

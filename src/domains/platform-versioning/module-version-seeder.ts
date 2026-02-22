@@ -44,8 +44,8 @@ export async function seedAllModuleVersions(createdBy: string): Promise<{
       // Auto-release initial version
       await engine.modules.release(entry.module_id, version.id);
       seeded.push(entry.module_id);
-    } catch (err: any) {
-      errors.push({ module_id: entry.module_id, error: err.message });
+    } catch (err: unknown) {
+      errors.push({ module_id: entry.module_id, error: err instanceof Error ? err.message : String(err) });
     }
   }
 

@@ -137,14 +137,14 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
       setAnalysisSteps([...steps]);
 
       setAnalysisResult(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const failIdx = steps.findIndex(s => s.status === 'loading');
       if (failIdx >= 0) {
         steps[failIdx].status = 'error';
-        steps[failIdx].detail = err.message;
+        steps[failIdx].detail = err instanceof Error ? err.message : String(err);
       }
       setAnalysisSteps([...steps]);
-      setAnalysisResult({ error: err.message });
+      setAnalysisResult({ error: err instanceof Error ? err.message : String(err) });
     }
     setAnalyzing(false);
   };
@@ -170,8 +170,8 @@ export default function CloudflareConnectCard({ config, onRefresh, canEdit }: Cl
         cloudflare_api_token: form.cloudflare_api_token,
         cloudflare_zone_id: data.matched_zone?.id || form.cloudflare_zone_id,
       });
-    } catch (err: any) {
-      toast({ title: 'Erro na autorização', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: 'Erro na autorização', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     }
     setAnalyzing(false);
   };
