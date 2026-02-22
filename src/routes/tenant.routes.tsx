@@ -54,6 +54,7 @@ import SettingsRoles from '@/pages/SettingsRoles';
 import WebhookSettings from '@/pages/WebhookSettings';
 import TenantPlansPage from '@/pages/TenantPlansPage';
 import TenantAppsIntegrations from '@/pages/TenantAppsIntegrations';
+import TelegramIntegration from '@/pages/TelegramIntegration';
 import ReferralPage from '@/pages/ReferralPage';
 import SupportNewTicket from '@/pages/support/SupportNewTicket';
 import SupportTickets from '@/pages/support/SupportTickets';
@@ -127,6 +128,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/announcements', element: <TenantAnnouncements /> },
       // ── Apps / Plans / Notifications ──
       { path: '/apps', element: <TenantAppsIntegrations /> },
+      { path: '/integrations/telegram', element: pr('dashboard', <TelegramIntegration />) },
       { path: '/plans', element: <TenantPlansPage /> },
       { path: '/notifications', element: <Notifications /> },
       { path: '/audit', element: pr('audit', <Audit />) },
