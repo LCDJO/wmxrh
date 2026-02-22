@@ -3,6 +3,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
@@ -281,7 +282,7 @@ export default function PlatformTenants() {
         setTenantDetails(json);
       }
     } catch (e) {
-      console.error('[tenant-details] fetch error:', e);
+      logger.error('Erro ao buscar detalhes do tenant', { error: e });
     }
     setDetailsLoading(false);
   };

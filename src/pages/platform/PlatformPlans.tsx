@@ -3,6 +3,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -102,7 +103,7 @@ export default function PlatformPlans() {
       .order('price', { ascending: true });
     if (error) {
       toast.error('Erro ao carregar planos');
-      console.error(error);
+      logger.error('Erro ao carregar planos', { error });
     } else {
       setPlans((data ?? []) as SaasPlan[]);
     }
@@ -156,13 +157,13 @@ export default function PlatformPlans() {
         .from('saas_plans')
         .update(payload)
         .eq('id', editingPlan.id);
-      if (error) { toast.error('Erro ao atualizar plano'); console.error(error); }
+      if (error) { toast.error('Erro ao atualizar plano'); logger.error('Erro ao atualizar plano', { error }); }
       else { toast.success('Plano atualizado'); }
     } else {
       const { error } = await supabase
         .from('saas_plans')
         .insert(payload);
-      if (error) { toast.error('Erro ao criar plano'); console.error(error); }
+      if (error) { toast.error('Erro ao criar plano'); logger.error('Erro ao criar plano', { error }); }
       else { toast.success('Plano criado'); }
     }
 
@@ -174,7 +175,7 @@ export default function PlatformPlans() {
   const handleDelete = async () => {
     if (!deletingPlan) return;
     const { error } = await supabase.from('saas_plans').delete().eq('id', deletingPlan.id);
-    if (error) { toast.error('Erro ao excluir plano'); console.error(error); }
+    if (error) { toast.error('Erro ao excluir plano'); logger.error('Erro ao excluir plano', { error }); }
     else { toast.success('Plano excluído'); }
     setDeleteDialogOpen(false);
     setDeletingPlan(null);

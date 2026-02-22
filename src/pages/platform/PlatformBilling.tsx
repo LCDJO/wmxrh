@@ -6,6 +6,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -76,8 +77,8 @@ export default function PlatformBilling() {
       supabase.from('tenant_plans').select('*, tenants(name), saas_plans(name, price)').order('created_at', { ascending: false }),
     ]);
 
-    if (entRes.error) console.error(entRes.error);
-    if (tpRes.error) console.error(tpRes.error);
+    if (entRes.error) logger.error('Erro ao buscar entries financeiras', { error: entRes.error });
+    if (tpRes.error) logger.error('Erro ao buscar tenant plans', { error: tpRes.error });
 
     setInvoices(allInvoices);
     setMetrics(revenueMetrics);
