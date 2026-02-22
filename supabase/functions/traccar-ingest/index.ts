@@ -128,7 +128,38 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── 5. Response with dispatch manifest ──
+    // ── 5. Push to Display Event Queue (async, non-blocking) ──
+    try {
+      const displayEvents = normalized.map(e => ({
+        event_type: 'tracking_position',
+        source: 'traccar',
+        channel: `tenant-${tenantId}`,
+        payload: {
+          device_id: e.device_id,
+          latitude: e.latitude,
+          longitude: e.longitude,
+          speed: e.speed,
+          ignition: e.ignition,
+          event_timestamp: e.event_timestamp,
+          integrity_hash: e.integrity_hash,
+        },
+        priority: (e.speed > 100 ? 0 : e.speed > 80 ? 1 : 2),
+        ttl_seconds: 300,
+      }));
+
+      // Fire-and-forget to display pipeline
+      const processorUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/display-event-processor?action=ingest&tenant_id=${tenantId}`;
+      fetch(processorUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: JSON.stringify(displayEvents),
+      }).catch(() => { /* non-blocking */ });
+    } catch { /* display pipeline is non-critical */ }
+
+    // ── 6. Response with dispatch manifest ──
     return new Response(JSON.stringify({
       ingested: normalized.length,
       rejected,
