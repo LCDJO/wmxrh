@@ -5,6 +5,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function jsonResponse(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -18,10 +25,7 @@ Deno.serve(async (req) => {
     // Verify caller is a platform super admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -30,13 +34,9 @@ Deno.serve(async (req) => {
     });
     const { data: { user: caller } } = await callerClient.auth.getUser();
     if (!caller) {
-      return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Invalid token" }, 401);
     }
 
-    // Check caller is platform super admin (using role_id → platform_roles join)
     const { data: callerPlatform } = await adminClient
       .from("platform_users")
       .select("role_id, platform_roles(slug)")
@@ -46,26 +46,19 @@ Deno.serve(async (req) => {
 
     const callerSlug = (callerPlatform as any)?.platform_roles?.slug;
     if (!callerPlatform || callerSlug !== "platform_super_admin") {
-      return new Response(JSON.stringify({ error: "Only super admins can manage platform users" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Only super admins can manage platform users" }, 403);
     }
 
     const body = await req.json();
     const { action } = body;
 
+    // ── CREATE ──
     if (action === "create") {
       const { email, password, display_name, role, role_id } = body;
-
       if (!email || !password) {
-        return new Response(JSON.stringify({ error: "Email and password required" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse({ error: "Email and password required" }, 400);
       }
 
-      // Resolve role_id if not provided (fallback from slug)
       let resolvedRoleId = role_id;
       let resolvedSlug = role || "platform_read_only";
       if (!resolvedRoleId) {
@@ -74,16 +67,10 @@ Deno.serve(async (req) => {
           .select("id, slug")
           .eq("slug", resolvedSlug)
           .single();
-        if (!roleData) {
-          return new Response(JSON.stringify({ error: "Invalid role" }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
+        if (!roleData) return jsonResponse({ error: "Invalid role" }, 400);
         resolvedRoleId = roleData.id;
       }
 
-      // Create auth user
       const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
         email,
         password,
@@ -91,14 +78,8 @@ Deno.serve(async (req) => {
         user_metadata: { display_name: display_name || email, user_type: "platform" },
       });
 
-      if (authError) {
-        return new Response(JSON.stringify({ error: authError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      if (authError) return jsonResponse({ error: authError.message }, 400);
 
-      // Insert into platform_users with both role (enum) and role_id (FK)
       const { error: insertError } = await adminClient
         .from("platform_users")
         .insert({
@@ -112,26 +93,148 @@ Deno.serve(async (req) => {
 
       if (insertError) {
         await adminClient.auth.admin.deleteUser(authData.user.id);
-        return new Response(JSON.stringify({ error: insertError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return jsonResponse({ error: insertError.message }, 400);
+      }
+
+      return jsonResponse({ success: true, user_id: authData.user.id });
+    }
+
+    // ── UPDATE ──
+    if (action === "update") {
+      const { platform_user_id, display_name, role_id, status } = body;
+      if (!platform_user_id) return jsonResponse({ error: "platform_user_id required" }, 400);
+
+      // Fetch current user
+      const { data: targetUser, error: fetchErr } = await adminClient
+        .from("platform_users")
+        .select("id, user_id, role_id, status")
+        .eq("id", platform_user_id)
+        .single();
+
+      if (fetchErr || !targetUser) return jsonResponse({ error: "User not found" }, 404);
+
+      // Prevent self-demotion
+      if (targetUser.user_id === caller.id && role_id && role_id !== targetUser.role_id) {
+        return jsonResponse({ error: "Cannot change your own role" }, 400);
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (display_name !== undefined) updates.display_name = display_name;
+      if (status !== undefined) updates.status = status;
+
+      if (role_id && role_id !== targetUser.role_id) {
+        const { data: roleData } = await adminClient
+          .from("platform_roles")
+          .select("id, slug")
+          .eq("id", role_id)
+          .single();
+        if (!roleData) return jsonResponse({ error: "Invalid role_id" }, 400);
+        updates.role_id = role_id;
+        updates.role = roleData.slug;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        const { error: updateErr } = await adminClient
+          .from("platform_users")
+          .update(updates)
+          .eq("id", platform_user_id);
+        if (updateErr) return jsonResponse({ error: updateErr.message }, 400);
+      }
+
+      // Update auth user metadata if display_name changed
+      if (display_name !== undefined) {
+        await adminClient.auth.admin.updateUserById(targetUser.user_id, {
+          user_metadata: { display_name },
         });
       }
 
-      return new Response(JSON.stringify({ success: true, user_id: authData.user.id }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ success: true });
     }
 
-    return new Response(JSON.stringify({ error: "Unknown action" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // ── DELETE ──
+    if (action === "delete") {
+      const { platform_user_id } = body;
+      if (!platform_user_id) return jsonResponse({ error: "platform_user_id required" }, 400);
+
+      const { data: targetUser, error: fetchErr } = await adminClient
+        .from("platform_users")
+        .select("id, user_id")
+        .eq("id", platform_user_id)
+        .single();
+
+      if (fetchErr || !targetUser) return jsonResponse({ error: "User not found" }, 404);
+
+      if (targetUser.user_id === caller.id) {
+        return jsonResponse({ error: "Cannot delete yourself" }, 400);
+      }
+
+      // Remove platform_users row
+      const { error: deleteErr } = await adminClient
+        .from("platform_users")
+        .delete()
+        .eq("id", platform_user_id);
+
+      if (deleteErr) return jsonResponse({ error: deleteErr.message }, 400);
+
+      // Also delete auth user
+      await adminClient.auth.admin.deleteUser(targetUser.user_id);
+
+      return jsonResponse({ success: true });
+    }
+
+    // ── NOTIFY ──
+    if (action === "notify") {
+      const { platform_user_id, subject, message } = body;
+      if (!platform_user_id || !message) {
+        return jsonResponse({ error: "platform_user_id and message required" }, 400);
+      }
+
+      const { data: targetUser } = await adminClient
+        .from("platform_users")
+        .select("email, display_name")
+        .eq("id", platform_user_id)
+        .single();
+
+      if (!targetUser) return jsonResponse({ error: "User not found" }, 404);
+
+      // Store notification in platform_notifications table (best-effort)
+      await adminClient.from("platform_notifications").insert({
+        user_email: targetUser.email,
+        subject: subject || "Notificação da Plataforma",
+        message,
+        sent_by: caller.id,
+        created_at: new Date().toISOString(),
+      }).then(() => {}).catch(() => {});
+
+      return jsonResponse({ success: true, sent_to: targetUser.email });
+    }
+
+    // ── RESET PASSWORD ──
+    if (action === "reset_password") {
+      const { platform_user_id, new_password } = body;
+      if (!platform_user_id || !new_password) {
+        return jsonResponse({ error: "platform_user_id and new_password required" }, 400);
+      }
+
+      const { data: targetUser } = await adminClient
+        .from("platform_users")
+        .select("user_id")
+        .eq("id", platform_user_id)
+        .single();
+
+      if (!targetUser) return jsonResponse({ error: "User not found" }, 404);
+
+      const { error: pwErr } = await adminClient.auth.admin.updateUserById(
+        targetUser.user_id,
+        { password: new_password }
+      );
+
+      if (pwErr) return jsonResponse({ error: pwErr.message }, 400);
+      return jsonResponse({ success: true });
+    }
+
+    return jsonResponse({ error: "Unknown action" }, 400);
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: err.message }, 500);
   }
 });
