@@ -34,6 +34,7 @@ import { useDisplayGateway, type GatewayStatus } from '@/hooks/useDisplayGateway
 import { useDisplayCache } from '@/hooks/useDisplayCache';
 import { useRenderThrottle } from '@/hooks/useRenderThrottle';
 import { useDisplayScalability } from '@/hooks/useDisplayScalability';
+import { useFailsafeMode } from '@/hooks/useFailsafeMode';
 import {
   type DisplayData,
   KpiTile,
@@ -294,6 +295,15 @@ export default function LiveDisplayTV() {
     gatewayStatus === 'reconnecting' ? 'reconnecting' :
     connectionStatus === 'connecting' && data ? 'polling' : connectionStatus;
 
+  // ── Failsafe Mode ──
+  const failsafe = useFailsafeMode({
+    connectionStatus: effectiveStatus,
+    lastUpdate,
+    hasData: !!data,
+    staleThresholdSeconds: 120,
+    degradedThresholdSeconds: 30,
+  });
+
   // ═══════════════════════════════════════════════════════
   // PAIRING SCREENS
   // ═══════════════════════════════════════════════════════
@@ -515,7 +525,43 @@ export default function LiveDisplayTV() {
       )}
 
       {/* ════════════════════════════════════════════════
-          MAIN CONTENT — Rotation Views
+          FAILSAFE WARNING — Discrete connection alert
+          ════════════════════════════════════════════════ */}
+      {failsafe.level !== 'ok' && (
+        <div className={cn(
+          "px-6 py-1.5 shrink-0 transition-all duration-500",
+          failsafe.level === 'failsafe' ? 'tv-slide-up' : ''
+        )}>
+          <div className={cn(
+            "rounded-lg px-4 py-2 flex items-center gap-3 text-sm",
+            failsafe.level === 'degraded'
+              ? "bg-amber-500/8 border border-amber-500/20"
+              : "bg-red-500/8 border border-red-500/20"
+          )}>
+            <div className={cn(
+              "h-2 w-2 rounded-full shrink-0 animate-pulse",
+              failsafe.level === 'degraded' ? "bg-amber-400" : "bg-red-400"
+            )} />
+            <WifiOff className={cn(
+              "h-4 w-4 shrink-0",
+              failsafe.level === 'degraded' ? "text-amber-400/70" : "text-red-400/70"
+            )} />
+            <span className={cn(
+              "font-medium",
+              failsafe.level === 'degraded' ? "text-amber-300/80" : "text-red-300/80"
+            )}>
+              {failsafe.message}
+            </span>
+            {failsafe.staleSince > 0 && (
+              <span className="text-white/25 tabular-nums ml-auto">
+                {failsafe.staleSince}s atrás
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/*
           ════════════════════════════════════════════════ */}
       <main className="flex-1 flex gap-4 px-6 py-3 min-h-0">
         {rotation.currentView === 'fleet_live' && <FleetLiveView data={data} />}
