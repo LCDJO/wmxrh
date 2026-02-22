@@ -277,10 +277,12 @@ export default function LiveDisplayAdmin() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">{tipoInfo?.description}</p>
-                  {display.last_seen_at && (
+                  {display.last_seen_at ? (
                     <p className="text-xs text-muted-foreground">
-                      Último sinal: {format(new Date(display.last_seen_at), 'dd/MM HH:mm')}
+                      Pareado em: {format(new Date(display.last_seen_at), "dd/MM/yyyy 'às' HH:mm")}
                     </p>
+                  ) : (
+                    <p className="text-xs text-amber-500">Não pareado</p>
                   )}
                   <div className="flex items-center gap-2 pt-2 flex-wrap">
                     <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={() => { setPairingDisplayId(display.id); setShowPairing(true); }}>
