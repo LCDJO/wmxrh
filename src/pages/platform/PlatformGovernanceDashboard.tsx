@@ -20,12 +20,11 @@ import { AccessRiskIndicator } from '@/components/platform/governance/AccessRisk
 import {
   Brain, Scan, Shield, Loader2, Sparkles,
   AlertTriangle, XCircle, Info, CheckCircle2, ChevronRight,
-  TrendingDown, TrendingUp, Minus, HelpCircle,
+  TrendingDown, TrendingUp, Minus,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import type { GovernanceAIResponse, InsightSeverity } from '@/domains/governance-ai/types';
 
@@ -86,36 +85,14 @@ export default function PlatformGovernanceDashboard() {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div>
-            <h1 className="text-2xl font-bold font-display text-foreground flex items-center gap-2">
-              <Brain className="h-6 w-6 text-primary" />
-              Governance
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Análise de riscos, otimização de cargos e monitoramento de acesso.
-            </p>
-          </div>
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="shrink-0 rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" aria-label="Ajuda sobre Governance">
-                <HelpCircle className="h-5 w-5" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 text-sm space-y-2" side="bottom" align="start">
-              <p className="font-semibold text-foreground">Sobre esta Dashboard</p>
-              <p className="text-muted-foreground leading-relaxed">
-                A Dashboard de Governance centraliza ferramentas para garantir conformidade, segurança e transparência na gestão do seu ambiente.
-              </p>
-              <ul className="text-muted-foreground space-y-1 list-disc pl-4 text-xs leading-relaxed">
-                <li><strong>Access Risk:</strong> Visualize o score de risco composto por usuário com breakdown por dimensão.</li>
-                <li><strong>Otimização:</strong> Receba sugestões inteligentes para otimizar cargos e permissões.</li>
-                <li><strong>Insights:</strong> Resultados do scan heurístico, SoD e detecção de anomalias.</li>
-                <li><strong>Análise AI:</strong> Análise profunda com IA para compliance, remediação e gaps regulatórios.</li>
-                <li><strong>Previsão:</strong> Projeção de tendências de risco para 30 e 90 dias.</li>
-              </ul>
-            </PopoverContent>
-          </Popover>
+        <div>
+          <h1 className="text-2xl font-bold font-display text-foreground flex items-center gap-2">
+            <Brain className="h-6 w-6 text-primary" />
+            Governance
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Análise de riscos, otimização de cargos e monitoramento de acesso.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={handleScan} disabled={scanning} variant="outline" size="sm">

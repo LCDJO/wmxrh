@@ -98,7 +98,7 @@ export const platformRoutes: RouteObject[] = [
       { path: 'security/permissions', element: <PlatformSecurityPermissions /> },
       { path: 'security/access-graph', element: <PlatformSecurityAccessGraph /> },
       { path: 'security/unified-graph', element: <PlatformUnifiedGraph /> },
-      { path: 'security/governance', element: <Navigate to="/platform/governance" replace /> },
+      { path: 'security/governance', element: <PlatformGovernance /> },
       { path: 'security/governance-ai', element: <PlatformGovernanceAI /> },
       { path: 'governance', element: <PlatformGovernanceDashboard /> },
       { path: 'automation', element: <PlatformAutomation /> },
