@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 interface SignUpMetadata {
   full_name?: string;
@@ -26,22 +27,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    logger.debug('AuthProvider montado - inicializando autenticação');
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      logger.info('Auth state changed', { event, userId: session?.user?.id });
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        logger.info('Sessão existente recuperada', { userId: session.user.id });
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      logger.debug('AuthProvider desmontado');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, metadata?: SignUpMetadata) => {
+    logger.info('Tentativa de cadastro', { email, hasMetadata: !!metadata });
+    
     const { error } = await supabase.auth.signUp({ 
       email, 
       password,
@@ -50,16 +62,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: metadata ?? {},
       }
     });
+    
+    if (error) {
+      logger.error('Falha no cadastro', { error: error.message, email });
+    } else {
+      logger.info('Cadastro realizado com sucesso', { email });
+    }
+    
     return { error: error as Error | null };
   };
 
   const signIn = async (email: string, password: string) => {
+    logger.info('Tentativa de login', { email });
+    
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    if (error) {
+      logger.error('Falha no login', { error: error.message, email });
+    } else {
+      logger.info('Login realizado com sucesso', { email });
+    }
+    
     return { error: error as Error | null };
   };
 
   const signOut = async () => {
+    logger.info('Usuário fazendo logout', { userId: user?.id });
     await supabase.auth.signOut();
+    logger.info('Logout realizado com sucesso');
   };
 
   return (

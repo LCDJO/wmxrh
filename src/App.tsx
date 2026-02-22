@@ -9,6 +9,7 @@ import { TenantProvider, useTenant } from "./contexts/TenantContext";
 import { ScopeProvider } from "./contexts/ScopeContext";
 import { PlatformShell } from "./components/platform/PlatformShell";
 import { useAdaptiveUserType } from "./components/layout/AdaptiveSidebar";
+import { DevConsole } from "./components/shared/DevConsole";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
@@ -83,6 +84,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <DevConsole />
       <BrowserRouter>
         <AuthProvider>
           <TenantProvider>
