@@ -2,7 +2,7 @@
  * LiveDisplayAdmin — Manage TV displays (DisplayBoard), pair via code.
  * Route: /live-display (tenant)
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -55,7 +55,16 @@ export default function LiveDisplayAdmin() {
   const [formIntervalo, setFormIntervalo] = useState(30);
   const [creating, setCreating] = useState(false);
   const [previewDisplayId, setPreviewDisplayId] = useState<string | null>(null);
-  const previewDisplay = displays.find(d => d.id === previewDisplayId) ?? null;
+  const previewSnapshotRef = useRef<LiveDisplay | null>(null);
+
+  // Snapshot the display when preview opens; keep it stable across re-renders
+  if (previewDisplayId && (!previewSnapshotRef.current || previewSnapshotRef.current.id !== previewDisplayId)) {
+    previewSnapshotRef.current = displays.find(d => d.id === previewDisplayId) ?? null;
+  }
+  if (!previewDisplayId) {
+    previewSnapshotRef.current = null;
+  }
+  const previewDisplay = previewSnapshotRef.current;
   const [editDisplay, setEditDisplay] = useState<LiveDisplay | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -512,10 +521,12 @@ export default function LiveDisplayAdmin() {
           <div className="relative w-full bg-black rounded-b-lg overflow-hidden" style={{ aspectRatio: '16/9', minHeight: '400px' }}>
             {previewDisplay && (
               <iframe
+                key={previewDisplay.id}
                 src={`/tv?tipo=${previewDisplay.tipo}&preview=true`}
                 className="border-0 absolute inset-0 w-full h-full"
                 title={`Preview ${previewDisplay.nome}`}
                 allow="fullscreen"
+                loading="eager"
               />
             )}
           </div>
