@@ -12739,6 +12739,184 @@ export type Database = {
           },
         ]
       }
+      tenant_event_consumer_offsets: {
+        Row: {
+          consumer_group: string
+          id: string
+          last_consumed_at: string
+          last_sequence_num: number
+          tenant_id: string
+          topic: string
+        }
+        Insert: {
+          consumer_group: string
+          id?: string
+          last_consumed_at?: string
+          last_sequence_num?: number
+          tenant_id: string
+          topic: string
+        }
+        Update: {
+          consumer_group?: string
+          id?: string
+          last_consumed_at?: string
+          last_sequence_num?: number
+          tenant_id?: string
+          topic?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_event_consumer_offsets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_event_dlq: {
+        Row: {
+          created_at: string
+          error_message: string
+          error_stack: string | null
+          event_type: string
+          failed_at: string
+          id: string
+          metadata: Json | null
+          original_event_id: string | null
+          payload: Json
+          reprocessed: boolean
+          reprocessed_at: string | null
+          retry_count: number
+          tenant_id: string
+          topic: string
+        }
+        Insert: {
+          created_at?: string
+          error_message: string
+          error_stack?: string | null
+          event_type: string
+          failed_at?: string
+          id?: string
+          metadata?: Json | null
+          original_event_id?: string | null
+          payload: Json
+          reprocessed?: boolean
+          reprocessed_at?: string | null
+          retry_count?: number
+          tenant_id: string
+          topic: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string
+          error_stack?: string | null
+          event_type?: string
+          failed_at?: string
+          id?: string
+          metadata?: Json | null
+          original_event_id?: string | null
+          payload?: Json
+          reprocessed?: boolean
+          reprocessed_at?: string | null
+          retry_count?: number
+          tenant_id?: string
+          topic?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_event_dlq_original_event_id_fkey"
+            columns: ["original_event_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_event_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_event_dlq_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_event_log: {
+        Row: {
+          causation_id: string | null
+          correlation_id: string | null
+          created_at: string
+          error_message: string | null
+          event_type: string
+          expires_at: string
+          id: string
+          max_retries: number
+          metadata: Json | null
+          next_retry_at: string | null
+          partition_key: string
+          payload: Json
+          priority: number
+          processed_at: string | null
+          retry_count: number
+          sequence_num: number
+          source: string
+          status: string
+          tenant_id: string
+          topic: string
+        }
+        Insert: {
+          causation_id?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          expires_at?: string
+          id?: string
+          max_retries?: number
+          metadata?: Json | null
+          next_retry_at?: string | null
+          partition_key: string
+          payload?: Json
+          priority?: number
+          processed_at?: string | null
+          retry_count?: number
+          sequence_num?: number
+          source?: string
+          status?: string
+          tenant_id: string
+          topic: string
+        }
+        Update: {
+          causation_id?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          expires_at?: string
+          id?: string
+          max_retries?: number
+          metadata?: Json | null
+          next_retry_at?: string | null
+          partition_key?: string
+          payload?: Json
+          priority?: number
+          processed_at?: string | null
+          retry_count?: number
+          sequence_num?: number
+          source?: string
+          status?: string
+          tenant_id?: string
+          topic?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_event_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_memberships: {
         Row: {
           created_at: string
@@ -13858,6 +14036,7 @@ export type Database = {
         Returns: string[]
       }
       cleanup_expired_display_events: { Args: never; Returns: number }
+      cleanup_expired_events: { Args: never; Returns: number }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       fn_regulatory_audit_insert: {
         Args: {
@@ -14089,6 +14268,10 @@ export type Database = {
           lote_validade: string
           quantidade_em_estoque: number
         }[]
+      }
+      schedule_event_retry: {
+        Args: { p_error_message?: string; p_event_id: string }
+        Returns: string
       }
       seed_default_labor_rules: {
         Args: { _tenant_id: string }

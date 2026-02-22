@@ -128,8 +128,38 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── 5. Push to Display Event Queue (async, non-blocking) ──
+    // ── 5. Push to Event Queue (Kafka-style topics, non-blocking) ──
     try {
+      const topicEvents = normalized.map(e => ({
+        event_type: 'TrackingEvent',
+        domain: 'fleet',
+        payload: {
+          device_id: e.device_id,
+          latitude: e.latitude,
+          longitude: e.longitude,
+          speed: e.speed,
+          ignition: e.ignition,
+          event_timestamp: e.event_timestamp,
+          integrity_hash: e.integrity_hash,
+        },
+        priority: e.speed > 100 ? 'critical' : e.speed > 80 ? 'high' : 'normal',
+        ttl_seconds: 3600,
+        source: 'traccar',
+        metadata: { raw_device_id: e.device_id },
+      }));
+
+      // Fire-and-forget to topic-based event queue
+      const queueUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/tenant-event-queue?action=publish&tenant_id=${tenantId}`;
+      fetch(queueUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: JSON.stringify(topicEvents),
+      }).catch(() => { /* non-blocking */ });
+
+      // Also push to display pipeline for immediate TV updates
       const displayEvents = normalized.map(e => ({
         event_type: 'tracking_position',
         source: 'traccar',
@@ -147,7 +177,6 @@ Deno.serve(async (req) => {
         ttl_seconds: 300,
       }));
 
-      // Fire-and-forget to display pipeline
       const processorUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/display-event-processor?action=ingest&tenant_id=${tenantId}`;
       fetch(processorUrl, {
         method: 'POST',
@@ -157,7 +186,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify(displayEvents),
       }).catch(() => { /* non-blocking */ });
-    } catch { /* display pipeline is non-critical */ }
+    } catch { /* event pipeline is non-critical */ }
 
     // ── 6. Response with dispatch manifest ──
     return new Response(JSON.stringify({
