@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
       .select("id")
       .eq("user_id", user.id)
       .eq("tenant_id", display.tenant_id)
-      .eq("is_active", true)
+      .eq("status", "active")
       .maybeSingle();
 
     if (!membership) {
