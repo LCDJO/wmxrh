@@ -106,6 +106,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Segurança',
     items: [
+      { to: '/platform/governance-dashboard', label: 'Governance Dashboard', icon: BarChart3, requiredPermission: 'security.view' },
       {
         to: '/platform/security',
         label: 'Segurança',
@@ -121,9 +122,7 @@ const NAV_SECTIONS: NavSection[] = [
         ],
       },
       { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
-      { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'audit.view' },
       { to: '/platform/logs', label: 'Logs do Sistema', icon: FileText, requiredRole: 'platform_super_admin' },
-      { to: '/platform/governance-dashboard', label: 'Governance Dashboard', icon: BarChart3, requiredPermission: 'security.view' },
     ],
   },
   {
