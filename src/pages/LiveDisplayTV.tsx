@@ -170,20 +170,21 @@ export default function LiveDisplayTV() {
   const cacheKey = activeToken ? `tok_${activeToken.slice(-8)}` : 'none';
   const cache = useDisplayCache<DisplayData>({ key: cacheKey, ttlMs: 300_000 });
 
-  // Initialize from cache on mount
+  // Initialize from cache on mount (skip in preview — data is already set)
   useEffect(() => {
+    if (isPreviewMode) return;
     if (!rawData && activeToken) {
       const cached = cache.read();
       if (cached) setRawData(cached);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Throttle renders to max 2/sec for smooth TV display
-  const data = useRenderThrottle(rawData, 500);
+  // In preview, skip throttle for instant render; in live mode throttle to 2/sec
+  const data = useRenderThrottle(rawData, isPreviewMode ? 0 : 500);
 
   // ── SECURITY: Clear cache on token change ──
   useEffect(() => {
-    if (!activeToken) {
+    if (!activeToken && !isPreviewMode) {
       cache.clear();
     }
   }, [activeToken]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -207,14 +208,14 @@ export default function LiveDisplayTV() {
     displayId: data?.display?.id ?? null,
   });
 
-  // ── Hooks: Event Queue, Pipeline, Gateway ──
+  // ── Hooks: Event Queue, Pipeline, Gateway (ALL disabled in preview) ──
   const { stats: queueStats } = useDisplayEventQueue({ maxBufferSize: 500, flushIntervalMs: 300 });
 
   const { status: pipelineStatus } = useDisplayEventPipeline({
     tenantId: tenantIdFromData,
     enabled: !isPreviewMode && !!activeToken && !!data,
     pollIntervalMs: 10_000,
-    pollingOnly: true, // TV has no auth session — skip Realtime WS
+    pollingOnly: true,
     onEvent: (events) => { if (events.length > 0) fetchData(); },
   });
 
@@ -226,6 +227,7 @@ export default function LiveDisplayTV() {
     instanceId: scalability.instanceId,
     onEvent: (events) => { if (events.length > 0) fetchData(); },
     onSessionExpired: () => {
+      if (isPreviewMode) return;
       setActiveToken(null);
       setPairingState({ phase: 'error', message: 'Sessão expirada. Pareie novamente.' });
     },
@@ -352,8 +354,9 @@ export default function LiveDisplayTV() {
     // Will trigger requestPairing via the useEffect
   }, [activeToken, isPreviewMode, cache]);
 
-  // ── Lock TV ──
+  // ── Lock TV (skip in preview — it's inside an iframe) ──
   useEffect(() => {
+    if (isPreviewMode) return;
     const dblClickHandler = () => {
       if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
       else document.exitFullscreen?.();
@@ -372,23 +375,23 @@ export default function LiveDisplayTV() {
       document.removeEventListener('contextmenu', ctxHandler);
       document.removeEventListener('keydown', keyHandler);
     };
-  }, []);
+  }, [isPreviewMode]);
 
-  // Effective connection status
-  const effectiveStatus: ConnectionStatus =
+  // Effective connection status — in preview, always show as connected
+  const effectiveStatus: ConnectionStatus = isPreviewMode ? 'realtime' :
     gatewayStatus === 'connected' ? 'realtime' :
     pipelineStatus === 'realtime' ? 'realtime' :
     connectionStatus === 'realtime' ? 'realtime' :
     gatewayStatus === 'reconnecting' ? 'reconnecting' :
     connectionStatus === 'polling' && data ? 'realtime' : connectionStatus;
 
-  // ── Failsafe Mode ──
+  // ── Failsafe Mode (disabled in preview) ──
   const failsafe = useFailsafeMode({
     connectionStatus: effectiveStatus,
     lastUpdate,
     hasData: !!data,
-    staleThresholdSeconds: 120,
-    degradedThresholdSeconds: 30,
+    staleThresholdSeconds: isPreviewMode ? 999999 : 120,
+    degradedThresholdSeconds: isPreviewMode ? 999999 : 30,
   });
 
   // ═══════════════════════════════════════════════════════
