@@ -19,6 +19,8 @@ interface UseDisplayRealtimeOptions {
   pollIntervalMs?: number;
   onDataRefresh: () => void;
   enabled?: boolean;
+  /** When true, skip Supabase Realtime and use HTTP polling only (e.g. unauthenticated TV context) */
+  pollingOnly?: boolean;
 }
 
 export function useDisplayRealtime({
@@ -27,6 +29,7 @@ export function useDisplayRealtime({
   pollIntervalMs = 15_000,
   onDataRefresh,
   enabled = true,
+  pollingOnly = false,
 }: UseDisplayRealtimeOptions) {
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
   const channelRef = useRef<any>(null);
@@ -49,6 +52,12 @@ export function useDisplayRealtime({
     // Start polling as baseline immediately
     pollTimerRef.current = setInterval(onDataRefresh, pollIntervalMs);
 
+    // Skip Realtime WebSocket in polling-only mode (e.g. unauthenticated TV)
+    if (pollingOnly) {
+      setStatus('polling');
+      return cleanup;
+    }
+
     // Try Realtime subscription
     try {
       const channelName = `tv-tenant-${tenantId}`;
@@ -63,7 +72,6 @@ export function useDisplayRealtime({
             filter: `tenant_id=eq.${tenantId}`,
           },
           () => {
-            // Any display config change in this tenant triggers refresh
             onDataRefresh();
           }
         )
@@ -71,15 +79,12 @@ export function useDisplayRealtime({
           if (subStatus === 'SUBSCRIBED') {
             setStatus('realtime');
             backoffRef.current = pollIntervalMs;
-            // Reduce polling frequency when realtime is active
             clearInterval(pollTimerRef.current);
             pollTimerRef.current = setInterval(onDataRefresh, Math.max(pollIntervalMs * 2, 30_000));
           } else if (subStatus === 'CLOSED' || subStatus === 'CHANNEL_ERROR') {
             setStatus('reconnecting');
-            // Increase polling frequency as fallback
             clearInterval(pollTimerRef.current);
             pollTimerRef.current = setInterval(onDataRefresh, Math.max(backoffRef.current, 10_000));
-            // Schedule reconnect
             reconnectTimerRef.current = setTimeout(() => {
               channel.subscribe();
             }, backoffRef.current);
@@ -93,7 +98,7 @@ export function useDisplayRealtime({
     }
 
     return cleanup;
-  }, [enabled, tenantId, displayId, pollIntervalMs, onDataRefresh, cleanup]);
+  }, [enabled, tenantId, displayId, pollIntervalMs, onDataRefresh, cleanup, pollingOnly]);
 
   return { status };
 }

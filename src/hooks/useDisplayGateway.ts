@@ -170,81 +170,9 @@ export function useDisplayGateway({
         setEventCount((c) => c + result.pending_events.length);
       }
 
-      // Step 3: Subscribe to Realtime channel (tenant-scoped)
-      const sub = result.subscription;
-      if (sub) {
-        try {
-          const realtimeChannel = supabase
-            .channel(sub.realtime_channel)
-            .on(
-              'postgres_changes',
-              {
-                event: 'INSERT',
-                schema: 'public',
-                table: sub.realtime_table,
-                filter: sub.realtime_filter,
-              },
-              (payload) => {
-                const row = payload.new as any;
-                if (row) {
-                  const event: GatewayEvent = {
-                    id: row.id,
-                    event_type: row.event_type,
-                    payload: row.payload,
-                    priority: row.priority,
-                    created_at: row.created_at,
-                    _source: 'realtime',
-                  };
-                  onEvent?.([event]);
-                  setEventCount((c) => c + 1);
-                  lastEventTimeRef.current = row.created_at;
-                }
-              }
-            )
-            // Also subscribe to topic events
-            .on(
-              'postgres_changes',
-              {
-                event: 'INSERT',
-                schema: 'public',
-                table: sub.event_topic_table,
-                filter: sub.event_topic_filter,
-              },
-              (payload) => {
-                const row = payload.new as any;
-                if (row) {
-                  const event: GatewayEvent = {
-                    id: row.id,
-                    event_type: row.event_type,
-                    payload: row.payload,
-                    priority: row.priority,
-                    created_at: row.created_at,
-                    _source: 'event_log',
-                  };
-                  onEvent?.([event]);
-                  setEventCount((c) => c + 1);
-                }
-              }
-            )
-            .subscribe((subStatus) => {
-              if (subStatus === 'SUBSCRIBED') {
-                setStatus('connected');
-              } else if (
-                subStatus === 'CLOSED' ||
-                subStatus === 'CHANNEL_ERROR'
-              ) {
-                setStatus('reconnecting');
-                scheduleReconnect();
-              }
-            });
-
-          channelRef.current = realtimeChannel;
-        } catch {
-          setStatus('connected'); // Connected via polling even if realtime fails
-        }
-      } else {
-        setStatus('connected');
-      }
+      // Step 3: Skip Realtime subscription — TV has no auth session.
+      // Gateway polling (Step 5) handles event delivery reliably via HTTP.
+      setStatus('connected');
 
       // Step 4: Start heartbeat
       heartbeatRef.current = setInterval(async () => {

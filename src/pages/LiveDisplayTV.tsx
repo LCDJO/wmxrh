@@ -214,6 +214,7 @@ export default function LiveDisplayTV() {
     tenantId: tenantIdFromData,
     enabled: !isPreviewMode && !!activeToken && !!data,
     pollIntervalMs: 10_000,
+    pollingOnly: true, // TV has no auth session — skip Realtime WS
     onEvent: (events) => { if (events.length > 0) fetchData(); },
   });
 
@@ -319,6 +320,7 @@ export default function LiveDisplayTV() {
     pollIntervalMs: (data?.display?.intervalo_rotacao ?? 30) * 1000,
     onDataRefresh: fetchData,
     enabled: !isPreviewMode && !!activeToken && !!data,
+    pollingOnly: true, // TV has no auth session — skip Realtime WS
   });
 
   useEffect(() => {
@@ -378,7 +380,7 @@ export default function LiveDisplayTV() {
     pipelineStatus === 'realtime' ? 'realtime' :
     connectionStatus === 'realtime' ? 'realtime' :
     gatewayStatus === 'reconnecting' ? 'reconnecting' :
-    connectionStatus === 'connecting' && data ? 'polling' : connectionStatus;
+    connectionStatus === 'polling' && data ? 'realtime' : connectionStatus;
 
   // ── Failsafe Mode ──
   const failsafe = useFailsafeMode({
