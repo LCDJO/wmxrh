@@ -30,6 +30,8 @@ interface UseDisplayEventPipelineOptions {
   enabled?: boolean;
   pollIntervalMs?: number;
   onEvent?: (events: PipelineEvent[]) => void;
+  /** When true, skip Supabase Realtime and use HTTP polling only (e.g. unauthenticated TV context) */
+  pollingOnly?: boolean;
 }
 
 export function useDisplayEventPipeline({
@@ -38,6 +40,7 @@ export function useDisplayEventPipeline({
   enabled = true,
   pollIntervalMs = 10_000,
   onEvent,
+  pollingOnly = false,
 }: UseDisplayEventPipelineOptions) {
   const [status, setStatus] = useState<PipelineStatus>('disconnected');
   const [eventCount, setEventCount] = useState(0);
@@ -124,7 +127,6 @@ export function useDisplayEventPipeline({
     }
   }, [tenantId, channel, functionsBase, processNewEvents]);
 
-  // Main effect: Realtime + polling
   useEffect(() => {
     if (!enabled || !tenantId) {
       setStatus('disconnected');
@@ -134,52 +136,54 @@ export function useDisplayEventPipeline({
     setStatus('connecting');
     const effectiveChannel = channel ?? `tenant-${tenantId}`;
 
-    // 1. Realtime subscription on display_event_queue
-    try {
-      const realtimeChannel = supabase
-        .channel(`display-pipeline-${effectiveChannel}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'display_event_queue',
-            filter: `tenant_id=eq.${tenantId}`,
-          },
-          (payload) => {
-            const row = payload.new as any;
-            if (row && (!channel || row.channel === channel)) {
-              processNewEvents([
-                {
-                  id: row.id,
-                  event_type: row.event_type,
-                  source: 'realtime',
-                  channel: row.channel,
-                  payload: row.payload,
-                  priority: row.priority,
-                  created_at: row.created_at,
-                },
-              ]);
+    // 1. Realtime subscription (skip in polling-only mode, e.g. unauthenticated TV)
+    if (!pollingOnly) {
+      try {
+        const realtimeChannel = supabase
+          .channel(`display-pipeline-${effectiveChannel}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'display_event_queue',
+              filter: `tenant_id=eq.${tenantId}`,
+            },
+            (payload) => {
+              const row = payload.new as any;
+              if (row && (!channel || row.channel === channel)) {
+                processNewEvents([
+                  {
+                    id: row.id,
+                    event_type: row.event_type,
+                    source: 'realtime',
+                    channel: row.channel,
+                    payload: row.payload,
+                    priority: row.priority,
+                    created_at: row.created_at,
+                  },
+                ]);
+              }
             }
-          }
-        )
-        .subscribe((subStatus) => {
-          if (subStatus === 'SUBSCRIBED') {
-            setStatus('realtime');
-          } else if (subStatus === 'CLOSED' || subStatus === 'CHANNEL_ERROR') {
-            setStatus('polling');
-          }
-        });
+          )
+          .subscribe((subStatus) => {
+            if (subStatus === 'SUBSCRIBED') {
+              setStatus('realtime');
+            } else if (subStatus === 'CLOSED' || subStatus === 'CHANNEL_ERROR') {
+              setStatus('polling');
+            }
+          });
 
-      channelRef.current = realtimeChannel;
-    } catch {
+        channelRef.current = realtimeChannel;
+      } catch {
+        setStatus('polling');
+      }
+    } else {
       setStatus('polling');
     }
 
-    // 2. Polling fallback (always active, reduced frequency when realtime works)
+    // 2. Polling fallback (always active)
     pollTimerRef.current = setInterval(pollEvents, pollIntervalMs);
-
-    // Initial poll
     pollEvents();
 
     return () => {
@@ -189,7 +193,7 @@ export function useDisplayEventPipeline({
         channelRef.current = null;
       }
     };
-  }, [enabled, tenantId, channel, pollIntervalMs, pollEvents, processNewEvents]);
+  }, [enabled, tenantId, channel, pollIntervalMs, pollEvents, processNewEvents, pollingOnly]);
 
   return {
     status,
