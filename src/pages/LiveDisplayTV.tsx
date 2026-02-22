@@ -23,6 +23,7 @@ import { ptBR } from 'date-fns/locale';
 import {
   AlertTriangle, Tv, WifiOff, Loader2, Wifi, Activity,
   Clock, BarChart3, Scale, Zap, Lock, FileWarning,
+  RotateCw, Pause, Play, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QRCodeSVG } from 'qrcode.react';
@@ -42,6 +43,13 @@ import {
   useAnimatedNumber,
 } from '@/components/tv/TVComponents';
 import { TVMapCenter } from '@/components/tv/TVMapCenter';
+import { useRotationMode, VIEW_LABELS, type RotationView } from '@/hooks/useRotationMode';
+import {
+  FleetLiveView,
+  RiskHeatmapView,
+  ComplianceSummaryView,
+  ExecutiveOverviewView,
+} from '@/components/tv/TVRotationViews';
 
 type PairingState =
   | { phase: 'requesting' }
@@ -87,6 +95,14 @@ export default function LiveDisplayTV() {
   const pollRef = useRef<ReturnType<typeof setInterval>>();
   const backoffRef = useRef(10_000);
   const clock = useLiveClock();
+
+  // ── Rotation Mode ──
+  const rotationEnabled = data?.display?.rotacao_automatica ?? false;
+  const rotationInterval = data?.display?.intervalo_rotacao ?? 60;
+  const rotation = useRotationMode({
+    enabled: rotationEnabled && !!data,
+    intervalSeconds: rotationInterval,
+  });
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const functionsBase = `https://${projectId}.supabase.co/functions/v1`;
@@ -447,46 +463,17 @@ export default function LiveDisplayTV() {
       )}
 
       {/* ════════════════════════════════════════════════
-          MAIN CONTENT — Map + Side Panel
+          MAIN CONTENT — Rotation Views
           ════════════════════════════════════════════════ */}
       <main className="flex-1 flex gap-4 px-6 py-3 min-h-0">
-        {/* CENTER: Map + Heatmap overlay */}
-        <TVMapCenter
-          positions={positions}
-          heatmap={data.risk_heatmap}
-          className="flex-1"
-        />
-
-        {/* RIGHT SIDE PANEL */}
-        <aside className="w-80 2xl:w-96 shrink-0 flex flex-col gap-3 min-h-0">
-          {/* KPI strip */}
-          <div className="grid grid-cols-2 gap-2 shrink-0">
-            <KpiTile icon={AlertTriangle} label="Infrações" value={exec?.total_violations ?? fleetEvents.length} sub="Hoje" color="text-amber-400" />
-            <KpiTile icon={Lock} label="Bloqueios" value={exec?.total_blocks ?? blocks.length} sub="Ativos" color={blocks.length > 0 ? "text-red-400" : "text-emerald-400"} />
-          </div>
-
-          {/* Top infractions */}
-          <TVCard title="Top Infrações do Dia" icon={Zap} className="flex-1 min-h-0 overflow-hidden">
-            <TopInfractions events={[...fleetEvents, ...speedAlerts].sort((a: any, b: any) => {
-              const sev: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-              return (sev[a.severity] ?? 3) - (sev[b.severity] ?? 3);
-            })} />
-          </TVCard>
-
-          {/* Blocked employees */}
-          <TVCard title="Colaboradores Bloqueados" icon={Lock} className="shrink-0 max-h-[28%] overflow-hidden">
-            <BlockedEmployees blocks={blocks} />
-          </TVCard>
-
-          {/* Recent warnings */}
-          <TVCard title="Advertências Recentes" icon={FileWarning} className="shrink-0 max-h-[28%] overflow-hidden">
-            <RecentWarnings warnings={warnings} />
-          </TVCard>
-        </aside>
+        {rotation.currentView === 'fleet_live' && <FleetLiveView data={data} />}
+        {rotation.currentView === 'risk_heatmap' && <RiskHeatmapView data={data} />}
+        {rotation.currentView === 'compliance_summary' && <ComplianceSummaryView data={data} />}
+        {rotation.currentView === 'executive_overview' && <ExecutiveOverviewView data={data} />}
       </main>
 
       {/* ════════════════════════════════════════════════
-          FOOTER — Connection, Version, Last Update
+          FOOTER — Connection, Rotation, Version, Last Update
           ════════════════════════════════════════════════ */}
       <footer className="flex items-center justify-between px-6 py-2 border-t border-white/5 shrink-0 text-[10px] 2xl:text-xs text-white/25">
         {/* Left: WebSocket status */}
@@ -512,11 +499,43 @@ export default function LiveDisplayTV() {
           )}
         </div>
 
-        {/* Center: Version */}
+        {/* Center: Rotation indicator */}
         <div className="flex items-center gap-3">
-          <span>Display Engine v2.0</span>
-          <span className="text-white/10">|</span>
-          <span>Clique duplo → Tela cheia</span>
+          {rotationEnabled && (
+            <>
+              <div className="flex items-center gap-1.5">
+                <RotateCw className={cn("h-3 w-3", rotation.paused ? "text-white/20" : "text-sky-400/60 animate-spin")} style={rotation.paused ? {} : { animationDuration: `${rotationInterval}s` }} />
+                <span className="text-white/40">{rotation.viewLabel}</span>
+              </div>
+              {/* Rotation dots */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: rotation.totalViews }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-300",
+                      i === rotation.currentIndex ? "w-4 bg-sky-400/60" : "w-1.5 bg-white/15"
+                    )}
+                  />
+                ))}
+              </div>
+              {/* Progress bar */}
+              <div className="w-16 h-1 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-sky-400/40 rounded-full"
+                  style={{ width: `${rotation.progress * 100}%`, transition: 'width 0.1s linear' }}
+                />
+              </div>
+              <span className="text-white/20 tabular-nums">{rotation.remaining}s</span>
+            </>
+          )}
+          {!rotationEnabled && (
+            <>
+              <span>Display Engine v2.0</span>
+              <span className="text-white/10">|</span>
+              <span>Clique duplo → Tela cheia</span>
+            </>
+          )}
         </div>
 
         {/* Right: Last update */}
