@@ -102,10 +102,10 @@ export function LandingPublishButton({
         setStatus('draft');
         onStatusChange?.('draft');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Deploy error:', err);
       setStatus('error');
-      setErrorMsg(err.message || 'Falha ao publicar');
+      setErrorMsg(err instanceof Error ? err.message : 'Falha ao publicar');
       onStatusChange?.('error');
     }
   };

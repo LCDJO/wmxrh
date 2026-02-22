@@ -22,7 +22,7 @@ import type {
   PermissionUsage,
   GraphDomain,
 } from '@/domains/security/kernel/unified-graph-engine';
-import type { UnifiedNode } from '@/domains/security/kernel/unified-graph-engine';
+import type { UnifiedNode, UnifiedGraphSnapshot } from '@/domains/security/kernel/unified-graph-engine';
 
 // ════════════════════════════════════
 // DOMAIN BADGE CONFIG
@@ -90,7 +90,7 @@ export function AccessRelationshipPanel(props: AccessRelationshipPanelProps) {
 // USER PANEL
 // ════════════════════════════════════
 
-function UserPanel({ userId, snapshot, maxHeight, className }: { userId: string; snapshot: any; maxHeight: number; className?: string }) {
+function UserPanel({ userId, snapshot, maxHeight, className }: { userId: string; snapshot: UnifiedGraphSnapshot; maxHeight: number; className?: string }) {
   const data: UserAccessMap = useMemo(
     () => unifiedGraphEngine.getUserAccessMap(snapshot, userId),
     [snapshot, userId],
@@ -170,7 +170,7 @@ function UserPanel({ userId, snapshot, maxHeight, className }: { userId: string;
 // TENANT PANEL
 // ════════════════════════════════════
 
-function TenantPanel({ tenantId, snapshot, maxHeight, className }: { tenantId: string; snapshot: any; maxHeight: number; className?: string }) {
+function TenantPanel({ tenantId, snapshot, maxHeight, className }: { tenantId: string; snapshot: UnifiedGraphSnapshot; maxHeight: number; className?: string }) {
   const data: TenantAccessOverview = useMemo(
     () => unifiedGraphEngine.getTenantAccessOverview(snapshot, tenantId),
     [snapshot, tenantId],

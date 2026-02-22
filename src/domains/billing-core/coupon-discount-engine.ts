@@ -24,6 +24,7 @@ import type {
   CreateCouponDTO,
   CouponValidationResult,
   DiscountApplication,
+  DiscountType,
 } from './types';
 
 // ══════════════════════════════════════════════════════════════════
@@ -385,15 +386,18 @@ function createDiscountEngine(): DiscountEngineAPI {
         .eq('tenant_id', tenantId)
         .eq('status', 'active');
 
-      return (data ?? []).map((r: any) => ({
-        redemption_id: r.id,
-        coupon_code: r.coupons?.code ?? '',
-        coupon_name: r.coupons?.name ?? '',
-        discount_type: r.coupons?.discount_type ?? 'percentage',
-        discount_value: Number(r.coupons?.discount_value ?? 0),
-        discount_applied_brl: Number(r.discount_applied_brl),
-        cycles_remaining: r.billing_cycles_remaining,
-      }));
+      return (data ?? []).map((r) => {
+        const coupon = r.coupons as { code?: string; name?: string; discount_type?: string; discount_value?: number } | null;
+        return {
+          redemption_id: r.id,
+          coupon_code: coupon?.code ?? '',
+          coupon_name: coupon?.name ?? '',
+          discount_type: (coupon?.discount_type ?? 'percentage') as DiscountType,
+          discount_value: Number(coupon?.discount_value ?? 0),
+          discount_applied_brl: Number(r.discount_applied_brl),
+          cycles_remaining: r.billing_cycles_remaining,
+        };
+      });
     },
 
     async calculateRecurringDiscount(tenantId, subtotalBrl) {

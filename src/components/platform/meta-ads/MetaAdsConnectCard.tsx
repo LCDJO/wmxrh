@@ -83,8 +83,8 @@ export function MetaAdsConnectCard({ tenantId, canEdit }: MetaAdsConnectCardProp
       setOpen(false);
       setForm({ access_token: '', ad_account_id: '', pixel_id: '', page_id: '' });
       fetchConnection();
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: 'Erro', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     }
     setSaving(false);
   };

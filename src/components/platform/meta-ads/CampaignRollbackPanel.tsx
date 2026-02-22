@@ -66,8 +66,8 @@ export function CampaignRollbackPanel({ landingPageId, pageName, disabled }: Cam
       if (data?.error) throw new Error(data.error);
       toast.success(data.message);
       await fetchVersions();
-    } catch (err: any) {
-      toast.error('Erro no rollback', { description: err.message });
+    } catch (err: unknown) {
+      toast.error('Erro no rollback', { description: err instanceof Error ? err.message : String(err) });
     }
     setRolling(false);
   };

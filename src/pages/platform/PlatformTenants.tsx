@@ -409,8 +409,8 @@ export default function PlatformTenants() {
         });
         setDialogMode(null); fetchTenantPlans();
       }
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: 'Erro', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     }
     setSaving(false);
   };

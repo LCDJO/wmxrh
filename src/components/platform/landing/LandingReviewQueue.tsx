@@ -248,11 +248,12 @@ function GovernanceRiskPanel({ snapshot }: { snapshot: Record<string, unknown> }
       });
       if (error) throw error;
       setAiAnalysis(data?.analysis ?? null);
-    } catch (err: any) {
-      const msg = err?.message ?? 'Erro ao analisar conteúdo';
-      if (err?.status === 429) {
+    } catch (err: unknown) {
+      const errObj = err as { message?: string; status?: number };
+      const msg = errObj?.message ?? 'Erro ao analisar conteúdo';
+      if (errObj?.status === 429) {
         setAiError('Rate limit excedido. Tente novamente em alguns segundos.');
-      } else if (err?.status === 402) {
+      } else if (errObj?.status === 402) {
         setAiError('Créditos insuficientes. Adicione créditos ao workspace.');
       } else {
         setAiError(msg);
@@ -510,8 +511,8 @@ export function LandingReviewQueue() {
       }, notes[requestId]);
       toast({ title: 'Aprovada!', description: 'Landing page aprovada com sucesso.' });
       fetchPending();
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: 'Erro', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     } finally {
       setActing(null);
     }
@@ -533,8 +534,8 @@ export function LandingReviewQueue() {
       }, reason);
       toast({ title: 'Rejeitada', description: 'Landing page devolvida para rascunho.' });
       fetchPending();
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: 'Erro', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     } finally {
       setActing(null);
     }

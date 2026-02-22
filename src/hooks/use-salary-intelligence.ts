@@ -102,9 +102,9 @@ export function useSalaryIntelligence() {
           toast.success('Benchmark entre empresas gerado!');
           break;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('salary-intelligence error:', err);
-      toast.error(err?.message || 'Erro ao gerar análise de IA.');
+      toast.error(err instanceof Error ? err.message : 'Erro ao gerar análise de IA.');
     } finally {
       setLoading(false);
     }

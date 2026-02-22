@@ -218,10 +218,10 @@ export class PublicAPIGateway {
         data,
         meta: { cached: false, rateLimit: rateResult },
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return {
         success: false,
-        error: { code: 'GATEWAY_ERROR', message: err.message ?? 'Internal gateway error.' },
+        error: { code: 'GATEWAY_ERROR', message: err instanceof Error ? err.message : 'Internal gateway error.' },
         meta: { cached: false, rateLimit: rateResult },
       };
     }

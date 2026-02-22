@@ -53,8 +53,8 @@ export default function LandingDrafts() {
         .eq('id', pageId);
       toast({ title: 'Salvo!', description: 'Rascunho salvo com sucesso.' });
       fetchDrafts();
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: 'Erro', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     } finally {
       setSubmitting(null);
     }
@@ -72,8 +72,8 @@ export default function LandingDrafts() {
       });
       toast({ title: 'Submetida!', description: 'Landing page enviada para revisão.' });
       fetchDrafts();
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: 'Erro', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
     } finally {
       setSubmitting(null);
     }

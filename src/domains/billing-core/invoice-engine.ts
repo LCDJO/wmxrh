@@ -5,13 +5,14 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { InvoiceEngineAPI, Invoice, CreateInvoiceDTO, InvoiceStatus, InvoiceLine } from './types';
 
-function mapRowToInvoice(row: any): Invoice {
-  const metadata = (row.metadata ?? {}) as Record<string, unknown>;
+function mapRowToInvoice(row: unknown): Invoice {
+  const r = row as Record<string, unknown>;
+  const metadata = (r.metadata ?? {}) as Record<string, unknown>;
   return {
-    ...row,
+    ...r,
     lines: (metadata.lines as InvoiceLine[] | undefined) ?? [],
     metadata,
-  };
+  } as unknown as Invoice;
 }
 
 export function createInvoiceEngine(): InvoiceEngineAPI {
@@ -34,7 +35,7 @@ export function createInvoiceEngine(): InvoiceEngineAPI {
           payment_method: dto.payment_method ?? null,
           notes: dto.notes ?? null,
           status: 'pending' as const,
-          metadata: metadata as any,
+          metadata: metadata as unknown as import('@/integrations/supabase/types').Json,
         }])
         .select()
         .single();
