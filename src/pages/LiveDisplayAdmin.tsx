@@ -507,8 +507,8 @@ export default function LiveDisplayAdmin() {
         </DialogContent>
       </Dialog>
       {/* Preview Dialog */}
-      <Dialog open={!!previewDisplay} onOpenChange={(v) => { if (!v) setPreviewDisplayId(null); }}>
-        <DialogContent className="sm:max-w-5xl p-0 overflow-hidden" onFocusOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
+      <Dialog open={!!previewDisplay} onOpenChange={(v) => { if (!v) setPreviewDisplayId(null); }} modal={false}>
+        <DialogContent className="sm:max-w-5xl p-0 overflow-hidden" onInteractOutside={(e) => e.preventDefault()} onFocusOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => { e.preventDefault(); setPreviewDisplayId(null); }}>
           <DialogHeader className="px-6 pt-5 pb-3">
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5 text-primary" />
