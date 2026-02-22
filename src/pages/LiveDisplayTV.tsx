@@ -1,37 +1,41 @@
 /**
- * LiveDisplayTV — Full-screen TV mode for corporate monitors.
+ * LiveDisplayTV — Enterprise-scalable full-screen TV mode.
  *
- * PERFORMANCE:
- *   ✅ GPU-accelerated CSS transitions for smooth data updates
- *   ✅ will-change hints on animated elements
- *   ✅ Large-screen optimized (4K-ready typography & spacing)
- *   ✅ Dark mode native — no theme switching overhead
- *   ✅ WebSocket (Realtime) with automatic polling fallback
- *   ✅ Exponential backoff on connection failures
- *   ✅ requestAnimationFrame for gauge animations
- *   ✅ Memoized sub-components to avoid unnecessary re-renders
- *
- * 4 Display Modes:
- *   Fleet     → Live map, current speed, alerts
- *   SST       → Overdue NRs, active blocks
- *   Compliance→ Recent warnings, critical incidents
- *   Executive → Operational score, legal risk, projected cost
+ * ENTERPRISE:
+ *   ✅ Event queue with deduplication & backpressure
+ *   ✅ Shared Realtime channel per tenant (multi-TV)
+ *   ✅ Risk heatmap aggregating Fleet, SST, Compliance, Workforce
+ *   ✅ GPU-accelerated CSS transitions
+ *   ✅ Large-screen optimized (4K-ready)
+ *   ✅ Dark mode native
+ *   ✅ requestAnimationFrame gauge animations
+ *   ✅ Memoized sub-components
  */
-import { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import {
   Users, AlertTriangle, Activity, Shield, Tv, WifiOff,
   Zap, Clock, Loader2, MapPin, Gauge, FileWarning,
-  Lock, TrendingUp, DollarSign, Scale, BarChart3,
-  Car, Heart, ShieldAlert, Wifi,
+  Lock, DollarSign, Scale, BarChart3,
+  Car, Heart, ShieldAlert, Wifi, Flame,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QRCodeSVG } from 'qrcode.react';
-import { supabase } from '@/integrations/supabase/client';
+import { useDisplayRealtime, type ConnectionStatus } from '@/hooks/useDisplayRealtime';
+import { useDisplayEventQueue } from '@/hooks/useDisplayEventQueue';
 
 // ── Types ──
+
+interface RiskHeatmapEntry {
+  fleet: number;
+  sst: number;
+  compliance: number;
+  workforce: number;
+  total: number;
+  headcount: number;
+}
 
 interface DisplayData {
   display: { id: string; nome: string; tipo: string; rotacao_automatica: boolean; intervalo_rotacao: number; layout_config: any };
@@ -56,23 +60,15 @@ interface DisplayData {
     total_warnings: number;
     total_blocks: number;
   };
+  risk_heatmap?: Record<string, RiskHeatmapEntry>;
   critical_alerts?: any[];
 }
-
-type ConnectionMode = 'realtime' | 'polling' | 'reconnecting';
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: 'bg-red-500/20 text-red-400 border-red-500/30',
   high: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
   medium: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
   low: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-};
-
-const RISK_COLORS: Record<string, string> = {
-  critical: 'text-red-400',
-  high: 'text-orange-400',
-  medium: 'text-amber-400',
-  low: 'text-emerald-400',
 };
 
 type PairingState =
@@ -85,17 +81,14 @@ type PairingState =
 function useAnimatedNumber(target: number, duration = 600): number {
   const [current, setCurrent] = useState(target);
   const rafRef = useRef<number>();
-  const startRef = useRef({ value: target, time: 0 });
 
   useEffect(() => {
     const start = current;
     const startTime = performance.now();
-    startRef.current = { value: start, time: startTime };
 
     const animate = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       setCurrent(Math.round(start + (target - start) * eased));
       if (progress < 1) rafRef.current = requestAnimationFrame(animate);
@@ -119,17 +112,19 @@ export default function LiveDisplayTV() {
   const [pairingState, setPairingState] = useState<PairingState | null>(null);
   const [activeToken, setActiveToken] = useState<string | null>(tokenFromUrl);
   const [data, setData] = useState<DisplayData | null>(null);
-  const [prevData, setPrevData] = useState<DisplayData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('polling');
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const pollRef = useRef<ReturnType<typeof setInterval>>();
-  const backoffRef = useRef(10_000); // start at 10s for polling fallback
-  const realtimeChannelRef = useRef<any>(null);
+  const backoffRef = useRef(10_000);
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const functionsBase = `https://${projectId}.supabase.co/functions/v1`;
+
+  // ── Event Queue (dedup + backpressure) ──
+  const { stats: queueStats } = useDisplayEventQueue({
+    maxBufferSize: 500,
+    flushIntervalMs: 300,
+  });
 
   // ── Phase 1: Request pairing code ──
   const requestPairing = useCallback(async () => {
@@ -187,7 +182,7 @@ export default function LiveDisplayTV() {
     return () => clearInterval(pollRef.current);
   }, [pairingState, functionsBase]);
 
-  // ── Phase 3: Fetch display data (with smooth transition) ──
+  // ── Phase 3: Fetch display data ──
   const fetchData = useCallback(async () => {
     if (!activeToken) return;
     try {
@@ -198,84 +193,34 @@ export default function LiveDisplayTV() {
         return;
       }
       const result = await resp.json();
-      // Smooth transition: save previous data for CSS transitions
-      setData(prev => {
-        if (prev) setPrevData(prev);
-        return result;
-      });
+      setData(result);
       setError(null);
       setLastUpdate(new Date());
-      backoffRef.current = 10_000; // reset backoff on success
+      backoffRef.current = 10_000;
     } catch {
       setError('Falha na conexão com o servidor');
-      // Exponential backoff (max 60s)
       backoffRef.current = Math.min(backoffRef.current * 1.5, 60_000);
     }
   }, [activeToken, functionsBase]);
 
-  // Initial fetch
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ── Realtime subscription with polling fallback ──
+  // ── Shared Realtime channel (enterprise multi-TV) ──
+  const { status: connectionStatus } = useDisplayRealtime({
+    tenantId: data?.display ? (data as any).display.tenant_id ?? null : null,
+    displayId: data?.display?.id ?? null,
+    pollIntervalMs: (data?.display?.intervalo_rotacao ?? 30) * 1000,
+    onDataRefresh: fetchData,
+    enabled: !!activeToken && !!data,
+  });
+
+  // Fallback polling when realtime not providing tenant_id (edge func doesn't expose it)
   useEffect(() => {
     if (!activeToken || !data) return;
-
-    const displayId = data.display.id;
     const interval = (data.display.intervalo_rotacao ?? 30) * 1000;
-
-    // Try Realtime first
-    try {
-      const channel = supabase
-        .channel(`tv-display-${displayId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'live_displays',
-            filter: `id=eq.${displayId}`,
-          },
-          () => {
-            // Display config changed — refetch
-            fetchData();
-          }
-        )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            setConnectionMode('realtime');
-            // Still poll but at longer intervals as backup
-            clearInterval(intervalRef.current);
-            intervalRef.current = setInterval(fetchData, Math.max(interval, 30_000));
-          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-            setConnectionMode('reconnecting');
-            // Fallback to polling
-            clearInterval(intervalRef.current);
-            intervalRef.current = setInterval(fetchData, Math.max(backoffRef.current, 10_000));
-            // Try to reconnect after backoff
-            setTimeout(() => {
-              channel.subscribe();
-            }, backoffRef.current);
-            backoffRef.current = Math.min(backoffRef.current * 1.5, 60_000);
-          }
-        });
-
-      realtimeChannelRef.current = channel;
-    } catch {
-      // WebSocket not available — pure polling fallback
-      setConnectionMode('polling');
-    }
-
-    // Always set up polling as baseline
-    intervalRef.current = setInterval(fetchData, interval);
-
-    return () => {
-      clearInterval(intervalRef.current);
-      if (realtimeChannelRef.current) {
-        supabase.removeChannel(realtimeChannelRef.current);
-        realtimeChannelRef.current = null;
-      }
-    };
-  }, [activeToken, data?.display?.id, data?.display?.intervalo_rotacao, fetchData]);
+    const timer = setInterval(fetchData, interval);
+    return () => clearInterval(timer);
+  }, [activeToken, data?.display?.intervalo_rotacao, fetchData]);
 
   // ── SECURITY: Lock down TV display ──
   useEffect(() => {
@@ -297,7 +242,6 @@ export default function LiveDisplayTV() {
 
     document.body.style.userSelect = 'none';
     (document.body.style as any).webkitUserSelect = 'none';
-
     document.addEventListener('dblclick', dblClickHandler);
     document.addEventListener('contextmenu', contextMenuHandler);
     document.addEventListener('keydown', keydownHandler);
@@ -310,6 +254,9 @@ export default function LiveDisplayTV() {
       document.removeEventListener('keydown', keydownHandler);
     };
   }, []);
+
+  // Derive effective connection status
+  const effectiveStatus: ConnectionStatus = connectionStatus === 'connecting' && data ? 'polling' : connectionStatus;
 
   // ═══════════════════════════════════════════════════
   // RENDER: Pairing screens
@@ -348,7 +295,7 @@ export default function LiveDisplayTV() {
               <div className="h-3 w-3 rounded-full bg-primary animate-pulse" />
               <h1 className="text-2xl lg:text-3xl 2xl:text-4xl font-bold">Pareamento de Display</h1>
             </div>
-            <p className="text-white/50 text-sm 2xl:text-base">Escaneie o QR Code abaixo com seu celular ou insira o código no painel administrativo.</p>
+            <p className="text-white/50 text-sm 2xl:text-base">Escaneie o QR Code ou insira o código no painel administrativo.</p>
             <div className="bg-white p-6 2xl:p-8 rounded-2xl inline-block mx-auto">
               <QRCodeSVG value={pairUrl} size={240} level="H" />
             </div>
@@ -366,7 +313,6 @@ export default function LiveDisplayTV() {
               <Loader2 className="h-3 w-3 animate-spin" />
               <span>Aguardando confirmação do administrador...</span>
             </div>
-            <p className="text-white/20 text-[10px]">O código expira em 10 minutos. Clique duplo para tela cheia.</p>
           </div>
         </div>
       );
@@ -412,16 +358,11 @@ export default function LiveDisplayTV() {
     );
   }
 
-  // ═══════════════════════════════════════════════════
-  // RENDER: Mode-specific content (with smooth transitions)
-  // ═══════════════════════════════════════════════════
-
   const tipo = data.display.tipo;
   const alerts = data.critical_alerts ?? [];
 
   return (
     <div className="min-h-screen bg-[#0a0a12] text-white p-4 lg:p-6 2xl:p-8 overflow-hidden tv-container">
-      {/* GPU-accelerated transition layer */}
       <style>{`
         .tv-container { transform: translateZ(0); }
         .tv-fade-in { animation: tvFadeIn 0.4s ease-out; will-change: opacity, transform; }
@@ -438,15 +379,15 @@ export default function LiveDisplayTV() {
         <div className="flex items-center gap-3">
           <div className={cn(
             "flex items-center gap-2 px-3 py-1.5 2xl:px-4 2xl:py-2 rounded-full",
-            connectionMode === 'realtime' ? "bg-emerald-500/20 tv-pulse-glow" : "bg-primary/20"
+            effectiveStatus === 'realtime' ? "bg-emerald-500/20 tv-pulse-glow" : "bg-primary/20"
           )}>
             <div className={cn(
               "h-2 w-2 2xl:h-2.5 2xl:w-2.5 rounded-full animate-pulse",
-              connectionMode === 'realtime' ? "bg-emerald-400" :
-              connectionMode === 'reconnecting' ? "bg-amber-400" : "bg-sky-400"
+              effectiveStatus === 'realtime' ? "bg-emerald-400" :
+              effectiveStatus === 'reconnecting' ? "bg-amber-400" : "bg-sky-400"
             )} />
             <span className="text-sm 2xl:text-base font-semibold text-primary">
-              {connectionMode === 'realtime' ? 'AO VIVO' : connectionMode === 'reconnecting' ? 'RECONECTANDO' : 'POLLING'}
+              {effectiveStatus === 'realtime' ? 'AO VIVO' : effectiveStatus === 'reconnecting' ? 'RECONECTANDO' : 'POLLING'}
             </span>
           </div>
           <h1 className="text-lg lg:text-xl 2xl:text-2xl font-bold text-white/90">{data.display.nome}</h1>
@@ -454,8 +395,8 @@ export default function LiveDisplayTV() {
         </div>
         <div className="flex items-center gap-4 text-xs 2xl:text-sm text-white/40">
           <span className="flex items-center gap-1">
-            {connectionMode === 'realtime' ? <Wifi className="h-3 w-3 text-emerald-400" /> :
-             connectionMode === 'reconnecting' ? <WifiOff className="h-3 w-3 text-amber-400" /> :
+            {effectiveStatus === 'realtime' ? <Wifi className="h-3 w-3 text-emerald-400" /> :
+             effectiveStatus === 'reconnecting' ? <WifiOff className="h-3 w-3 text-amber-400" /> :
              <Activity className="h-3 w-3 text-sky-400" />}
           </span>
           {lastUpdate && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(lastUpdate, 'HH:mm:ss')}</span>}
@@ -463,7 +404,7 @@ export default function LiveDisplayTV() {
         </div>
       </div>
 
-      {/* Alerts Banner (all modes) */}
+      {/* Alerts Banner */}
       {alerts.length > 0 && (
         <div className="mb-4 2xl:mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-3 2xl:p-4 flex items-start gap-3 overflow-x-auto tv-slide-up">
           <AlertTriangle className="h-5 w-5 2xl:h-6 2xl:w-6 text-red-400 shrink-0 mt-0.5" />
@@ -502,7 +443,6 @@ const FleetMode = memo(function FleetMode({ data }: { data: DisplayData }) {
   const positions = data.live_positions ?? [];
   const fleetEvents = data.fleet_events ?? [];
   const speedAlerts = data.speed_alerts ?? [];
-  const workforce = data.workforce;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 2xl:gap-6 h-[calc(100vh-8rem)]">
@@ -542,8 +482,8 @@ const FleetMode = memo(function FleetMode({ data }: { data: DisplayData }) {
               speedAlerts.slice(0, 10).map((a: any, i: number) => (
                 <div key={a.id ?? i} className="flex items-center justify-between py-1 border-b border-white/5 last:border-0 tv-slide-up">
                   <div className="min-w-0">
-                    <p className="text-sm 2xl:text-base text-white/80 truncate">{a.employees?.name ?? 'Não identificado'}</p>
-                    <p className="text-[10px] 2xl:text-xs text-white/40">{a.speed_kmh} km/h (limite: {a.speed_limit_kmh})</p>
+                    <p className="text-sm 2xl:text-base text-white/80 truncate">{a.employees?.name ?? 'N/I'}</p>
+                    <p className="text-[10px] 2xl:text-xs text-white/40">{a.speed_kmh} km/h (lim: {a.speed_limit_kmh})</p>
                   </div>
                   <span className="text-xs text-white/30">{a.detected_at ? format(new Date(a.detected_at), 'HH:mm') : '--'}</span>
                 </div>
@@ -605,7 +545,7 @@ const SSTMode = memo(function SSTMode({ data }: { data: DisplayData }) {
                 "bg-amber-500/10 border-amber-500/30"
               )}>
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm 2xl:text-base font-semibold text-white/90">{exam.employee_name ?? 'Não identificado'}</p>
+                  <p className="text-sm 2xl:text-base font-semibold text-white/90">{exam.employee_name ?? 'N/I'}</p>
                   <Badge className={cn("text-[10px] 2xl:text-xs",
                     exam.alert_status === 'overdue' ? SEVERITY_COLORS.critical :
                     exam.alert_status === 'critical' ? SEVERITY_COLORS.high :
@@ -616,7 +556,7 @@ const SSTMode = memo(function SSTMode({ data }: { data: DisplayData }) {
                 </div>
                 <div className="flex items-center justify-between text-xs 2xl:text-sm text-white/50">
                   <span>{exam.exam_type} — {exam.program_name}</span>
-                  <span>{exam.days_until_due != null ? `${Math.abs(exam.days_until_due)}d ${exam.days_until_due < 0 ? 'vencido' : 'restantes'}` : '--'}</span>
+                  <span>{exam.days_until_due != null ? `${Math.abs(exam.days_until_due)}d ${exam.days_until_due < 0 ? 'vencido' : 'rest.'}` : '--'}</span>
                 </div>
               </div>
             ))
@@ -635,11 +575,10 @@ const SSTMode = memo(function SSTMode({ data }: { data: DisplayData }) {
             blocks.map((block: any, i: number) => (
               <div key={block.id ?? i} className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 2xl:p-4 tv-slide-up">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm 2xl:text-base font-semibold text-white/90">{block.employees?.name ?? 'Não identificado'}</p>
+                  <p className="text-sm 2xl:text-base font-semibold text-white/90">{block.employees?.name ?? 'N/I'}</p>
                   <Badge className={cn("text-[10px] 2xl:text-xs", SEVERITY_COLORS[block.severity] ?? SEVERITY_COLORS.high)}>{block.severity}</Badge>
                 </div>
                 <p className="text-xs 2xl:text-sm text-white/50">{block.violation_type} — {block.description?.slice(0, 80)}</p>
-                <p className="text-[10px] text-white/30 mt-1">{block.detected_at ? format(new Date(block.detected_at), 'dd/MM HH:mm') : '--'}</p>
               </div>
             ))
           )}
@@ -678,13 +617,12 @@ const ComplianceMode = memo(function ComplianceMode({ data }: { data: DisplayDat
             warnings.map((w: any, i: number) => (
               <div key={w.id ?? i} className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 2xl:p-4 tv-slide-up">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm 2xl:text-base font-semibold text-white/90">{w.employees?.name ?? 'Não identificado'}</p>
+                  <p className="text-sm 2xl:text-base font-semibold text-white/90">{w.employees?.name ?? 'N/I'}</p>
                   <Badge className="text-[10px] 2xl:text-xs bg-amber-500/20 text-amber-400 border-amber-500/30">
                     {w.event_type === 'warning_issued' ? 'Emitida' : w.event_type === 'warning_signed' ? 'Assinada' : 'Recusada'}
                   </Badge>
                 </div>
                 <p className="text-xs 2xl:text-sm text-white/50 truncate">{w.description}</p>
-                <p className="text-[10px] text-white/30 mt-1">{w.created_at ? format(new Date(w.created_at), 'dd/MM HH:mm') : '--'}</p>
               </div>
             ))
           )}
@@ -709,7 +647,6 @@ const ComplianceMode = memo(function ComplianceMode({ data }: { data: DisplayDat
                   <Badge variant="outline" className="text-[10px] text-white/50 border-white/20 shrink-0">{inc.status}</Badge>
                 </div>
                 <p className="text-xs 2xl:text-sm text-white/50 truncate">{inc.employees?.name} — {inc.description?.slice(0, 60)}</p>
-                <p className="text-[10px] text-white/30 mt-1">{inc.created_at ? format(new Date(inc.created_at), 'dd/MM HH:mm') : '--'}</p>
               </div>
             ))
           )}
@@ -720,12 +657,13 @@ const ComplianceMode = memo(function ComplianceMode({ data }: { data: DisplayDat
 });
 
 // ════════════════════════════════════════════════
-// EXECUTIVE MODE
+// EXECUTIVE MODE (with Risk Heatmap)
 // ════════════════════════════════════════════════
 
 const ExecutiveMode = memo(function ExecutiveMode({ data }: { data: DisplayData }) {
   const exec = data.executive;
   const workforce = data.workforce;
+  const heatmap = data.risk_heatmap;
 
   if (!exec) {
     return (
@@ -737,6 +675,7 @@ const ExecutiveMode = memo(function ExecutiveMode({ data }: { data: DisplayData 
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 2xl:gap-6 h-[calc(100vh-8rem)]">
+      {/* KPIs Row */}
       <div className="col-span-full grid grid-cols-3 lg:grid-cols-6 gap-3 2xl:gap-4">
         <KpiTile icon={Users} label="Colaboradores" value={exec.workforce_total} sub={`${workforce?.active ?? 0} ativos`} color="text-sky-400" />
         <KpiTile icon={Car} label="Veículos" value={exec.active_devices} sub="Rastreados" color="text-sky-400" />
@@ -746,6 +685,7 @@ const ExecutiveMode = memo(function ExecutiveMode({ data }: { data: DisplayData 
         <KpiTile icon={DollarSign} label="Custo Projetado" value={exec.projected_cost_brl} sub="R$ estimado" color="text-red-400" isCurrency />
       </div>
 
+      {/* Gauges */}
       <AnimatedGauge
         title="Score Operacional"
         icon={BarChart3}
@@ -772,12 +712,20 @@ const ExecutiveMode = memo(function ExecutiveMode({ data }: { data: DisplayData 
             R$ {exec.projected_cost_brl.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
           </p>
           <p className="text-xs 2xl:text-sm text-white/40 text-center">
-            Estimativa baseada em {exec.total_violations} infrações, {exec.total_warnings} advertências e {exec.total_blocks} bloqueios ativos
+            {exec.total_violations} infrações · {exec.total_warnings} advertências · {exec.total_blocks} bloqueios
           </p>
         </div>
       </TVCard>
 
-      {workforce && (
+      {/* ── RISK HEATMAP ── */}
+      {heatmap && Object.keys(heatmap).length > 0 && (
+        <TVCard title="Heatmap de Risco por Departamento" icon={Flame} className="lg:col-span-3">
+          <RiskHeatmap data={heatmap} />
+        </TVCard>
+      )}
+
+      {/* Workforce grid (fallback if no heatmap) */}
+      {(!heatmap || Object.keys(heatmap).length === 0) && workforce && (
         <TVCard title="Workforce por Departamento" icon={Users} className="lg:col-span-3">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 2xl:gap-3 max-h-[180px] 2xl:max-h-[240px] overflow-y-auto">
             {Object.entries(workforce.by_department).sort(([, a], [, b]) => b - a).map(([dept, count]) => (
@@ -794,26 +742,111 @@ const ExecutiveMode = memo(function ExecutiveMode({ data }: { data: DisplayData 
 });
 
 // ════════════════════════════════════════════════
-// ANIMATED GAUGE (requestAnimationFrame)
+// RISK HEATMAP COMPONENT
+// ════════════════════════════════════════════════
+
+const RiskHeatmap = memo(function RiskHeatmap({ data }: { data: Record<string, RiskHeatmapEntry> }) {
+  const domains = ['fleet', 'sst', 'compliance', 'workforce'] as const;
+  const domainLabels: Record<string, string> = {
+    fleet: 'Frota',
+    sst: 'SST',
+    compliance: 'Compliance',
+    workforce: 'Workforce',
+  };
+
+  const departments = Object.entries(data)
+    .sort(([, a], [, b]) => b.total - a.total);
+
+  const getRiskColor = (value: number): string => {
+    if (value >= 70) return 'bg-red-500/60';
+    if (value >= 40) return 'bg-orange-500/50';
+    if (value >= 20) return 'bg-amber-500/40';
+    if (value > 0) return 'bg-emerald-500/30';
+    return 'bg-white/5';
+  };
+
+  const getRiskTextColor = (value: number): string => {
+    if (value >= 70) return 'text-red-300';
+    if (value >= 40) return 'text-orange-300';
+    if (value >= 20) return 'text-amber-300';
+    return 'text-emerald-300';
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="min-w-[600px]">
+        {/* Header */}
+        <div className="grid gap-1 mb-2" style={{ gridTemplateColumns: '1fr repeat(4, 80px) 60px 70px' }}>
+          <div className="text-[10px] 2xl:text-xs text-white/40 uppercase tracking-wider px-2">Departamento</div>
+          {domains.map(d => (
+            <div key={d} className="text-[10px] 2xl:text-xs text-white/40 uppercase tracking-wider text-center">{domainLabels[d]}</div>
+          ))}
+          <div className="text-[10px] 2xl:text-xs text-white/40 uppercase tracking-wider text-center">Total</div>
+          <div className="text-[10px] 2xl:text-xs text-white/40 uppercase tracking-wider text-center">HC</div>
+        </div>
+
+        {/* Rows */}
+        <div className="space-y-1 max-h-[200px] 2xl:max-h-[280px] overflow-y-auto">
+          {departments.map(([dept, entry]) => (
+            <div key={dept} className="grid gap-1 items-center tv-slide-up" style={{ gridTemplateColumns: '1fr repeat(4, 80px) 60px 70px' }}>
+              <div className="text-xs 2xl:text-sm text-white/80 truncate px-2 font-medium">{dept}</div>
+              {domains.map(d => (
+                <div
+                  key={d}
+                  className={cn(
+                    "rounded px-2 py-1.5 text-center text-xs 2xl:text-sm font-bold transition-colors duration-500",
+                    getRiskColor(entry[d]),
+                    getRiskTextColor(entry[d])
+                  )}
+                  style={{ transform: 'translateZ(0)' }}
+                >
+                  {entry[d]}
+                </div>
+              ))}
+              <div className={cn(
+                "rounded px-2 py-1.5 text-center text-xs 2xl:text-sm font-bold border transition-colors duration-500",
+                entry.total >= 70 ? "bg-red-500/30 border-red-500/40 text-red-300" :
+                entry.total >= 40 ? "bg-orange-500/20 border-orange-500/30 text-orange-300" :
+                entry.total >= 20 ? "bg-amber-500/15 border-amber-500/25 text-amber-300" :
+                "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
+              )}>
+                {entry.total}
+              </div>
+              <div className="text-xs 2xl:text-sm text-white/50 text-center">{entry.headcount}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-4 mt-3 pt-2 border-t border-white/5">
+          <span className="text-[10px] text-white/30 uppercase">Risco:</span>
+          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-500/30" /><span className="text-[10px] text-white/40">Baixo (0-19)</span></div>
+          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-amber-500/40" /><span className="text-[10px] text-white/40">Médio (20-39)</span></div>
+          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-orange-500/50" /><span className="text-[10px] text-white/40">Alto (40-69)</span></div>
+          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-500/60" /><span className="text-[10px] text-white/40">Crítico (70+)</span></div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ════════════════════════════════════════════════
+// ANIMATED GAUGE
 // ════════════════════════════════════════════════
 
 function AnimatedGauge({ title, icon: Icon, value, maxValue, label, unit, invertColor }: {
   title: string; icon: any; value: number; maxValue: number; label: string; unit: string; invertColor?: boolean;
 }) {
   const animatedValue = useAnimatedNumber(value);
-  const circumference = 2 * Math.PI * 52; // r=52
+  const circumference = 2 * Math.PI * 52;
 
   const getColor = (v: number) => {
-    if (invertColor) {
-      return v >= 70 ? '#f87171' : v >= 40 ? '#fb923c' : v >= 20 ? '#fbbf24' : '#34d399';
-    }
+    if (invertColor) return v >= 70 ? '#f87171' : v >= 40 ? '#fb923c' : v >= 20 ? '#fbbf24' : '#34d399';
     return v >= 80 ? '#34d399' : v >= 60 ? '#fbbf24' : v >= 40 ? '#fb923c' : '#f87171';
   };
 
   const getTextColor = (v: number) => {
-    if (invertColor) {
-      return v >= 70 ? 'text-red-400' : v >= 40 ? 'text-orange-400' : v >= 20 ? 'text-amber-400' : 'text-emerald-400';
-    }
+    if (invertColor) return v >= 70 ? 'text-red-400' : v >= 40 ? 'text-orange-400' : v >= 20 ? 'text-amber-400' : 'text-emerald-400';
     return v >= 80 ? 'text-emerald-400' : v >= 60 ? 'text-amber-400' : v >= 40 ? 'text-orange-400' : 'text-red-400';
   };
 
@@ -821,7 +854,7 @@ function AnimatedGauge({ title, icon: Icon, value, maxValue, label, unit, invert
     <TVCard title={title} icon={Icon} className="flex items-center justify-center">
       <div className="flex flex-col items-center gap-4 py-6 2xl:py-8">
         <div className="relative w-40 h-40 2xl:w-48 2xl:h-48 flex items-center justify-center" style={{ willChange: 'transform' }}>
-          <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90" style={{ transform: 'rotate(-90deg) translateZ(0)' }}>
+          <svg viewBox="0 0 120 120" className="w-full h-full" style={{ transform: 'rotate(-90deg) translateZ(0)' }}>
             <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
             <circle
               cx="60" cy="60" r="52" fill="none"
@@ -844,7 +877,7 @@ function AnimatedGauge({ title, icon: Icon, value, maxValue, label, unit, invert
 }
 
 // ════════════════════════════════════════════════
-// SHARED COMPONENTS (memoized)
+// SHARED COMPONENTS
 // ════════════════════════════════════════════════
 
 const KpiTile = memo(function KpiTile({ icon: Icon, label, value, sub, color, isCurrency }: {

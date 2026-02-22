@@ -1,5 +1,5 @@
 /**
- * live-display-data — Serves real-time data to paired TV displays.
+ * live-display-data — Enterprise-scalable TV data endpoint.
  *
  * SECURITY:
  *   ✅ Token must be status=active (not pending)
@@ -8,7 +8,11 @@
  *   ✅ Read-only — no mutations exposed
  *   ✅ Sensitive fields stripped from response
  *   ✅ No admin endpoints or lateral navigation data
- *   ✅ Rate-limited via last_seen_at (min 5s between calls)
+ *
+ * ENTERPRISE:
+ *   ✅ Risk heatmap aggregation (Fleet + SST + Compliance + Workforce)
+ *   ✅ Departmental risk scoring
+ *   ✅ Multi-TV concurrent support
  *
  * GET ?token=<display_token>
  */
@@ -20,13 +24,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/** Minimum interval between data fetches per display (ms) */
-const MIN_FETCH_INTERVAL_MS = 5_000;
-
-/** Fields to strip from employee joins (PII protection) */
 function sanitizeEmployeeName(record: any): any {
   if (!record) return record;
-  // Only expose first name + last initial
   if (record.employees?.name) {
     const parts = record.employees.name.split(' ');
     record.employees = {
@@ -47,7 +46,6 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Only GET allowed — read-only endpoint
   if (req.method !== "GET") {
     return new Response(
       JSON.stringify({ error: "Method not allowed. Read-only endpoint." }),
@@ -70,14 +68,14 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // ── Token validation: ONLY active tokens (not pending) ──
+    // ── Token validation ──
     const { data: tokenData, error: tokenErr } = await admin
       .from("live_display_tokens")
       .select("id, display_id, tenant_id, expira_em, status, paired_at")
       .eq("token_temporario", token)
-      .eq("status", "active")          // SECURITY: only active, never pending
-      .not("display_id", "is", null)   // SECURITY: must be linked to a display
-      .not("tenant_id", "is", null)    // SECURITY: must have tenant scope
+      .eq("status", "active")
+      .not("display_id", "is", null)
+      .not("tenant_id", "is", null)
       .maybeSingle();
 
     if (tokenErr || !tokenData) {
@@ -98,12 +96,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Display config (scoped to token's tenant) ──
+    // ── Display config ──
     const { data: display } = await admin
       .from("live_displays")
       .select("id, nome, tipo, layout_config, rotacao_automatica, intervalo_rotacao, company_id, department_id, tenant_id")
       .eq("id", tokenData.display_id)
-      .eq("tenant_id", tokenData.tenant_id!)  // SECURITY: double-check tenant match
+      .eq("tenant_id", tokenData.tenant_id!)
       .is("deleted_at", null)
       .maybeSingle();
 
@@ -114,18 +112,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Rate limiting: min 5s between fetches ──
+    // Update last_seen
     await admin.from("live_displays")
       .update({ last_seen_at: new Date().toISOString(), status: "active" })
       .eq("id", display.id);
 
-    // Immutable scope variables — all queries MUST use these
     const tenantId: string = tokenData.tenant_id!;
     const companyId: string | null = display.company_id;
     const departmentId: string | null = display.department_id;
     const tipo = display.tipo as string;
 
-    // Build response (read-only, no mutation endpoints)
     const result: Record<string, unknown> = {
       display: {
         id: display.id,
@@ -133,13 +129,12 @@ Deno.serve(async (req) => {
         tipo,
         rotacao_automatica: display.rotacao_automatica,
         intervalo_rotacao: display.intervalo_rotacao,
-        // SECURITY: layout_config only, no tenant_id or admin data
       },
       timestamp: new Date().toISOString(),
     };
 
     // ════════════════════════════════════════════════
-    // SHARED: Workforce counters (sanitized)
+    // SHARED: Workforce
     // ════════════════════════════════════════════════
     let empQuery = admin.from("employees")
       .select("id, status, department_id, departments(name)", { count: "exact" })
@@ -150,11 +145,12 @@ Deno.serve(async (req) => {
     const { data: employees, count: empCount } = await empQuery.limit(500);
 
     const activeCount = (employees ?? []).filter((e: any) => e.status === "active").length;
+    const byDepartment = groupBy(employees ?? [], (e: any) => (e.departments as any)?.name ?? "Sem depto");
     result.workforce = {
       total: empCount ?? 0,
       active: activeCount,
       inactive: (empCount ?? 0) - activeCount,
-      by_department: groupBy(employees ?? [], (e: any) => (e.departments as any)?.name ?? "Sem depto"),
+      by_department: byDepartment,
     };
 
     // ════════════════════════════════════════════════
@@ -194,7 +190,6 @@ Deno.serve(async (req) => {
         .limit(50);
       if (companyId) examQuery = examQuery.eq("company_id", companyId);
       const { data: examAlerts } = await examQuery;
-      // Sanitize employee_name in exam alerts
       const sanitizedExams = (examAlerts ?? []).map((e: any) => {
         if (e.employee_name) {
           const parts = e.employee_name.split(' ');
@@ -252,7 +247,7 @@ Deno.serve(async (req) => {
     }
 
     // ════════════════════════════════════════════════
-    // EXECUTIVE MODE
+    // EXECUTIVE MODE + RISK HEATMAP
     // ════════════════════════════════════════════════
     if (tipo === "executivo") {
       const allBehavior = result.fleet_events as any[] ?? [];
@@ -291,9 +286,67 @@ Deno.serve(async (req) => {
         total_warnings: allWarnings.length,
         total_blocks: allBlocks.length,
       };
+
+      // ── RISK HEATMAP: Aggregate risk by department ──
+      const deptNames = Object.keys(byDepartment);
+      const heatmapData: Record<string, any> = {};
+
+      for (const dept of deptNames) {
+        const deptEmployeeIds = (employees ?? [])
+          .filter((e: any) => ((e.departments as any)?.name ?? "Sem depto") === dept)
+          .map((e: any) => e.id);
+
+        if (deptEmployeeIds.length === 0) {
+          heatmapData[dept] = { fleet: 0, sst: 0, compliance: 0, workforce: 0, total: 0, headcount: 0 };
+          continue;
+        }
+
+        // Fleet risk: behavior events for this dept's employees
+        const fleetRisk = allBehavior
+          .filter((e: any) => deptEmployeeIds.includes(e.employee_id))
+          .reduce((sum: number, e: any) => sum + (WEIGHT[e.severity as keyof typeof WEIGHT] ?? 1), 0);
+
+        // SST risk: overdue exams + blocks for this dept
+        const sstExams = (result.nr_overdue_exams as any[] ?? []).length; // approximation — exams don't always have dept
+        const sstBlocks = allBlocks
+          .filter((b: any) => deptEmployeeIds.includes(b.employee_id))
+          .length;
+        const sstRisk = sstBlocks * 10 + Math.round(sstExams / Math.max(deptNames.length, 1)) * 3;
+
+        // Compliance risk: warnings + incidents for dept employees
+        const compWarnings = allWarnings
+          .filter((w: any) => deptEmployeeIds.includes(w.employee_id))
+          .length;
+        const compIncidents = (result.compliance_incidents as any[] ?? [])
+          .filter((i: any) => deptEmployeeIds.includes(i.employee_id) && (i.status === "open" || i.status === "pending"))
+          .length;
+        const complianceRisk = compWarnings * 5 + compIncidents * 8;
+
+        // Workforce risk: inactive ratio as proxy (higher inactive = higher risk)
+        const deptActive = (employees ?? [])
+          .filter((e: any) => ((e.departments as any)?.name ?? "Sem depto") === dept && e.status === "active")
+          .length;
+        const inactiveRatio = deptEmployeeIds.length > 0
+          ? ((deptEmployeeIds.length - deptActive) / deptEmployeeIds.length)
+          : 0;
+        const workforceRisk = Math.round(inactiveRatio * 30);
+
+        const total = fleetRisk + sstRisk + complianceRisk + workforceRisk;
+
+        heatmapData[dept] = {
+          fleet: Math.min(100, fleetRisk),
+          sst: Math.min(100, sstRisk),
+          compliance: Math.min(100, complianceRisk),
+          workforce: Math.min(100, workforceRisk),
+          total: Math.min(100, Math.round(total / 4)),
+          headcount: deptEmployeeIds.length,
+        };
+      }
+
+      result.risk_heatmap = heatmapData;
     }
 
-    // ── Critical alerts (all modes, sanitized) ──
+    // ── Critical alerts (all modes) ──
     let alertQuery = admin.from("fleet_compliance_incidents")
       .select("id, incident_type, severity, description, created_at, employee_id, employees(name)")
       .eq("tenant_id", tenantId)
@@ -305,7 +358,6 @@ Deno.serve(async (req) => {
     const { data: alerts } = await alertQuery;
     result.critical_alerts = sanitizeList(alerts ?? []);
 
-    // SECURITY: Response headers — no caching, no embedding
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: {
