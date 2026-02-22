@@ -287,20 +287,20 @@ export default function LiveDisplayAdmin() {
             </div>
             <div>
               <Label>Empresa (opcional)</Label>
-              <Select value={formCompanyId} onValueChange={setFormCompanyId}>
+              <Select value={formCompanyId || '__all__'} onValueChange={v => setFormCompanyId(v === '__all__' ? '' : v)}>
                 <SelectTrigger><SelectValue placeholder="Todas as empresas" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as empresas</SelectItem>
+                  <SelectItem value="__all__">Todas as empresas</SelectItem>
                   {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label>Departamento (opcional)</Label>
-              <Select value={formDeptId} onValueChange={setFormDeptId}>
+              <Select value={formDeptId || '__all__'} onValueChange={v => setFormDeptId(v === '__all__' ? '' : v)}>
                 <SelectTrigger><SelectValue placeholder="Todos os departamentos" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os departamentos</SelectItem>
+                  <SelectItem value="__all__">Todos os departamentos</SelectItem>
                   {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                 </SelectContent>
               </Select>
