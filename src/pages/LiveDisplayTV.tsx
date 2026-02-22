@@ -172,13 +172,45 @@ export default function LiveDisplayTV() {
     return () => clearInterval(intervalRef.current);
   }, [data, fetchData]);
 
+  // ── SECURITY: Lock down TV display ──
   useEffect(() => {
-    const handler = () => {
+    // Fullscreen on double-click
+    const dblClickHandler = () => {
       if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
       else document.exitFullscreen?.();
     };
-    document.addEventListener('dblclick', handler);
-    return () => document.removeEventListener('dblclick', handler);
+
+    // Disable right-click context menu
+    const contextMenuHandler = (e: MouseEvent) => { e.preventDefault(); };
+
+    // Block keyboard shortcuts that could navigate away
+    const keydownHandler = (e: KeyboardEvent) => {
+      // Block F5, Ctrl+R (refresh is ok but block navigation keys)
+      if (
+        e.key === 'F12' ||                                    // DevTools
+        (e.ctrlKey && e.key === 'l') ||                       // Address bar
+        (e.ctrlKey && e.key === 'u') ||                       // View source
+        (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) // Back/Forward
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    // Prevent text selection (TV display shouldn't be interactive)
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
+
+    document.addEventListener('dblclick', dblClickHandler);
+    document.addEventListener('contextmenu', contextMenuHandler);
+    document.addEventListener('keydown', keydownHandler);
+
+    return () => {
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
+      document.removeEventListener('dblclick', dblClickHandler);
+      document.removeEventListener('contextmenu', contextMenuHandler);
+      document.removeEventListener('keydown', keydownHandler);
+    };
   }, []);
 
   // ═══════════════════════════════════════════════════

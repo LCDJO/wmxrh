@@ -2,6 +2,12 @@
  * display-pair-request — Called by the TV at /display to request a pairing code.
  * No auth needed. Creates a pending session with a 6-digit pairing code.
  *
+ * SECURITY:
+ *   ✅ Rate limited: max 5 pending sessions per IP per 10 min
+ *   ✅ Pairing code expires in 10 min
+ *   ✅ Token is random UUID, not guessable
+ *   ✅ No tenant data exposed until paired
+ *
  * POST — body: {} (empty)
  * Returns: { pairing_code, session_id, expires_in_minutes }
  */
@@ -13,8 +19,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const MAX_PENDING_PER_WINDOW = 5;
+
 function generatePairingCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
   for (let i = 0; i < 6; i++) {
     code += chars[Math.floor(Math.random() * chars.length)];
@@ -27,19 +35,47 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Expire any old pending sessions with same pairing codes older than 10 min
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      ?? req.headers.get("cf-connecting-ip")
+      ?? "unknown";
+
+    // ── Rate limiting: max pending sessions per IP ──
     const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+    // Expire old pending sessions
     await admin
       .from("live_display_tokens")
       .update({ status: "expired" })
       .eq("status", "pending")
       .lt("created_at", tenMinAgo)
       .not("pairing_code", "is", null);
+
+    // Count recent pending from same IP
+    const { count: recentCount } = await admin
+      .from("live_display_tokens")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+      .eq("paired_ip", clientIp)
+      .gte("created_at", tenMinAgo);
+
+    if ((recentCount ?? 0) >= MAX_PENDING_PER_WINDOW) {
+      return new Response(
+        JSON.stringify({ error: "Too many pairing requests. Try again in a few minutes." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "300" } }
+      );
+    }
 
     // Generate unique pairing code
     let pairingCode = generatePairingCode();
@@ -56,10 +92,10 @@ Deno.serve(async (req) => {
       attempts++;
     }
 
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     const tokenValue = crypto.randomUUID() + "-" + crypto.randomUUID();
 
-    // Create a pending session without display_id (will be set on pairing)
+    // Create a pending session — NO tenant data, NO display link
     const { data: session, error } = await admin
       .from("live_display_tokens")
       .insert({
@@ -69,6 +105,8 @@ Deno.serve(async (req) => {
         expira_em: expiresAt,
         status: "pending",
         pairing_code: pairingCode,
+        paired_ip: clientIp,
+        paired_user_agent: req.headers.get("user-agent") ?? "unknown",
       })
       .select("id")
       .single();
@@ -81,6 +119,7 @@ Deno.serve(async (req) => {
       );
     }
 
+    // SECURITY: Only return minimal info — no tenant/display data
     return new Response(
       JSON.stringify({
         pairing_code: pairingCode,
