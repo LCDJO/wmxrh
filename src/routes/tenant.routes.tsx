@@ -5,6 +5,7 @@ import { lazy, Suspense } from 'react';
 import type { RouteObject } from 'react-router-dom';
 import { Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/domains/security';
+import type { NavKey } from '@/domains/security/permissions';
 import { AppLayout } from '@/components/layout/AppLayout';
 import Dashboard from '@/pages/Dashboard';
 import Employees from '@/pages/Employees';
@@ -58,8 +59,8 @@ const TenantOnboarding = lazy(() => import('@/pages/TenantOnboarding'));
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
 
 /** Helper to wrap with ProtectedRoute */
-function pr(navKey: string, element: React.ReactNode) {
-  return <ProtectedRoute navKey={navKey as any}>{element}</ProtectedRoute>;
+function pr(navKey: NavKey, element: React.ReactNode) {
+  return <ProtectedRoute navKey={navKey}>{element}</ProtectedRoute>;
 }
 
 export const tenantRoutes: RouteObject[] = [

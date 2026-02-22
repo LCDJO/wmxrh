@@ -12,11 +12,61 @@ import { useCompanies, useEmployeesSimple, useQueryScope } from '@/domains/hooks
 import { supabase } from '@/integrations/supabase/client';
 import { applyScope, type QueryScope } from '@/domains/shared/scoped-query';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
+import type { Json } from '@/integrations/supabase/types';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   RadialBarChart, RadialBar, LineChart, Line, CartesianGrid,
   PieChart as RePieChart, Pie, Cell,
 } from 'recharts';
+
+// ── Domain types ──
+
+/** Row shape returned by workforce_insights table */
+interface WorkforceInsight {
+  id: string;
+  tenant_id: string;
+  company_id: string | null;
+  company_group_id?: string | null;
+  group_id?: string | null;
+  insight_type: string;
+  severity: string;
+  descricao: string;
+  criado_em: string;
+  dados_origem_json: Json | null;
+}
+
+/** Parsed shape of dados_origem_json for financial fields */
+interface InsightOriginData {
+  financial_exposure?: number;
+  recommended_action?: string;
+  health_score?: { overall_score?: number };
+}
+
+/** Lightweight employee returned by listSimple */
+interface SimpleEmployee {
+  id: string;
+  company_id: string;
+  department_id: string | null;
+  position_id: string | null;
+  current_salary: number | null;
+  status: string;
+  hire_date?: string | null;
+}
+
+/** Company row used in this page */
+interface SimpleCompany {
+  id: string;
+  name: string;
+  company_group_id: string | null;
+}
+
+/** Safely cast dados_origem_json to InsightOriginData */
+function parseOriginData(json: Json | null): InsightOriginData {
+  if (json && typeof json === 'object' && !Array.isArray(json)) {
+    return json as unknown as InsightOriginData;
+  }
+  return {};
+}
 
 /**
  * Fetch workforce insights using scoped query (applyScope).
@@ -25,7 +75,7 @@ import {
 function useWorkforceInsights(qs: QueryScope | null) {
   return useQuery({
     queryKey: ['workforce-insights', qs?.tenantId, qs?.scopeLevel, qs?.groupId, qs?.companyId],
-    queryFn: async () => {
+    queryFn: async (): Promise<WorkforceInsight[]> => {
       if (!qs) return [];
       const base = supabase
         .from('workforce_insights')
@@ -35,7 +85,7 @@ function useWorkforceInsights(qs: QueryScope | null) {
       const scoped = applyScope(base, qs, { softDeleteColumn: 'criado_em', skipSoftDelete: true });
       const { data, error } = await scoped;
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as unknown as WorkforceInsight[];
     },
     enabled: !!qs,
   });
@@ -58,11 +108,12 @@ export default function WorkforceIntelligenceDashboard() {
     const reachableCompanies = accessGraph.getReachableCompanies();
     const reachableGroups = accessGraph.getReachableGroups();
 
-    return insights.filter((i: any) => {
+    return insights.filter((i) => {
       if (i.company_id && reachableCompanies.has(i.company_id)) return true;
-      if (i.company_group_id && reachableGroups.has(i.company_group_id)) return true;
+      const groupId = i.company_group_id ?? i.group_id;
+      if (groupId && reachableGroups.has(groupId)) return true;
       // Tenant-level insights only visible with tenant scope
-      if (!i.company_id && !i.company_group_id) return false;
+      if (!i.company_id && !groupId) return false;
       return false;
     });
   }, [insights, accessGraph]);
@@ -70,10 +121,11 @@ export default function WorkforceIntelligenceDashboard() {
   // UI scope narrowing (on top of Access Graph filter)
   const scopedInsights = useMemo(() => {
     if (scope.level === 'company' && scope.companyId) {
-      return securedInsights.filter((i: any) => i.company_id === scope.companyId);
+      return securedInsights.filter((i) => i.company_id === scope.companyId);
     }
     if (scope.level === 'group' && scope.groupId) {
-      return securedInsights.filter((i: any) => i.company_group_id === scope.groupId);
+      const groupId = scope.groupId;
+      return securedInsights.filter((i) => (i.company_group_id ?? i.group_id) === groupId);
     }
     return securedInsights;
   }, [securedInsights, scope]);
@@ -113,17 +165,18 @@ export default function WorkforceIntelligenceDashboard() {
 
 // ── Tenant View ──
 function TenantView({ insights, employees, companies, totalPayroll, tenantName }: {
-  insights: any[]; employees: any[]; companies: any[]; totalPayroll: number; tenantName?: string;
+  insights: WorkforceInsight[]; employees: SimpleEmployee[]; companies: SimpleCompany[]; totalPayroll: number; tenantName?: string;
 }) {
-  const criticalCount = insights.filter((i: any) => i.severity === 'critical').length;
-  const warningCount = insights.filter((i: any) => i.severity === 'warning').length;
-  const totalExposure = insights.reduce((s: number, i: any) => {
-    return s + ((i.dados_origem_json as any)?.financial_exposure ?? 0);
+  const criticalCount = insights.filter((i) => i.severity === 'critical').length;
+  const warningCount = insights.filter((i) => i.severity === 'warning').length;
+  const totalExposure = insights.reduce((s: number, i) => {
+    return s + (parseOriginData(i.dados_origem_json).financial_exposure ?? 0);
   }, 0);
 
   const latestHealthScore = useMemo(() => {
-    const withScore = insights.find((i: any) => (i.dados_origem_json as any)?.health_score);
-    return (withScore as any)?.dados_origem_json?.health_score?.overall_score ?? null;
+    const withScore = insights.find((i) => parseOriginData(i.dados_origem_json).health_score);
+    if (!withScore) return null;
+    return parseOriginData(withScore.dados_origem_json).health_score?.overall_score ?? null;
   }, [insights]);
 
   // Salary distribution buckets
@@ -149,12 +202,12 @@ function TenantView({ insights, employees, companies, totalPayroll, tenantName }
   ];
 
   // Legal risk insights
-  const legalRisks = insights.filter((i: any) =>
+  const legalRisks = insights.filter((i) =>
     i.insight_type === 'LEGAL_RISK' || i.insight_type === 'COMPLIANCE_WARNING'
   );
 
   // Health-related
-  const healthInsights = insights.filter((i: any) =>
+  const healthInsights = insights.filter((i) =>
     i.insight_type === 'HEALTH_RISK' || i.insight_type === 'PCMSO_WARNING'
   );
 
@@ -211,18 +264,21 @@ function TenantView({ insights, employees, companies, totalPayroll, tenantName }
           </div>
           {legalRisks.length > 0 ? (
             <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-              {legalRisks.slice(0, 6).map((alert: any) => (
-                <div key={alert.id} className={`p-3 rounded-lg border ${alert.severity === 'critical' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-secondary/30'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`inline-block h-2 w-2 rounded-full ${alert.severity === 'critical' ? 'bg-destructive' : 'bg-warning'}`} />
-                    <span className="text-xs font-semibold uppercase text-muted-foreground">{alert.insight_type?.replace(/_/g, ' ')}</span>
+              {legalRisks.slice(0, 6).map((alert) => {
+                const origin = parseOriginData(alert.dados_origem_json);
+                return (
+                  <div key={alert.id} className={`p-3 rounded-lg border ${alert.severity === 'critical' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-secondary/30'}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`inline-block h-2 w-2 rounded-full ${alert.severity === 'critical' ? 'bg-destructive' : 'bg-warning'}`} />
+                      <span className="text-xs font-semibold uppercase text-muted-foreground">{alert.insight_type?.replace(/_/g, ' ')}</span>
+                    </div>
+                    <p className="text-sm text-card-foreground leading-snug">{alert.descricao}</p>
+                    {origin.recommended_action && (
+                      <p className="text-xs text-muted-foreground mt-1">→ {origin.recommended_action}</p>
+                    )}
                   </div>
-                  <p className="text-sm text-card-foreground leading-snug">{alert.descricao}</p>
-                  {(alert.dados_origem_json as any)?.recommended_action && (
-                    <p className="text-xs text-muted-foreground mt-1">→ {(alert.dados_origem_json as any).recommended_action}</p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="flex items-center justify-center h-32">
@@ -256,7 +312,7 @@ function TenantView({ insights, employees, companies, totalPayroll, tenantName }
               <p className="text-xs text-muted-foreground mt-0.5">Exposição estimada</p>
             </div>
           </div>
-          <RiskList insights={insights.filter(i => (i.dados_origem_json as any)?.financial_exposure > 0)} maxItems={4} />
+          <RiskList insights={insights.filter(i => (parseOriginData(i.dados_origem_json).financial_exposure ?? 0) > 0)} maxItems={4} />
         </div>
 
         {/* 3 — Saúde Ocupacional */}
@@ -302,7 +358,7 @@ function TenantView({ insights, employees, companies, totalPayroll, tenantName }
             <div className="flex-1 min-w-0">
               {healthInsights.length > 0 ? (
                 <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                  {healthInsights.slice(0, 4).map((h: any) => (
+                  {healthInsights.slice(0, 4).map((h) => (
                     <div key={h.id} className="flex items-start gap-2 p-2 rounded-md bg-secondary/30 border border-border">
                       <HeartPulse className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
                       <p className="text-xs text-card-foreground leading-snug">{h.descricao}</p>
@@ -380,11 +436,11 @@ function TenantView({ insights, employees, companies, totalPayroll, tenantName }
 }
 
 // ── Group View ──
-function GroupView({ insights, companies, employees }: { insights: any[]; companies: any[]; employees: any[] }) {
+function GroupView({ insights, companies, employees }: { insights: WorkforceInsight[]; companies: SimpleCompany[]; employees: SimpleEmployee[] }) {
   const costByCompany = useMemo(() => {
     return companies.map(c => {
       const compEmps = employees.filter(e => e.company_id === c.id);
-      const cost = compEmps.reduce((s: number, e: any) => s + (e.current_salary || 0), 0);
+      const cost = compEmps.reduce((s: number, e) => s + (e.current_salary || 0), 0);
       return { name: c.name.length > 18 ? c.name.slice(0, 18) + '…' : c.name, custo: cost };
     }).filter(c => c.custo > 0).sort((a, b) => b.custo - a.custo);
   }, [companies, employees]);
@@ -455,8 +511,8 @@ function GroupView({ insights, companies, employees }: { insights: any[]; compan
 }
 
 // ── Company View ──
-function CompanyView({ insights, employees, totalPayroll }: { insights: any[]; employees: any[]; totalPayroll: number }) {
-  const legalAlerts = insights.filter((i: any) => i.insight_type === 'LEGAL_RISK' || i.insight_type === 'COMPLIANCE_WARNING');
+function CompanyView({ insights, employees, totalPayroll }: { insights: WorkforceInsight[]; employees: SimpleEmployee[]; totalPayroll: number }) {
+  const legalAlerts = insights.filter((i) => i.insight_type === 'LEGAL_RISK' || i.insight_type === 'COMPLIANCE_WARNING');
 
   const salaryTrend = useMemo(() => {
     const months: Record<string, { total: number; count: number }> = {};
@@ -494,18 +550,21 @@ function CompanyView({ insights, employees, totalPayroll }: { insights: any[]; e
           </div>
           {legalAlerts.length > 0 ? (
             <div className="space-y-3 max-h-80 overflow-y-auto">
-              {legalAlerts.map((alert: any) => (
-                <div key={alert.id} className={`p-3 rounded-lg border ${alert.severity === 'critical' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-secondary/30'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`inline-block h-2 w-2 rounded-full ${alert.severity === 'critical' ? 'bg-destructive' : 'bg-warning'}`} />
-                    <span className="text-xs font-semibold uppercase text-muted-foreground">{alert.insight_type}</span>
+              {legalAlerts.map((alert) => {
+                const origin = parseOriginData(alert.dados_origem_json);
+                return (
+                  <div key={alert.id} className={`p-3 rounded-lg border ${alert.severity === 'critical' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-secondary/30'}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`inline-block h-2 w-2 rounded-full ${alert.severity === 'critical' ? 'bg-destructive' : 'bg-warning'}`} />
+                      <span className="text-xs font-semibold uppercase text-muted-foreground">{alert.insight_type}</span>
+                    </div>
+                    <p className="text-sm text-card-foreground">{alert.descricao}</p>
+                    {origin.recommended_action && (
+                      <p className="text-xs text-muted-foreground mt-1">→ {origin.recommended_action}</p>
+                    )}
                   </div>
-                  <p className="text-sm text-card-foreground">{alert.descricao}</p>
-                  {(alert.dados_origem_json as any)?.recommended_action && (
-                    <p className="text-xs text-muted-foreground mt-1">→ {(alert.dados_origem_json as any).recommended_action}</p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground py-8 text-center">Nenhum alerta legal.</p>
@@ -537,27 +596,30 @@ function CompanyView({ insights, employees, totalPayroll }: { insights: any[]; e
 }
 
 // ── Shared Risk List ──
-function RiskList({ insights, maxItems = 10 }: { insights: any[]; maxItems?: number }) {
+function RiskList({ insights, maxItems = 10 }: { insights: WorkforceInsight[]; maxItems?: number }) {
   if (insights.length === 0) {
     return <p className="text-sm text-muted-foreground py-6 text-center">Nenhum risco detectado.</p>;
   }
 
   return (
     <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-      {insights.slice(0, maxItems).map((i: any) => (
-        <div key={i.id} className={`flex items-start gap-3 p-3 rounded-lg border ${i.severity === 'critical' ? 'border-destructive/30 bg-destructive/5' : i.severity === 'warning' ? 'border-warning/30 bg-warning/5' : 'border-border'}`}>
-          <span className={`mt-0.5 inline-block h-2.5 w-2.5 rounded-full shrink-0 ${i.severity === 'critical' ? 'bg-destructive' : i.severity === 'warning' ? 'bg-warning' : 'bg-info'}`} />
-          <div className="min-w-0">
-            <p className="text-sm text-card-foreground leading-snug">{i.descricao}</p>
-            <div className="flex gap-3 mt-1">
-              <span className="text-xs text-muted-foreground">{i.insight_type?.replace(/_/g, ' ')}</span>
-              {(i.dados_origem_json as any)?.financial_exposure > 0 && (
-                <span className="text-xs font-medium text-destructive">R$ {((i.dados_origem_json as any).financial_exposure / 1000).toFixed(0)}k exposição</span>
-              )}
+      {insights.slice(0, maxItems).map((i) => {
+        const origin = parseOriginData(i.dados_origem_json);
+        return (
+          <div key={i.id} className={`flex items-start gap-3 p-3 rounded-lg border ${i.severity === 'critical' ? 'border-destructive/30 bg-destructive/5' : i.severity === 'warning' ? 'border-warning/30 bg-warning/5' : 'border-border'}`}>
+            <span className={`mt-0.5 inline-block h-2.5 w-2.5 rounded-full shrink-0 ${i.severity === 'critical' ? 'bg-destructive' : i.severity === 'warning' ? 'bg-warning' : 'bg-info'}`} />
+            <div className="min-w-0">
+              <p className="text-sm text-card-foreground leading-snug">{i.descricao}</p>
+              <div className="flex gap-3 mt-1">
+                <span className="text-xs text-muted-foreground">{i.insight_type?.replace(/_/g, ' ')}</span>
+                {(origin.financial_exposure ?? 0) > 0 && (
+                  <span className="text-xs font-medium text-destructive">R$ {((origin.financial_exposure ?? 0) / 1000).toFixed(0)}k exposição</span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
