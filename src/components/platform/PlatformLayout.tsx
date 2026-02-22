@@ -5,7 +5,7 @@
  */
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
+import { usePlatformIdentity, type PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import type { PlatformPermission } from '@/domains/platform/platform-permissions';
 import { getSavedMenuOrder, applyOrder } from '@/lib/platform-menu-order';
@@ -42,6 +42,7 @@ import {
   CheckSquare,
   BookOpen,
   FileSignature,
+  FileText,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -75,6 +76,8 @@ interface PlatformNavItem {
   icon: typeof LayoutDashboard;
   /** Permission required to see this item. Omit = always visible. */
   requiredPermission?: PlatformPermission;
+  /** Role required to see this item. Stricter than permission — checked against identity.role. */
+  requiredRole?: PlatformRoleType;
   children?: NavChild[];
 }
 
@@ -119,6 +122,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
       { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'audit.view' },
+      { to: '/platform/logs', label: 'Logs do Sistema', icon: FileText, requiredRole: 'platform_super_admin' },
       { to: '/platform/governance-dashboard', label: 'Governance Dashboard', icon: BarChart3, requiredPermission: 'security.view' },
     ],
   },
@@ -413,6 +417,7 @@ export default function PlatformLayout() {
   const visibleSections = useMemo(() => {
     return NAV_SECTIONS.map(section => {
       let items = section.items.filter(item => {
+        if (item.requiredRole && identity?.role !== item.requiredRole) return false;
         if (!item.requiredPermission) return true;
         return can(item.requiredPermission);
       }).map(item => {
@@ -439,7 +444,7 @@ export default function PlatformLayout() {
 
       return { ...section, items };
     }).filter(section => section.items.length > 0);
-  }, [can, savedOrder]);
+  }, [can, savedOrder, identity?.role]);
 
   const handleLogout = async () => {
     await signOut();
