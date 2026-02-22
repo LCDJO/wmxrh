@@ -39,6 +39,7 @@ import LegalIntelligenceDashboard from '@/pages/LegalIntelligenceDashboard';
 import EsocialGovernanceDashboard from '@/pages/EsocialGovernanceDashboard';
 import FleetDashboard from '@/pages/FleetDashboard';
 import LiveDisplayAdmin from '@/pages/LiveDisplayAdmin';
+import OperationalCommandCenter from '@/pages/OperationalCommandCenter';
 import EpiCatalog from '@/pages/EpiCatalog';
 import EpiDelivery from '@/pages/EpiDelivery';
 import EpiDashboard from '@/pages/EpiDashboard';
@@ -113,6 +114,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/fleet-dashboard', element: pr('dashboard', <FleetDashboard />) },
       // ── Live Display ──
       { path: '/live-display', element: pr('dashboard', <LiveDisplayAdmin />) },
+      { path: '/command-center', element: pr('dashboard', <OperationalCommandCenter />) },
       // ── Agreements / Communication ──
       { path: '/agreements', element: pr('employees', <AgreementManagement />) },
       { path: '/communication-center', element: <TenantCommunicationCenter /> },
