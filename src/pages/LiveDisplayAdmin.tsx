@@ -118,9 +118,9 @@ export default function LiveDisplayAdmin() {
     if (!tenantId) return;
     const tokenValue = crypto.randomUUID() + '-' + crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-    await supabase.from('live_display_tokens').update({ is_active: false }).eq('display_id', display.id);
+    await supabase.from('live_display_tokens').update({ status: 'expired' as const }).eq('display_id', display.id);
     const { error } = await supabase.from('live_display_tokens').insert({
-      display_id: display.id, tenant_id: tenantId, token: tokenValue, expires_at: expiresAt,
+      display_id: display.id, tenant_id: tenantId, token_temporario: tokenValue, expira_em: expiresAt, status: 'pending' as const,
     });
     if (error) {
       toast({ title: 'Erro ao gerar token', description: error.message, variant: 'destructive' });
