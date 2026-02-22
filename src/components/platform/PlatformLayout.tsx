@@ -98,18 +98,18 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Gestão',
     items: [
       { to: '/platform/tenants', label: 'Clientes', icon: Building2, requiredPermission: 'tenant.view' },
-      { to: '/platform/users', label: 'Usuários', icon: Users, requiredPermission: 'platform_user.view' },
       { to: '/platform/modules', label: 'Módulos', icon: Puzzle, requiredPermission: 'module.view' },
       { to: '/platform/plans', label: 'Planos', icon: Package, requiredPermission: 'plan.manage' },
     ],
   },
   {
-    label: 'Segurança',
+    label: 'Usuários e Permissões',
     items: [
-      { to: '/platform/governance-dashboard', label: 'Governance Dashboard', icon: BarChart3, requiredPermission: 'security.view' },
+      { to: '/platform/users', label: 'Usuários', icon: Users, requiredPermission: 'platform_user.view' },
+      { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
       {
         to: '/platform/security',
-        label: 'Segurança',
+        label: 'Cargos e Permissões',
         icon: ShieldCheck,
         requiredPermission: 'security.view',
         children: [
@@ -117,11 +117,24 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/security/permissions', label: 'Permissões' },
           { to: '/platform/security/access-graph', label: 'Access Graph' },
           { to: '/platform/security/unified-graph', label: 'Unified Graph' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Segurança',
+    items: [
+      { to: '/platform/governance-dashboard', label: 'Governance Dashboard', icon: BarChart3, requiredPermission: 'security.view' },
+      {
+        to: '/platform/security/governance',
+        label: 'Governança',
+        icon: Shield,
+        requiredPermission: 'security.view',
+        children: [
           { to: '/platform/security/governance', label: 'Governança' },
           { to: '/platform/security/governance-ai', label: 'Governance AI' },
         ],
       },
-      { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
       { to: '/platform/logs', label: 'Logs do Sistema', icon: FileText, requiredRole: 'platform_super_admin' },
     ],
   },
