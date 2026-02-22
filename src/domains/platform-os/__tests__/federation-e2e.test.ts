@@ -150,7 +150,7 @@ describe('Federation Architecture — Full E2E', () => {
       core.registerAll();
 
       const allModules = core.list();
-      expect(allModules.length).toBe(4);
+      expect(allModules.length).toBe(5);
 
       const keys = allModules.map(m => m.key);
       expect(keys).toContain('core_hr');
@@ -218,7 +218,7 @@ describe('Federation Architecture — Full E2E', () => {
 
       const bootEvent = events.emitted.find(e => e.type === 'platform:all_modules_registered');
       expect(bootEvent).toBeTruthy();
-      expect(bootEvent!.payload.count).toBe(4);
+      expect(bootEvent!.payload.count).toBe(5);
       expect(bootEvent!.payload.keys).toContain('core_hr');
     });
 
@@ -895,7 +895,7 @@ describe('Federation Architecture — Full E2E', () => {
     it('complete flow: boot → tenant setup → activate → resolve widgets → navigation', async () => {
       // ── Step 1: Boot all modules ──
       core.registerAll();
-      expect(core.list().length).toBe(4);
+      expect(core.list().length).toBe(5);
 
       // ── Step 2: Configure tenant ──
       const tenantId = 'acme_corp';
@@ -983,7 +983,7 @@ describe('Federation Architecture — Full E2E', () => {
       const tenantBModules = core.listForTenant('tenant_b').map(m => m.key);
       const tenantCModules = core.listForTenant('tenant_c').map(m => m.key);
 
-      expect(tenantAModules.length).toBe(4);
+      expect(tenantAModules.length).toBe(5);
       expect(tenantBModules).not.toContain('compensation_engine');
       expect(tenantBModules).toContain('core_hr');
       expect(tenantCModules).not.toContain('reporting');
