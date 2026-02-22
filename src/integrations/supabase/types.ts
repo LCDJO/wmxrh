@@ -3025,6 +3025,64 @@ export type Database = {
           },
         ]
       }
+      display_connection_logs: {
+        Row: {
+          created_at: string
+          display_id: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          tenant_id: string | null
+          token_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_id?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          tenant_id?: string | null
+          token_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_id?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          tenant_id?: string | null
+          token_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "display_connection_logs_display_id_fkey"
+            columns: ["display_id"]
+            isOneToOne: false
+            referencedRelation: "live_displays"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "display_connection_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "display_connection_logs_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "live_display_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       display_event_queue: {
         Row: {
           channel: string
@@ -14037,6 +14095,7 @@ export type Database = {
       }
       cleanup_expired_display_events: { Args: never; Returns: number }
       cleanup_expired_events: { Args: never; Returns: number }
+      cleanup_old_display_logs: { Args: never; Returns: undefined }
       compute_risk_heatmap: {
         Args: {
           p_days_back?: number

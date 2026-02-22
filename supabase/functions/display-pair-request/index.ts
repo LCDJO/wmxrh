@@ -119,6 +119,17 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ── CONNECTION LOG: pairing request ──
+    admin.from("display_connection_logs").insert({
+      display_id: null,
+      token_id: session.id,
+      tenant_id: null,
+      event_type: "pair_request",
+      ip_address: clientIp,
+      user_agent: req.headers.get("user-agent") ?? "unknown",
+      metadata: { pairing_code: pairingCode },
+    }).then(() => {}).catch(() => {});
+
     // SECURITY: Only return minimal info — no tenant/display data
     return new Response(
       JSON.stringify({

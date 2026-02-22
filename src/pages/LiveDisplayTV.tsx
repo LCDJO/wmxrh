@@ -89,6 +89,9 @@ export default function LiveDisplayTV() {
   const tokenFromUrl = params.get('token');
   const isDisplayRoute = location.pathname === '/display';
 
+  // ── SECURITY: Block direct URL access without token (non-pairing routes) ──
+  const isValidAccess = isDisplayRoute || !!tokenFromUrl;
+
   const [pairingState, setPairingState] = useState<PairingState | null>(null);
   const [activeToken, setActiveToken] = useState<string | null>(tokenFromUrl);
   const [rawData, setRawData] = useState<DisplayData | null>(null);
@@ -98,8 +101,9 @@ export default function LiveDisplayTV() {
   const backoffRef = useRef(10_000);
   const clock = useLiveClock();
 
-  // ── Performance: Local cache + render throttle ──
-  const cache = useDisplayCache<DisplayData>({ key: activeToken ?? 'default', ttlMs: 300_000 });
+  // ── Performance: Local cache (namespaced by token) + render throttle ──
+  const cacheKey = activeToken ? `tok_${activeToken.slice(-8)}` : 'none';
+  const cache = useDisplayCache<DisplayData>({ key: cacheKey, ttlMs: 300_000 });
 
   // Initialize from cache on mount
   useEffect(() => {
@@ -111,6 +115,13 @@ export default function LiveDisplayTV() {
 
   // Throttle renders to max 2/sec for smooth TV display
   const data = useRenderThrottle(rawData, 500);
+
+  // ── SECURITY: Clear cache on token change ──
+  useEffect(() => {
+    if (!activeToken) {
+      cache.clear();
+    }
+  }, [activeToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Rotation Mode ──
   const rotationEnabled = data?.display?.rotacao_automatica ?? false;
@@ -276,6 +287,20 @@ export default function LiveDisplayTV() {
   // ═══════════════════════════════════════════════════════
   // PAIRING SCREENS
   // ═══════════════════════════════════════════════════════
+
+  // ── SECURITY: Block access without valid token or pairing route ──
+  if (!isValidAccess) {
+    return (
+      <div className="min-h-screen bg-[#060610] flex items-center justify-center text-white">
+        <style>{TV_STYLES}</style>
+        <div className="text-center space-y-4">
+          <Lock className="h-20 w-20 mx-auto text-red-400/60" />
+          <h1 className="text-3xl font-bold">Acesso Negado</h1>
+          <p className="text-white/50 text-lg">Token de display obrigatório. Acesse <span className="text-primary font-mono">/display</span> para parear.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isDisplayRoute && !activeToken) {
     if (!pairingState || pairingState.phase === 'requesting') {

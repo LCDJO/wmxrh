@@ -117,6 +117,23 @@ Deno.serve(async (req) => {
       .update({ last_seen_at: new Date().toISOString(), status: "active" })
       .eq("id", display.id);
 
+    // ── CONNECTION LOG ──
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      ?? req.headers.get("cf-connecting-ip")
+      ?? "unknown";
+    const clientUa = req.headers.get("user-agent") ?? "unknown";
+
+    // Fire-and-forget — don't block response
+    admin.from("display_connection_logs").insert({
+      display_id: display.id,
+      token_id: tokenData.id,
+      tenant_id: tenantId,
+      event_type: "data_fetch",
+      ip_address: clientIp,
+      user_agent: clientUa,
+      metadata: { tipo, timestamp: new Date().toISOString() },
+    }).then(() => {}).catch(() => {});
+
     const tenantId: string = tokenData.tenant_id!;
     const companyId: string | null = display.company_id;
     const departmentId: string | null = display.department_id;
