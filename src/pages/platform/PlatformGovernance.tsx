@@ -8,8 +8,9 @@
  */
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, ShieldCheck, Brain } from 'lucide-react';
+import { Eye, ShieldCheck, Brain, HelpCircle } from 'lucide-react';
 import { useTenant } from '@/contexts/TenantContext';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { GovernanceAuditDashboard } from '@/components/governance/GovernanceAuditDashboard';
 import { ComplianceAutomationPanel } from '@/components/governance/ComplianceAutomationPanel';
 import { PredictiveRiskAnalysis } from '@/components/governance/PredictiveRiskAnalysis';
@@ -23,11 +24,31 @@ export default function PlatformGovernance() {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold font-display text-foreground">Governança</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Auditoria visual, compliance automatizado e análise preditiva de risco.
-          </p>
+        <div className="flex items-center gap-2">
+          <div>
+            <h1 className="text-2xl font-bold font-display text-foreground">Governança</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Auditoria visual, compliance automatizado e análise preditiva de risco.
+            </p>
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="shrink-0 rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" aria-label="Ajuda sobre Governança">
+                <HelpCircle className="h-5 w-5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 text-sm space-y-2" side="bottom" align="start">
+              <p className="font-semibold text-foreground">Sobre esta Dashboard</p>
+              <p className="text-muted-foreground leading-relaxed">
+                A Dashboard de Governança centraliza ferramentas para garantir conformidade, segurança e transparência na gestão do seu ambiente.
+              </p>
+              <ul className="text-muted-foreground space-y-1 list-disc pl-4 text-xs leading-relaxed">
+                <li><strong>Auditoria Visual:</strong> Capture snapshots do grafo de permissões e compare alterações ao longo do tempo com análise de IA.</li>
+                <li><strong>Compliance:</strong> Configure regras automáticas de conformidade e receba alertas e remediações inteligentes.</li>
+                <li><strong>Risco Preditivo:</strong> Visualize tendências de risco e utilize previsões de IA para agir preventivamente.</li>
+              </ul>
+            </PopoverContent>
+          </Popover>
         </div>
         <RiskIndicatorBadge />
       </div>
