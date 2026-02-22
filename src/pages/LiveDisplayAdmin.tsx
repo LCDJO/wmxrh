@@ -3,6 +3,9 @@
  * Route: /live-display (tenant)
  */
 import { useState, useEffect, useCallback } from 'react';
+import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
@@ -284,19 +287,57 @@ export default function LiveDisplayAdmin() {
                   ) : (
                     <p className="text-xs text-amber-500">Não pareado</p>
                   )}
-                  <div className="flex items-center gap-2 pt-2 flex-wrap">
-                    <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={() => { setPairingDisplayId(display.id); setShowPairing(true); }}>
+                  <div className="space-y-2.5 pt-2">
+                    <Button size="sm" variant="outline" className="gap-1.5 w-full" onClick={() => { setPairingDisplayId(display.id); setShowPairing(true); }}>
                       <Link2 className="h-3.5 w-3.5" /> Parear
                     </Button>
-                    <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={() => setPreviewDisplay(display)}>
-                      <Eye className="h-3.5 w-3.5" /> Conteúdo
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={() => openEdit(display)}>
-                      <Pencil className="h-3.5 w-3.5" /> Editar
-                    </Button>
-                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => deleteDisplay(display.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <Separator />
+                    <TooltipProvider delayDuration={200}>
+                      <div className="flex items-center justify-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="icon" variant="outline" className="h-9 w-9 rounded-lg hover:bg-accent hover:border-primary/30 transition-all" onClick={() => setPreviewDisplay(display)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Conteúdo</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="icon" variant="outline" className="h-9 w-9 rounded-lg hover:bg-accent hover:border-primary/30 transition-all" onClick={() => openEdit(display)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Editar</p></TooltipContent>
+                        </Tooltip>
+                        <AlertDialog>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertDialogTrigger asChild>
+                                <Button size="icon" variant="outline" className="h-9 w-9 rounded-lg text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-all">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Excluir</p></TooltipContent>
+                          </Tooltip>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir display?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                O display <strong>{display.nome}</strong> será removido permanentemente. Essa ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteDisplay(display.id)}>
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TooltipProvider>
                   </div>
                 </CardContent>
               </Card>
