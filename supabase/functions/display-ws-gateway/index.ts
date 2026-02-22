@@ -163,37 +163,69 @@ Deno.serve(async (req) => {
     const modo = tipoToModo[session.display_type] ?? 'executive';
 
     // Run auto-expiry cleanup before connecting
-    await admin.rpc('expire_inactive_display_sessions');
+    try {
+      await admin.rpc('expire_inactive_display_sessions');
+    } catch { /* non-critical */ }
 
     // Register/update display session
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
       ?? req.headers.get('cf-connecting-ip') ?? 'unknown';
     const userAgent = req.headers.get('user-agent') ?? 'unknown';
 
-    const { data: displaySession } = await admin
+    // Check for existing session for this display
+    const { data: existingSession } = await admin
       .from('display_sessions')
-      .upsert(
-        {
+      .select('id')
+      .eq('display_id', session.display_id)
+      .eq('tenant_id', session.tenant_id)
+      .maybeSingle();
+
+    let displaySession: { id: string; metadata: any } | null = null;
+
+    if (existingSession) {
+      // Update existing session
+      const { data } = await admin
+        .from('display_sessions')
+        .update({
+          channel_name: channelName,
+          status: 'active',
+          last_heartbeat: new Date().toISOString(),
+          metadata: {
+            modo,
+            display_type: session.display_type,
+            display_name: session.display_name,
+            connected_via: 'ws-gateway',
+            connected_ip: clientIp,
+            user_agent: userAgent,
+          },
+        })
+        .eq('id', existingSession.id)
+        .select('id, metadata')
+        .single();
+      displaySession = data;
+    } else {
+      // Insert new session
+      const { data } = await admin
+        .from('display_sessions')
+        .insert({
           tenant_id: session.tenant_id,
           display_id: session.display_id,
           channel_name: channelName,
           status: 'active',
           last_heartbeat: new Date().toISOString(),
-          modo: modo,
-          token_temporario: token,
-          expira_em: session.expires_at,
-          display_name: session.display_name,
-          connected_ip: clientIp,
-          user_agent: userAgent,
           metadata: {
+            modo,
             display_type: session.display_type,
+            display_name: session.display_name,
             connected_via: 'ws-gateway',
+            connected_ip: clientIp,
+            user_agent: userAgent,
           },
-        },
-        { onConflict: 'id' }
-      )
-      .select('id, modo')
-      .single();
+        })
+        .select('id, metadata')
+        .single();
+      displaySession = data;
+    }
 
     // Update display last_seen
     await admin
@@ -216,7 +248,7 @@ Deno.serve(async (req) => {
       type: 'connected',
       session_id: displaySession?.id ?? null,
       channel: channelName,
-      modo: displaySession?.modo ?? modo,
+      modo: displaySession?.metadata?.modo ?? modo,
       display: {
         id: session.display_id,
         name: session.display_name,
@@ -262,7 +294,11 @@ Deno.serve(async (req) => {
     }
 
     // Run auto-expiry on heartbeat
-    const { data: expiredCount } = await admin.rpc('expire_inactive_display_sessions');
+    let expiredCount = 0;
+    try {
+      const { data } = await admin.rpc('expire_inactive_display_sessions');
+      expiredCount = data ?? 0;
+    } catch { /* non-critical */ }
 
     // Update session heartbeat
     await admin
@@ -277,10 +313,10 @@ Deno.serve(async (req) => {
       .update({ last_seen_at: new Date().toISOString() })
       .eq('id', tokenData.display_id);
 
-    // Get session modo
+    // Get session modo from metadata
     const { data: sessionData } = await admin
       .from('display_sessions')
-      .select('modo')
+      .select('metadata')
       .eq('display_id', tokenData.display_id)
       .eq('tenant_id', tokenData.tenant_id)
       .eq('status', 'active')
@@ -289,7 +325,7 @@ Deno.serve(async (req) => {
     return json({
       type: 'pong',
       tenant_id: tokenData.tenant_id,
-      modo: sessionData?.modo ?? 'executive',
+      modo: (sessionData?.metadata as any)?.modo ?? 'executive',
       expires_at: tokenData.expira_em,
       ttl_seconds: Math.max(
         0,
