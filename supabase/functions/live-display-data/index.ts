@@ -112,6 +112,11 @@ Deno.serve(async (req) => {
       );
     }
 
+    const tenantId: string = tokenData.tenant_id!;
+    const companyId: string | null = display.company_id;
+    const departmentId: string | null = display.department_id;
+    const tipo = display.tipo as string;
+
     // Update last_seen
     await admin.from("live_displays")
       .update({ last_seen_at: new Date().toISOString(), status: "active" })
@@ -133,11 +138,6 @@ Deno.serve(async (req) => {
       user_agent: clientUa,
       metadata: { tipo, timestamp: new Date().toISOString() },
     }).then(() => {}).catch(() => {});
-
-    const tenantId: string = tokenData.tenant_id!;
-    const companyId: string | null = display.company_id;
-    const departmentId: string | null = display.department_id;
-    const tipo = display.tipo as string;
 
     const result: Record<string, unknown> = {
       display: {
