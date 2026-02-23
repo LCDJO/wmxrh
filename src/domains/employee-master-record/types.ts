@@ -1,0 +1,258 @@
+/**
+ * Employee Master Record Engine — Types
+ *
+ * Ficha Completa do Trabalhador (CLT, Portaria 671/2021, eSocial)
+ * All satellite entity types for the employee master record.
+ */
+
+// ════════════════════════════════════════
+// ENUMS (mirror DB enums)
+// ════════════════════════════════════════
+
+export type EmployeeDocumentType =
+  | 'rg' | 'ctps' | 'pis_pasep' | 'titulo_eleitor' | 'cnh'
+  | 'certidao_nascimento' | 'certidao_casamento' | 'reservista'
+  | 'passaporte' | 'crnm' | 'outros';
+
+export type EmployeeDependentType =
+  | 'conjuge' | 'filho' | 'enteado' | 'pai_mae' | 'tutelado' | 'outros';
+
+export type ContractType =
+  | 'clt_indeterminado' | 'clt_determinado' | 'clt_intermitente'
+  | 'clt_temporario' | 'clt_aprendiz' | 'estagio' | 'autonomo';
+
+export type WorkRegime =
+  | 'clt' | 'estatutario' | 'temporario' | 'avulso' | 'cooperado' | 'estagiario';
+
+export type FgtsRegime = 'optante' | 'nao_optante' | 'retroativo';
+
+export type EsocialCategory = string; // e.g. '101', '201', etc.
+
+// ════════════════════════════════════════
+// LABEL MAPS
+// ════════════════════════════════════════
+
+export const DOCUMENT_TYPE_LABELS: Record<EmployeeDocumentType, string> = {
+  rg: 'RG',
+  ctps: 'CTPS',
+  pis_pasep: 'PIS/PASEP',
+  titulo_eleitor: 'Título de Eleitor',
+  cnh: 'CNH',
+  certidao_nascimento: 'Certidão de Nascimento',
+  certidao_casamento: 'Certidão de Casamento',
+  reservista: 'Certificado de Reservista',
+  passaporte: 'Passaporte',
+  crnm: 'CRNM (Estrangeiro)',
+  outros: 'Outros',
+};
+
+export const DEPENDENT_TYPE_LABELS: Record<EmployeeDependentType, string> = {
+  conjuge: 'Cônjuge/Companheiro(a)',
+  filho: 'Filho(a)',
+  enteado: 'Enteado(a)',
+  pai_mae: 'Pai/Mãe',
+  tutelado: 'Tutelado(a)',
+  outros: 'Outros',
+};
+
+export const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
+  clt_indeterminado: 'CLT - Prazo Indeterminado',
+  clt_determinado: 'CLT - Prazo Determinado',
+  clt_intermitente: 'CLT - Intermitente',
+  clt_temporario: 'CLT - Temporário',
+  clt_aprendiz: 'CLT - Aprendiz',
+  estagio: 'Estágio',
+  autonomo: 'Autônomo',
+};
+
+export const WORK_REGIME_LABELS: Record<WorkRegime, string> = {
+  clt: 'CLT',
+  estatutario: 'Estatutário',
+  temporario: 'Temporário',
+  avulso: 'Avulso',
+  cooperado: 'Cooperado',
+  estagiario: 'Estagiário',
+};
+
+export const FGTS_REGIME_LABELS: Record<FgtsRegime, string> = {
+  optante: 'Optante',
+  nao_optante: 'Não Optante',
+  retroativo: 'Retroativo',
+};
+
+// ════════════════════════════════════════
+// ENTITIES
+// ════════════════════════════════════════
+
+export interface EmployeeDocument {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  document_type: EmployeeDocumentType;
+  document_number: string;
+  issuing_authority: string | null;
+  issuing_state: string | null;
+  issue_date: string | null;
+  expiry_date: string | null;
+  series: string | null;
+  zone: string | null;
+  section: string | null;
+  category: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface EmployeeAddress {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  address_type: string;
+  cep: string | null;
+  logradouro: string;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cidade: string;
+  uf: string;
+  pais: string;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface EmployeeDependent {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  name: string;
+  relationship: EmployeeDependentType;
+  birth_date: string | null;
+  cpf: string | null;
+  is_ir_dependent: boolean;
+  is_benefit_dependent: boolean;
+  has_disability: boolean;
+  start_date: string;
+  end_date: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface EmployeeContract {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  company_id: string | null;
+  contract_type: ContractType;
+  work_regime: WorkRegime;
+  fgts_regime: FgtsRegime;
+  esocial_category: EsocialCategory | null;
+  esocial_matricula: string | null;
+  admission_date: string;
+  contract_end_date: string | null;
+  experience_end_date: string | null;
+  weekly_hours: number;
+  shift_description: string | null;
+  is_night_shift: boolean;
+  union_name: string | null;
+  union_code: string | null;
+  collective_agreement_id: string | null;
+  cbo_code: string | null;
+  job_function: string | null;
+  is_current: boolean;
+  started_at: string;
+  ended_at: string | null;
+  end_reason: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+// ════════════════════════════════════════
+// DTOs
+// ════════════════════════════════════════
+
+export interface CreateEmployeeDocumentDTO {
+  tenant_id: string;
+  employee_id: string;
+  document_type: EmployeeDocumentType;
+  document_number: string;
+  issuing_authority?: string | null;
+  issuing_state?: string | null;
+  issue_date?: string | null;
+  expiry_date?: string | null;
+  series?: string | null;
+  zone?: string | null;
+  section?: string | null;
+  category?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CreateEmployeeAddressDTO {
+  tenant_id: string;
+  employee_id: string;
+  address_type?: string;
+  cep?: string | null;
+  logradouro: string;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade: string;
+  uf: string;
+  pais?: string;
+  is_primary?: boolean;
+}
+
+export interface CreateEmployeeDependentDTO {
+  tenant_id: string;
+  employee_id: string;
+  name: string;
+  relationship: EmployeeDependentType;
+  birth_date?: string | null;
+  cpf?: string | null;
+  is_ir_dependent?: boolean;
+  is_benefit_dependent?: boolean;
+  has_disability?: boolean;
+  start_date?: string;
+  end_date?: string | null;
+}
+
+export interface CreateEmployeeContractDTO {
+  tenant_id: string;
+  employee_id: string;
+  company_id?: string | null;
+  contract_type?: ContractType;
+  work_regime?: WorkRegime;
+  fgts_regime?: FgtsRegime;
+  esocial_category?: EsocialCategory | null;
+  esocial_matricula?: string | null;
+  admission_date: string;
+  contract_end_date?: string | null;
+  experience_end_date?: string | null;
+  weekly_hours?: number;
+  shift_description?: string | null;
+  is_night_shift?: boolean;
+  union_name?: string | null;
+  union_code?: string | null;
+  collective_agreement_id?: string | null;
+  cbo_code?: string | null;
+  job_function?: string | null;
+  started_at: string;
+  created_by?: string | null;
+}
+
+// ════════════════════════════════════════
+// AGGREGATE: Full Master Record
+// ════════════════════════════════════════
+
+export interface EmployeeMasterRecord {
+  employee_id: string;
+  documents: EmployeeDocument[];
+  addresses: EmployeeAddress[];
+  dependents: EmployeeDependent[];
+  contracts: EmployeeContract[];
+}

@@ -1157,3 +1157,60 @@ export function useCompanyCnaeProfiles() {
     enabled: !!qs,
   });
 }
+
+// ════════════════════════════════════════════════════════════
+// EMPLOYEE MASTER RECORD ENGINE
+// ════════════════════════════════════════════════════════════
+
+import { employeeDocumentService } from '@/domains/employee-master-record/employee-document.service';
+import { employeeAddressService } from '@/domains/employee-master-record/employee-address.service';
+import { employeeDependentService } from '@/domains/employee-master-record/employee-dependent.service';
+import { employeeContractService } from '@/domains/employee-master-record/employee-contract.service';
+import { employeeMasterRecordService } from '@/domains/employee-master-record/employee-master-record.service';
+import type {
+  CreateEmployeeDocumentDTO,
+  CreateEmployeeAddressDTO,
+  CreateEmployeeDependentDTO,
+  CreateEmployeeContractDTO,
+} from '@/domains/employee-master-record/types';
+
+export function useEmployeeMasterRecord(employeeId: string) {
+  const qs = useQueryScope();
+  return useQuery({
+    queryKey: ['employee-master-record', employeeId, qs?.tenantId],
+    queryFn: () => employeeMasterRecordService.loadFullRecord(employeeId, qs!.tenantId),
+    enabled: !!qs && !!employeeId,
+  });
+}
+
+export function useCreateEmployeeDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateEmployeeDocumentDTO) => employeeDocumentService.create(dto),
+    onSuccess: (_d, v) => { qc.invalidateQueries({ queryKey: ['employee-master-record', v.employee_id] }); },
+  });
+}
+
+export function useCreateEmployeeAddress() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateEmployeeAddressDTO) => employeeAddressService.create(dto),
+    onSuccess: (_d, v) => { qc.invalidateQueries({ queryKey: ['employee-master-record', v.employee_id] }); },
+  });
+}
+
+export function useCreateEmployeeDependent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateEmployeeDependentDTO) => employeeDependentService.create(dto),
+    onSuccess: (_d, v) => { qc.invalidateQueries({ queryKey: ['employee-master-record', v.employee_id] }); },
+  });
+}
+
+export function useCreateEmployeeContract() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateEmployeeContractDTO) => employeeContractService.create(dto),
+    onSuccess: (_d, v) => { qc.invalidateQueries({ queryKey: ['employee-master-record', v.employee_id] }); },
+  });
+}
