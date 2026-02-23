@@ -3438,6 +3438,7 @@ export type Database = {
           tenant_id: string
           updated_at: string
           user_agent: string | null
+          versao: number
           viewed_at: string | null
         }
         Insert: {
@@ -3465,6 +3466,7 @@ export type Database = {
           tenant_id: string
           updated_at?: string
           user_agent?: string | null
+          versao?: number
           viewed_at?: string | null
         }
         Update: {
@@ -3492,6 +3494,7 @@ export type Database = {
           tenant_id?: string
           updated_at?: string
           user_agent?: string | null
+          versao?: number
           viewed_at?: string | null
         }
         Relationships: [
