@@ -995,6 +995,69 @@ export type Database = {
           },
         ]
       }
+      blockchain_anchor_queue: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          created_by: string | null
+          hash_sha256: string
+          id: string
+          last_error: string | null
+          max_attempts: number
+          next_retry_at: string
+          proof_id: string | null
+          signed_document_id: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          created_by?: string | null
+          hash_sha256: string
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          next_retry_at?: string
+          proof_id?: string | null
+          signed_document_id: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          created_by?: string | null
+          hash_sha256?: string
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          next_retry_at?: string
+          proof_id?: string | null
+          signed_document_id?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blockchain_anchor_queue_proof_id_fkey"
+            columns: ["proof_id"]
+            isOneToOne: false
+            referencedRelation: "blockchain_hash_registry"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blockchain_anchor_queue_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blockchain_hash_registry: {
         Row: {
           block_number: number | null
