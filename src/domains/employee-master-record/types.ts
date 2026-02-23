@@ -328,6 +328,16 @@ export interface EmployeePersonalData {
   municipio_nascimento: string | null;
   nome_mae: string | null;
   nome_pai: string | null;
+  // Documentação
+  rg_numero: string | null;
+  rg_orgao_emissor: string | null;
+  rg_uf: string | null;
+  rg_data_emissao: string | null;
+  cnh_numero: string | null;
+  cnh_categoria: string | null;
+  cnh_validade: string | null;
+  passaporte: string | null;
+  rne_rnm: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -349,6 +359,16 @@ export interface CreateEmployeePersonalDataDTO {
   municipio_nascimento?: string | null;
   nome_mae?: string | null;
   nome_pai?: string | null;
+  // Documentação
+  rg_numero?: string | null;
+  rg_orgao_emissor?: string | null;
+  rg_uf?: string | null;
+  rg_data_emissao?: string | null;
+  cnh_numero?: string | null;
+  cnh_categoria?: string | null;
+  cnh_validade?: string | null;
+  passaporte?: string | null;
+  rne_rnm?: string | null;
 }
 
 // ════════════════════════════════════════
