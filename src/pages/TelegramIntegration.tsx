@@ -474,13 +474,27 @@ export default function TelegramIntegration() {
                   <ExternalLink className="h-4 w-4" /> Webhook URL
                 </CardTitle>
                 <CardDescription>
-                  Configure no BotFather com <code className="bg-muted px-1 rounded text-xs">/setwebhook</code>
+                  Configure o webhook do seu bot para receber comandos e interações
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Input value={webhookUrl} readOnly className="font-mono text-xs flex-1" />
                   <Button size="icon" variant="outline" onClick={() => copyToClipboard(webhookUrl)}><Copy className="h-4 w-4" /></Button>
+                </div>
+                <div className="rounded-md border border-border bg-muted/50 p-3 space-y-2">
+                  <p className="text-xs font-medium text-foreground">📋 Como configurar o Webhook</p>
+                  <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
+                    <li>Copie a URL acima clicando no botão de cópia</li>
+                    <li>Abra o Telegram e acesse o <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80">@BotFather</a></li>
+                    <li>Envie o comando <code className="bg-muted px-1 rounded">/setwebhook</code></li>
+                    <li>Selecione o seu bot na lista</li>
+                    <li>Cole a URL copiada e envie</li>
+                    <li>O BotFather confirmará com <em>"Webhook was set"</em></li>
+                  </ol>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    💡 Após configurar, envie <code className="bg-muted px-1 rounded">/start</code> ao seu bot para testar a conexão e obter o Chat ID.
+                  </p>
                 </div>
               </CardContent>
             </Card>
