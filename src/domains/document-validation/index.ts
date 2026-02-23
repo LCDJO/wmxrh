@@ -1,0 +1,26 @@
+/**
+ * Document Validation & LGPD Compliance Engine — Bounded Context
+ *
+ * Guarantees signed document authenticity via QR Code public validation,
+ * LGPD-compliant access logging, and integration with the Agreement Engine.
+ *
+ * ┌─────────────────────────────────────────────────────────┐
+ * │        DocumentValidation & LGPD Compliance             │
+ * ├─────────────────────────────────────────────────────────┤
+ * │  DocumentValidationService  — tokens + QR URLs          │
+ * │  validate-document (Edge)   — public verification API   │
+ * │  LGPD Access Logs           — requester tracking        │
+ * └─────────────────────────────────────────────────────────┘
+ */
+
+export { documentValidationService } from './document-validation.service';
+
+export type {
+  DocumentValidationToken,
+  DocumentAccessLog,
+  IssueValidationTokenDTO,
+  PublicValidationResult,
+  PublicValidationRequest,
+  ValidationTokenStatus,
+  AccessResult,
+} from './types';
