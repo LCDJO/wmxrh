@@ -1,17 +1,8 @@
 /**
  * display-pair-status — Polled by TV to check if pairing was confirmed.
- * No auth needed.
- *
- * SECURITY:
- *   ✅ Requires both session_id AND token (dual-key)
- *   ✅ No tenant data leaked for pending sessions
- *   ✅ Auto-expires stale sessions
- *   ✅ Read-only — GET only
- *
- * GET ?session_id=<id>&token=<token>
- * Returns: { status: "pending"|"active"|"expired", token?: string }
+ * No auth needed. OPTIMIZED: npm: import, module-level client, minimal logic.
  */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,17 +10,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+const admin = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+);
 
-  if (req.method !== "GET") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "GET") return json({ error: "Method not allowed" }, 405);
 
   try {
     const url = new URL(req.url);
@@ -37,15 +25,8 @@ Deno.serve(async (req) => {
     const token = url.searchParams.get("token");
 
     if (!sessionId || !token || token.length < 30) {
-      return new Response(
-        JSON.stringify({ error: "session_id and token are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return json({ error: "session_id and token are required" }, 400);
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const admin = createClient(supabaseUrl, serviceKey);
 
     const { data: session, error } = await admin
       .from("live_display_tokens")
@@ -54,58 +35,32 @@ Deno.serve(async (req) => {
       .eq("token_temporario", token)
       .maybeSingle();
 
-    if (error || !session) {
-      return new Response(
-        JSON.stringify({ status: "expired" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    if (error || !session) return json({ status: "expired" }, 404);
 
     // Auto-expire stale pending sessions
     if (session.status === "pending" && new Date(session.expira_em) < new Date()) {
-      await admin.from("live_display_tokens").update({ status: "expired" }).eq("id", session.id);
-      return new Response(
-        JSON.stringify({ status: "expired" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Fire-and-forget expire update
+      admin.from("live_display_tokens").update({ status: "expired" }).eq("id", session.id).then(() => {}).catch(() => {});
+      return json({ status: "expired" });
     }
 
-    // ── CONNECTION LOG: status check ──
-    if (session.status === "active") {
-      const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-        ?? req.headers.get("cf-connecting-ip")
-        ?? "unknown";
-      admin.from("display_connection_logs").insert({
-        display_id: null,
-        token_id: session.id,
-        tenant_id: null,
-        event_type: "pair_confirmed",
-        ip_address: clientIp,
-        user_agent: req.headers.get("user-agent") ?? "unknown",
-        metadata: {},
-      }).then(() => {}).catch(() => {});
-    }
-
-    // SECURITY: Only return token when active, never leak tenant/display info
-    return new Response(
-      JSON.stringify({
+    return json(
+      {
         status: session.status,
         token: session.status === "active" ? session.token_temporario : undefined,
-      }),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        },
-      }
+      },
+      200,
+      { "Cache-Control": "no-store" }
     );
   } catch (e) {
     console.error("[display-pair-status] error:", e);
-    return new Response(
-      JSON.stringify({ error: "An unexpected error occurred" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ error: "An unexpected error occurred" }, 500);
   }
 });
+
+function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json", ...extraHeaders },
+  });
+}

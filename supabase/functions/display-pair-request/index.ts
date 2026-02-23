@@ -2,16 +2,9 @@
  * display-pair-request — Called by the TV at /display to request a pairing code.
  * No auth needed. Creates a pending session with a 6-digit pairing code.
  *
- * SECURITY:
- *   ✅ Rate limited: max 5 pending sessions per IP per 10 min
- *   ✅ Pairing code expires in 10 min
- *   ✅ Token is random UUID, not guessable
- *   ✅ No tenant data exposed until paired
- *
- * POST — body: {} (empty)
- * Returns: { pairing_code, session_id, expires_in_minutes }
+ * OPTIMIZED: Single-pass logic, npm: import, minimal DB round-trips.
  */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,83 +12,58 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_PENDING_PER_WINDOW = 5;
+const CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function generatePairingCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
+  for (let i = 0; i < 6; i++) code += CHARS[Math.floor(Math.random() * CHARS.length)];
   return code;
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+// Pre-create admin client at module level (reused across warm invocations)
+const admin = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+);
 
-  if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const admin = createClient(supabaseUrl, serviceKey);
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("cf-connecting-ip") ?? "unknown";
 
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-      ?? req.headers.get("cf-connecting-ip")
-      ?? "unknown";
-
-    // ── Rate limiting: max pending sessions per IP ──
     const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
 
-    // Expire old pending sessions
-    await admin
-      .from("live_display_tokens")
-      .update({ status: "expired" })
-      .eq("status", "pending")
-      .lt("created_at", tenMinAgo)
-      .not("pairing_code", "is", null);
+    // Run expire + count in parallel (2 queries → 1 round-trip)
+    const [, countResult] = await Promise.all([
+      admin.from("live_display_tokens")
+        .update({ status: "expired" })
+        .eq("status", "pending")
+        .lt("created_at", tenMinAgo)
+        .not("pairing_code", "is", null),
+      admin.from("live_display_tokens")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+        .eq("paired_ip", clientIp)
+        .gte("created_at", tenMinAgo),
+    ]);
 
-    // Count recent pending from same IP
-    const { count: recentCount } = await admin
-      .from("live_display_tokens")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending")
-      .eq("paired_ip", clientIp)
-      .gte("created_at", tenMinAgo);
-
-    if ((recentCount ?? 0) >= MAX_PENDING_PER_WINDOW) {
-      return new Response(
-        JSON.stringify({ error: "Too many pairing requests. Try again in a few minutes." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "300" } }
+    if ((countResult.count ?? 0) >= 5) {
+      return json(
+        { error: "Too many pairing requests. Try again in a few minutes." },
+        429,
+        { "Retry-After": "300" }
       );
     }
 
-    // Generate unique pairing code
-    let pairingCode = generatePairingCode();
-    let attempts = 0;
-    while (attempts < 10) {
-      const { data: existing } = await admin
-        .from("live_display_tokens")
-        .select("id")
-        .eq("pairing_code", pairingCode)
-        .eq("status", "pending")
-        .maybeSingle();
-      if (!existing) break;
-      pairingCode = generatePairingCode();
-      attempts++;
-    }
-
+    // Generate code + insert (skip uniqueness loop — 6-char from 31-char set = ~887M combos, collision near-zero)
+    const pairingCode = generatePairingCode();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     const tokenValue = crypto.randomUUID() + "-" + crypto.randomUUID();
 
-    // Create a pending session — NO tenant data, NO display link
     const { data: session, error } = await admin
       .from("live_display_tokens")
       .insert({
@@ -113,38 +81,32 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("[display-pair-request] insert error:", error);
-      return new Response(
-        JSON.stringify({ error: "Failed to create pairing session" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return json({ error: "Failed to create pairing session" }, 500);
     }
 
-    // ── CONNECTION LOG: pairing request ──
+    // Fire-and-forget log
     admin.from("display_connection_logs").insert({
-      display_id: null,
-      token_id: session.id,
-      tenant_id: null,
-      event_type: "pair_request",
-      ip_address: clientIp,
+      display_id: null, token_id: session.id, tenant_id: null,
+      event_type: "pair_request", ip_address: clientIp,
       user_agent: req.headers.get("user-agent") ?? "unknown",
       metadata: { pairing_code: pairingCode },
     }).then(() => {}).catch(() => {});
 
-    // SECURITY: Only return minimal info — no tenant/display data
-    return new Response(
-      JSON.stringify({
-        pairing_code: pairingCode,
-        session_id: session.id,
-        token: tokenValue,
-        expires_in_minutes: 10,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({
+      pairing_code: pairingCode,
+      session_id: session.id,
+      token: tokenValue,
+      expires_in_minutes: 10,
+    });
   } catch (e) {
     console.error("[display-pair-request] error:", e);
-    return new Response(
-      JSON.stringify({ error: "An unexpected error occurred" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ error: "An unexpected error occurred" }, 500);
   }
 });
+
+function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json", ...extraHeaders },
+  });
+}
