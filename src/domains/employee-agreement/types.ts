@@ -178,4 +178,13 @@ export type {
   ConsentLegalBasis,
   LgpdConsentRecord,
   LgpdDataSubjectRequest,
+  BlockchainNetwork,
+  BlockchainProofRecord,
+  BlockchainProofRequest,
+  BlockchainVerificationResult,
+  CartorioProvider,
+  CartorioRequestStatus,
+  CartorioRegistrationRecord,
+  CartorioSubmissionRequest,
+  CartorioSigner,
 } from './types-future';
