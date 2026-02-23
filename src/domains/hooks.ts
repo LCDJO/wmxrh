@@ -1166,12 +1166,16 @@ import { employeeDocumentService } from '@/domains/employee-master-record/employ
 import { employeeAddressService } from '@/domains/employee-master-record/employee-address.service';
 import { employeeDependentService } from '@/domains/employee-master-record/employee-dependent.service';
 import { employeeContractService } from '@/domains/employee-master-record/employee-contract.service';
+import { employeeRecordService } from '@/domains/employee-master-record/employee-record.service';
+import { employeePersonalDataService } from '@/domains/employee-master-record/employee-personal-data.service';
 import { employeeMasterRecordService } from '@/domains/employee-master-record/employee-master-record.service';
 import type {
   CreateEmployeeDocumentDTO,
   CreateEmployeeAddressDTO,
   CreateEmployeeDependentDTO,
   CreateEmployeeContractDTO,
+  CreateEmployeeRecordDTO,
+  CreateEmployeePersonalDataDTO,
 } from '@/domains/employee-master-record/types';
 
 export function useEmployeeMasterRecord(employeeId: string) {
@@ -1180,6 +1184,22 @@ export function useEmployeeMasterRecord(employeeId: string) {
     queryKey: ['employee-master-record', employeeId, qs?.tenantId],
     queryFn: () => employeeMasterRecordService.loadFullRecord(employeeId, qs!.tenantId),
     enabled: !!qs && !!employeeId,
+  });
+}
+
+export function useCreateEmployeeRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateEmployeeRecordDTO) => employeeRecordService.create(dto),
+    onSuccess: (_d, v) => { qc.invalidateQueries({ queryKey: ['employee-master-record', v.employee_id] }); },
+  });
+}
+
+export function useUpsertEmployeePersonalData() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateEmployeePersonalDataDTO) => employeePersonalDataService.upsert(dto),
+    onSuccess: (_d, v) => { qc.invalidateQueries({ queryKey: ['employee-master-record', v.employee_id] }); },
   });
 }
 

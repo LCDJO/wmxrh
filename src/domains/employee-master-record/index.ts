@@ -17,6 +17,8 @@
  */
 
 // ── Services ──
+export { employeeRecordService } from './employee-record.service';
+export { employeePersonalDataService } from './employee-personal-data.service';
 export { employeeDocumentService } from './employee-document.service';
 export { employeeAddressService } from './employee-address.service';
 export { employeeDependentService } from './employee-dependent.service';
@@ -31,11 +33,18 @@ export type {
   WorkRegime,
   FgtsRegime,
   EsocialCategory,
+  EmployeeRecordStatus,
+  EmployeeSexo,
+  EmployeeEstadoCivil,
+  EmployeeRecord,
+  EmployeePersonalData,
   EmployeeDocument,
   EmployeeAddress,
   EmployeeDependent,
   EmployeeContract,
   EmployeeMasterRecord,
+  CreateEmployeeRecordDTO,
+  CreateEmployeePersonalDataDTO,
   CreateEmployeeDocumentDTO,
   CreateEmployeeAddressDTO,
   CreateEmployeeDependentDTO,
@@ -44,6 +53,9 @@ export type {
 
 // ── Label Maps ──
 export {
+  RECORD_STATUS_LABELS,
+  SEXO_LABELS,
+  ESTADO_CIVIL_LABELS,
   DOCUMENT_TYPE_LABELS,
   DEPENDENT_TYPE_LABELS,
   CONTRACT_TYPE_LABELS,

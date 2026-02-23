@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, MapPin, Users, Briefcase, Loader2 } from 'lucide-react';
+import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   useEmployeeMasterRecord,
@@ -20,6 +20,8 @@ import {
   useCreateEmployeeAddress,
   useCreateEmployeeDependent,
   useCreateEmployeeContract,
+  useUpsertEmployeePersonalData,
+  useCreateEmployeeRecord,
 } from '@/domains/hooks';
 import {
   DOCUMENT_TYPE_LABELS,
@@ -27,6 +29,9 @@ import {
   CONTRACT_TYPE_LABELS,
   WORK_REGIME_LABELS,
   FGTS_REGIME_LABELS,
+  RECORD_STATUS_LABELS,
+  SEXO_LABELS,
+  ESTADO_CIVIL_LABELS,
 } from '@/domains/employee-master-record';
 import type {
   EmployeeDocumentType,
@@ -34,6 +39,9 @@ import type {
   ContractType,
   WorkRegime,
   FgtsRegime,
+  EmployeeRecordStatus,
+  EmployeeSexo,
+  EmployeeEstadoCivil,
 } from '@/domains/employee-master-record';
 
 interface Props {
@@ -59,8 +67,14 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
       <h3 className="text-lg font-semibold font-display text-card-foreground mb-4">
         Ficha Completa do Trabalhador
       </h3>
-      <Tabs defaultValue="documentos" className="space-y-4">
+      <Tabs defaultValue="registro" className="space-y-4">
         <TabsList className="flex flex-wrap h-auto gap-1">
+          <TabsTrigger value="registro" className="gap-1.5 text-xs">
+            <IdCard className="h-3.5 w-3.5" /> Registro
+          </TabsTrigger>
+          <TabsTrigger value="dados_pessoais" className="gap-1.5 text-xs">
+            <User className="h-3.5 w-3.5" /> Dados Pessoais
+          </TabsTrigger>
           <TabsTrigger value="documentos" className="gap-1.5 text-xs">
             <FileText className="h-3.5 w-3.5" /> Documentos ({record?.documents.length ?? 0})
           </TabsTrigger>
@@ -74,6 +88,26 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
             <Briefcase className="h-3.5 w-3.5" /> Dados Contratuais ({record?.contracts.length ?? 0})
           </TabsTrigger>
         </TabsList>
+
+        {/* ── Aggregate Root ── */}
+        <TabsContent value="registro">
+          <RecordSection
+            record={record?.record ?? null}
+            employeeId={employeeId}
+            tenantId={tenantId}
+            canEdit={canEdit}
+          />
+        </TabsContent>
+
+        {/* ── Personal Data ── */}
+        <TabsContent value="dados_pessoais">
+          <PersonalDataSection
+            personalData={record?.personalData ?? null}
+            employeeId={employeeId}
+            tenantId={tenantId}
+            canEdit={canEdit}
+          />
+        </TabsContent>
 
         {/* ── Documents ── */}
         <TabsContent value="documentos">
@@ -115,6 +149,278 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
           />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════
+// RECORD SECTION (Aggregate Root)
+// ════════════════════════════════════════════
+
+function RecordSection({
+  record,
+  employeeId,
+  tenantId,
+  canEdit,
+}: {
+  record: any;
+  employeeId: string;
+  tenantId: string;
+  canEdit: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [matricula, setMatricula] = useState('');
+  const [status, setStatus] = useState<EmployeeRecordStatus>('pre_admissao');
+  const [dataAdmissao, setDataAdmissao] = useState('');
+  const { toast } = useToast();
+  const createRecord = useCreateEmployeeRecord();
+
+  const handleCreate = () => {
+    createRecord.mutate(
+      {
+        tenant_id: tenantId,
+        employee_id: employeeId,
+        matricula_interna: matricula,
+        status,
+        data_admissao: dataAdmissao,
+      },
+      {
+        onSuccess: () => { toast({ title: 'Registro criado!' }); setOpen(false); },
+        onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+      }
+    );
+  };
+
+  if (record) {
+    return (
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Matrícula</p>
+            <p className="text-sm font-mono font-medium text-card-foreground">{record.matricula_interna}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Status</p>
+            <Badge variant={record.status === 'ativo' ? 'default' : 'secondary'}>
+              {RECORD_STATUS_LABELS[record.status as EmployeeRecordStatus] ?? record.status}
+            </Badge>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Data Admissão</p>
+            <p className="text-sm text-card-foreground">{new Date(record.data_admissao).toLocaleDateString('pt-BR')}</p>
+          </div>
+          {record.data_desligamento && (
+            <div>
+              <p className="text-xs text-muted-foreground">Data Desligamento</p>
+              <p className="text-sm text-card-foreground">{new Date(record.data_desligamento).toLocaleDateString('pt-BR')}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground italic">Nenhum registro principal cadastrado.</p>
+      {canEdit && (
+        <Button variant="outline" size="sm" className="gap-1" onClick={() => setOpen(true)}>
+          <Plus className="h-3.5 w-3.5" /> Criar Registro
+        </Button>
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Criar Registro do Trabalhador</DialogTitle></DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }} className="space-y-4">
+            <div className="space-y-2"><Label>Matrícula Interna *</Label><Input value={matricula} onChange={(e) => setMatricula(e.target.value)} required /></div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as EmployeeRecordStatus)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(RECORD_STATUS_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2"><Label>Data de Admissão *</Label><Input type="date" value={dataAdmissao} onChange={(e) => setDataAdmissao(e.target.value)} required /></div>
+            <Button type="submit" className="w-full" disabled={createRecord.isPending}>
+              {createRecord.isPending ? 'Salvando...' : 'Criar Registro'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════
+// PERSONAL DATA SECTION
+// ════════════════════════════════════════════
+
+function PersonalDataSection({
+  personalData,
+  employeeId,
+  tenantId,
+  canEdit,
+}: {
+  personalData: any;
+  employeeId: string;
+  tenantId: string;
+  canEdit: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    nome_completo: '',
+    nome_social: '',
+    cpf: '',
+    pis_pasep_nit: '',
+    data_nascimento: '',
+    sexo: 'nao_informado' as EmployeeSexo,
+    estado_civil: 'nao_informado' as EmployeeEstadoCivil,
+    nacionalidade: 'Brasileira',
+    pais_nascimento: 'Brasil',
+    uf_nascimento: '',
+    municipio_nascimento: '',
+    nome_mae: '',
+    nome_pai: '',
+  });
+  const { toast } = useToast();
+  const upsert = useUpsertEmployeePersonalData();
+
+  const openEdit = () => {
+    if (personalData) {
+      setForm({
+        nome_completo: personalData.nome_completo || '',
+        nome_social: personalData.nome_social || '',
+        cpf: personalData.cpf || '',
+        pis_pasep_nit: personalData.pis_pasep_nit || '',
+        data_nascimento: personalData.data_nascimento || '',
+        sexo: personalData.sexo || 'nao_informado',
+        estado_civil: personalData.estado_civil || 'nao_informado',
+        nacionalidade: personalData.nacionalidade || 'Brasileira',
+        pais_nascimento: personalData.pais_nascimento || 'Brasil',
+        uf_nascimento: personalData.uf_nascimento || '',
+        municipio_nascimento: personalData.municipio_nascimento || '',
+        nome_mae: personalData.nome_mae || '',
+        nome_pai: personalData.nome_pai || '',
+      });
+    }
+    setOpen(true);
+  };
+
+  const handleSave = () => {
+    upsert.mutate(
+      {
+        tenant_id: tenantId,
+        employee_id: employeeId,
+        nome_completo: form.nome_completo,
+        nome_social: form.nome_social || null,
+        cpf: form.cpf,
+        pis_pasep_nit: form.pis_pasep_nit || null,
+        data_nascimento: form.data_nascimento,
+        sexo: form.sexo,
+        estado_civil: form.estado_civil,
+        nacionalidade: form.nacionalidade,
+        pais_nascimento: form.pais_nascimento,
+        uf_nascimento: form.uf_nascimento || null,
+        municipio_nascimento: form.municipio_nascimento || null,
+        nome_mae: form.nome_mae || null,
+        nome_pai: form.nome_pai || null,
+      },
+      {
+        onSuccess: () => { toast({ title: 'Dados pessoais salvos!' }); setOpen(false); },
+        onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+      }
+    );
+  };
+
+  const f = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, [key]: e.target.value }));
+
+  if (personalData && !open) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Dados pessoais do trabalhador</p>
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={openEdit}>Editar</Button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div><p className="text-xs text-muted-foreground">Nome Completo</p><p className="text-sm font-medium text-card-foreground">{personalData.nome_completo}</p></div>
+          {personalData.nome_social && <div><p className="text-xs text-muted-foreground">Nome Social</p><p className="text-sm text-card-foreground">{personalData.nome_social}</p></div>}
+          <div><p className="text-xs text-muted-foreground">CPF</p><p className="text-sm font-mono text-card-foreground">{personalData.cpf}</p></div>
+          {personalData.pis_pasep_nit && <div><p className="text-xs text-muted-foreground">PIS/PASEP/NIT</p><p className="text-sm font-mono text-card-foreground">{personalData.pis_pasep_nit}</p></div>}
+          <div><p className="text-xs text-muted-foreground">Data Nascimento</p><p className="text-sm text-card-foreground">{new Date(personalData.data_nascimento).toLocaleDateString('pt-BR')}</p></div>
+          <div><p className="text-xs text-muted-foreground">Sexo</p><p className="text-sm text-card-foreground">{SEXO_LABELS[personalData.sexo as EmployeeSexo]}</p></div>
+          <div><p className="text-xs text-muted-foreground">Estado Civil</p><p className="text-sm text-card-foreground">{ESTADO_CIVIL_LABELS[personalData.estado_civil as EmployeeEstadoCivil]}</p></div>
+          <div><p className="text-xs text-muted-foreground">Nacionalidade</p><p className="text-sm text-card-foreground">{personalData.nacionalidade}</p></div>
+          {personalData.uf_nascimento && <div><p className="text-xs text-muted-foreground">UF/Município Nasc.</p><p className="text-sm text-card-foreground">{personalData.municipio_nascimento ? `${personalData.municipio_nascimento}/` : ''}{personalData.uf_nascimento}</p></div>}
+          {personalData.nome_mae && <div><p className="text-xs text-muted-foreground">Nome da Mãe</p><p className="text-sm text-card-foreground">{personalData.nome_mae}</p></div>}
+          {personalData.nome_pai && <div><p className="text-xs text-muted-foreground">Nome do Pai</p><p className="text-sm text-card-foreground">{personalData.nome_pai}</p></div>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {!personalData && <p className="text-sm text-muted-foreground italic">Nenhum dado pessoal cadastrado.</p>}
+      {canEdit && !open && (
+        <Button variant="outline" size="sm" className="gap-1" onClick={openEdit}>
+          <Plus className="h-3.5 w-3.5" /> Cadastrar Dados Pessoais
+        </Button>
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{personalData ? 'Editar' : 'Cadastrar'} Dados Pessoais</DialogTitle></DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2"><Label>Nome Completo *</Label><Input value={form.nome_completo} onChange={f('nome_completo')} required /></div>
+              <div className="space-y-2"><Label>Nome Social</Label><Input value={form.nome_social} onChange={f('nome_social')} /></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-2"><Label>CPF *</Label><Input value={form.cpf} onChange={f('cpf')} placeholder="000.000.000-00" required /></div>
+              <div className="space-y-2"><Label>PIS/PASEP/NIT</Label><Input value={form.pis_pasep_nit} onChange={f('pis_pasep_nit')} /></div>
+              <div className="space-y-2"><Label>Data Nascimento *</Label><Input type="date" value={form.data_nascimento} onChange={f('data_nascimento')} required /></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label>Sexo</Label>
+                <Select value={form.sexo} onValueChange={(v) => setForm(p => ({ ...p, sexo: v as EmployeeSexo }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(SEXO_LABELS).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Estado Civil</Label>
+                <Select value={form.estado_civil} onValueChange={(v) => setForm(p => ({ ...p, estado_civil: v as EmployeeEstadoCivil }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(ESTADO_CIVIL_LABELS).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2"><Label>Nacionalidade</Label><Input value={form.nacionalidade} onChange={f('nacionalidade')} /></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-2"><Label>País Nascimento</Label><Input value={form.pais_nascimento} onChange={f('pais_nascimento')} /></div>
+              <div className="space-y-2"><Label>UF Nascimento</Label><Input value={form.uf_nascimento} onChange={f('uf_nascimento')} maxLength={2} /></div>
+              <div className="space-y-2"><Label>Município Nascimento</Label><Input value={form.municipio_nascimento} onChange={f('municipio_nascimento')} /></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2"><Label>Nome da Mãe</Label><Input value={form.nome_mae} onChange={f('nome_mae')} /></div>
+              <div className="space-y-2"><Label>Nome do Pai</Label><Input value={form.nome_pai} onChange={f('nome_pai')} /></div>
+            </div>
+            <Button type="submit" className="w-full" disabled={upsert.isPending}>
+              {upsert.isPending ? 'Salvando...' : 'Salvar Dados Pessoais'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -4083,6 +4083,141 @@ export type Database = {
           },
         ]
       }
+      employee_personal_data: {
+        Row: {
+          cpf: string
+          created_at: string
+          data_nascimento: string
+          deleted_at: string | null
+          employee_id: string
+          estado_civil: Database["public"]["Enums"]["employee_estado_civil"]
+          id: string
+          municipio_nascimento: string | null
+          nacionalidade: string
+          nome_completo: string
+          nome_mae: string | null
+          nome_pai: string | null
+          nome_social: string | null
+          pais_nascimento: string
+          pis_pasep_nit: string | null
+          sexo: Database["public"]["Enums"]["employee_sexo"]
+          tenant_id: string
+          uf_nascimento: string | null
+          updated_at: string
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          data_nascimento: string
+          deleted_at?: string | null
+          employee_id: string
+          estado_civil?: Database["public"]["Enums"]["employee_estado_civil"]
+          id?: string
+          municipio_nascimento?: string | null
+          nacionalidade?: string
+          nome_completo: string
+          nome_mae?: string | null
+          nome_pai?: string | null
+          nome_social?: string | null
+          pais_nascimento?: string
+          pis_pasep_nit?: string | null
+          sexo?: Database["public"]["Enums"]["employee_sexo"]
+          tenant_id: string
+          uf_nascimento?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          data_nascimento?: string
+          deleted_at?: string | null
+          employee_id?: string
+          estado_civil?: Database["public"]["Enums"]["employee_estado_civil"]
+          id?: string
+          municipio_nascimento?: string | null
+          nacionalidade?: string
+          nome_completo?: string
+          nome_mae?: string | null
+          nome_pai?: string | null
+          nome_social?: string | null
+          pais_nascimento?: string
+          pis_pasep_nit?: string | null
+          sexo?: Database["public"]["Enums"]["employee_sexo"]
+          tenant_id?: string
+          uf_nascimento?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_personal_data_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_personal_data_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_records: {
+        Row: {
+          created_at: string
+          data_admissao: string
+          data_desligamento: string | null
+          deleted_at: string | null
+          employee_id: string
+          id: string
+          matricula_interna: string
+          status: Database["public"]["Enums"]["employee_record_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_admissao: string
+          data_desligamento?: string | null
+          deleted_at?: string | null
+          employee_id: string
+          id?: string
+          matricula_interna: string
+          status?: Database["public"]["Enums"]["employee_record_status"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_admissao?: string
+          data_desligamento?: string | null
+          deleted_at?: string | null
+          employee_id?: string
+          id?: string
+          matricula_interna?: string
+          status?: Database["public"]["Enums"]["employee_record_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_risk_exposures: {
         Row: {
           company_group_id: string | null
@@ -15131,6 +15266,14 @@ export type Database = {
         | "passaporte"
         | "crnm"
         | "outros"
+      employee_estado_civil:
+        | "solteiro"
+        | "casado"
+        | "divorciado"
+        | "viuvo"
+        | "separado"
+        | "uniao_estavel"
+        | "nao_informado"
       employee_event_type:
         | "company_transfer"
         | "position_change"
@@ -15143,6 +15286,12 @@ export type Database = {
         | "salary_adjusted"
         | "additional_added"
         | "job_changed"
+      employee_record_status:
+        | "pre_admissao"
+        | "ativo"
+        | "afastado"
+        | "desligado"
+      employee_sexo: "masculino" | "feminino" | "intersexo" | "nao_informado"
       employee_status: "active" | "inactive" | "on_leave"
       esocial_category:
         | "101"
@@ -15501,6 +15650,15 @@ export const Constants = {
         "crnm",
         "outros",
       ],
+      employee_estado_civil: [
+        "solteiro",
+        "casado",
+        "divorciado",
+        "viuvo",
+        "separado",
+        "uniao_estavel",
+        "nao_informado",
+      ],
       employee_event_type: [
         "company_transfer",
         "position_change",
@@ -15514,6 +15672,13 @@ export const Constants = {
         "additional_added",
         "job_changed",
       ],
+      employee_record_status: [
+        "pre_admissao",
+        "ativo",
+        "afastado",
+        "desligado",
+      ],
+      employee_sexo: ["masculino", "feminino", "intersexo", "nao_informado"],
       employee_status: ["active", "inactive", "on_leave"],
       esocial_category: [
         "101",
