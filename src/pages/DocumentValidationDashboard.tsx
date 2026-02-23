@@ -107,7 +107,7 @@ export default function DocumentValidationDashboard() {
   const { data: blockchainStats } = useQuery({
     queryKey: ['blockchain-stats', tenantId],
     queryFn: async () => {
-      if (!tenantId) return { total: 0, anchored: 0, pending: 0, failed: 0 };
+      if (!tenantId) return { total: 0, confirmed: 0, pending: 0, failed: 0 };
       return blockchainRegistryService.getStats(tenantId);
     },
     enabled: !!tenantId,
@@ -317,7 +317,7 @@ export default function DocumentValidationDashboard() {
             <Blocks className="h-4 w-4 text-primary" />
             Blockchain Hash Registry
             <Badge variant="outline" className="text-[10px] border-primary/50 text-primary ml-auto">
-              {blockchainStats?.anchored ?? 0} ancorados
+              {blockchainStats?.confirmed ?? 0} confirmados
             </Badge>
           </CardTitle>
         </CardHeader>
@@ -328,8 +328,8 @@ export default function DocumentValidationDashboard() {
               <p className="text-[10px] text-muted-foreground">Total</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/50">
-              <p className="text-lg font-bold text-primary">{blockchainStats?.anchored ?? 0}</p>
-              <p className="text-[10px] text-muted-foreground">Ancorados</p>
+              <p className="text-lg font-bold text-primary">{blockchainStats?.confirmed ?? 0}</p>
+              <p className="text-[10px] text-muted-foreground">Confirmados</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/50">
               <p className="text-lg font-bold text-yellow-500">{blockchainStats?.pending ?? 0}</p>
@@ -351,26 +351,26 @@ export default function DocumentValidationDashboard() {
                 {recentAnchors.map((a) => (
                   <div key={a.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50 text-xs">
                     <div className="min-w-0 flex-1">
-                      <p className="font-mono truncate text-foreground">{a.document_hash.slice(0, 20)}…</p>
+                      <p className="font-mono truncate text-foreground">{a.hash_sha256.slice(0, 20)}…</p>
                       <p className="text-muted-foreground">
-                        tx: {a.tx_hash?.slice(0, 18)}… | bloco: {a.block_number}
+                        tx: {a.transaction_hash?.slice(0, 18)}… | bloco: {a.block_number}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
                       <Badge
                         variant="outline"
                         className={`text-[10px] ${
-                          a.status === 'anchored'
+                          a.status === 'confirmed'
                             ? 'border-primary/50 text-primary'
                             : a.status === 'pending'
                             ? 'border-yellow-500/50 text-yellow-500'
                             : 'border-destructive/50 text-destructive'
                         }`}
                       >
-                        {a.status === 'anchored' ? '⛓ Ancorado' : a.status === 'pending' ? '⏳ Pendente' : '✗ Falha'}
+                        {a.status === 'confirmed' ? '⛓ Confirmado' : a.status === 'pending' ? '⏳ Pendente' : '✗ Falha'}
                       </Badge>
                       <span className="text-[10px] text-muted-foreground">
-                        {new Date(a.anchor_timestamp).toLocaleDateString('pt-BR')}
+                        {new Date(a.timestamp_blockchain).toLocaleDateString('pt-BR')}
                       </span>
                     </div>
                   </div>

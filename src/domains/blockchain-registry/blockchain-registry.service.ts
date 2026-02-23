@@ -7,22 +7,22 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type {
-  BlockchainHashRecord,
+  BlockchainProof,
   AnchorDocumentDTO,
   AnchorResult,
   VerifyHashResult,
 } from './types';
 
-function toRecord(row: any): BlockchainHashRecord {
+function toRecord(row: any): BlockchainProof {
   return {
     id: row.id,
     tenant_id: row.tenant_id,
     signed_document_id: row.signed_document_id,
-    document_hash: row.document_hash,
-    chain: row.chain,
-    tx_hash: row.tx_hash,
+    hash_sha256: row.hash_sha256,
+    blockchain_network: row.blockchain_network,
+    transaction_hash: row.transaction_hash,
     block_number: row.block_number,
-    anchor_timestamp: row.anchor_timestamp,
+    timestamp_blockchain: row.timestamp_blockchain,
     status: row.status,
     verification_url: row.verification_url,
     metadata: row.metadata,
@@ -37,7 +37,12 @@ export const blockchainRegistryService = {
    */
   async anchor(dto: AnchorDocumentDTO): Promise<AnchorResult> {
     const { data, error } = await supabase.functions.invoke('blockchain-anchor', {
-      body: dto,
+      body: {
+        tenant_id: dto.tenant_id,
+        signed_document_id: dto.signed_document_id,
+        document_hash: dto.hash_sha256,
+        created_by: dto.created_by,
+      },
     });
 
     if (error) {
@@ -48,13 +53,13 @@ export const blockchainRegistryService = {
   },
 
   /**
-   * Verify if a document hash has been anchored.
+   * Verify if a document hash has been confirmed on chain.
    */
-  async verifyByHash(documentHash: string, tenantId: string): Promise<VerifyHashResult> {
+  async verifyByHash(hashSha256: string, tenantId: string): Promise<VerifyHashResult> {
     const { data, error } = await supabase
       .from('blockchain_hash_registry')
       .select('*')
-      .eq('document_hash', documentHash)
+      .eq('hash_sha256', hashSha256)
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(1);
@@ -62,22 +67,22 @@ export const blockchainRegistryService = {
     if (error) throw error;
 
     if (!data || data.length === 0) {
-      return { found: false, anchored: false };
+      return { found: false, confirmed: false };
     }
 
     const record = toRecord(data[0]);
     return {
       found: true,
-      anchored: record.status === 'anchored',
+      confirmed: record.status === 'confirmed',
       record,
       verification_url: record.verification_url ?? undefined,
     };
   },
 
   /**
-   * List all blockchain records for a signed document.
+   * List all blockchain proofs for a signed document.
    */
-  async listByDocument(signedDocumentId: string, tenantId: string): Promise<BlockchainHashRecord[]> {
+  async listByDocument(signedDocumentId: string, tenantId: string): Promise<BlockchainProof[]> {
     const { data, error } = await supabase
       .from('blockchain_hash_registry')
       .select('*')
@@ -90,9 +95,9 @@ export const blockchainRegistryService = {
   },
 
   /**
-   * List all blockchain records for a tenant (dashboard).
+   * List all blockchain proofs for a tenant (dashboard).
    */
-  async listByTenant(tenantId: string, limit = 100): Promise<BlockchainHashRecord[]> {
+  async listByTenant(tenantId: string, limit = 100): Promise<BlockchainProof[]> {
     const { data, error } = await supabase
       .from('blockchain_hash_registry')
       .select('*')
@@ -109,7 +114,7 @@ export const blockchainRegistryService = {
    */
   async getStats(tenantId: string): Promise<{
     total: number;
-    anchored: number;
+    confirmed: number;
     pending: number;
     failed: number;
   }> {
@@ -122,7 +127,7 @@ export const blockchainRegistryService = {
     const rows = data || [];
     return {
       total: rows.length,
-      anchored: rows.filter((r: any) => r.status === 'anchored').length,
+      confirmed: rows.filter((r: any) => r.status === 'confirmed').length,
       pending: rows.filter((r: any) => r.status === 'pending').length,
       failed: rows.filter((r: any) => r.status === 'failed').length,
     };

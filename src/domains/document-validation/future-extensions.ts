@@ -83,15 +83,15 @@ export async function anchorOnBlockchain(
     const result = await blockchainRegistryService.anchor({
       tenant_id: req.tenant_id,
       signed_document_id: req.signed_document_id || '',
-      document_hash: req.document_hash,
+      hash_sha256: req.document_hash,
     });
     if (result.success && result.record) {
       return {
         anchored: true,
-        tx_hash: result.record.tx_hash ?? undefined,
-        chain: result.record.chain,
+        tx_hash: result.record.transaction_hash ?? undefined,
+        chain: result.record.blockchain_network,
         block_number: result.record.block_number ?? undefined,
-        timestamp: result.record.anchor_timestamp,
+        timestamp: result.record.timestamp_blockchain,
       };
     }
     return { anchored: false, error: result.error };
