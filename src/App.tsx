@@ -18,6 +18,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
 import LiveDisplayTV from "./pages/LiveDisplayTV";
+import PublicDocumentValidation from "./pages/PublicDocumentValidation";
 import LiveDisplayPair from "./pages/LiveDisplayPair";
 import { authRoutes } from "./routes/auth.routes";
 import { platformRoutes } from "./routes/platform.routes";
@@ -51,15 +52,16 @@ function AppRoutes() {
   }
 
   // ── Public TV routes (no auth needed) ──
-  const tvRoute: RouteObject[] = [
+  const publicRoutes: RouteObject[] = [
     { path: '/tv', element: <LiveDisplayTV /> },
     { path: '/display', element: <LiveDisplayTV /> },
     { path: '/live-display/pair', element: <LiveDisplayPair /> },
+    { path: '/public/validate/:token', element: <PublicDocumentValidation /> },
   ];
 
   // ── Unauthenticated ──
   if (!user) {
-    return useRoutes([...authRoutes, ...tvRoute]);
+    return useRoutes([...authRoutes, ...publicRoutes]);
   }
 
   // ── Check sessionStorage on EVERY render to prevent wildcard redirects during login ──
@@ -68,7 +70,7 @@ function AppRoutes() {
   // ── Build authenticated route set ──
   const sharedRoutes: RouteObject[] = [
     ...platformRoutes,
-    ...tvRoute,
+    ...publicRoutes,
     { path: '/lp/:slug', element: <LandingPagePreview /> },
     { path: '/auth/login', element: hasPendingRedirect ? <FullScreenLoader label="Redirecionando..." /> : <Navigate to="/" replace /> },
     { path: '/reset-password', element: <ResetPassword /> },

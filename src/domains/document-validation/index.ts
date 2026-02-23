@@ -15,6 +15,8 @@
 
 export { documentValidationService } from './document-validation.service';
 export { signedDocumentRegistry } from './signed-document.service';
+export { qrPdfService } from './qr-pdf.service';
+export type { QRPdfGenerationParams, QRPdfGenerationResult } from './qr-pdf.service';
 
 export type {
   DocumentValidationToken,
