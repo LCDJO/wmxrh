@@ -136,9 +136,21 @@ export default function LiveDisplayTV() {
   // ── Rotation Mode ──
   const rotationEnabled = data?.display?.rotacao_automatica ?? false;
   const rotationInterval = data?.display?.intervalo_rotacao ?? 60;
+
+  // Map display tipo to the correct initial view
+  const TIPO_TO_VIEW: Record<string, RotationView> = {
+    fleet: 'fleet_live',
+    sst: 'sst_view',
+    compliance: 'compliance_summary',
+    executivo: 'executive_overview',
+  };
+  const displayTipo = data?.display?.tipo ?? 'executivo';
+  const initialView = TIPO_TO_VIEW[displayTipo] ?? 'executive_overview';
+
   const rotation = useRotationMode({
     enabled: rotationEnabled && !!data,
     intervalSeconds: rotationInterval,
+    views: rotationEnabled ? undefined : [initialView],
   });
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
