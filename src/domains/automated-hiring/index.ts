@@ -134,6 +134,13 @@ export type {
   AgreementEtapaResult,
 } from './agreements-admission.engine';
 
+// ── Hiring → Agreement Bridge ──
+export { hiringAgreementBridge } from './hiring-agreement-bridge';
+export type {
+  HiringAgreementDispatchResult,
+  HiringAgreementComplianceCheck,
+} from './hiring-agreement-bridge';
+
 // ── Integração Fleet (Etapa 7) ──
 export {
   validateFleetCompliance,
