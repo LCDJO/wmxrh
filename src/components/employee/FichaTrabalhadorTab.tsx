@@ -16,6 +16,7 @@ import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, Dollar
 import { RemuneracaoSection } from './RemuneracaoSection';
 import { SSTSection } from './SSTSection';
 import { DisciplinarySection } from './DisciplinarySection';
+import { ComplianceValidationBanner } from './ComplianceValidationBanner';
 import { useToast } from '@/hooks/use-toast';
 import {
   useEmployeeMasterRecord,
@@ -25,6 +26,7 @@ import {
   useCreateEmployeeContract,
   useUpsertEmployeePersonalData,
   useCreateEmployeeRecord,
+  useHealthExams,
 } from '@/domains/hooks';
 import {
   DOCUMENT_TYPE_LABELS,
@@ -61,6 +63,7 @@ interface Props {
 
 export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
   const { data: record, isLoading } = useEmployeeMasterRecord(employeeId);
+  const { data: exams = [] } = useHealthExams(employeeId);
   const { toast } = useToast();
 
   if (isLoading) {
@@ -76,7 +79,8 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
       <h3 className="text-lg font-semibold font-display text-card-foreground mb-4">
         Ficha Completa do Trabalhador
       </h3>
-      <Tabs defaultValue="registro" className="space-y-4">
+      <ComplianceValidationBanner record={record} exams={exams} />
+      <Tabs defaultValue="registro" className="space-y-4 mt-4">
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="registro" className="gap-1.5 text-xs">
             <IdCard className="h-3.5 w-3.5" /> Registro
