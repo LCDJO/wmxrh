@@ -12,12 +12,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign, ShieldAlert, Scale, Lock } from 'lucide-react';
+import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign, ShieldAlert, Scale, Lock, Building2, FileCheck, Banknote } from 'lucide-react';
 import { RemuneracaoSection } from './RemuneracaoSection';
 import { SSTSection } from './SSTSection';
 import { DisciplinarySection } from './DisciplinarySection';
 import { ComplianceValidationBanner } from './ComplianceValidationBanner';
 import { LGPDSection } from './LGPDSection';
+import { FichaStatusIndicators } from './FichaStatusIndicators';
+import { SignedDocumentsSection } from './SignedDocumentsSection';
+import { FinanceiroSection } from './FinanceiroSection';
 import { useToast } from '@/hooks/use-toast';
 import {
   useEmployeeMasterRecord,
@@ -88,56 +91,60 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
   }
 
   return (
-    <div className="bg-card rounded-xl shadow-card p-6">
-      <h3 className="text-lg font-semibold font-display text-card-foreground mb-4">
-        Ficha Completa do Trabalhador
-      </h3>
+    <div className="bg-card rounded-xl shadow-card p-6 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-lg font-semibold font-display text-card-foreground">
+          Ficha Completa do Trabalhador
+        </h3>
+      </div>
+
+      {/* Status Indicators */}
+      <FichaStatusIndicators record={record} employeeId={employeeId} exams={exams} />
+
+      {/* Compliance Validation */}
       <ComplianceValidationBanner record={record} exams={exams} />
-      <Tabs defaultValue="registro" className="space-y-4 mt-4">
-        <TabsList className="flex flex-wrap h-auto gap-1">
-          <TabsTrigger value="registro" className="gap-1.5 text-xs">
-            <IdCard className="h-3.5 w-3.5" /> Registro
-          </TabsTrigger>
+
+      <Tabs defaultValue="dados_pessoais" className="space-y-4">
+        <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1 rounded-lg">
+          {/* 1 */}
           <TabsTrigger value="dados_pessoais" className="gap-1.5 text-xs">
             <User className="h-3.5 w-3.5" /> Dados Pessoais
           </TabsTrigger>
+          {/* 2 */}
           <TabsTrigger value="documentos" className="gap-1.5 text-xs">
-            <FileText className="h-3.5 w-3.5" /> Documentos ({record?.documents.length ?? 0})
+            <FileText className="h-3.5 w-3.5" /> Documentos
           </TabsTrigger>
-          <TabsTrigger value="enderecos" className="gap-1.5 text-xs">
-            <MapPin className="h-3.5 w-3.5" /> Endereços ({record?.addresses.length ?? 0})
-          </TabsTrigger>
-          <TabsTrigger value="dependentes" className="gap-1.5 text-xs">
-            <Users className="h-3.5 w-3.5" /> Dependentes ({record?.dependents.length ?? 0})
-          </TabsTrigger>
+          {/* 3 */}
           <TabsTrigger value="contrato" className="gap-1.5 text-xs">
-            <Briefcase className="h-3.5 w-3.5" /> Dados Contratuais ({record?.contracts.length ?? 0})
+            <Briefcase className="h-3.5 w-3.5" /> Contrato
           </TabsTrigger>
+          {/* 4 */}
           <TabsTrigger value="remuneracao" className="gap-1.5 text-xs">
             <DollarSign className="h-3.5 w-3.5" /> Remuneração
           </TabsTrigger>
+          {/* 5 */}
+          <TabsTrigger value="dependentes" className="gap-1.5 text-xs">
+            <Users className="h-3.5 w-3.5" /> Dependentes
+          </TabsTrigger>
+          {/* 6 */}
           <TabsTrigger value="sst" className="gap-1.5 text-xs">
             <ShieldAlert className="h-3.5 w-3.5" /> SST
           </TabsTrigger>
+          {/* 7 */}
+          <TabsTrigger value="financeiro" className="gap-1.5 text-xs">
+            <Banknote className="h-3.5 w-3.5" /> Financeiro
+          </TabsTrigger>
+          {/* 8 */}
           <TabsTrigger value="disciplinar" className="gap-1.5 text-xs">
             <Scale className="h-3.5 w-3.5" /> Disciplinar
           </TabsTrigger>
-          <TabsTrigger value="lgpd" className="gap-1.5 text-xs">
-            <Lock className="h-3.5 w-3.5" /> LGPD
+          {/* 9 */}
+          <TabsTrigger value="docs_assinados" className="gap-1.5 text-xs">
+            <FileCheck className="h-3.5 w-3.5" /> Docs Assinados
           </TabsTrigger>
         </TabsList>
 
-        {/* ── Aggregate Root ── */}
-        <TabsContent value="registro">
-          <RecordSection
-            record={record?.record ?? null}
-            employeeId={employeeId}
-            tenantId={tenantId}
-            canEdit={canEdit}
-          />
-        </TabsContent>
-
-        {/* ── Personal Data ── */}
+        {/* 1. Dados Pessoais (includes addresses) */}
         <TabsContent value="dados_pessoais">
           <PersonalDataSection
             personalData={record?.personalData ?? null}
@@ -145,9 +152,20 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
             tenantId={tenantId}
             canEdit={canEdit}
           />
+          <div className="mt-6">
+            <h4 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
+              <MapPin className="h-4 w-4" /> Endereços
+            </h4>
+            <AddressesSection
+              addresses={record?.addresses ?? []}
+              employeeId={employeeId}
+              tenantId={tenantId}
+              canEdit={canEdit}
+            />
+          </div>
         </TabsContent>
 
-        {/* ── Documents ── */}
+        {/* 2. Documentos */}
         <TabsContent value="documentos">
           <DocumentsSection
             documents={record?.documents ?? []}
@@ -157,17 +175,33 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
           />
         </TabsContent>
 
-        {/* ── Addresses ── */}
-        <TabsContent value="enderecos">
-          <AddressesSection
-            addresses={record?.addresses ?? []}
+        {/* 3. Contrato */}
+        <TabsContent value="contrato">
+          <RecordSection
+            record={record?.record ?? null}
             employeeId={employeeId}
             tenantId={tenantId}
             canEdit={canEdit}
           />
+          <div className="mt-4">
+            <ContractsSection
+              contracts={record?.contracts ?? []}
+              employeeId={employeeId}
+              tenantId={tenantId}
+              canEdit={canEdit}
+            />
+          </div>
         </TabsContent>
 
-        {/* ── Dependents ── */}
+        {/* 4. Remuneração */}
+        <TabsContent value="remuneracao">
+          <RemuneracaoSection
+            employeeId={employeeId}
+            tenantId={tenantId}
+          />
+        </TabsContent>
+
+        {/* 5. Dependentes */}
         <TabsContent value="dependentes">
           <DependentsSection
             dependents={record?.dependents ?? []}
@@ -177,25 +211,7 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
           />
         </TabsContent>
 
-        {/* ── Contract ── */}
-        <TabsContent value="contrato">
-          <ContractsSection
-            contracts={record?.contracts ?? []}
-            employeeId={employeeId}
-            tenantId={tenantId}
-            canEdit={canEdit}
-          />
-        </TabsContent>
-
-        {/* ── Compensation ── */}
-        <TabsContent value="remuneracao">
-          <RemuneracaoSection
-            employeeId={employeeId}
-            tenantId={tenantId}
-          />
-        </TabsContent>
-
-        {/* ── SST ── */}
+        {/* 6. SST */}
         <TabsContent value="sst">
           <SSTSection
             employeeId={employeeId}
@@ -203,7 +219,15 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
           />
         </TabsContent>
 
-        {/* ── Disciplinary ── */}
+        {/* 7. Financeiro */}
+        <TabsContent value="financeiro">
+          <FinanceiroSection
+            personalData={record?.personalData ?? null}
+            currentContract={record?.contracts?.filter(c => !c.deleted_at && c.is_current)[0] ?? null}
+          />
+        </TabsContent>
+
+        {/* 8. Disciplinar */}
         <TabsContent value="disciplinar">
           <DisciplinarySection
             employeeId={employeeId}
@@ -211,12 +235,11 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
           />
         </TabsContent>
 
-        {/* ── LGPD ── */}
-        <TabsContent value="lgpd">
-          <LGPDSection
+        {/* 9. Documentos Assinados */}
+        <TabsContent value="docs_assinados">
+          <SignedDocumentsSection
             employeeId={employeeId}
             tenantId={tenantId}
-            terminationDate={record?.record?.data_desligamento}
           />
         </TabsContent>
       </Tabs>
