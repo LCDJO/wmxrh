@@ -19,6 +19,8 @@
 // ── Services ──
 export { employeeRecordService } from './employee-record.service';
 export { employeePersonalDataService } from './employee-personal-data.service';
+export { complianceValidationService } from './compliance-validation.service';
+export type { ComplianceValidationResult, ComplianceValidationItem, ValidationSeverity } from './compliance-validation.service';
 export { employeeDocumentService } from './employee-document.service';
 export { employeeAddressService } from './employee-address.service';
 export { employeeDependentService } from './employee-dependent.service';
