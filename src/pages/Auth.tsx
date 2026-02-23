@@ -136,15 +136,19 @@ export default function Auth() {
 
   const handleSelectWorkspace = (choice: 'platform' | 'tenant', tenantId?: string) => {
     setSelectorOpen(false);
+
+    // Honor redirect param if present
+    const params = new URLSearchParams(window.location.search);
+    const redirectTo = params.get('redirect');
+
     if (choice === 'platform') {
       platformEvents.userLoggedIn('', email);
-      navigate('/platform/dashboard', { replace: true });
+      navigate(redirectTo && redirectTo.startsWith('/') ? redirectTo : '/platform/dashboard', { replace: true });
     } else {
-      // If a specific tenant was chosen, store it for TenantContext to pick up
       if (tenantId) {
         localStorage.setItem('currentTenantId', tenantId);
       }
-      navigate('/', { replace: true });
+      navigate(redirectTo && redirectTo.startsWith('/') ? redirectTo : '/', { replace: true });
     }
   };
 
