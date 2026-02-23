@@ -102,6 +102,18 @@ export default function Auth() {
    * Route based on detected intent.
    */
   const routeByIntent = (intent: DetectedIntent) => {
+    // Check for pending redirect (e.g. display pairing QR flow)
+    const pendingRedirect = sessionStorage.getItem('redirectAfterLogin');
+    if (pendingRedirect) {
+      sessionStorage.removeItem('redirectAfterLogin');
+      // Still set tenant context if needed
+      if (intent.intent === 'tenant' && intent.tenants.length === 1) {
+        localStorage.setItem('currentTenantId', intent.tenants[0].id);
+      }
+      navigate(pendingRedirect, { replace: true });
+      return;
+    }
+
     switch (intent.intent) {
       case 'platform':
         platformEvents.userLoggedIn('', email);
@@ -126,6 +138,16 @@ export default function Auth() {
 
   const handleSelectWorkspace = (choice: 'platform' | 'tenant', tenantId?: string) => {
     setSelectorOpen(false);
+
+    // Check for pending redirect (e.g. display pairing QR flow)
+    const pendingRedirect = sessionStorage.getItem('redirectAfterLogin');
+    if (pendingRedirect) {
+      sessionStorage.removeItem('redirectAfterLogin');
+      if (tenantId) localStorage.setItem('currentTenantId', tenantId);
+      navigate(pendingRedirect, { replace: true });
+      return;
+    }
+
     if (choice === 'platform') {
       platformEvents.userLoggedIn('', email);
       navigate('/platform/dashboard', { replace: true });
