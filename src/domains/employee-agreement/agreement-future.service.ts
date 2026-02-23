@@ -23,7 +23,7 @@ import type {
   LgpdDataSubjectRequest,
   ConsentPurpose,
   ConsentLegalBasis,
-} from './types';
+} from './types-future';
 
 const STUB = (name: string) =>
   console.warn(`[AgreementEngine] ${name} is not yet implemented (future feature).`);

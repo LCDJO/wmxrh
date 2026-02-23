@@ -1070,8 +1070,8 @@ export function useSalaryRubricTemplates() {
 // DOCUMENT VAULT
 // ========================
 
-import { documentVaultService } from '@/domains/employee-agreement/document-vault.service';
-import type { DocumentVaultRecord } from '@/domains/employee-agreement/document-vault.service';
+import { documentVaultService } from '@/domains/employee-agreement/document-vault';
+import type { DocumentVaultRecord } from '@/domains/employee-agreement/document-vault';
 
 export function useDocumentVault(employeeId: string) {
   const qs = useQueryScope();
