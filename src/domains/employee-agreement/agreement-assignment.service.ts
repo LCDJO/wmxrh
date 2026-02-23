@@ -14,6 +14,7 @@ import { emitAgreementEvent } from './events';
 import { digitalSignatureAdapter } from './digital-signature-adapter';
 import { documentVault } from './document-vault';
 import { agreementTemplateService } from './agreement-template.service';
+import { registerPrecomputedHash } from '@/domains/blockchain-registry';
 import type {
   EmployeeAgreement,
   SendForSignatureDTO,
@@ -171,6 +172,45 @@ export const agreementAssignmentService = {
       payload: { status: dto.status },
       timestamp: new Date().toISOString(),
     });
+
+    // ─── Blockchain Registration (async, non-blocking) ───
+    if (dto.status === 'signed' && dto.signed_document_hash) {
+      registerPrecomputedHash(
+        ctx.tenant_id,
+        dto.agreement_id,
+        dto.signed_document_hash,
+        ctx.user_id,
+      ).then((result) => {
+        if (result.success) {
+          console.log(`[Blockchain] Enqueued hash for agreement ${dto.agreement_id}: ${result.status}`);
+          // Audit log
+          supabase.from('audit_logs').insert({
+            tenant_id: ctx.tenant_id,
+            user_id: ctx.user_id,
+            entity_type: 'blockchain_proof',
+            entity_id: dto.agreement_id,
+            action: 'blockchain.enqueued',
+            metadata: {
+              hash_sha256: dto.signed_document_hash,
+              queue_id: result.queue_id,
+              status: result.status,
+            },
+          }).then(() => {});
+        } else {
+          console.error(`[Blockchain] Failed to enqueue: ${result.error}`);
+          supabase.from('audit_logs').insert({
+            tenant_id: ctx.tenant_id,
+            user_id: ctx.user_id,
+            entity_type: 'blockchain_proof',
+            entity_id: dto.agreement_id,
+            action: 'blockchain.enqueue_failed',
+            metadata: { error: result.error },
+          }).then(() => {});
+        }
+      }).catch((err) => {
+        console.error(`[Blockchain] Registration error:`, err);
+      });
+    }
   },
 
   // ── LIST ──
