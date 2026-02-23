@@ -3264,8 +3264,10 @@ export type Database = {
           ip_address: string | null
           metadata: Json | null
           requester_document: string | null
+          requester_email: string | null
           requester_name: string | null
           requester_purpose: string | null
+          signed_document_id: string | null
           tenant_id: string
           token_id: string
           user_agent: string | null
@@ -3277,8 +3279,10 @@ export type Database = {
           ip_address?: string | null
           metadata?: Json | null
           requester_document?: string | null
+          requester_email?: string | null
           requester_name?: string | null
           requester_purpose?: string | null
+          signed_document_id?: string | null
           tenant_id: string
           token_id: string
           user_agent?: string | null
@@ -3290,8 +3294,10 @@ export type Database = {
           ip_address?: string | null
           metadata?: Json | null
           requester_document?: string | null
+          requester_email?: string | null
           requester_name?: string | null
           requester_purpose?: string | null
+          signed_document_id?: string | null
           tenant_id?: string
           token_id?: string
           user_agent?: string | null

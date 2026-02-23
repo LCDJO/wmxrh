@@ -16,6 +16,8 @@
 export { documentValidationService } from './document-validation.service';
 export { signedDocumentRegistry } from './signed-document.service';
 export { qrPdfService } from './qr-pdf.service';
+export { lgpdValidationLogService } from './lgpd-validation-log.service';
+export type { LGPDValidationLog } from './lgpd-validation-log.service';
 export type { QRPdfGenerationParams, QRPdfGenerationResult } from './qr-pdf.service';
 
 export type {

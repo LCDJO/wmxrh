@@ -139,20 +139,33 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Resolve signed_document_id if available
+    let signedDocumentId: string | null = null;
+    if (accessResult === "success") {
+      const { data: sdRow } = await supabase
+        .from("signed_documents")
+        .select("id")
+        .eq("validation_token", token)
+        .eq("ativo", true)
+        .maybeSingle();
+      signedDocumentId = sdRow?.id ?? null;
+    }
+
     // LGPD: Log access attempt with all requester data
     await supabase.from("document_access_logs").insert({
       token_id: tokenRow.id,
       tenant_id: tokenRow.tenant_id,
+      signed_document_id: signedDocumentId,
       ip_address: ip,
       user_agent: ua,
       requester_name: requesterName,
-      requester_document: requesterEmail, // storing email in document field
+      requester_email: requesterEmail,
+      requester_document: requesterEmail,
       requester_purpose: requesterPurpose,
       access_result: accessResult,
       metadata: {
         privacy_accepted: privacyAccepted,
         privacy_accepted_at: new Date().toISOString(),
-        requester_email: requesterEmail,
       },
     });
 
