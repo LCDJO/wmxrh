@@ -59,6 +59,13 @@ function AppRoutes() {
     return useRoutes([...authRoutes, ...tvRoute]);
   }
 
+  // ── Check for pending redirect (e.g. from display pairing QR code flow) ──
+  const pendingRedirect = sessionStorage.getItem('redirectAfterLogin');
+  if (pendingRedirect) {
+    sessionStorage.removeItem('redirectAfterLogin');
+    return <Navigate to={pendingRedirect} replace />;
+  }
+
   // ── Build authenticated route set ──
   const sharedRoutes: RouteObject[] = [
     ...platformRoutes,

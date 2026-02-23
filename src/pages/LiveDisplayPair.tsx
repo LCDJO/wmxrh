@@ -127,7 +127,10 @@ export default function LiveDisplayPair() {
             <Button
               className="w-full gap-2"
               size="lg"
-              onClick={() => navigate(`/auth/login?redirect=${encodeURIComponent(`/live-display/pair?code=${code}`)}`)}
+              onClick={() => {
+                sessionStorage.setItem('redirectAfterLogin', `/live-display/pair?code=${code}`);
+                navigate('/auth/login');
+              }}
             >
               <LogIn className="h-4 w-4" />
               Fazer login para continuar
