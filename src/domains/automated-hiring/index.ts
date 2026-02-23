@@ -178,6 +178,22 @@ export type {
 export { activateEmployee } from './activation.engine';
 export type { ActivationInput, ActivationResult } from './activation.engine';
 
+// ── Bloqueios Automáticos ──
+export {
+  evaluateHiringRestrictions,
+  checkOperationAllowed,
+  canClockIn,
+  canUseVehicle,
+  canPerformCriticalOperation,
+} from './operational-blocks.engine';
+export type {
+  OperationalRestriction,
+  RestrictionSeverity,
+  OperationalBlock,
+  HiringRestrictionProfile,
+  RestrictionCheckResult,
+} from './operational-blocks.engine';
+
 // ── Events ──
 export {
   onHiringEvent,
