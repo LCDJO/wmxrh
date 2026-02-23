@@ -145,6 +145,22 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Audit log — blockchain proof confirmed
+    await supabase.from("audit_logs").insert({
+      tenant_id,
+      user_id: created_by || userId,
+      entity_type: "blockchain_proof",
+      entity_id: record.id,
+      action: "blockchain.confirmed",
+      metadata: {
+        hash_sha256: document_hash,
+        transaction_hash: txHash,
+        block_number: simulatedBlockNumber,
+        blockchain_network: chain,
+        signed_document_id,
+      },
+    });
+
     return new Response(
       JSON.stringify({ success: true, record }),
       { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
