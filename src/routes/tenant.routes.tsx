@@ -44,6 +44,7 @@ import FleetAnalyticsView from '@/pages/FleetAnalyticsView';
 import FleetEmployeeBehaviorProfile from '@/pages/FleetEmployeeBehaviorProfile';
 import LiveDisplayAdmin from '@/pages/LiveDisplayAdmin';
 import OperationalCommandCenter from '@/pages/OperationalCommandCenter';
+import DocumentValidationDashboard from '@/pages/DocumentValidationDashboard';
 import EpiCatalog from '@/pages/EpiCatalog';
 import EpiDelivery from '@/pages/EpiDelivery';
 import EpiDashboard from '@/pages/EpiDashboard';
@@ -127,6 +128,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/command-center', element: pr('dashboard', <OperationalCommandCenter />) },
       // ── Agreements / Communication ──
       { path: '/agreements', element: pr('employees', <AgreementManagement />) },
+      { path: '/document-validation', element: pr('audit', <DocumentValidationDashboard />) },
       { path: '/communication-center', element: <TenantCommunicationCenter /> },
       { path: '/announcements', element: <TenantAnnouncements /> },
       // ── Apps / Plans / Notifications ──
