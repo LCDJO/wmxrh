@@ -194,6 +194,18 @@ export type {
   RestrictionCheckResult,
 } from './operational-blocks.engine';
 
+// ── Dashboard de Admissão ──
+export {
+  computeCompanyMetrics,
+  computeTenantMetrics,
+} from './admission-dashboard.engine';
+export type {
+  StepPendencyCount,
+  CompanyAdmissionMetrics,
+  BlockedAdmission,
+  TenantAdmissionMetrics,
+} from './admission-dashboard.engine';
+
 // ── Events ──
 export {
   onHiringEvent,
