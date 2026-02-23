@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign, ShieldAlert, Scale, Lock, Building2, FileCheck, Banknote } from 'lucide-react';
+import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign, ShieldAlert, Scale, Lock, Building2, FileCheck, Banknote, ScrollText } from 'lucide-react';
 import { RemuneracaoSection } from './RemuneracaoSection';
 import { SSTSection } from './SSTSection';
 import { DisciplinarySection } from './DisciplinarySection';
@@ -21,6 +21,7 @@ import { LGPDSection } from './LGPDSection';
 import { FichaStatusIndicators } from './FichaStatusIndicators';
 import { SignedDocumentsSection } from './SignedDocumentsSection';
 import { FinanceiroSection } from './FinanceiroSection';
+import { EmployeeAuditLogSection } from './EmployeeAuditLogSection';
 import { useToast } from '@/hooks/use-toast';
 import {
   useEmployeeMasterRecord,
@@ -142,6 +143,10 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
           <TabsTrigger value="docs_assinados" className="gap-1.5 text-xs">
             <FileCheck className="h-3.5 w-3.5" /> Docs Assinados
           </TabsTrigger>
+          {/* 10 */}
+          <TabsTrigger value="auditoria" className="gap-1.5 text-xs">
+            <ScrollText className="h-3.5 w-3.5" /> Auditoria
+          </TabsTrigger>
         </TabsList>
 
         {/* 1. Dados Pessoais (includes addresses) */}
@@ -238,6 +243,14 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
         {/* 9. Documentos Assinados */}
         <TabsContent value="docs_assinados">
           <SignedDocumentsSection
+            employeeId={employeeId}
+            tenantId={tenantId}
+          />
+        </TabsContent>
+
+        {/* 10. Auditoria */}
+        <TabsContent value="auditoria">
+          <EmployeeAuditLogSection
             employeeId={employeeId}
             tenantId={tenantId}
           />
