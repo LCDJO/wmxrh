@@ -324,6 +324,11 @@ function PersonalDataSection({
     cnh_validade: '',
     passaporte: '',
     rne_rnm: '',
+    banco: '',
+    agencia: '',
+    conta: '',
+    tipo_conta: 'corrente',
+    chave_pix: '',
   });
   const { toast } = useToast();
   const upsert = useUpsertEmployeePersonalData();
@@ -353,6 +358,11 @@ function PersonalDataSection({
         cnh_validade: personalData.cnh_validade || '',
         passaporte: personalData.passaporte || '',
         rne_rnm: personalData.rne_rnm || '',
+        banco: personalData.banco || '',
+        agencia: personalData.agencia || '',
+        conta: personalData.conta || '',
+        tipo_conta: personalData.tipo_conta || 'corrente',
+        chave_pix: personalData.chave_pix || '',
       });
     }
     setOpen(true);
@@ -385,6 +395,11 @@ function PersonalDataSection({
         cnh_validade: form.cnh_validade || null,
         passaporte: form.passaporte || null,
         rne_rnm: form.rne_rnm || null,
+        banco: form.banco || null,
+        agencia: form.agencia || null,
+        conta: form.conta || null,
+        tipo_conta: form.tipo_conta || null,
+        chave_pix: form.chave_pix || null,
       },
       {
         onSuccess: () => { toast({ title: 'Dados pessoais salvos!' }); setOpen(false); },
@@ -428,6 +443,19 @@ function PersonalDataSection({
               {personalData.cnh_validade && <div><p className="text-xs text-muted-foreground">Validade CNH</p><p className="text-sm text-card-foreground">{new Date(personalData.cnh_validade).toLocaleDateString('pt-BR')}</p></div>}
               {personalData.passaporte && <div><p className="text-xs text-muted-foreground">Passaporte</p><p className="text-sm font-mono text-card-foreground">{personalData.passaporte}</p></div>}
               {personalData.rne_rnm && <div><p className="text-xs text-muted-foreground">RNE/RNM</p><p className="text-sm font-mono text-card-foreground">{personalData.rne_rnm}</p></div>}
+            </div>
+          </>
+        )}
+        {/* Dados Bancários */}
+        {(personalData.banco || personalData.agencia || personalData.conta || personalData.chave_pix) && (
+          <>
+            <h4 className="text-sm font-semibold text-card-foreground mt-4">Dados Bancários</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {personalData.banco && <div><p className="text-xs text-muted-foreground">Banco</p><p className="text-sm text-card-foreground">{personalData.banco}</p></div>}
+              {personalData.agencia && <div><p className="text-xs text-muted-foreground">Agência</p><p className="text-sm font-mono text-card-foreground">{personalData.agencia}</p></div>}
+              {personalData.conta && <div><p className="text-xs text-muted-foreground">Conta</p><p className="text-sm font-mono text-card-foreground">{personalData.conta}</p></div>}
+              {personalData.tipo_conta && <div><p className="text-xs text-muted-foreground">Tipo Conta</p><p className="text-sm text-card-foreground">{personalData.tipo_conta === 'corrente' ? 'Corrente' : personalData.tipo_conta === 'poupanca' ? 'Poupança' : personalData.tipo_conta}</p></div>}
+              {personalData.chave_pix && <div><p className="text-xs text-muted-foreground">Chave PIX</p><p className="text-sm font-mono text-card-foreground">{personalData.chave_pix}</p></div>}
             </div>
           </>
         )}
@@ -502,6 +530,27 @@ function PersonalDataSection({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2"><Label>Passaporte</Label><Input value={form.passaporte} onChange={f('passaporte')} /></div>
               <div className="space-y-2"><Label>RNE/RNM</Label><Input value={form.rne_rnm} onChange={f('rne_rnm')} /></div>
+            </div>
+            {/* Dados Bancários */}
+            <h4 className="text-sm font-semibold text-foreground pt-2">Dados Bancários</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="space-y-2"><Label>Banco</Label><Input value={form.banco} onChange={f('banco')} placeholder="001 - Banco do Brasil" /></div>
+              <div className="space-y-2"><Label>Agência</Label><Input value={form.agencia} onChange={f('agencia')} /></div>
+              <div className="space-y-2"><Label>Conta</Label><Input value={form.conta} onChange={f('conta')} /></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Tipo Conta</Label>
+                <Select value={form.tipo_conta} onValueChange={(v) => setForm(prev => ({ ...prev, tipo_conta: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="corrente">Corrente</SelectItem>
+                    <SelectItem value="poupanca">Poupança</SelectItem>
+                    <SelectItem value="salario">Salário</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2"><Label>Chave PIX</Label><Input value={form.chave_pix} onChange={f('chave_pix')} placeholder="CPF, email, telefone ou aleatória" /></div>
             </div>
             <Button type="submit" className="w-full" disabled={upsert.isPending}>
               {upsert.isPending ? 'Salvando...' : 'Salvar Dados Pessoais'}

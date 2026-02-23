@@ -376,6 +376,11 @@ export interface EmployeePersonalData {
   cnh_validade: string | null;
   passaporte: string | null;
   rne_rnm: string | null;
+  banco: string | null;
+  agencia: string | null;
+  conta: string | null;
+  tipo_conta: string | null;
+  chave_pix: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -407,6 +412,11 @@ export interface CreateEmployeePersonalDataDTO {
   cnh_validade?: string | null;
   passaporte?: string | null;
   rne_rnm?: string | null;
+  banco?: string | null;
+  agencia?: string | null;
+  conta?: string | null;
+  tipo_conta?: string | null;
+  chave_pix?: string | null;
 }
 
 // ════════════════════════════════════════

@@ -4110,9 +4110,13 @@ export type Database = {
       }
       employee_personal_data: {
         Row: {
+          agencia: string | null
+          banco: string | null
+          chave_pix: string | null
           cnh_categoria: string | null
           cnh_numero: string | null
           cnh_validade: string | null
+          conta: string | null
           cpf: string
           created_at: string
           data_nascimento: string
@@ -4136,13 +4140,18 @@ export type Database = {
           rne_rnm: string | null
           sexo: Database["public"]["Enums"]["employee_sexo"]
           tenant_id: string
+          tipo_conta: string | null
           uf_nascimento: string | null
           updated_at: string
         }
         Insert: {
+          agencia?: string | null
+          banco?: string | null
+          chave_pix?: string | null
           cnh_categoria?: string | null
           cnh_numero?: string | null
           cnh_validade?: string | null
+          conta?: string | null
           cpf: string
           created_at?: string
           data_nascimento: string
@@ -4166,13 +4175,18 @@ export type Database = {
           rne_rnm?: string | null
           sexo?: Database["public"]["Enums"]["employee_sexo"]
           tenant_id: string
+          tipo_conta?: string | null
           uf_nascimento?: string | null
           updated_at?: string
         }
         Update: {
+          agencia?: string | null
+          banco?: string | null
+          chave_pix?: string | null
           cnh_categoria?: string | null
           cnh_numero?: string | null
           cnh_validade?: string | null
+          conta?: string | null
           cpf?: string
           created_at?: string
           data_nascimento?: string
@@ -4196,6 +4210,7 @@ export type Database = {
           rne_rnm?: string | null
           sexo?: Database["public"]["Enums"]["employee_sexo"]
           tenant_id?: string
+          tipo_conta?: string | null
           uf_nascimento?: string | null
           updated_at?: string
         }
