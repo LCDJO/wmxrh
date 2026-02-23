@@ -22,8 +22,8 @@
 export { blockchainRegistryService } from './blockchain-registry.service';
 
 export type {
-  BlockchainHashRecord,
-  BlockchainAnchorStatus,
+  BlockchainProof,
+  BlockchainProofStatus,
   AnchorDocumentDTO,
   AnchorResult,
   VerifyHashResult,

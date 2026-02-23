@@ -78,10 +78,10 @@ Deno.serve(async (req) => {
     // Check for duplicate
     const { data: existing } = await supabase
       .from("blockchain_hash_registry")
-      .select("id, status, tx_hash")
-      .eq("document_hash", document_hash)
+      .select("id, status, transaction_hash")
+      .eq("hash_sha256", document_hash)
       .eq("tenant_id", tenant_id)
-      .eq("status", "anchored")
+      .eq("status", "confirmed")
       .maybeSingle();
 
     if (existing) {
@@ -120,12 +120,12 @@ Deno.serve(async (req) => {
       .insert({
         tenant_id,
         signed_document_id,
-        document_hash,
-        chain,
-        tx_hash: txHash,
+        hash_sha256: document_hash,
+        blockchain_network: chain,
+        transaction_hash: txHash,
         block_number: simulatedBlockNumber,
-        anchor_timestamp: now.toISOString(),
-        status: "anchored",
+        timestamp_blockchain: now.toISOString(),
+        status: "confirmed",
         verification_url: verificationUrl,
         metadata: {
           simulation: true,

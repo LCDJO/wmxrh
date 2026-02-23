@@ -1,43 +1,43 @@
 /**
- * Blockchain Hash Registry — Types
+ * Blockchain Proof Entity — Types
  *
  * No PII is stored — only document hashes and chain metadata.
  */
 
-export interface BlockchainHashRecord {
+export interface BlockchainProof {
   id: string;
   tenant_id: string;
   signed_document_id: string;
-  document_hash: string;
-  chain: string;
-  tx_hash: string | null;
+  hash_sha256: string;
+  blockchain_network: string;
+  transaction_hash: string | null;
   block_number: number | null;
-  anchor_timestamp: string;
-  status: BlockchainAnchorStatus;
+  timestamp_blockchain: string;
+  status: BlockchainProofStatus;
   verification_url: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
   created_by: string | null;
 }
 
-export type BlockchainAnchorStatus = 'pending' | 'anchored' | 'failed';
+export type BlockchainProofStatus = 'pending' | 'confirmed' | 'failed';
 
 export interface AnchorDocumentDTO {
   tenant_id: string;
   signed_document_id: string;
-  document_hash: string;
+  hash_sha256: string;
   created_by?: string;
 }
 
 export interface AnchorResult {
   success: boolean;
-  record?: BlockchainHashRecord;
+  record?: BlockchainProof;
   error?: string;
 }
 
 export interface VerifyHashResult {
   found: boolean;
-  anchored: boolean;
-  record?: BlockchainHashRecord;
+  confirmed: boolean;
+  record?: BlockchainProof;
   verification_url?: string;
 }
