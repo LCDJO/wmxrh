@@ -26,6 +26,7 @@ export { agreementAuditService, initAgreementAudit } from './agreement-audit.ser
 export { agreementAutomationService } from './agreement-automation.service';
 export { agreementExpirationService } from './agreement-expiration.service';
 export { internalSignatureService, legalVersionService, renewalEngineService, lgpdConsentService } from './agreement-future.service';
+export { generateDocumentHash, verifyDocumentHash } from './document-hash';
 
 // ── Governance Engine ──
 export { agreementGovernanceOrchestrator } from './agreement-governance.orchestrator';

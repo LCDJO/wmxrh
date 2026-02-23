@@ -18,6 +18,7 @@ import { requirePermission, type PipelineInput } from '@/domains/security/kernel
 import { scopedInsertFromContext } from '@/domains/security/kernel/scope-resolver';
 import type { SecurityContext } from '@/domains/security/kernel/identity.service';
 import { emitAgreementEvent } from './events';
+import { generateDocumentHash } from './document-hash';
 import type {
   AgreementTemplate,
   CreateTemplateDTO,
@@ -95,11 +96,27 @@ export const agreementTemplateService = {
 
     if (error) throw error;
 
+    // Create initial version record (v1) with hash
+    const contentHash = await generateDocumentHash(dto.conteudo_html);
+    const versionRow = scopedInsertFromContext({
+      template_id: data.id,
+      version_number: 1,
+      title: dto.nome_termo,
+      content_html: dto.conteudo_html,
+      content_hash: contentHash,
+      is_current: true,
+      published_at: new Date().toISOString(),
+    }, ctx);
+
+    await supabase
+      .from('agreement_template_versions')
+      .insert([versionRow as any]);
+
     emitAgreementEvent({
       type: 'agreement.template.created',
       tenant_id: ctx.tenant_id,
       template_id: data.id,
-      payload: { nome_termo: dto.nome_termo, categoria: dto.categoria ?? dto.tipo },
+      payload: { nome_termo: dto.nome_termo, categoria: dto.categoria ?? dto.tipo, content_hash: contentHash },
       timestamp: new Date().toISOString(),
     });
 
@@ -187,31 +204,33 @@ export const agreementTemplateService = {
     if (!current) throw new Error('Template não encontrado.');
 
     const nextVersion = current.versao + 1;
+    const contentHash = await generateDocumentHash(dto.conteudo_html);
 
-    // Also store in versions table for audit trail
+    // Store in versions table for immutable audit trail
     const versionRow = scopedInsertFromContext({
       template_id: dto.template_id,
       version_number: nextVersion,
       title: current.nome_termo,
       content_html: dto.conteudo_html,
+      content_hash: contentHash,
       change_summary: dto.descricao_mudanca ?? null,
       is_current: true,
       published_at: new Date().toISOString(),
     }, ctx);
 
-    // Unset previous current version
+    // Unset previous current version (never delete — append-only)
     await supabase
       .from('agreement_template_versions')
       .update({ is_current: false } as any)
       .eq('template_id', dto.template_id)
       .eq('is_current', true);
 
-    // Insert new version record
+    // Insert new version record (immutable)
     await supabase
       .from('agreement_template_versions')
       .insert([versionRow as any]);
 
-    // Update template itself
+    // Update template head pointer
     const { error } = await supabase
       .from('agreement_templates')
       .update({ versao: nextVersion, conteudo_html: dto.conteudo_html } as any)
@@ -223,7 +242,7 @@ export const agreementTemplateService = {
       type: 'agreement.template.version_published',
       tenant_id: ctx.tenant_id,
       template_id: dto.template_id,
-      payload: { versao: nextVersion },
+      payload: { versao: nextVersion, content_hash: contentHash },
       timestamp: new Date().toISOString(),
     });
 

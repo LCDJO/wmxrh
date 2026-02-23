@@ -72,6 +72,7 @@ export interface AgreementTemplateVersion {
   title: string;
   content_html: string;
   content_plain: string | null;
+  content_hash: string | null;
   change_summary: string | null;
   published_at: string | null;
   is_current: boolean;

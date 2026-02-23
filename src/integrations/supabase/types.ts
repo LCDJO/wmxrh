@@ -17,6 +17,7 @@ export type Database = {
       agreement_template_versions: {
         Row: {
           change_summary: string | null
+          content_hash: string | null
           content_html: string
           content_plain: string | null
           created_at: string
@@ -31,6 +32,7 @@ export type Database = {
         }
         Insert: {
           change_summary?: string | null
+          content_hash?: string | null
           content_html: string
           content_plain?: string | null
           created_at?: string
@@ -45,6 +47,7 @@ export type Database = {
         }
         Update: {
           change_summary?: string | null
+          content_hash?: string | null
           content_html?: string
           content_plain?: string | null
           created_at?: string
