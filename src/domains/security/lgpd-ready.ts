@@ -11,14 +11,10 @@
  * - Art. 18, V   → Data portability
  * - Art. 18, VI  → Deletion of data processed with consent
  * - Art. 18, IX  → Revocation of consent
- * 
- * To activate:
- * 1. Create consent_records table in DB
- * 2. Set SECURITY_FEATURES.LGPD.enabled = true
- * 3. Wire up consent UI in onboarding/settings
  */
 
 import { SECURITY_FEATURES } from './feature-flags';
+import { supabase } from '@/integrations/supabase/client';
 
 // ═══════════════════════════════════
 // Types
@@ -30,6 +26,14 @@ export type ConsentPurpose =
   | 'analytics'                 // Aggregated reporting
   | 'communication'             // Email/phone contact
   | 'data_sharing';             // Sharing with third parties
+
+export type LegalBasisType =
+  | 'consent'
+  | 'legal_obligation'
+  | 'contract_execution'
+  | 'legitimate_interest'
+  | 'public_interest'
+  | 'vital_interest';
 
 export interface ConsentRecord {
   id: string;
@@ -43,27 +47,107 @@ export interface ConsentRecord {
   expires_at: string | null;
 }
 
-export interface DataExportRequest {
+export interface DataAccessLog {
   id: string;
-  user_id: string;
   tenant_id: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  requested_at: string;
-  completed_at: string | null;
-  download_url: string | null;
-  expires_at: string | null;
+  employee_id: string;
+  accessed_by: string;
+  access_type: 'view' | 'edit' | 'export' | 'print' | 'anonymize';
+  data_scope: string;
+  accessed_fields: string[];
+  ip_address: string | null;
+  user_agent: string | null;
+  justification: string | null;
+  created_at: string;
 }
 
 export interface AnonymizationRequest {
   id: string;
-  user_id: string;
   tenant_id: string;
+  requested_by: string;
+  employee_id: string;
   entity_type: string;
-  entity_id: string;
-  status: 'pending' | 'completed';
-  requested_at: string;
-  completed_at: string | null;
+  status: 'pending' | 'approved' | 'processing' | 'completed' | 'rejected';
+  reason: string | null;
+  legal_basis: string;
+  retention_end_date: string | null;
+  processed_at: string | null;
+  processed_by: string | null;
+  created_at: string;
 }
+
+export interface LegalBasisRecord {
+  id: string;
+  tenant_id: string;
+  data_category: string;
+  legal_basis_type: LegalBasisType;
+  lgpd_article: string;
+  description: string;
+  retention_period_months: number;
+  is_active: boolean;
+}
+
+// ═══════════════════════════════════
+// Default Legal Basis Map
+// ═══════════════════════════════════
+
+export const DEFAULT_LEGAL_BASIS: {
+  data_category: string;
+  legal_basis_type: LegalBasisType;
+  lgpd_article: string;
+  description: string;
+  retention_period_months: number;
+}[] = [
+  {
+    data_category: 'dados_pessoais',
+    legal_basis_type: 'contract_execution',
+    lgpd_article: 'Art. 7º, V',
+    description: 'Execução do contrato de trabalho — nome, CPF, endereço, dados de nascimento.',
+    retention_period_months: 60,
+  },
+  {
+    data_category: 'dados_financeiros',
+    legal_basis_type: 'legal_obligation',
+    lgpd_article: 'Art. 7º, II',
+    description: 'Obrigação legal — dados bancários, salário, FGTS, INSS para cumprimento de obrigações trabalhistas e previdenciárias.',
+    retention_period_months: 240, // 20 years (FGTS)
+  },
+  {
+    data_category: 'dados_saude',
+    legal_basis_type: 'legal_obligation',
+    lgpd_article: 'Art. 11, II, "b"',
+    description: 'Dado sensível — exames médicos (ASO, PCMSO) exigidos por NR-7 e legislação trabalhista.',
+    retention_period_months: 240,
+  },
+  {
+    data_category: 'dados_dependentes',
+    legal_basis_type: 'contract_execution',
+    lgpd_article: 'Art. 7º, V',
+    description: 'Dados de dependentes para benefícios (salário-família, IR, plano de saúde).',
+    retention_period_months: 60,
+  },
+  {
+    data_category: 'dados_disciplinares',
+    legal_basis_type: 'legitimate_interest',
+    lgpd_article: 'Art. 7º, IX',
+    description: 'Interesse legítimo do empregador — registros de advertências, suspensões e ocorrências.',
+    retention_period_months: 60,
+  },
+  {
+    data_category: 'dados_esocial',
+    legal_basis_type: 'legal_obligation',
+    lgpd_article: 'Art. 7º, II',
+    description: 'Obrigação legal — transmissão de eventos ao eSocial conforme legislação vigente.',
+    retention_period_months: 60,
+  },
+  {
+    data_category: 'dados_biometricos',
+    legal_basis_type: 'consent',
+    lgpd_article: 'Art. 11, I',
+    description: 'Dado sensível — biometria para controle de ponto requer consentimento explícito.',
+    retention_period_months: 12,
+  },
+];
 
 // ═══════════════════════════════════
 // Anonymization Utilities
@@ -75,6 +159,14 @@ export function anonymizeName(name: string): string {
     .split(' ')
     .map(part => part.charAt(0) + '•'.repeat(Math.max(part.length - 1, 2)))
     .join(' ');
+}
+
+/** Anonymize CPF: "123.456.789-00" → "•••.•••.789-00" */
+export function anonymizeCPF(cpf: string | null): string | null {
+  if (!cpf) return null;
+  const digits = cpf.replace(/\D/g, '');
+  if (digits.length !== 11) return '•••.•••.•••-••';
+  return `•••.•••.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
 /** Anonymize an email: "joao@example.com" → "j***@e***.com" */
@@ -94,7 +186,7 @@ export function anonymizePhone(phone: string | null): string | null {
 }
 
 // ═══════════════════════════════════
-// LGPD Service (stubs)
+// LGPD Service
 // ═══════════════════════════════════
 
 export const lgpdService = {
@@ -136,29 +228,174 @@ export const lgpdService = {
     return descriptions[purpose];
   },
 
-  // Future: these will be implemented when the consent_records table is created
+  // ── Access Logging ──
 
-  /** Record consent grant (stub) */
-  async grantConsent(_userId: string, _tenantId: string, _purpose: ConsentPurpose): Promise<void> {
-    if (!SECURITY_FEATURES.LGPD.enabled) return;
-    console.warn('[LGPD] grantConsent stub called — implement when DB table is ready');
+  async logAccess(params: {
+    tenantId: string;
+    employeeId: string;
+    accessType: DataAccessLog['access_type'];
+    dataScope?: string;
+    accessedFields?: string[];
+    justification?: string;
+  }): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await (supabase as any).from('employee_data_access_logs').insert({
+      tenant_id: params.tenantId,
+      employee_id: params.employeeId,
+      accessed_by: user.id,
+      access_type: params.accessType,
+      data_scope: params.dataScope || 'full',
+      accessed_fields: params.accessedFields || [],
+      justification: params.justification || null,
+      user_agent: navigator.userAgent,
+    });
   },
 
-  /** Record consent revocation (stub) */
-  async revokeConsent(_userId: string, _tenantId: string, _purpose: ConsentPurpose): Promise<void> {
-    if (!SECURITY_FEATURES.LGPD.enabled) return;
-    console.warn('[LGPD] revokeConsent stub called — implement when DB table is ready');
+  async getAccessLogs(tenantId: string, employeeId: string): Promise<DataAccessLog[]> {
+    const { data } = await (supabase as any)
+      .from('employee_data_access_logs')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('employee_id', employeeId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    return (data ?? []) as DataAccessLog[];
   },
 
-  /** Request data export (portability) (stub) */
-  async requestDataExport(_userId: string, _tenantId: string): Promise<void> {
-    if (!SECURITY_FEATURES.LGPD.enabled) return;
-    console.warn('[LGPD] requestDataExport stub called — implement when edge function is ready');
+  // ── Consent Management ──
+
+  async grantConsent(userId: string, tenantId: string, purpose: ConsentPurpose): Promise<void> {
+    await (supabase as any).from('lgpd_consent_records').upsert(
+      {
+        tenant_id: tenantId,
+        user_id: userId,
+        purpose,
+        granted: true,
+        granted_at: new Date().toISOString(),
+        revoked_at: null,
+      },
+      { onConflict: 'tenant_id,user_id,purpose' },
+    );
   },
 
-  /** Request data anonymization (right to be forgotten) (stub) */
-  async requestAnonymization(_userId: string, _tenantId: string): Promise<void> {
-    if (!SECURITY_FEATURES.LGPD.enabled) return;
-    console.warn('[LGPD] requestAnonymization stub called — implement when edge function is ready');
+  async revokeConsent(userId: string, tenantId: string, purpose: ConsentPurpose): Promise<void> {
+    await (supabase as any).from('lgpd_consent_records').upsert(
+      {
+        tenant_id: tenantId,
+        user_id: userId,
+        purpose,
+        granted: false,
+        revoked_at: new Date().toISOString(),
+      },
+      { onConflict: 'tenant_id,user_id,purpose' },
+    );
+  },
+
+  async getConsents(tenantId: string, userId: string): Promise<ConsentRecord[]> {
+    const { data } = await (supabase as any)
+      .from('lgpd_consent_records')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userId);
+    return (data ?? []) as ConsentRecord[];
+  },
+
+  // ── Anonymization ──
+
+  async requestAnonymization(params: {
+    tenantId: string;
+    employeeId: string;
+    reason?: string;
+    retentionEndDate?: string;
+  }): Promise<string | null> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data } = await (supabase as any)
+      .from('lgpd_anonymization_requests')
+      .insert({
+        tenant_id: params.tenantId,
+        requested_by: user.id,
+        employee_id: params.employeeId,
+        reason: params.reason || 'Solicitação do titular',
+        legal_basis: 'LGPD Art. 18, IV',
+        retention_end_date: params.retentionEndDate || null,
+      })
+      .select('id')
+      .single();
+    return data?.id ?? null;
+  },
+
+  async getAnonymizationRequests(tenantId: string, employeeId?: string): Promise<AnonymizationRequest[]> {
+    let query = (supabase as any)
+      .from('lgpd_anonymization_requests')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false });
+
+    if (employeeId) {
+      query = query.eq('employee_id', employeeId);
+    }
+
+    const { data } = await query;
+    return (data ?? []) as AnonymizationRequest[];
+  },
+
+  // ── Legal Basis ──
+
+  async getLegalBasis(tenantId: string): Promise<LegalBasisRecord[]> {
+    const { data } = await (supabase as any)
+      .from('lgpd_legal_basis')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .order('data_category');
+    return (data ?? []) as LegalBasisRecord[];
+  },
+
+  async seedDefaultLegalBasis(tenantId: string): Promise<void> {
+    const existing = await this.getLegalBasis(tenantId);
+    if (existing.length > 0) return;
+
+    const records = DEFAULT_LEGAL_BASIS.map((item) => ({
+      tenant_id: tenantId,
+      ...item,
+      is_active: true,
+    }));
+
+    await (supabase as any).from('lgpd_legal_basis').insert(records);
+  },
+
+  /** Check if an employee's data retention period has expired */
+  isRetentionExpired(terminationDate: string | null, retentionMonths: number): boolean {
+    if (!terminationDate) return false;
+    const termDate = new Date(terminationDate);
+    const expiryDate = new Date(termDate);
+    expiryDate.setMonth(expiryDate.getMonth() + retentionMonths);
+    return new Date() > expiryDate;
+  },
+
+  /** Get retention status for display */
+  getRetentionInfo(terminationDate: string | null, retentionMonths: number = 60): {
+    expired: boolean;
+    expiryDate: string | null;
+    remainingDays: number | null;
+  } {
+    if (!terminationDate) return { expired: false, expiryDate: null, remainingDays: null };
+    
+    const termDate = new Date(terminationDate);
+    const expiryDate = new Date(termDate);
+    expiryDate.setMonth(expiryDate.getMonth() + retentionMonths);
+    
+    const now = new Date();
+    const remaining = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    return {
+      expired: now > expiryDate,
+      expiryDate: expiryDate.toISOString().slice(0, 10),
+      remainingDays: remaining,
+    };
   },
 };
