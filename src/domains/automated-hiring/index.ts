@@ -224,6 +224,39 @@ export type {
   AuditTimeline,
 } from './hiring-audit.engine';
 
+// ── Preparação Futura ──
+export {
+  DEFAULT_FUTURE_FLAGS,
+  isFutureFeatureEnabled,
+} from './future-capabilities';
+export type {
+  OnboardingChannel,
+  OnboardingWizardStep,
+  OnboardingSession,
+  CreateOnboardingSessionDTO,
+  OnboardingPortalPort,
+  DocumentCaptureMethod,
+  DocumentValidationStatus,
+  CapturedDocument,
+  DocumentCaptureRequest,
+  DocumentCapturePort,
+  BackgroundCheckType,
+  BackgroundCheckStatus,
+  BackgroundCheckResult,
+  BackgroundCheckRecord,
+  RequestBackgroundCheckDTO,
+  BackgroundCheckSummary,
+  BackgroundCheckPort,
+  ExternalExamStatus,
+  ExamResultFit,
+  ExternalClinicProvider,
+  ExternalExamAppointment,
+  ScheduleExamDTO,
+  ExamResultWebhookPayload,
+  ExternalClinicalPort,
+  HiringFutureFeatureFlags,
+} from './future-capabilities';
+
 // ── Events ──
 export {
   onHiringEvent,
