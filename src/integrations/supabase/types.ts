@@ -3570,6 +3570,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           deleted_at: string | null
+          departamento: string | null
           employee_id: string
           end_reason: string | null
           ended_at: string | null
@@ -3579,13 +3580,18 @@ export type Database = {
           esocial_matricula: string | null
           experience_end_date: string | null
           fgts_regime: Database["public"]["Enums"]["fgts_regime"]
+          forma_pagamento: Database["public"]["Enums"]["forma_pagamento"] | null
           id: string
+          indicativo_inss: boolean
           is_current: boolean
           is_night_shift: boolean
           job_function: string | null
+          jornada_tipo: Database["public"]["Enums"]["jornada_tipo"] | null
+          salario_base: number | null
           shift_description: string | null
           started_at: string
           tenant_id: string
+          tipo_salario: Database["public"]["Enums"]["tipo_salario"] | null
           union_code: string | null
           union_name: string | null
           updated_at: string
@@ -3602,6 +3608,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          departamento?: string | null
           employee_id: string
           end_reason?: string | null
           ended_at?: string | null
@@ -3611,13 +3618,20 @@ export type Database = {
           esocial_matricula?: string | null
           experience_end_date?: string | null
           fgts_regime?: Database["public"]["Enums"]["fgts_regime"]
+          forma_pagamento?:
+            | Database["public"]["Enums"]["forma_pagamento"]
+            | null
           id?: string
+          indicativo_inss?: boolean
           is_current?: boolean
           is_night_shift?: boolean
           job_function?: string | null
+          jornada_tipo?: Database["public"]["Enums"]["jornada_tipo"] | null
+          salario_base?: number | null
           shift_description?: string | null
           started_at: string
           tenant_id: string
+          tipo_salario?: Database["public"]["Enums"]["tipo_salario"] | null
           union_code?: string | null
           union_name?: string | null
           updated_at?: string
@@ -3634,6 +3648,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          departamento?: string | null
           employee_id?: string
           end_reason?: string | null
           ended_at?: string | null
@@ -3643,13 +3658,20 @@ export type Database = {
           esocial_matricula?: string | null
           experience_end_date?: string | null
           fgts_regime?: Database["public"]["Enums"]["fgts_regime"]
+          forma_pagamento?:
+            | Database["public"]["Enums"]["forma_pagamento"]
+            | null
           id?: string
+          indicativo_inss?: boolean
           is_current?: boolean
           is_night_shift?: boolean
           job_function?: string | null
+          jornada_tipo?: Database["public"]["Enums"]["jornada_tipo"] | null
+          salario_base?: number | null
           shift_description?: string | null
           started_at?: string
           tenant_id?: string
+          tipo_salario?: Database["public"]["Enums"]["tipo_salario"] | null
           union_code?: string | null
           union_name?: string | null
           updated_at?: string
@@ -15379,7 +15401,9 @@ export type Database = {
         | "mudanca_funcao"
         | "retorno_trabalho"
       fgts_regime: "optante" | "nao_optante" | "retroativo"
+      forma_pagamento: "deposito_bancario" | "pix" | "cheque" | "dinheiro"
       health_program_type: "pcmso" | "pgr" | "ltcat" | "ppra"
+      jornada_tipo: "integral" | "parcial" | "escala" | "12x36" | "flexivel"
       labor_rule_calc_type:
         | "percentage"
         | "fixed_value"
@@ -15497,6 +15521,7 @@ export type Database = {
         | "rh"
         | "gestor"
         | "financeiro"
+      tipo_salario: "mensalista" | "horista"
       work_regime:
         | "clt"
         | "estatutario"
@@ -15770,7 +15795,9 @@ export const Constants = {
         "retorno_trabalho",
       ],
       fgts_regime: ["optante", "nao_optante", "retroativo"],
+      forma_pagamento: ["deposito_bancario", "pix", "cheque", "dinheiro"],
       health_program_type: ["pcmso", "pgr", "ltcat", "ppra"],
+      jornada_tipo: ["integral", "parcial", "escala", "12x36", "flexivel"],
       labor_rule_calc_type: [
         "percentage",
         "fixed_value",
@@ -15900,6 +15927,7 @@ export const Constants = {
         "gestor",
         "financeiro",
       ],
+      tipo_salario: ["mensalista", "horista"],
       work_regime: [
         "clt",
         "estatutario",

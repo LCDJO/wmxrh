@@ -36,6 +36,9 @@ export type {
   EmployeeRecordStatus,
   EmployeeSexo,
   EmployeeEstadoCivil,
+  TipoSalario,
+  FormaPagamento,
+  JornadaTipo,
   EmployeeRecord,
   EmployeePersonalData,
   EmployeeDocument,
@@ -61,4 +64,7 @@ export {
   CONTRACT_TYPE_LABELS,
   WORK_REGIME_LABELS,
   FGTS_REGIME_LABELS,
+  TIPO_SALARIO_LABELS,
+  FORMA_PAGAMENTO_LABELS,
+  JORNADA_TIPO_LABELS,
 } from './types';

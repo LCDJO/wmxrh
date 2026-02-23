@@ -36,6 +36,12 @@ export type EmployeeEstadoCivil =
   | 'solteiro' | 'casado' | 'divorciado' | 'viuvo'
   | 'separado' | 'uniao_estavel' | 'nao_informado';
 
+export type TipoSalario = 'mensalista' | 'horista';
+
+export type FormaPagamento = 'deposito_bancario' | 'pix' | 'cheque' | 'dinheiro';
+
+export type JornadaTipo = 'integral' | 'parcial' | 'escala' | '12x36' | 'flexivel';
+
 // ════════════════════════════════════════
 // LABEL MAPS
 // ════════════════════════════════════════
@@ -112,8 +118,26 @@ export const FGTS_REGIME_LABELS: Record<FgtsRegime, string> = {
   retroativo: 'Retroativo',
 };
 
-// ════════════════════════════════════════
-// ENTITIES
+export const TIPO_SALARIO_LABELS: Record<TipoSalario, string> = {
+  mensalista: 'Mensalista',
+  horista: 'Horista',
+};
+
+export const FORMA_PAGAMENTO_LABELS: Record<FormaPagamento, string> = {
+  deposito_bancario: 'Depósito Bancário',
+  pix: 'PIX',
+  cheque: 'Cheque',
+  dinheiro: 'Dinheiro',
+};
+
+export const JORNADA_TIPO_LABELS: Record<JornadaTipo, string> = {
+  integral: 'Integral',
+  parcial: 'Parcial',
+  escala: 'Escala',
+  '12x36': '12x36',
+  flexivel: 'Flexível',
+};
+
 // ════════════════════════════════════════
 
 export interface EmployeeDocument {
@@ -199,6 +223,12 @@ export interface EmployeeContract {
   ended_at: string | null;
   end_reason: string | null;
   created_by: string | null;
+  departamento: string | null;
+  salario_base: number | null;
+  tipo_salario: TipoSalario | null;
+  forma_pagamento: FormaPagamento | null;
+  jornada_tipo: JornadaTipo | null;
+  indicativo_inss: boolean;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -275,6 +305,12 @@ export interface CreateEmployeeContractDTO {
   job_function?: string | null;
   started_at: string;
   created_by?: string | null;
+  departamento?: string | null;
+  salario_base?: number | null;
+  tipo_salario?: TipoSalario;
+  forma_pagamento?: FormaPagamento;
+  jornada_tipo?: JornadaTipo;
+  indicativo_inss?: boolean;
 }
 
 // ════════════════════════════════════════

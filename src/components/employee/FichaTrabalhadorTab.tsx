@@ -32,6 +32,9 @@ import {
   RECORD_STATUS_LABELS,
   SEXO_LABELS,
   ESTADO_CIVIL_LABELS,
+  TIPO_SALARIO_LABELS,
+  FORMA_PAGAMENTO_LABELS,
+  JORNADA_TIPO_LABELS,
 } from '@/domains/employee-master-record';
 import type {
   EmployeeDocumentType,
@@ -42,6 +45,9 @@ import type {
   EmployeeRecordStatus,
   EmployeeSexo,
   EmployeeEstadoCivil,
+  TipoSalario,
+  FormaPagamento,
+  JornadaTipo,
 } from '@/domains/employee-master-record';
 
 interface Props {
@@ -856,6 +862,12 @@ function ContractsSection({
   const [weeklyHours, setWeeklyHours] = useState('44');
   const [cboCode, setCboCode] = useState('');
   const [jobFunction, setJobFunction] = useState('');
+  const [departamento, setDepartamento] = useState('');
+  const [salarioBase, setSalarioBase] = useState('');
+  const [tipoSalario, setTipoSalario] = useState<TipoSalario>('mensalista');
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('deposito_bancario');
+  const [jornadaTipo, setJornadaTipo] = useState<JornadaTipo>('integral');
+  const [indicativoInss, setIndicativoInss] = useState(true);
   const { toast } = useToast();
   const createContract = useCreateEmployeeContract();
 
@@ -872,12 +884,18 @@ function ContractsSection({
         cbo_code: cboCode || null,
         job_function: jobFunction || null,
         started_at: admissionDate,
+        departamento: departamento || null,
+        salario_base: salarioBase ? parseFloat(salarioBase) : null,
+        tipo_salario: tipoSalario,
+        forma_pagamento: formaPagamento,
+        jornada_tipo: jornadaTipo,
+        indicativo_inss: indicativoInss,
       },
       {
         onSuccess: () => {
           toast({ title: 'Contrato registrado!' });
           setOpen(false);
-          setAdmissionDate(''); setCboCode(''); setJobFunction('');
+          setAdmissionDate(''); setCboCode(''); setJobFunction(''); setDepartamento(''); setSalarioBase('');
         },
         onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
       }
@@ -941,6 +959,40 @@ function ContractsSection({
                 <p className="font-medium text-card-foreground">{currentContract.job_function}</p>
               </div>
             )}
+            {currentContract.departamento && (
+              <div>
+                <p className="text-xs text-muted-foreground">Departamento</p>
+                <p className="font-medium text-card-foreground">{currentContract.departamento}</p>
+              </div>
+            )}
+            {currentContract.salario_base != null && (
+              <div>
+                <p className="text-xs text-muted-foreground">Salário Base</p>
+                <p className="font-medium text-card-foreground">R$ {Number(currentContract.salario_base).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+              </div>
+            )}
+            {currentContract.tipo_salario && (
+              <div>
+                <p className="text-xs text-muted-foreground">Tipo Salário</p>
+                <p className="font-medium text-card-foreground">{TIPO_SALARIO_LABELS[currentContract.tipo_salario as TipoSalario]}</p>
+              </div>
+            )}
+            {currentContract.forma_pagamento && (
+              <div>
+                <p className="text-xs text-muted-foreground">Forma Pagamento</p>
+                <p className="font-medium text-card-foreground">{FORMA_PAGAMENTO_LABELS[currentContract.forma_pagamento as FormaPagamento]}</p>
+              </div>
+            )}
+            {currentContract.jornada_tipo && (
+              <div>
+                <p className="text-xs text-muted-foreground">Tipo Jornada</p>
+                <p className="font-medium text-card-foreground">{JORNADA_TIPO_LABELS[currentContract.jornada_tipo as JornadaTipo]}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-xs text-muted-foreground">INSS</p>
+              <p className="font-medium text-card-foreground">{currentContract.indicativo_inss ? 'Sim' : 'Não'}</p>
+            </div>
           </div>
         </div>
       )}
@@ -1018,6 +1070,43 @@ function ContractsSection({
               <div className="space-y-2"><Label>Jornada (h/sem)</Label><Input type="number" value={weeklyHours} onChange={(e) => setWeeklyHours(e.target.value)} /></div>
               <div className="space-y-2"><Label>CBO</Label><Input value={cboCode} onChange={(e) => setCboCode(e.target.value)} placeholder="5142-05" /></div>
               <div className="space-y-2"><Label>Função</Label><Input value={jobFunction} onChange={(e) => setJobFunction(e.target.value)} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2"><Label>Departamento</Label><Input value={departamento} onChange={(e) => setDepartamento(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Salário Base (R$)</Label><Input type="number" step="0.01" value={salarioBase} onChange={(e) => setSalarioBase(e.target.value)} placeholder="0.00" /></div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label>Tipo Salário</Label>
+                <Select value={tipoSalario} onValueChange={(v) => setTipoSalario(v as TipoSalario)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(TIPO_SALARIO_LABELS).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Forma Pagamento</Label>
+                <Select value={formaPagamento} onValueChange={(v) => setFormaPagamento(v as FormaPagamento)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(FORMA_PAGAMENTO_LABELS).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo Jornada</Label>
+                <Select value={jornadaTipo} onValueChange={(v) => setJornadaTipo(v as JornadaTipo)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(JORNADA_TIPO_LABELS).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="indicativo_inss" checked={indicativoInss} onChange={(e) => setIndicativoInss(e.target.checked)} className="rounded border-border" />
+              <Label htmlFor="indicativo_inss">Indicativo INSS</Label>
             </div>
             <Button type="submit" className="w-full" disabled={createContract.isPending}>
               {createContract.isPending ? 'Salvando...' : 'Registrar Contrato'}
