@@ -8,7 +8,9 @@
  * │          Blockchain Hash Registry Engine                 │
  * ├─────────────────────────────────────────────────────────┤
  * │  blockchainRegistryService — anchor & verify hashes     │
+ * │  executeBlockchainRegistration — full flow orchestrator  │
  * │  blockchain-anchor (Edge)  — chain interaction          │
+ * │  blockchain-webhook (Edge) — async confirmation         │
  * │  Immutable Registry        — no UPDATE/DELETE           │
  * └─────────────────────────────────────────────────────────┘
  *
@@ -20,6 +22,7 @@
  */
 
 export { blockchainRegistryService } from './blockchain-registry.service';
+export { executeBlockchainRegistration, registerPrecomputedHash } from './blockchain-registration-flow';
 
 export type {
   BlockchainProof,
@@ -28,3 +31,8 @@ export type {
   AnchorResult,
   VerifyHashResult,
 } from './types';
+
+export type {
+  RegistrationFlowInput,
+  RegistrationFlowResult,
+} from './blockchain-registration-flow';
