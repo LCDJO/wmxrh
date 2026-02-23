@@ -43,6 +43,7 @@ function AppRoutes() {
   const { isPlatformUser, loading: platformLoading } = useAdaptiveUserType();
   const navigate = useNavigate();
   const redirectHandled = useRef(false);
+  const hasPendingRedirect = useRef(!!sessionStorage.getItem('redirectAfterLogin'));
 
   // ── Handle pending redirect after login (e.g. display pairing QR flow) ──
   useEffect(() => {
@@ -51,6 +52,7 @@ function AppRoutes() {
     if (pendingRedirect) {
       sessionStorage.removeItem('redirectAfterLogin');
       redirectHandled.current = true;
+      hasPendingRedirect.current = false;
       navigate(pendingRedirect, { replace: true });
     }
   }, [user, navigate]);
@@ -77,7 +79,7 @@ function AppRoutes() {
     ...platformRoutes,
     ...tvRoute,
     { path: '/lp/:slug', element: <LandingPagePreview /> },
-    { path: '/auth/login', element: <Navigate to="/" replace /> },
+    { path: '/auth/login', element: hasPendingRedirect.current ? <FullScreenLoader label="Redirecionando..." /> : <Navigate to="/" replace /> },
     { path: '/reset-password', element: <ResetPassword /> },
   ];
 
@@ -87,7 +89,7 @@ function AppRoutes() {
     if (isPlatformUser) {
       routes = [
         ...sharedRoutes,
-        { path: '*', element: <Navigate to="/platform/dashboard" replace /> },
+        { path: '*', element: hasPendingRedirect.current ? <FullScreenLoader label="Redirecionando..." /> : <Navigate to="/platform/dashboard" replace /> },
       ];
     } else {
       routes = [
