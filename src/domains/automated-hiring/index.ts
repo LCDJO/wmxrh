@@ -160,6 +160,20 @@ export type {
   ValidacaoFinalResult,
 } from './validacao-final.engine';
 
+// ── Envio eSocial (Etapa 9) ──
+export {
+  prepareESocialSubmission,
+  processESocialResponse,
+  applyESocialToWorkflow,
+  handleESocialResponse,
+} from './esocial-submission.engine';
+export type {
+  ESocialSubmissionStatus,
+  ESocialEtapaInput,
+  ESocialSubmissionRecord,
+  ESocialEtapaResult,
+} from './esocial-submission.engine';
+
 // ── Events ──
 export {
   onHiringEvent,
