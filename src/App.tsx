@@ -18,6 +18,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
 import LiveDisplayTV from "./pages/LiveDisplayTV";
+import LiveDisplayPair from "./pages/LiveDisplayPair";
 import { authRoutes } from "./routes/auth.routes";
 import { platformRoutes } from "./routes/platform.routes";
 import { tenantRoutes } from "./routes/tenant.routes";
@@ -50,6 +51,7 @@ function AppRoutes() {
   const tvRoute: RouteObject[] = [
     { path: '/tv', element: <LiveDisplayTV /> },
     { path: '/display', element: <LiveDisplayTV /> },
+    { path: '/live-display/pair', element: <LiveDisplayPair /> },
   ];
 
   // ── Unauthenticated ──
