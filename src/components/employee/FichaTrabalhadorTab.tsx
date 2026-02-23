@@ -748,6 +748,7 @@ function DependentsSection({
   const [cpf, setCpf] = useState('');
   const [isIr, setIsIr] = useState(false);
   const [isBenefit, setIsBenefit] = useState(false);
+  const [isSalarioFamilia, setIsSalarioFamilia] = useState(false);
   const { toast } = useToast();
   const createDep = useCreateEmployeeDependent();
 
@@ -762,12 +763,13 @@ function DependentsSection({
         cpf: cpf || null,
         is_ir_dependent: isIr,
         is_benefit_dependent: isBenefit,
+        dependente_salario_familia: isSalarioFamilia,
       },
       {
         onSuccess: () => {
           toast({ title: 'Dependente adicionado!' });
           setOpen(false);
-          setName(''); setCpf(''); setBirthDate(''); setIsIr(false); setIsBenefit(false);
+          setName(''); setCpf(''); setBirthDate(''); setIsIr(false); setIsBenefit(false); setIsSalarioFamilia(false);
         },
         onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
       }
@@ -804,6 +806,7 @@ function DependentsSection({
               <div className="flex gap-2 mt-1">
                 {dep.is_ir_dependent && <Badge variant="outline" className="text-xs">IR</Badge>}
                 {dep.is_benefit_dependent && <Badge variant="outline" className="text-xs">Benefício</Badge>}
+                {dep.dependente_salario_familia && <Badge variant="outline" className="text-xs">Salário Família</Badge>}
                 {dep.has_disability && <Badge variant="outline" className="text-xs">PcD</Badge>}
               </div>
             </div>
@@ -839,6 +842,10 @@ function DependentsSection({
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={isBenefit} onChange={(e) => setIsBenefit(e.target.checked)} className="rounded" />
                 Dependente Benefício
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={isSalarioFamilia} onChange={(e) => setIsSalarioFamilia(e.target.checked)} className="rounded" />
+                Salário Família
               </label>
             </div>
             <Button type="submit" className="w-full" disabled={createDep.isPending}>
