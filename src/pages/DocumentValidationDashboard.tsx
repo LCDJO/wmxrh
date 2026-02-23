@@ -10,6 +10,9 @@ import { useTenant } from '@/contexts/TenantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { downloadLGPDLogs, isICPBrasilAvailable, isBlockchainAvailable } from '@/domains/document-validation';
 import {
   ShieldCheck,
   FileCheck,
@@ -17,6 +20,10 @@ import {
   Eye,
   BarChart3,
   Clock,
+  Download,
+  Link2,
+  Fingerprint,
+  Blocks,
 } from 'lucide-react';
 
 interface AccessLogRow {
@@ -281,6 +288,94 @@ export default function DocumentValidationDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* LGPD Export + Future Capabilities */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* LGPD Export */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Download className="h-4 w-4 text-primary" />
+              Exportação LGPD
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Exporte todos os registros de acesso para auditoria conforme a Lei 13.709/2018.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!tenantId) return;
+                  try {
+                    await downloadLGPDLogs(tenantId, 'csv');
+                    toast.success('Logs LGPD exportados em CSV');
+                  } catch {
+                    toast.error('Erro ao exportar logs');
+                  }
+                }}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!tenantId) return;
+                  try {
+                    await downloadLGPDLogs(tenantId, 'json');
+                    toast.success('Logs LGPD exportados em JSON');
+                  } catch {
+                    toast.error('Erro ao exportar logs');
+                  }
+                }}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                JSON
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Future Capabilities */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-primary" />
+              Integrações futuras
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <FeatureRow
+              icon={<Fingerprint className="h-4 w-4" />}
+              label="Assinatura ICP-Brasil"
+              available={isICPBrasilAvailable()}
+              description="Certificado digital A1/A3 com carimbo de tempo"
+            />
+            <FeatureRow
+              icon={<Blocks className="h-4 w-4" />}
+              label="Blockchain Proof Hash"
+              available={isBlockchainAvailable()}
+              description="Âncora imutável em blockchain pública"
+            />
+            <FeatureRow
+              icon={<Link2 className="h-4 w-4" />}
+              label="API Pública"
+              available={true}
+              description="Endpoint GET/POST para validação automatizada"
+            />
+            <FeatureRow
+              icon={<Download className="h-4 w-4" />}
+              label="Exportação LGPD"
+              available={true}
+              description="CSV/JSON com todos os registros de acesso"
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -319,5 +414,37 @@ function KpiCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function FeatureRow({
+  icon,
+  label,
+  available,
+  description,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  available: boolean;
+  description: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 py-2 px-3 rounded-lg bg-muted/50">
+      <div className="text-muted-foreground">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-foreground">{label}</p>
+        <p className="text-[10px] text-muted-foreground">{description}</p>
+      </div>
+      <Badge
+        variant="outline"
+        className={`text-[10px] shrink-0 ${
+          available
+            ? 'border-primary/50 text-primary'
+            : 'border-muted-foreground/30 text-muted-foreground'
+        }`}
+      >
+        {available ? 'Ativo' : 'Em breve'}
+      </Badge>
+    </div>
   );
 }
