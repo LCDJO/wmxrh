@@ -13,6 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { downloadLGPDLogs, isICPBrasilAvailable, isBlockchainAvailable } from '@/domains/document-validation';
+import { blockchainRegistryService } from '@/domains/blockchain-registry';
 import {
   ShieldCheck,
   FileCheck,
@@ -98,6 +99,26 @@ export default function DocumentValidationDashboard() {
         .limit(20);
       if (error) throw error;
       return data || [];
+    },
+    enabled: !!tenantId,
+  });
+
+  // Fetch blockchain stats
+  const { data: blockchainStats } = useQuery({
+    queryKey: ['blockchain-stats', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return { total: 0, anchored: 0, pending: 0, failed: 0 };
+      return blockchainRegistryService.getStats(tenantId);
+    },
+    enabled: !!tenantId,
+  });
+
+  // Fetch recent blockchain records
+  const { data: recentAnchors = [] } = useQuery({
+    queryKey: ['blockchain-recent', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return [];
+      return blockchainRegistryService.listByTenant(tenantId, 10);
     },
     enabled: !!tenantId,
   });
@@ -288,6 +309,77 @@ export default function DocumentValidationDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Blockchain Hash Registry */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Blocks className="h-4 w-4 text-primary" />
+            Blockchain Hash Registry
+            <Badge variant="outline" className="text-[10px] border-primary/50 text-primary ml-auto">
+              {blockchainStats?.anchored ?? 0} ancorados
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-lg font-bold text-foreground">{blockchainStats?.total ?? 0}</p>
+              <p className="text-[10px] text-muted-foreground">Total</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-lg font-bold text-primary">{blockchainStats?.anchored ?? 0}</p>
+              <p className="text-[10px] text-muted-foreground">Ancorados</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-lg font-bold text-yellow-500">{blockchainStats?.pending ?? 0}</p>
+              <p className="text-[10px] text-muted-foreground">Pendentes</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-lg font-bold text-destructive">{blockchainStats?.failed ?? 0}</p>
+              <p className="text-[10px] text-muted-foreground">Falhas</p>
+            </div>
+          </div>
+
+          {recentAnchors.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Nenhum hash ancorado ainda.
+            </p>
+          ) : (
+            <ScrollArea className="h-[200px]">
+              <div className="space-y-2">
+                {recentAnchors.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50 text-xs">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono truncate text-foreground">{a.document_hash.slice(0, 20)}…</p>
+                      <p className="text-muted-foreground">
+                        tx: {a.tx_hash?.slice(0, 18)}… | bloco: {a.block_number}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${
+                          a.status === 'anchored'
+                            ? 'border-primary/50 text-primary'
+                            : a.status === 'pending'
+                            ? 'border-yellow-500/50 text-yellow-500'
+                            : 'border-destructive/50 text-destructive'
+                        }`}
+                      >
+                        {a.status === 'anchored' ? '⛓ Ancorado' : a.status === 'pending' ? '⏳ Pendente' : '✗ Falha'}
+                      </Badge>
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(a.anchor_timestamp).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
 
       {/* LGPD Export + Future Capabilities */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

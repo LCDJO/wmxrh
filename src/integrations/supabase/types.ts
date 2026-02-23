@@ -995,6 +995,62 @@ export type Database = {
           },
         ]
       }
+      blockchain_hash_registry: {
+        Row: {
+          anchor_timestamp: string
+          block_number: number | null
+          chain: string
+          created_at: string
+          created_by: string | null
+          document_hash: string
+          id: string
+          metadata: Json | null
+          signed_document_id: string
+          status: string
+          tenant_id: string
+          tx_hash: string | null
+          verification_url: string | null
+        }
+        Insert: {
+          anchor_timestamp?: string
+          block_number?: number | null
+          chain?: string
+          created_at?: string
+          created_by?: string | null
+          document_hash: string
+          id?: string
+          metadata?: Json | null
+          signed_document_id: string
+          status?: string
+          tenant_id: string
+          tx_hash?: string | null
+          verification_url?: string | null
+        }
+        Update: {
+          anchor_timestamp?: string
+          block_number?: number | null
+          chain?: string
+          created_at?: string
+          created_by?: string | null
+          document_hash?: string
+          id?: string
+          metadata?: Json | null
+          signed_document_id?: string
+          status?: string
+          tenant_id?: string
+          tx_hash?: string | null
+          verification_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blockchain_hash_registry_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       career_legal_mappings: {
         Row: {
           adicional_aplicavel: string | null
