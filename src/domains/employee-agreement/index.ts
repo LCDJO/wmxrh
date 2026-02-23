@@ -27,6 +27,8 @@ export { agreementAutomationService } from './agreement-automation.service';
 export { assignmentRuleService } from './assignment-rule.service';
 export type { AssignmentRule, AssignmentRuleType, AssignmentTriggerEvent, CreateAssignmentRuleDTO, MatchContext } from './assignment-rule.service';
 export { agreementExpirationService } from './agreement-expiration.service';
+export { agreementRenewalEngine } from './agreement-renewal.engine';
+export type { RenewalScanResult } from './agreement-renewal.engine';
 export { internalSignatureService, legalVersionService, renewalEngineService, lgpdConsentService } from './agreement-future.service';
 export { generateDocumentHash, verifyDocumentHash } from './document-hash';
 
