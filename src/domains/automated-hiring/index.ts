@@ -149,6 +149,17 @@ export type {
   FleetEtapaResult,
 } from './fleet-admission.engine';
 
+// ── Validação Final (Etapa 8) ──
+export {
+  runValidacaoFinal,
+  applyValidacaoFinalToWorkflow,
+} from './validacao-final.engine';
+export type {
+  ValidacaoFinalInput,
+  ValidacaoFinalCheckItem,
+  ValidacaoFinalResult,
+} from './validacao-final.engine';
+
 // ── Events ──
 export {
   onHiringEvent,
