@@ -4,7 +4,7 @@
  * Shows documents, addresses, dependents, and contract data
  * as sub-tabs inside the employee detail page.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,11 +12,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign, ShieldAlert, Scale } from 'lucide-react';
+import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign, ShieldAlert, Scale, Lock } from 'lucide-react';
 import { RemuneracaoSection } from './RemuneracaoSection';
 import { SSTSection } from './SSTSection';
 import { DisciplinarySection } from './DisciplinarySection';
 import { ComplianceValidationBanner } from './ComplianceValidationBanner';
+import { LGPDSection } from './LGPDSection';
 import { useToast } from '@/hooks/use-toast';
 import {
   useEmployeeMasterRecord,
@@ -66,6 +67,18 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
   const { data: exams = [] } = useHealthExams(employeeId);
   const { toast } = useToast();
 
+  // LGPD: log access to employee record
+  useEffect(() => {
+    import('@/domains/security').then(({ lgpdService }) => {
+      lgpdService.logAccess({
+        tenantId,
+        employeeId,
+        accessType: 'view',
+        dataScope: 'ficha_trabalhador',
+      });
+    });
+  }, [tenantId, employeeId]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -108,6 +121,9 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
           </TabsTrigger>
           <TabsTrigger value="disciplinar" className="gap-1.5 text-xs">
             <Scale className="h-3.5 w-3.5" /> Disciplinar
+          </TabsTrigger>
+          <TabsTrigger value="lgpd" className="gap-1.5 text-xs">
+            <Lock className="h-3.5 w-3.5" /> LGPD
           </TabsTrigger>
         </TabsList>
 
@@ -192,6 +208,15 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
           <DisciplinarySection
             employeeId={employeeId}
             tenantId={tenantId}
+          />
+        </TabsContent>
+
+        {/* ── LGPD ── */}
+        <TabsContent value="lgpd">
+          <LGPDSection
+            employeeId={employeeId}
+            tenantId={tenantId}
+            terminationDate={record?.record?.data_desligamento}
           />
         </TabsContent>
       </Tabs>

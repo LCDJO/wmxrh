@@ -3709,6 +3709,63 @@ export type Database = {
           },
         ]
       }
+      employee_data_access_logs: {
+        Row: {
+          access_type: string
+          accessed_by: string
+          accessed_fields: string[] | null
+          created_at: string
+          data_scope: string
+          employee_id: string
+          id: string
+          ip_address: string | null
+          justification: string | null
+          tenant_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          access_type: string
+          accessed_by: string
+          accessed_fields?: string[] | null
+          created_at?: string
+          data_scope?: string
+          employee_id: string
+          id?: string
+          ip_address?: string | null
+          justification?: string | null
+          tenant_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          access_type?: string
+          accessed_by?: string
+          accessed_fields?: string[] | null
+          created_at?: string
+          data_scope?: string
+          employee_id?: string
+          id?: string
+          ip_address?: string | null
+          justification?: string | null
+          tenant_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_data_access_logs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_data_access_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_dependents: {
         Row: {
           birth_date: string | null
@@ -9249,6 +9306,169 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "legal_references_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lgpd_anonymization_requests: {
+        Row: {
+          created_at: string
+          employee_id: string
+          entity_type: string
+          id: string
+          legal_basis: string
+          processed_at: string | null
+          processed_by: string | null
+          reason: string | null
+          requested_by: string
+          retention_end_date: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          entity_type?: string
+          id?: string
+          legal_basis?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          requested_by: string
+          retention_end_date?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          entity_type?: string
+          id?: string
+          legal_basis?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          requested_by?: string
+          retention_end_date?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lgpd_anonymization_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lgpd_anonymization_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lgpd_consent_records: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          granted: boolean
+          granted_at: string | null
+          id: string
+          ip_address: string | null
+          legal_basis: string | null
+          purpose: string
+          revoked_at: string | null
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          ip_address?: string | null
+          legal_basis?: string | null
+          purpose: string
+          revoked_at?: string | null
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          ip_address?: string | null
+          legal_basis?: string | null
+          purpose?: string
+          revoked_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lgpd_consent_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lgpd_legal_basis: {
+        Row: {
+          created_at: string
+          data_category: string
+          description: string
+          id: string
+          is_active: boolean
+          legal_basis_type: string
+          lgpd_article: string
+          retention_period_months: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_category: string
+          description: string
+          id?: string
+          is_active?: boolean
+          legal_basis_type: string
+          lgpd_article: string
+          retention_period_months?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_category?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          legal_basis_type?: string
+          lgpd_article?: string
+          retention_period_months?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lgpd_legal_basis_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

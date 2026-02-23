@@ -182,5 +182,5 @@ export { ssoService } from './sso-ready';
 export type { SSOProvider, SSOConfig } from './sso-ready';
 
 // LGPD Ready
-export { lgpdService, anonymizeName, anonymizeEmail, anonymizePhone } from './lgpd-ready';
-export type { ConsentPurpose, ConsentRecord, DataExportRequest, AnonymizationRequest } from './lgpd-ready';
+export { lgpdService, anonymizeName, anonymizeEmail, anonymizePhone, anonymizeCPF, DEFAULT_LEGAL_BASIS } from './lgpd-ready';
+export type { ConsentPurpose, ConsentRecord, AnonymizationRequest, DataAccessLog, LegalBasisRecord, LegalBasisType } from './lgpd-ready';
