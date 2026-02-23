@@ -39,6 +39,10 @@ export type {
 
 export { isFleetBlocked } from './types';
 
+// ── Fleet → Agreement Guard ──
+export { fleetAgreementGuard } from './fleet-agreement-guard';
+export type { FleetAgreementGuardResult } from './fleet-agreement-guard';
+
 // ── Workforce Intelligence Integration ──
 export { generateFleetInsights } from './fleet-workforce-integration.engine';
 export type { FleetWiIntegrationInput } from './fleet-workforce-integration.engine';
