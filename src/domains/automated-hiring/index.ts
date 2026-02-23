@@ -80,6 +80,20 @@ export type {
   AnaliseLegalCargoInput,
 } from './analise-legal-cargo.engine';
 
+// ── PCMSO Admissional (Etapa 3) ──
+export {
+  validateExameAdmissional,
+  applyPcmsoToWorkflow,
+  buildComplementaryExamChecklist,
+} from './pcmso-admissional.engine';
+export type {
+  AsoResultado,
+  ExameAdmissionalInput,
+  ExameComplementarResult,
+  PcmsoEtapaResult,
+} from './pcmso-admissional.engine';
+
+// ── Events ──
 export {
   onHiringEvent,
   emitHiringEvent,
