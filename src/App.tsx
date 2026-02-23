@@ -43,16 +43,15 @@ function AppRoutes() {
   const { isPlatformUser, loading: platformLoading } = useAdaptiveUserType();
   const navigate = useNavigate();
   const redirectHandled = useRef(false);
-  const hasPendingRedirect = useRef(!!sessionStorage.getItem('redirectAfterLogin'));
 
   // ── Handle pending redirect after login (e.g. display pairing QR flow) ──
   useEffect(() => {
     if (!user || redirectHandled.current) return;
     const pendingRedirect = sessionStorage.getItem('redirectAfterLogin');
     if (pendingRedirect) {
+      console.log('[AppRoutes] useEffect consuming redirect →', pendingRedirect);
       sessionStorage.removeItem('redirectAfterLogin');
       redirectHandled.current = true;
-      hasPendingRedirect.current = false;
       navigate(pendingRedirect, { replace: true });
     }
   }, [user, navigate]);
@@ -74,12 +73,15 @@ function AppRoutes() {
     return useRoutes([...authRoutes, ...tvRoute]);
   }
 
+  // ── Check sessionStorage on EVERY render (not via ref, which only initializes once) ──
+  const hasPendingRedirect = redirectHandled.current || !!sessionStorage.getItem('redirectAfterLogin');
+
   // ── Build authenticated route set ──
   const sharedRoutes: RouteObject[] = [
     ...platformRoutes,
     ...tvRoute,
     { path: '/lp/:slug', element: <LandingPagePreview /> },
-    { path: '/auth/login', element: hasPendingRedirect.current ? <FullScreenLoader label="Redirecionando..." /> : <Navigate to="/" replace /> },
+    { path: '/auth/login', element: hasPendingRedirect ? <FullScreenLoader label="Redirecionando..." /> : <Navigate to="/" replace /> },
     { path: '/reset-password', element: <ResetPassword /> },
   ];
 
@@ -89,7 +91,7 @@ function AppRoutes() {
     if (isPlatformUser) {
       routes = [
         ...sharedRoutes,
-        { path: '*', element: hasPendingRedirect.current ? <FullScreenLoader label="Redirecionando..." /> : <Navigate to="/platform/dashboard" replace /> },
+        { path: '*', element: hasPendingRedirect ? <FullScreenLoader label="Redirecionando..." /> : <Navigate to="/platform/dashboard" replace /> },
       ];
     } else {
       routes = [
