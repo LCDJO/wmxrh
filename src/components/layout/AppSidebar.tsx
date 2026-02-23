@@ -168,6 +168,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/apps', icon: Store, label: 'Apps & Integrações', key: 'dashboard' as NavKey },
       { to: '/integrations/telegram', icon: Bot, label: 'Telegram', key: 'dashboard' as NavKey },
+      { to: '/integrations/traccar', icon: Car, label: 'Traccar (GPS)', key: 'dashboard' as NavKey },
       { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' as NavKey },
       { to: '/esocial-governance', icon: ShieldCheck, label: 'eSocial Governance', key: 'esocial' as NavKey },
     ],
