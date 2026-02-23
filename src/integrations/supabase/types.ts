@@ -14,6 +14,76 @@ export type Database = {
   }
   public: {
     Tables: {
+      agreement_assignment_rules: {
+        Row: {
+          agente_risco: string | null
+          cargo_id: string | null
+          cbo_codigo: string | null
+          created_at: string
+          departamento_id: string | null
+          evento_disparo: string
+          id: string
+          is_active: boolean
+          prioridade: number
+          regra_tipo: string
+          template_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          agente_risco?: string | null
+          cargo_id?: string | null
+          cbo_codigo?: string | null
+          created_at?: string
+          departamento_id?: string | null
+          evento_disparo?: string
+          id?: string
+          is_active?: boolean
+          prioridade?: number
+          regra_tipo?: string
+          template_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          agente_risco?: string | null
+          cargo_id?: string | null
+          cbo_codigo?: string | null
+          created_at?: string
+          departamento_id?: string | null
+          evento_disparo?: string
+          id?: string
+          is_active?: boolean
+          prioridade?: number
+          regra_tipo?: string
+          template_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreement_assignment_rules_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreement_assignment_rules_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "agreement_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreement_assignment_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agreement_template_versions: {
         Row: {
           change_summary: string | null

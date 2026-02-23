@@ -24,6 +24,8 @@ export { documentVault, documentVaultService } from './document-vault';
 export type { DocumentVaultRecord, CreateDocumentVaultDTO } from './document-vault';
 export { agreementAuditService, initAgreementAudit } from './agreement-audit.service';
 export { agreementAutomationService } from './agreement-automation.service';
+export { assignmentRuleService } from './assignment-rule.service';
+export type { AssignmentRule, AssignmentRuleType, AssignmentTriggerEvent, CreateAssignmentRuleDTO, MatchContext } from './assignment-rule.service';
 export { agreementExpirationService } from './agreement-expiration.service';
 export { internalSignatureService, legalVersionService, renewalEngineService, lgpdConsentService } from './agreement-future.service';
 export { generateDocumentHash, verifyDocumentHash } from './document-hash';
