@@ -50,7 +50,6 @@ export default function Auth() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirectAfterLogin = searchParams.get('redirect');
 
   /**
    * Detect login intent: PlatformUser, TenantUser, or Both.
@@ -101,22 +100,14 @@ export default function Auth() {
 
   /**
    * Route based on detected intent.
-   * Honors ?redirect= param from URL (e.g. from display pairing QR code flow).
    */
   const routeByIntent = (intent: DetectedIntent) => {
-    // If there's an explicit redirect, go there directly after auth
-    if (redirectAfterLogin && redirectAfterLogin.startsWith('/')) {
-      navigate(redirectAfterLogin, { replace: true });
-      return;
-    }
-
     switch (intent.intent) {
       case 'platform':
         platformEvents.userLoggedIn('', email);
         navigate('/platform/dashboard', { replace: true });
         break;
       case 'tenant': {
-        // Auto-restore last context if single tenant
         const lastCtx = identityIntelligence.contextMemory.getLastValidContext();
         if (lastCtx && intent.tenants.length === 1 && lastCtx.tenantId === intent.tenants[0]?.id) {
           localStorage.setItem('currentTenantId', lastCtx.tenantId);
@@ -135,15 +126,14 @@ export default function Auth() {
 
   const handleSelectWorkspace = (choice: 'platform' | 'tenant', tenantId?: string) => {
     setSelectorOpen(false);
-
     if (choice === 'platform') {
       platformEvents.userLoggedIn('', email);
-      navigate(redirectAfterLogin && redirectAfterLogin.startsWith('/') ? redirectAfterLogin : '/platform/dashboard', { replace: true });
+      navigate('/platform/dashboard', { replace: true });
     } else {
       if (tenantId) {
         localStorage.setItem('currentTenantId', tenantId);
       }
-      navigate(redirectAfterLogin && redirectAfterLogin.startsWith('/') ? redirectAfterLogin : '/', { replace: true });
+      navigate('/', { replace: true });
     }
   };
 
