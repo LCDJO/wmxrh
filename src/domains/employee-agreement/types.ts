@@ -30,7 +30,9 @@ export type AgreementStatus =
   | 'signed'
   | 'rejected'
   | 'expired'
-  | 'renewed';
+  | 'renewed'
+  | 'revoked'
+  | 'cancelled';
 
 export type SignatureProvider =
   | 'clicksign'
@@ -84,11 +86,13 @@ export interface EmployeeAgreement {
   id: string;
   employee_id: string;
   agreement_template_id: string;
+  versao: number;
   status: AgreementStatus;
   assinatura_provider_id: SignatureProvider | null;
   data_envio: string | null;
   data_assinatura: string | null;
   documento_assinado_url: string | null;
+  hash_documento_assinado: string | null;
 }
 
 // ── DTOs ──

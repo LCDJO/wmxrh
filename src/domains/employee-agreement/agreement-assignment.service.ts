@@ -97,11 +97,13 @@ export const agreementAssignmentService = {
       id: data.id,
       employee_id: (data as any).employee_id,
       agreement_template_id: (data as any).template_id,
+      versao: (data as any).versao ?? 1,
       status: (data as any).status,
       assinatura_provider_id: (data as any).signature_provider,
       data_envio: (data as any).sent_at,
       data_assinatura: (data as any).signed_at,
       documento_assinado_url: (data as any).signed_document_url,
+      hash_documento_assinado: (data as any).signed_document_hash,
     };
 
     emitAgreementEvent({
@@ -192,11 +194,13 @@ export const agreementAssignmentService = {
       id: row.id,
       employee_id: row.employee_id,
       agreement_template_id: row.template_id,
+      versao: row.versao ?? 1,
       status: row.status,
       assinatura_provider_id: row.signature_provider,
       data_envio: row.sent_at,
       data_assinatura: row.signed_at,
       documento_assinado_url: row.signed_document_url,
+      hash_documento_assinado: row.signed_document_hash,
     })) as EmployeeAgreement[];
   },
 
@@ -229,7 +233,7 @@ export const agreementAssignmentService = {
 
     if (!agr) throw new Error('Acordo não encontrado.');
     const a = agr as any;
-    if (a.status === 'signed') throw new Error('Não é possível cancelar um documento já assinado.');
+    if (a.status === 'signed') throw new Error('Não é possível cancelar um documento já assinado. Use revogação.');
 
     if (a.external_document_id && a.signature_provider) {
       await digitalSignatureAdapter.cancel(a.signature_provider, a.external_document_id);
@@ -267,6 +271,7 @@ export const agreementAssignmentService = {
     const byStatus: Record<AgreementStatus, number> = {
       pending: 0, sent: 0, signed: 0,
       rejected: 0, expired: 0, renewed: 0,
+      revoked: 0, cancelled: 0,
     };
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
     let signedThisMonth = 0;
