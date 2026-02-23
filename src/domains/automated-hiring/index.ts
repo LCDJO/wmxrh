@@ -65,7 +65,21 @@ export type {
   ESocialCategoryCode,
 } from './pre-cadastro.engine';
 
-// ── Events ──
+// ── Análise Legal do Cargo (Etapa 2) ──
+export {
+  analyzePositionLegal,
+  applyAnaliseLegalToWorkflow,
+} from './analise-legal-cargo.engine';
+export type {
+  NrObrigatoria,
+  ExameObrigatorio,
+  EpiObrigatorio,
+  AdicionalLegal,
+  PisoSalarialAplicavel,
+  AnaliseLegalCargoResult,
+  AnaliseLegalCargoInput,
+} from './analise-legal-cargo.engine';
+
 export {
   onHiringEvent,
   emitHiringEvent,
