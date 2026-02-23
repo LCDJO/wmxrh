@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, useRoutes, Navigate } from "react-router-dom";
+import { BrowserRouter, useRoutes, Navigate, useNavigate } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TenantProvider, useTenant } from "./contexts/TenantContext";
@@ -41,6 +41,19 @@ function AppRoutes() {
   const { user, loading: authLoading } = useAuth();
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { isPlatformUser, loading: platformLoading } = useAdaptiveUserType();
+  const navigate = useNavigate();
+  const redirectHandled = useRef(false);
+
+  // ── Handle pending redirect after login (e.g. display pairing QR flow) ──
+  useEffect(() => {
+    if (!user || redirectHandled.current) return;
+    const pendingRedirect = sessionStorage.getItem('redirectAfterLogin');
+    if (pendingRedirect) {
+      sessionStorage.removeItem('redirectAfterLogin');
+      redirectHandled.current = true;
+      navigate(pendingRedirect, { replace: true });
+    }
+  }, [user, navigate]);
 
   // ── Loading states ──
   if (authLoading || (user && tenantLoading) || (user && platformLoading)) {
@@ -57,13 +70,6 @@ function AppRoutes() {
   // ── Unauthenticated ──
   if (!user) {
     return useRoutes([...authRoutes, ...tvRoute]);
-  }
-
-  // ── Check for pending redirect (e.g. from display pairing QR code flow) ──
-  const pendingRedirect = sessionStorage.getItem('redirectAfterLogin');
-  if (pendingRedirect) {
-    sessionStorage.removeItem('redirectAfterLogin');
-    return <Navigate to={pendingRedirect} replace />;
   }
 
   // ── Build authenticated route set ──
