@@ -99,8 +99,18 @@ export default function Auth() {
 
   /**
    * Route based on detected intent.
+   * Honors ?redirect= param from URL (e.g. from display pairing QR code flow).
    */
   const routeByIntent = (intent: DetectedIntent) => {
+    const params = new URLSearchParams(window.location.search);
+    const redirectTo = params.get('redirect');
+
+    // If there's an explicit redirect, go there directly after auth
+    if (redirectTo && redirectTo.startsWith('/')) {
+      navigate(redirectTo, { replace: true });
+      return;
+    }
+
     switch (intent.intent) {
       case 'platform':
         platformEvents.userLoggedIn('', email);
