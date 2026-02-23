@@ -120,6 +120,20 @@ export type {
   EpiEtapaResult,
 } from './epi-delivery.engine';
 
+// ── Termos Obrigatórios (Etapa 6) ──
+export {
+  resolveRequiredAgreements,
+  validateAgreements,
+  applyAgreementsToWorkflow,
+} from './agreements-admission.engine';
+export type {
+  AgreementCategory,
+  RequiredAgreement,
+  AgreementSignatureStatus,
+  AgreementEtapaInput,
+  AgreementEtapaResult,
+} from './agreements-admission.engine';
+
 // ── Events ──
 export {
   onHiringEvent,
