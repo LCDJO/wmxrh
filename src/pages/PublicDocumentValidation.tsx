@@ -11,6 +11,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { CheckCircle2, XCircle, Shield, Loader2, FileText, Copy, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface BlockchainProofData {
+  hash_sha256: string;
+  blockchain_network: string;
+  transaction_hash: string | null;
+  block_number: number | null;
+  timestamp_blockchain: string;
+  status: string;
+  verification_url: string | null;
+}
+
 interface ValidationResult {
   valid: boolean;
   status: string;
@@ -20,6 +30,7 @@ interface ValidationResult {
   document_hash?: string;
   versao?: number;
   signer_name?: string;
+  blockchain_proof?: BlockchainProofData;
 }
 
 const PublicDocumentValidation: React.FC = () => {
@@ -76,11 +87,9 @@ const PublicDocumentValidation: React.FC = () => {
     }
   };
 
-  const copyHash = () => {
-    if (result?.document_hash) {
-      navigator.clipboard.writeText(result.document_hash);
-      toast.success('Hash copiado para a área de transferência');
-    }
+  const copyHash = (hash: string) => {
+    navigator.clipboard.writeText(hash);
+    toast.success('Hash copiado para a área de transferência');
   };
 
   const statusLabels: Record<string, string> = {
@@ -91,6 +100,8 @@ const PublicDocumentValidation: React.FC = () => {
     hash_mismatch: 'Integridade do documento comprometida',
     error: 'Erro interno na validação',
   };
+
+  const bp = result?.blockchain_proof;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -216,7 +227,7 @@ const PublicDocumentValidation: React.FC = () => {
 
               {result.valid && (
                 <div className="p-4 space-y-4">
-                  {/* Document details table */}
+                  {/* Document details */}
                   <div className="space-y-2.5 text-sm">
                     {result.document_name && (
                       <div className="flex justify-between items-start gap-4">
@@ -251,7 +262,7 @@ const PublicDocumentValidation: React.FC = () => {
                     <div className="bg-muted rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-semibold text-foreground">🔒 Hash SHA-256</p>
-                        <Button variant="ghost" size="sm" className="h-6 px-2" onClick={copyHash}>
+                        <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => copyHash(result.document_hash!)}>
                           <Copy className="h-3 w-3 mr-1" />
                           <span className="text-xs">Copiar</span>
                         </Button>
@@ -259,6 +270,85 @@ const PublicDocumentValidation: React.FC = () => {
                       <p className="font-mono text-[10px] break-all text-muted-foreground leading-relaxed">
                         {result.document_hash}
                       </p>
+                    </div>
+                  )}
+
+                  {/* ═══ BLOCKCHAIN PROOF SECTION ═══ */}
+                  {bp && (
+                    <div className="border border-primary/20 rounded-lg overflow-hidden">
+                      <div className="bg-primary/5 px-3 py-2 flex items-center gap-2">
+                        <span className="text-sm">⛓</span>
+                        <p className="text-xs font-semibold text-foreground">Prova Blockchain</p>
+                        <Badge variant="outline" className="ml-auto text-[10px] border-primary/50 text-primary">
+                          {bp.status === 'confirmed' ? '✓ Confirmado' : bp.status}
+                        </Badge>
+                      </div>
+                      <div className="p-3 space-y-2.5 text-xs">
+                        {/* Hash SHA-256 */}
+                        <div>
+                          <p className="text-muted-foreground mb-0.5">Hash SHA-256</p>
+                          <div className="flex items-center gap-1">
+                            <p className="font-mono text-[10px] break-all text-foreground leading-relaxed flex-1">
+                              {bp.hash_sha256}
+                            </p>
+                            <Button variant="ghost" size="sm" className="h-5 w-5 p-0 shrink-0" onClick={() => copyHash(bp.hash_sha256)}>
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Blockchain Network */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Rede</span>
+                          <span className="font-medium text-foreground">{bp.blockchain_network}</span>
+                        </div>
+
+                        {/* Transaction Hash */}
+                        {bp.transaction_hash && (
+                          <div>
+                            <p className="text-muted-foreground mb-0.5">Transaction Hash</p>
+                            <div className="flex items-center gap-1">
+                              <p className="font-mono text-[10px] break-all text-foreground leading-relaxed flex-1">
+                                {bp.transaction_hash}
+                              </p>
+                              <Button variant="ghost" size="sm" className="h-5 w-5 p-0 shrink-0" onClick={() => copyHash(bp.transaction_hash!)}>
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Block Number */}
+                        {bp.block_number != null && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Bloco</span>
+                            <span className="font-mono font-medium text-foreground">#{bp.block_number.toLocaleString('pt-BR')}</span>
+                          </div>
+                        )}
+
+                        {/* Timestamp */}
+                        {bp.timestamp_blockchain && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Timestamp</span>
+                            <span className="font-medium text-foreground">
+                              {new Date(bp.timestamp_blockchain).toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Explorer Link */}
+                        {bp.verification_url && (
+                          <a
+                            href={bp.verification_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-primary hover:underline pt-1"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            <span className="text-xs font-medium">Verificar no Explorer</span>
+                          </a>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -273,12 +363,17 @@ const PublicDocumentValidation: React.FC = () => {
                     <Badge variant="outline" className="text-xs">
                       ✓ LGPD registrado
                     </Badge>
+                    {bp?.status === 'confirmed' && (
+                      <Badge variant="outline" className="text-primary border-primary/50 text-xs">
+                        ⛓ Blockchain confirmado
+                      </Badge>
+                    )}
                   </div>
                 </div>
               )}
 
               {!result.valid && (
-                <div className="space-y-2">
+                <div className="p-4 space-y-2">
                   <p className="text-sm text-muted-foreground">
                     Este documento não pôde ser validado. Entre em contato com o emissor para obter um token válido.
                   </p>
@@ -290,13 +385,15 @@ const PublicDocumentValidation: React.FC = () => {
                 </div>
               )}
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => { setSubmitted(false); setResult(null); }}
-              >
-                Nova consulta
-              </Button>
+              <div className="p-4 pt-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setSubmitted(false); setResult(null); }}
+                >
+                  Nova consulta
+                </Button>
+              </div>
             </div>
           )}
 

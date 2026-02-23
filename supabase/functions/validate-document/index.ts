@@ -245,8 +245,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ─── 7. Resolve signed_document_id + signer name (masked) ───
+    // ─── 7. Resolve signed_document_id + signer name (masked) + blockchain proof ───
     let signedDocumentId: string | null = null;
+    let blockchainProof: Record<string, unknown> | null = null;
+
     if (accessResult === "success") {
       const { data: sdRow } = await supabase
         .from("signed_documents")
@@ -266,6 +268,30 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (empRow?.nome_completo) {
           signerNameMasked = maskName(empRow.nome_completo);
+        }
+      }
+
+      // ─── Blockchain Proof Lookup ───
+      if (signedDocumentId) {
+        const { data: proofRow } = await supabase
+          .from("blockchain_hash_registry")
+          .select("hash_sha256, blockchain_network, transaction_hash, block_number, timestamp_blockchain, status, verification_url")
+          .eq("signed_document_id", signedDocumentId)
+          .eq("status", "confirmed")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (proofRow) {
+          blockchainProof = {
+            hash_sha256: proofRow.hash_sha256,
+            blockchain_network: proofRow.blockchain_network,
+            transaction_hash: proofRow.transaction_hash,
+            block_number: proofRow.block_number,
+            timestamp_blockchain: proofRow.timestamp_blockchain,
+            status: proofRow.status,
+            verification_url: proofRow.verification_url,
+          };
         }
       }
     }
@@ -307,6 +333,7 @@ Deno.serve(async (req) => {
           signed_at: signedAt,
           document_hash: documentHash,
           versao,
+          blockchain_proof: blockchainProof,
         }),
       }),
       { status: isValid ? 200 : 400, headers: jsonHeaders }
