@@ -184,68 +184,84 @@ export interface TemplateMatchRule {
  * Maps trigger events to template matching rules.
  */
 export const TRIGGER_MATCH_RULES: Record<string, TemplateMatchRule> = {
-  // Hiring → all mandatory general + position-specific
+  // Hiring → all mandatory general + position-specific + LGPD
   'hiring_workflow:admission_started': {
-    tipos: ['geral', 'funcao', 'lgpd'],
+    tipos: ['geral', 'contrato', 'confidencialidade', 'uso_imagem', 'lgpd', 'funcao'],
     mandatory_only: true,
     include_global: true,
   },
   'hiring_workflow:compliance_gate_check': {
-    tipos: ['geral', 'funcao', 'risco', 'lgpd'],
+    tipos: ['geral', 'contrato', 'confidencialidade', 'uso_imagem', 'epi', 'lgpd', 'funcao', 'risco'],
+    mandatory_only: true,
+    include_global: true,
+  },
+  'hiring_workflow:activation_requested': {
+    tipos: ['geral', 'contrato', 'confidencialidade', 'uso_imagem', 'epi', 'lgpd', 'funcao', 'risco', 'veiculo', 'gps'],
     mandatory_only: true,
     include_global: true,
   },
   // Career → position-specific only
   'career_engine:position_changed': {
-    tipos: ['funcao'],
+    tipos: ['funcao', 'contrato'],
     mandatory_only: true,
     include_global: false,
   },
   'career_engine:promotion_approved': {
-    tipos: ['funcao'],
+    tipos: ['funcao', 'contrato'],
     mandatory_only: true,
     include_global: false,
   },
   'career_engine:risk_level_changed': {
-    tipos: ['risco'],
+    tipos: ['risco', 'epi'],
     mandatory_only: true,
     include_global: false,
   },
   // EPI → EPI-specific terms
   'epi_lifecycle:epi_delivered': {
-    tipos: ['risco'],
-    category_keywords: ['epi', 'equipamento'],
+    tipos: ['epi', 'risco'],
+    category_keywords: ['epi', 'equipamento', 'protecao'],
+    mandatory_only: true,
+    include_global: false,
+  },
+  'epi_lifecycle:epi_batch_delivery': {
+    tipos: ['epi', 'risco'],
+    category_keywords: ['epi', 'equipamento', 'protecao'],
     mandatory_only: true,
     include_global: false,
   },
   // Fleet → vehicle authorization terms
   'fleet_compliance:vehicle_assigned': {
-    tipos: ['empresa'],
-    category_keywords: ['veicular', 'frota', 'direcao'],
+    tipos: ['veiculo', 'gps'],
+    category_keywords: ['veicular', 'frota', 'direcao', 'veiculo', 'gps'],
     mandatory_only: true,
     include_global: false,
   },
   'fleet_compliance:driver_authorized': {
-    tipos: ['empresa'],
-    category_keywords: ['veicular', 'frota', 'direcao'],
+    tipos: ['veiculo', 'gps'],
+    category_keywords: ['veicular', 'frota', 'direcao', 'veiculo'],
     mandatory_only: true,
     include_global: false,
   },
   // NR Training → training acknowledgment terms
   'nr_training:training_completed': {
-    tipos: ['risco'],
-    category_keywords: ['treinamento', 'nr', 'seguranca'],
+    tipos: ['risco', 'epi', 'disciplinar'],
+    category_keywords: ['treinamento', 'nr', 'seguranca', 'capacitacao'],
     mandatory_only: true,
     include_global: false,
   },
   // Employee Record → department-specific / contract terms
   'employee_record:department_transferred': {
-    tipos: ['funcao', 'empresa'],
+    tipos: ['funcao', 'contrato'],
     mandatory_only: true,
     include_global: false,
   },
   'employee_record:contract_renewed': {
-    tipos: ['geral'],
+    tipos: ['geral', 'contrato', 'confidencialidade'],
+    mandatory_only: true,
+    include_global: true,
+  },
+  'employee_record:reactivated': {
+    tipos: ['geral', 'contrato', 'confidencialidade', 'lgpd'],
     mandatory_only: true,
     include_global: true,
   },

@@ -53,8 +53,8 @@ function buildPipeline(ctx: SecurityContext, action: PipelineInput['action']): P
 // ── Template Matching ──
 
 function matchesRule(template: AgreementTemplate, rule: TemplateMatchRule, cargoId?: string | null): boolean {
-  // Type check
-  if (!rule.tipos.includes(template.tipo)) return false;
+  // Type check (supports both old tipo and new categoria)
+  if (!rule.tipos.includes(template.tipo) && !rule.tipos.includes(template.categoria)) return false;
 
   // Mandatory check
   if (rule.mandatory_only && !template.obrigatorio) return false;
@@ -62,11 +62,15 @@ function matchesRule(template: AgreementTemplate, rule: TemplateMatchRule, cargo
   // Cargo-specific check
   if (rule.cargo_id && template.cargo_id && template.cargo_id !== rule.cargo_id) return false;
 
-  // If not global and template is position-specific, must match cargo
-  if (!rule.include_global && template.tipo === 'funcao') {
+  // Escopo-based matching
+  if (!rule.include_global && template.escopo === 'global') return false;
+  if (template.escopo === 'cargo' || template.escopo === 'funcao_especifica') {
     if (!template.cargo_id) return false;
     if (cargoId && template.cargo_id !== cargoId) return false;
   }
+
+  // CBO matching (if template has cbo_codigo, check against trigger context)
+  // Note: CBO matching is handled by the template's own cbo_codigo field
 
   // Category keyword matching (for EPI, Fleet, NR terms)
   if (rule.category_keywords?.length) {

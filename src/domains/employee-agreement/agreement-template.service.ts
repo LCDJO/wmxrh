@@ -44,12 +44,18 @@ function toDomain(row: any): AgreementTemplate {
     tenant_id: row.tenant_id,
     nome_termo: row.name,
     descricao: row.description,
+    categoria: row.category as AgreementTemplate['categoria'],
+    escopo: (row.escopo || 'global') as AgreementTemplate['escopo'],
     tipo: row.category as AgreementTemplate['tipo'],
     obrigatorio: row.is_mandatory,
     cargo_id: row.cargo_id,
+    cbo_codigo: row.cbo_codigo ?? null,
     versao: row.versao,
     conteudo_html: row.conteudo_html,
     ativo: row.is_active,
+    exige_assinatura: row.exige_assinatura ?? true,
+    validade_dias: row.expiry_days ?? null,
+    renovacao_obrigatoria: row.renovacao_obrigatoria ?? false,
   };
 }
 
@@ -68,12 +74,17 @@ export const agreementTemplateService = {
       name: dto.nome_termo,
       slug,
       description: dto.descricao ?? null,
-      category: dto.tipo,
+      category: dto.categoria ?? dto.tipo ?? 'outros',
+      escopo: dto.escopo ?? 'global',
       is_mandatory: dto.obrigatorio ?? true,
       is_active: true,
       cargo_id: dto.cargo_id ?? null,
+      cbo_codigo: dto.cbo_codigo ?? null,
       versao: 1,
       conteudo_html: dto.conteudo_html,
+      exige_assinatura: dto.exige_assinatura ?? true,
+      expiry_days: dto.validade_dias ?? null,
+      renovacao_obrigatoria: dto.renovacao_obrigatoria ?? false,
     }, ctx);
 
     const { data, error } = await supabase
@@ -88,7 +99,7 @@ export const agreementTemplateService = {
       type: 'agreement.template.created',
       tenant_id: ctx.tenant_id,
       template_id: data.id,
-      payload: { nome_termo: dto.nome_termo, tipo: dto.tipo },
+      payload: { nome_termo: dto.nome_termo, categoria: dto.categoria ?? dto.tipo },
       timestamp: new Date().toISOString(),
     });
 
@@ -138,11 +149,17 @@ export const agreementTemplateService = {
     const dbUpdates: Record<string, unknown> = {};
     if (updates.nome_termo !== undefined) dbUpdates.name = updates.nome_termo;
     if (updates.descricao !== undefined) dbUpdates.description = updates.descricao;
-    if (updates.tipo !== undefined) dbUpdates.category = updates.tipo;
+    if (updates.categoria !== undefined) dbUpdates.category = updates.categoria;
+    if (updates.tipo !== undefined && updates.categoria === undefined) dbUpdates.category = updates.tipo;
+    if (updates.escopo !== undefined) dbUpdates.escopo = updates.escopo;
     if (updates.obrigatorio !== undefined) dbUpdates.is_mandatory = updates.obrigatorio;
     if (updates.cargo_id !== undefined) dbUpdates.cargo_id = updates.cargo_id;
+    if (updates.cbo_codigo !== undefined) dbUpdates.cbo_codigo = updates.cbo_codigo;
     if (updates.conteudo_html !== undefined) dbUpdates.conteudo_html = updates.conteudo_html;
     if (updates.ativo !== undefined) dbUpdates.is_active = updates.ativo;
+    if (updates.exige_assinatura !== undefined) dbUpdates.exige_assinatura = updates.exige_assinatura;
+    if (updates.validade_dias !== undefined) dbUpdates.expiry_days = updates.validade_dias;
+    if (updates.renovacao_obrigatoria !== undefined) dbUpdates.renovacao_obrigatoria = updates.renovacao_obrigatoria;
 
     const { error } = await supabase
       .from('agreement_templates')

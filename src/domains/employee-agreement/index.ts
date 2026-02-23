@@ -46,6 +46,8 @@ export { TRIGGER_MATCH_RULES } from './integration-contracts';
 
 // ── Types ──
 export type {
+  AgreementCategoria,
+  AgreementEscopo,
   AgreementTipo,
   AgreementStatus,
   SignatureProvider,
