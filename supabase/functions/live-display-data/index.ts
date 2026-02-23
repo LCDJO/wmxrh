@@ -183,9 +183,9 @@ Deno.serve(async (req) => {
       result.live_positions = trackingEvents ?? [];
 
       let fleetQuery = admin.from("fleet_behavior_events")
-        .select("id, event_type, severity, detected_at, employee_id, employees(name), location_lat, location_lng, speed_kmh, speed_limit_kmh, description")
+        .select("id, event_type, severity, event_timestamp, employee_id, employees(name), details")
         .eq("tenant_id", tenantId)
-        .order("detected_at", { ascending: false })
+        .order("event_timestamp", { ascending: false })
         .limit(50);
       if (companyId) fleetQuery = fleetQuery.eq("company_id", companyId);
       const { data: fleetEvents } = await fleetQuery;
@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
       result.recent_warnings = sanitizeList(warnings ?? []);
 
       let incidentQuery = admin.from("fleet_compliance_incidents")
-        .select("id, incident_type, severity, status, description, created_at, employee_id, employees(name)")
+        .select("id, violation_type, severity, status, notes, created_at, employee_id, employees(name)")
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -365,7 +365,7 @@ Deno.serve(async (req) => {
 
     // ── Critical alerts (all modes) ──
     let alertQuery = admin.from("fleet_compliance_incidents")
-      .select("id, incident_type, severity, description, created_at, employee_id, employees(name)")
+      .select("id, violation_type, severity, notes, created_at, employee_id, employees(name)")
       .eq("tenant_id", tenantId)
       .in("severity", ["critical", "high"])
       .eq("status", "open")
