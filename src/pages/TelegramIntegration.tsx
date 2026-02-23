@@ -486,12 +486,22 @@ export default function TelegramIntegration() {
                   <p className="text-xs font-medium text-foreground">📋 Como configurar o Webhook</p>
                   <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
                     <li>Copie a URL acima clicando no botão de cópia</li>
-                    <li>Abra o Telegram e acesse o <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80">@BotFather</a></li>
-                    <li>Envie o comando <code className="bg-muted px-1 rounded">/setwebhook</code></li>
-                    <li>Selecione o seu bot na lista</li>
-                    <li>Cole a URL copiada e envie</li>
-                    <li>O BotFather confirmará com <em>"Webhook was set"</em></li>
+                    <li>Abra o navegador e acesse o seguinte endereço, substituindo <code className="bg-muted px-1 rounded">&lt;TOKEN&gt;</code> pelo token do seu bot:</li>
                   </ol>
+                  <div className="bg-background rounded border border-border p-2 mt-1">
+                    <code className="text-[11px] text-foreground break-all select-all">
+                      https://api.telegram.org/bot&lt;TOKEN&gt;/setWebhook?url=<span className="text-primary">{webhookUrl ? encodeURIComponent(webhookUrl) : '<URL_COPIADA>'}</span>
+                    </code>
+                  </div>
+                  <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside" start={3}>
+                    <li>Ao acessar, a resposta deve conter <code className="bg-muted px-1 rounded">"description": "Webhook was set"</code></li>
+                    <li>Alternativamente, use o <code className="bg-muted px-1 rounded">curl</code> no terminal:</li>
+                  </ol>
+                  <div className="bg-background rounded border border-border p-2 mt-1">
+                    <code className="text-[11px] text-foreground break-all select-all">
+                      curl "https://api.telegram.org/bot&lt;TOKEN&gt;/setWebhook?url={webhookUrl ? encodeURIComponent(webhookUrl) : '<URL_COPIADA>'}"
+                    </code>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-2">
                     💡 Após configurar, envie <code className="bg-muted px-1 rounded">/start</code> ao seu bot para testar a conexão e obter o Chat ID.
                   </p>
