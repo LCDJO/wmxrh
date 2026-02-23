@@ -1294,7 +1294,7 @@ export default function PlatformTenants() {
                       <p className="text-sm font-medium text-foreground">{mod.label}</p>
                       <p className="text-xs text-muted-foreground">{mod.description}</p>
                     </div>
-                    <Switch checked={active} onCheckedChange={() => toggleModule(mod.key, active)} disabled={!can('module.enable')} />
+                    <Switch checked={active} onCheckedChange={() => toggleModule(mod.key, active)} />
                   </div>
                 );
               })}
