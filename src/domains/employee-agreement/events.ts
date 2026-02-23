@@ -15,6 +15,7 @@ export type AgreementEventType =
   | 'agreement.signed'
   | 'agreement.rejected'
   | 'agreement.expired'
+  | 'agreement.renewal_required'
   | 'agreement.auto_dispatch_triggered'
   // Governance Engine events
   | 'agreement.governance.dispatch_triggered'
@@ -74,6 +75,7 @@ export const __DOMAIN_CATALOG = {
     { name: 'agreement.signed', description: 'Acordo assinado' },
     { name: 'agreement.rejected', description: 'Acordo rejeitado' },
     { name: 'agreement.expired', description: 'Acordo expirado' },
+    { name: 'agreement.renewal_required', description: 'Renovação de acordo obrigatória' },
     { name: 'agreement.auto_dispatch_triggered', description: 'Envio automático de acordo acionado' },
     { name: 'agreement.governance.dispatch_triggered', description: 'Governance engine disparou termos' },
     { name: 'agreement.governance.compliance_gate_checked', description: 'Compliance gate verificado' },
