@@ -162,6 +162,9 @@ export default function LiveDisplayAdmin() {
 
   const disconnectDisplay = async (displayId: string) => {
     try {
+      // Optimistic update: immediately reflect in UI
+      setDisplays(prev => prev.map(d => d.id === displayId ? { ...d, status: 'disconnected' } : d));
+
       // Expire all active tokens for this display
       await supabase
         .from('live_display_tokens')
@@ -176,9 +179,11 @@ export default function LiveDisplayAdmin() {
         .eq('id', displayId);
 
       toast({ title: 'Display desconectado', description: 'O display voltará à tela de pareamento.' });
+      // Refetch to ensure consistency
       fetchDisplays();
     } catch (e: any) {
       toast({ title: 'Erro ao desconectar', description: e.message, variant: 'destructive' });
+      fetchDisplays(); // revert optimistic update on error
     }
   };
 
