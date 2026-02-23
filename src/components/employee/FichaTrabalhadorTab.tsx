@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign, ShieldAlert, Scale, Lock, Building2, FileCheck, Banknote, ScrollText } from 'lucide-react';
+import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign, ShieldAlert, Scale, Lock, Building2, FileCheck, Banknote, ScrollText, Gift, Calculator, GraduationCap, HardHat, Clock } from 'lucide-react';
 import { RemuneracaoSection } from './RemuneracaoSection';
 import { SSTSection } from './SSTSection';
 import { DisciplinarySection } from './DisciplinarySection';
@@ -22,6 +22,18 @@ import { FichaStatusIndicators } from './FichaStatusIndicators';
 import { SignedDocumentsSection } from './SignedDocumentsSection';
 import { FinanceiroSection } from './FinanceiroSection';
 import { EmployeeAuditLogSection } from './EmployeeAuditLogSection';
+import { SalaryCompositionSection } from './SalaryCompositionSection';
+import { BenefitsSection } from './BenefitsSection';
+import { HealthExamsSection } from './HealthExamsSection';
+import { RiskExposuresSection } from './RiskExposuresSection';
+import { UnifiedTimelineSection } from './UnifiedTimelineSection';
+import { EmployeeEventsSection } from './EmployeeEventsSection';
+import { DocumentosTab } from './DocumentosTab';
+import { TermosDocumentosTab } from './TermosDocumentosTab';
+import { TreinamentosNrTab } from './TreinamentosNrTab';
+import { CorrectiveActionsTab } from './CorrectiveActionsTab';
+import { EpisTab } from './EpisTab';
+import { SimulacaoTrabalhistaTab } from './SimulacaoTrabalhistaTab';
 import { useToast } from '@/hooks/use-toast';
 import {
   useEmployeeMasterRecord,
@@ -64,9 +76,17 @@ interface Props {
   employeeId: string;
   tenantId: string;
   canEdit: boolean;
+  /** Employee data for salary/simulation sections */
+  employee?: {
+    id: string;
+    name: string;
+    base_salary?: number | null;
+    current_salary?: number | null;
+  } | null;
+  canManageCompensation?: boolean;
 }
 
-export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
+export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit, employee, canManageCompensation = false }: Props) {
   const { data: record, isLoading } = useEmployeeMasterRecord(employeeId);
   const { data: exams = [] } = useHealthExams(employeeId);
   const { toast } = useToast();
@@ -105,155 +125,182 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
       {/* Compliance Validation */}
       <ComplianceValidationBanner record={record} exams={exams} />
 
-      <Tabs defaultValue="dados_pessoais" className="space-y-4">
+      <Tabs defaultValue="cadastro" className="space-y-4">
         <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1 rounded-lg">
-          {/* 1 */}
-          <TabsTrigger value="dados_pessoais" className="gap-1.5 text-xs">
-            <User className="h-3.5 w-3.5" /> Dados Pessoais
+          <TabsTrigger value="cadastro" className="gap-1.5 text-xs">
+            <User className="h-3.5 w-3.5" /> Cadastro
           </TabsTrigger>
-          {/* 2 */}
-          <TabsTrigger value="documentos" className="gap-1.5 text-xs">
-            <FileText className="h-3.5 w-3.5" /> Documentos
+          <TabsTrigger value="contrato_trabalho" className="gap-1.5 text-xs">
+            <Briefcase className="h-3.5 w-3.5" /> Contrato & Trabalho
           </TabsTrigger>
-          {/* 3 */}
-          <TabsTrigger value="contrato" className="gap-1.5 text-xs">
-            <Briefcase className="h-3.5 w-3.5" /> Contrato
-          </TabsTrigger>
-          {/* 4 */}
           <TabsTrigger value="remuneracao" className="gap-1.5 text-xs">
             <DollarSign className="h-3.5 w-3.5" /> Remuneração
           </TabsTrigger>
-          {/* 5 */}
-          <TabsTrigger value="dependentes" className="gap-1.5 text-xs">
-            <Users className="h-3.5 w-3.5" /> Dependentes
+          <TabsTrigger value="sst_compliance" className="gap-1.5 text-xs">
+            <ShieldAlert className="h-3.5 w-3.5" /> SST & Compliance
           </TabsTrigger>
-          {/* 6 */}
-          <TabsTrigger value="sst" className="gap-1.5 text-xs">
-            <ShieldAlert className="h-3.5 w-3.5" /> SST
+          <TabsTrigger value="docs_legais" className="gap-1.5 text-xs">
+            <FileCheck className="h-3.5 w-3.5" /> Documentos Legais
           </TabsTrigger>
-          {/* 7 */}
-          <TabsTrigger value="financeiro" className="gap-1.5 text-xs">
-            <Banknote className="h-3.5 w-3.5" /> Financeiro
-          </TabsTrigger>
-          {/* 8 */}
-          <TabsTrigger value="disciplinar" className="gap-1.5 text-xs">
-            <Scale className="h-3.5 w-3.5" /> Disciplinar
-          </TabsTrigger>
-          {/* 9 */}
-          <TabsTrigger value="docs_assinados" className="gap-1.5 text-xs">
-            <FileCheck className="h-3.5 w-3.5" /> Docs Assinados
-          </TabsTrigger>
-          {/* 10 */}
-          <TabsTrigger value="auditoria" className="gap-1.5 text-xs">
-            <ScrollText className="h-3.5 w-3.5" /> Auditoria
+          <TabsTrigger value="governanca" className="gap-1.5 text-xs">
+            <Scale className="h-3.5 w-3.5" /> Governança
           </TabsTrigger>
         </TabsList>
 
-        {/* 1. Dados Pessoais (includes addresses) */}
-        <TabsContent value="dados_pessoais">
-          <PersonalDataSection
-            personalData={record?.personalData ?? null}
-            employeeId={employeeId}
-            tenantId={tenantId}
-            canEdit={canEdit}
-          />
-          <div className="mt-6">
-            <h4 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
-              <MapPin className="h-4 w-4" /> Endereços
-            </h4>
-            <AddressesSection
-              addresses={record?.addresses ?? []}
+        {/* ═══ GRUPO 1: CADASTRO ═══ */}
+        <TabsContent value="cadastro">
+          <div className="space-y-6">
+            <PersonalDataSection
+              personalData={record?.personalData ?? null}
               employeeId={employeeId}
               tenantId={tenantId}
               canEdit={canEdit}
             />
+            <div className="border-t border-border pt-4">
+              <h4 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
+                <FileText className="h-4 w-4" /> Documentos Pessoais
+              </h4>
+              <DocumentsSection
+                documents={record?.documents ?? []}
+                employeeId={employeeId}
+                tenantId={tenantId}
+                canEdit={canEdit}
+              />
+            </div>
+            <div className="border-t border-border pt-4">
+              <h4 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
+                <Users className="h-4 w-4" /> Dependentes
+              </h4>
+              <DependentsSection
+                dependents={record?.dependents ?? []}
+                employeeId={employeeId}
+                tenantId={tenantId}
+                canEdit={canEdit}
+              />
+            </div>
+            <div className="border-t border-border pt-4">
+              <h4 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
+                <MapPin className="h-4 w-4" /> Endereços
+              </h4>
+              <AddressesSection
+                addresses={record?.addresses ?? []}
+                employeeId={employeeId}
+                tenantId={tenantId}
+                canEdit={canEdit}
+              />
+            </div>
           </div>
         </TabsContent>
 
-        {/* 2. Documentos */}
-        <TabsContent value="documentos">
-          <DocumentsSection
-            documents={record?.documents ?? []}
-            employeeId={employeeId}
-            tenantId={tenantId}
-            canEdit={canEdit}
-          />
-        </TabsContent>
-
-        {/* 3. Contrato */}
-        <TabsContent value="contrato">
-          <RecordSection
-            record={record?.record ?? null}
-            employeeId={employeeId}
-            tenantId={tenantId}
-            canEdit={canEdit}
-          />
-          <div className="mt-4">
-            <ContractsSection
-              contracts={record?.contracts ?? []}
+        {/* ═══ GRUPO 2: CONTRATO & TRABALHO ═══ */}
+        <TabsContent value="contrato_trabalho">
+          <div className="space-y-6">
+            <RecordSection
+              record={record?.record ?? null}
               employeeId={employeeId}
               tenantId={tenantId}
               canEdit={canEdit}
             />
+            <div className="border-t border-border pt-4">
+              <ContractsSection
+                contracts={record?.contracts ?? []}
+                employeeId={employeeId}
+                tenantId={tenantId}
+                canEdit={canEdit}
+              />
+            </div>
+            <div className="border-t border-border pt-4">
+              <EmployeeEventsSection employeeId={employeeId} />
+            </div>
+            <div className="border-t border-border pt-4">
+              <UnifiedTimelineSection employeeId={employeeId} />
+            </div>
           </div>
         </TabsContent>
 
-        {/* 4. Remuneração */}
+        {/* ═══ GRUPO 3: REMUNERAÇÃO ═══ */}
         <TabsContent value="remuneracao">
-          <RemuneracaoSection
-            employeeId={employeeId}
-            tenantId={tenantId}
-          />
+          <div className="space-y-6">
+            <SalaryCompositionSection
+              employeeId={employeeId}
+              tenantId={tenantId}
+              employeeName={employee?.name ?? ''}
+              baseSalary={employee?.base_salary ?? 0}
+              currentSalary={employee?.current_salary ?? 0}
+              canManageCompensation={canManageCompensation}
+            />
+            <div className="border-t border-border pt-4">
+              <RemuneracaoSection employeeId={employeeId} tenantId={tenantId} />
+            </div>
+            <div className="border-t border-border pt-4">
+              <BenefitsSection employeeId={employeeId} />
+            </div>
+            <div className="border-t border-border pt-4">
+              <FinanceiroSection
+                personalData={record?.personalData ?? null}
+                currentContract={record?.contracts?.filter(c => !c.deleted_at && c.is_current)[0] ?? null}
+              />
+            </div>
+            {employee && (
+              <div className="border-t border-border pt-4">
+                <SimulacaoTrabalhistaTab employee={employee as any} />
+              </div>
+            )}
+          </div>
         </TabsContent>
 
-        {/* 5. Dependentes */}
-        <TabsContent value="dependentes">
-          <DependentsSection
-            dependents={record?.dependents ?? []}
-            employeeId={employeeId}
-            tenantId={tenantId}
-            canEdit={canEdit}
-          />
+        {/* ═══ GRUPO 4: SST & COMPLIANCE ═══ */}
+        <TabsContent value="sst_compliance">
+          <div className="space-y-6">
+            <SSTSection employeeId={employeeId} tenantId={tenantId} />
+            <div className="border-t border-border pt-4">
+              <HealthExamsSection employeeId={employeeId} />
+            </div>
+            <div className="border-t border-border pt-4">
+              <RiskExposuresSection employeeId={employeeId} />
+            </div>
+            <div className="border-t border-border pt-4">
+              <h4 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
+                <HardHat className="h-4 w-4" /> EPIs
+              </h4>
+              <EpisTab employeeId={employeeId} tenantId={tenantId} />
+            </div>
+            <div className="border-t border-border pt-4">
+              <h4 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
+                <GraduationCap className="h-4 w-4" /> Treinamentos NR
+              </h4>
+              <TreinamentosNrTab employeeId={employeeId} />
+            </div>
+            <div className="border-t border-border pt-4">
+              <CorrectiveActionsTab employeeId={employeeId} tenantId={tenantId} />
+            </div>
+          </div>
         </TabsContent>
 
-        {/* 6. SST */}
-        <TabsContent value="sst">
-          <SSTSection
-            employeeId={employeeId}
-            tenantId={tenantId}
-          />
+        {/* ═══ GRUPO 5: DOCUMENTOS LEGAIS ═══ */}
+        <TabsContent value="docs_legais">
+          <div className="space-y-6">
+            <DocumentosTab employeeId={employeeId} />
+            <div className="border-t border-border pt-4">
+              <h4 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
+                <FileCheck className="h-4 w-4" /> Termos e Acordos Assinados
+              </h4>
+              <TermosDocumentosTab employeeId={employeeId} />
+            </div>
+            <div className="border-t border-border pt-4">
+              <SignedDocumentsSection employeeId={employeeId} tenantId={tenantId} />
+            </div>
+          </div>
         </TabsContent>
 
-        {/* 7. Financeiro */}
-        <TabsContent value="financeiro">
-          <FinanceiroSection
-            personalData={record?.personalData ?? null}
-            currentContract={record?.contracts?.filter(c => !c.deleted_at && c.is_current)[0] ?? null}
-          />
-        </TabsContent>
-
-        {/* 8. Disciplinar */}
-        <TabsContent value="disciplinar">
-          <DisciplinarySection
-            employeeId={employeeId}
-            tenantId={tenantId}
-          />
-        </TabsContent>
-
-        {/* 9. Documentos Assinados */}
-        <TabsContent value="docs_assinados">
-          <SignedDocumentsSection
-            employeeId={employeeId}
-            tenantId={tenantId}
-          />
-        </TabsContent>
-
-        {/* 10. Auditoria */}
-        <TabsContent value="auditoria">
-          <EmployeeAuditLogSection
-            employeeId={employeeId}
-            tenantId={tenantId}
-          />
+        {/* ═══ GRUPO 6: GOVERNANÇA ═══ */}
+        <TabsContent value="governanca">
+          <div className="space-y-6">
+            <DisciplinarySection employeeId={employeeId} tenantId={tenantId} />
+            <div className="border-t border-border pt-4">
+              <EmployeeAuditLogSection employeeId={employeeId} tenantId={tenantId} />
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
