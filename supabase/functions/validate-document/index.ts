@@ -15,6 +15,19 @@ const TOKEN_MAX_LENGTH = 64;
 const FIELD_MAX_LENGTH = 200;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Mask a name: "João da Silva" → "Jo** da Si***" */
+function maskName(name: string | null): string | null {
+  if (!name || name.length < 2) return null;
+  return name
+    .split(" ")
+    .map((part) => {
+      if (part.length <= 2) return part;
+      const visible = Math.max(2, Math.floor(part.length * 0.4));
+      return part.slice(0, visible) + "*".repeat(part.length - visible);
+    })
+    .join(" ");
+}
+
 function sanitizeString(val: unknown, maxLen = FIELD_MAX_LENGTH): string | null {
   if (typeof val !== "string") return null;
   return val.trim().slice(0, maxLen) || null;
@@ -160,7 +173,7 @@ Deno.serve(async (req) => {
     // ─── 4. Lookup token ───
     const { data: tokenRow, error: tokenError } = await supabase
       .from("document_validation_tokens")
-      .select("id, tenant_id, document_vault_id, document_hash, status, expires_at")
+      .select("id, tenant_id, document_vault_id, document_hash, status, expires_at, employee_id")
       .eq("token", token)
       .single();
 
@@ -188,12 +201,13 @@ Deno.serve(async (req) => {
         .eq("id", tokenRow.id);
     }
 
-    // ─── 6. Verify hash (never expose employee data) ───
+    // ─── 6. Verify hash + resolve signer (masked, never expose full PII) ───
     let hashVerified = false;
     let documentName: string | null = null;
     let signedAt: string | null = null;
     let documentHash: string | null = null;
     let versao: number | null = null;
+    let signerNameMasked: string | null = null;
 
     if (accessResult === "success") {
       const { data: vaultRow } = await supabase
@@ -231,16 +245,29 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ─── 7. Resolve signed_document_id ───
+    // ─── 7. Resolve signed_document_id + signer name (masked) ───
     let signedDocumentId: string | null = null;
     if (accessResult === "success") {
       const { data: sdRow } = await supabase
         .from("signed_documents")
-        .select("id")
+        .select("id, employee_id")
         .eq("validation_token", token)
         .eq("ativo", true)
         .maybeSingle();
       signedDocumentId = sdRow?.id ?? null;
+
+      // Resolve employee name — only return masked version
+      const employeeId = sdRow?.employee_id ?? tokenRow.employee_id;
+      if (employeeId) {
+        const { data: empRow } = await supabase
+          .from("employees")
+          .select("nome_completo")
+          .eq("id", employeeId)
+          .maybeSingle();
+        if (empRow?.nome_completo) {
+          signerNameMasked = maskName(empRow.nome_completo);
+        }
+      }
     }
 
     // ─── 8. LGPD: Log access (all attempts) ───
@@ -276,6 +303,7 @@ Deno.serve(async (req) => {
         hash_verified: hashVerified,
         ...(isValid && {
           document_name: documentName,
+          signer_name: signerNameMasked,
           signed_at: signedAt,
           document_hash: documentHash,
           versao,
