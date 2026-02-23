@@ -3256,6 +3256,125 @@ export type Database = {
           },
         ]
       }
+      document_access_logs: {
+        Row: {
+          access_result: string
+          accessed_at: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          requester_document: string | null
+          requester_name: string | null
+          requester_purpose: string | null
+          tenant_id: string
+          token_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          access_result?: string
+          accessed_at?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          requester_document?: string | null
+          requester_name?: string | null
+          requester_purpose?: string | null
+          tenant_id: string
+          token_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          access_result?: string
+          accessed_at?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          requester_document?: string | null
+          requester_name?: string | null
+          requester_purpose?: string | null
+          tenant_id?: string
+          token_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_access_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_access_logs_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "document_validation_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_validation_tokens: {
+        Row: {
+          agreement_id: string | null
+          company_id: string | null
+          created_at: string
+          document_hash: string
+          document_vault_id: string
+          employee_id: string | null
+          expires_at: string | null
+          id: string
+          issued_at: string
+          metadata: Json | null
+          revoked_at: string | null
+          revoked_by: string | null
+          status: string
+          tenant_id: string
+          token: string
+        }
+        Insert: {
+          agreement_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          document_hash: string
+          document_vault_id: string
+          employee_id?: string | null
+          expires_at?: string | null
+          id?: string
+          issued_at?: string
+          metadata?: Json | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: string
+          tenant_id: string
+          token?: string
+        }
+        Update: {
+          agreement_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          document_hash?: string
+          document_vault_id?: string
+          employee_id?: string | null
+          expires_at?: string | null
+          id?: string
+          issued_at?: string
+          metadata?: Json | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: string
+          tenant_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_validation_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_vault: {
         Row: {
           agreement_id: string | null
