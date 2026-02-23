@@ -12,8 +12,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign } from 'lucide-react';
+import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign, ShieldAlert } from 'lucide-react';
 import { RemuneracaoSection } from './RemuneracaoSection';
+import { SSTSection } from './SSTSection';
 import { useToast } from '@/hooks/use-toast';
 import {
   useEmployeeMasterRecord,
@@ -97,6 +98,9 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
           <TabsTrigger value="remuneracao" className="gap-1.5 text-xs">
             <DollarSign className="h-3.5 w-3.5" /> Remuneração
           </TabsTrigger>
+          <TabsTrigger value="sst" className="gap-1.5 text-xs">
+            <ShieldAlert className="h-3.5 w-3.5" /> SST
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Aggregate Root ── */}
@@ -162,6 +166,14 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
         {/* ── Compensation ── */}
         <TabsContent value="remuneracao">
           <RemuneracaoSection
+            employeeId={employeeId}
+            tenantId={tenantId}
+          />
+        </TabsContent>
+
+        {/* ── SST ── */}
+        <TabsContent value="sst">
+          <SSTSection
             employeeId={employeeId}
             tenantId={tenantId}
           />
