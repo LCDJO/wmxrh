@@ -52,16 +52,18 @@ export function isICPBrasilAvailable(): boolean {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 2. Blockchain Proof Hash Anchoring (stub)
+// 2. Blockchain Proof Hash Anchoring — NOW LIVE via blockchain-registry domain
 // ═══════════════════════════════════════════════════════════
 
-export interface BlockchainAnchorRequest {
+export type { BlockchainAnchorRequest, BlockchainAnchorResult };
+
+interface BlockchainAnchorRequest {
   document_hash: string;
   tenant_id: string;
   metadata?: Record<string, unknown>;
 }
 
-export interface BlockchainAnchorResult {
+interface BlockchainAnchorResult {
   anchored: boolean;
   tx_hash?: string;
   chain?: string;
@@ -71,22 +73,36 @@ export interface BlockchainAnchorResult {
 }
 
 /**
- * Stub: Anchor document hash on a blockchain.
- * Future integration: Ethereum, Polygon, or Hyperledger.
+ * Anchor document hash via blockchain-registry domain service.
  */
 export async function anchorOnBlockchain(
-  _req: BlockchainAnchorRequest
+  req: BlockchainAnchorRequest & { signed_document_id?: string }
 ): Promise<BlockchainAnchorResult> {
-  console.warn('[Blockchain] Stub — Blockchain anchoring not yet configured.');
-  return {
-    anchored: false,
-    error: 'Blockchain proof not configured. Contact platform admin.',
-  };
+  try {
+    const { blockchainRegistryService } = await import('@/domains/blockchain-registry');
+    const result = await blockchainRegistryService.anchor({
+      tenant_id: req.tenant_id,
+      signed_document_id: req.signed_document_id || '',
+      document_hash: req.document_hash,
+    });
+    if (result.success && result.record) {
+      return {
+        anchored: true,
+        tx_hash: result.record.tx_hash ?? undefined,
+        chain: result.record.chain,
+        block_number: result.record.block_number ?? undefined,
+        timestamp: result.record.anchor_timestamp,
+      };
+    }
+    return { anchored: false, error: result.error };
+  } catch (err) {
+    return { anchored: false, error: String(err) };
+  }
 }
 
-/** Check if blockchain anchoring is available. */
+/** Blockchain anchoring is now available. */
 export function isBlockchainAvailable(): boolean {
-  return false; // flip to true when provider is connected
+  return true;
 }
 
 // ═══════════════════════════════════════════════════════════
