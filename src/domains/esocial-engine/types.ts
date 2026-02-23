@@ -59,6 +59,7 @@ export const EVENT_TYPE_REGISTRY: Record<string, ESocialEventType> = {
   'S-2206': { code: 'S-2206', name: 'Alteração de Contrato de Trabalho', category: 'nao_periodicos', layout_version: 'S-1.2', schema_id: 'evtAltContratual' },
   'S-2230': { code: 'S-2230', name: 'Afastamento Temporário', category: 'nao_periodicos', layout_version: 'S-1.2', schema_id: 'evtAfastTemp' },
   'S-2299': { code: 'S-2299', name: 'Desligamento', category: 'nao_periodicos', layout_version: 'S-1.2', schema_id: 'evtDeslig' },
+  'S-2300': { code: 'S-2300', name: 'Trabalhador Sem Vínculo - Início', category: 'nao_periodicos', layout_version: 'S-1.2', schema_id: 'evtTSVInicio' },
   'S-1200': { code: 'S-1200', name: 'Remuneração do Trabalhador', category: 'periodicos', layout_version: 'S-1.2', schema_id: 'evtRemun' },
   'S-1210': { code: 'S-1210', name: 'Pagamentos de Rendimentos', category: 'periodicos', layout_version: 'S-1.2', schema_id: 'evtPgtos' },
   'S-1299': { code: 'S-1299', name: 'Fechamento Eventos Periódicos', category: 'periodicos', layout_version: 'S-1.2', schema_id: 'evtFechaEvPer' },
@@ -115,8 +116,10 @@ export type InboundEventName =
   | 'employee.updated'
   | 'employee.terminated'
   | 'employee.leave_started'
+  | 'employee.tsv_started'
   | 'salary.contract_started'
   | 'salary.adjusted'
+  | 'salary.remuneration_closed'
   | 'health_exam.created'
   | 'risk_exposure.created'
   | 'company.created'

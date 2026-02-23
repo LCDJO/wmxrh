@@ -55,6 +55,10 @@ export type { LayoutVersionInfo } from './layout-version-manager';
 // ── Layout Mappers (EventMapper) ──
 export { getMapper, getRegisteredEventTypes, hasMapper } from './layout-mappers';
 
+// ── eSocial Mapping Profile ──
+export { esocialMappingProfile } from './esocial-mapping-profile';
+export type { ESocialEventMapping, ESocialMappingProfileResult } from './esocial-mapping-profile';
+
 // ── Types ──
 export type {
   LayoutVersion,

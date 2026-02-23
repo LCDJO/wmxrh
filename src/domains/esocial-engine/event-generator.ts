@@ -17,6 +17,9 @@ import type { S2220Input } from './layout-mappers/s2220-aso.mapper';
 import type { S1000Input } from './layout-mappers/s1000-empregador.mapper';
 import type { S1010Input } from './layout-mappers/s1010-rubrica.mapper';
 import type { S2240Input } from './layout-mappers/s2240-exp-risco.mapper';
+import type { S2299Input } from './layout-mappers/s2299-desligamento.mapper';
+import type { S2300Input } from './layout-mappers/s2300-tsv.mapper';
+import type { S1200Input } from './layout-mappers/s1200-remuneracao.mapper';
 
 function generateId(): string {
   return crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -30,9 +33,15 @@ export function generateFromDomainEvent(event: InboundDomainEvent): ESocialEnvel
   switch (event.event_name) {
     case 'employee.hired':
       return generateAdmissao(event);
+    case 'employee.terminated':
+      return generateDesligamento(event);
+    case 'employee.tsv_started':
+      return generateTSV(event);
     case 'salary.adjusted':
     case 'salary.contract_started':
       return generateAlteracaoContratual(event);
+    case 'salary.remuneration_closed':
+      return generateRemuneracao(event);
     case 'health_exam.created':
       return generateASO(event);
     case 'company.created':
@@ -221,6 +230,91 @@ function generateExpRisco(event: InboundDomainEvent): ESocialEnvelope | null {
     company_id: event.company_id,
     event_type: 'S-2240',
     category: 'sst',
+    payload: mapper.map(input as any),
+    source_entity_type: event.entity_type,
+    source_entity_id: event.entity_id,
+  });
+}
+
+function generateDesligamento(event: InboundDomainEvent): ESocialEnvelope | null {
+  const mapper = getMapper('S-2299');
+  if (!mapper) return null;
+
+  const p = event.payload as Record<string, unknown>;
+  const input: S2299Input = {
+    employee_id: event.entity_id,
+    cpf: (p.cpf as string) || '',
+    company_document: (p.company_document as string) || '',
+    matricula: (p.matricula as string) || event.entity_id.substring(0, 30),
+    termination_date: (p.termination_date as string) || event.occurred_at.slice(0, 10),
+    termination_reason_code: (p.termination_reason_code as string) || '02',
+    last_effective_date: (p.last_effective_date as string) || (p.termination_date as string) || event.occurred_at.slice(0, 10),
+    notice_type: p.notice_type as S2299Input['notice_type'],
+    notice_start_date: p.notice_start_date as string | undefined,
+  };
+
+  return createEnvelope({
+    tenant_id: event.tenant_id,
+    company_id: event.company_id,
+    event_type: 'S-2299',
+    category: 'nao_periodicos',
+    payload: mapper.map(input as any),
+    source_entity_type: event.entity_type,
+    source_entity_id: event.entity_id,
+  });
+}
+
+function generateTSV(event: InboundDomainEvent): ESocialEnvelope | null {
+  const mapper = getMapper('S-2300');
+  if (!mapper) return null;
+
+  const p = event.payload as Record<string, unknown>;
+  const input: S2300Input = {
+    employee_id: event.entity_id,
+    name: (p.name as string) || '',
+    cpf: (p.cpf as string) || '',
+    start_date: (p.start_date as string) || event.occurred_at.slice(0, 10),
+    company_document: (p.company_document as string) || '',
+    company_name: (p.company_name as string) || '',
+    category: (p.esocial_category as string) || '301',
+    position_title: p.position_title as string | undefined,
+    cbo_code: p.cbo_code as string | undefined,
+    remuneration: p.remuneration as number | undefined,
+    internship_institution: p.internship_institution as string | undefined,
+    contract_end_date: p.contract_end_date as string | undefined,
+  };
+
+  return createEnvelope({
+    tenant_id: event.tenant_id,
+    company_id: event.company_id,
+    event_type: 'S-2300',
+    category: 'nao_periodicos',
+    payload: mapper.map(input as any),
+    source_entity_type: event.entity_type,
+    source_entity_id: event.entity_id,
+  });
+}
+
+function generateRemuneracao(event: InboundDomainEvent): ESocialEnvelope | null {
+  const mapper = getMapper('S-1200');
+  if (!mapper) return null;
+
+  const p = event.payload as Record<string, unknown>;
+  const input: S1200Input = {
+    employee_id: event.entity_id,
+    cpf: (p.cpf as string) || '',
+    matricula: (p.matricula as string) || event.entity_id.substring(0, 30),
+    company_document: (p.company_document as string) || '',
+    competencia: (p.competencia as string) || '',
+    items: (p.items as S1200Input['items']) || [],
+    ind_apuracao: p.ind_apuracao as number | undefined,
+  };
+
+  return createEnvelope({
+    tenant_id: event.tenant_id,
+    company_id: event.company_id,
+    event_type: 'S-1200',
+    category: 'periodicos',
     payload: mapper.map(input as any),
     source_entity_type: event.entity_type,
     source_entity_id: event.entity_id,
