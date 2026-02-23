@@ -18,8 +18,9 @@ Deno.serve(async (req) => {
   try {
     let token: string | null = null;
     let requesterName: string | null = null;
-    let requesterDocument: string | null = null;
+    let requesterEmail: string | null = null;
     let requesterPurpose: string | null = null;
+    let privacyAccepted = false;
 
     if (req.method === "GET") {
       const url = new URL(req.url);
@@ -28,8 +29,9 @@ Deno.serve(async (req) => {
       const body = await req.json();
       token = body.token;
       requesterName = body.requester_name ?? null;
-      requesterDocument = body.requester_document ?? null;
+      requesterEmail = body.requester_email ?? null;
       requesterPurpose = body.requester_purpose ?? null;
+      privacyAccepted = body.privacy_accepted === true;
     }
 
     if (!token) {
@@ -37,6 +39,27 @@ Deno.serve(async (req) => {
         JSON.stringify({ valid: false, status: "invalid_token", hash_verified: false }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // For POST: validate mandatory LGPD fields
+    if (req.method === "POST") {
+      const missing: string[] = [];
+      if (!requesterName?.trim()) missing.push("requester_name");
+      if (!requesterEmail?.trim()) missing.push("requester_email");
+      if (!requesterPurpose?.trim()) missing.push("requester_purpose");
+      if (!privacyAccepted) missing.push("privacy_accepted");
+
+      if (missing.length > 0) {
+        return new Response(
+          JSON.stringify({
+            valid: false,
+            status: "lgpd_fields_required",
+            hash_verified: false,
+            missing_fields: missing,
+          }),
+          { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Lookup token
@@ -50,10 +73,6 @@ Deno.serve(async (req) => {
     const ua = req.headers.get("user-agent") ?? null;
 
     if (tokenError || !tokenRow) {
-      // Log failed attempt
-      if (token) {
-        // Can't log without token_id, skip
-      }
       return new Response(
         JSON.stringify({ valid: false, status: "invalid_token", hash_verified: false }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -69,7 +88,6 @@ Deno.serve(async (req) => {
       accessResult = "expired";
     } else if (tokenRow.expires_at && new Date(tokenRow.expires_at) < new Date()) {
       accessResult = "expired";
-      // Auto-mark as expired
       await supabase
         .from("document_validation_tokens")
         .update({ status: "expired" })
@@ -80,11 +98,13 @@ Deno.serve(async (req) => {
     let hashVerified = false;
     let documentName: string | null = null;
     let signedAt: string | null = null;
+    let documentHash: string | null = null;
+    let versao: number | null = null;
 
     if (accessResult === "success") {
       const { data: vaultRow } = await supabase
         .from("document_vault")
-        .select("nome_documento, hash_documento, created_at")
+        .select("nome_documento, hash_documento, created_at, versao")
         .eq("id", tokenRow.document_vault_id)
         .single();
 
@@ -92,25 +112,48 @@ Deno.serve(async (req) => {
         hashVerified = vaultRow.hash_documento === tokenRow.document_hash;
         documentName = vaultRow.nome_documento;
         signedAt = vaultRow.created_at;
+        documentHash = vaultRow.hash_documento;
+        versao = vaultRow.versao;
 
         if (!hashVerified) {
           accessResult = "hash_mismatch";
         }
       } else {
-        accessResult = "invalid_token";
+        // Fallback: check signed_documents table
+        const { data: signedRow } = await supabase
+          .from("signed_documents")
+          .select("hash_sha256, documento_url, data_assinatura, versao")
+          .eq("validation_token", token)
+          .eq("ativo", true)
+          .single();
+
+        if (signedRow) {
+          hashVerified = true;
+          documentHash = signedRow.hash_sha256;
+          signedAt = signedRow.data_assinatura;
+          versao = signedRow.versao;
+          documentName = `Documento assinado v${signedRow.versao}`;
+        } else {
+          accessResult = "invalid_token";
+        }
       }
     }
 
-    // LGPD: Log access attempt
+    // LGPD: Log access attempt with all requester data
     await supabase.from("document_access_logs").insert({
       token_id: tokenRow.id,
       tenant_id: tokenRow.tenant_id,
       ip_address: ip,
       user_agent: ua,
       requester_name: requesterName,
-      requester_document: requesterDocument,
+      requester_document: requesterEmail, // storing email in document field
       requester_purpose: requesterPurpose,
       access_result: accessResult,
+      metadata: {
+        privacy_accepted: privacyAccepted,
+        privacy_accepted_at: new Date().toISOString(),
+        requester_email: requesterEmail,
+      },
     });
 
     const isValid = accessResult === "success" && hashVerified;
@@ -123,6 +166,8 @@ Deno.serve(async (req) => {
         ...(isValid && {
           document_name: documentName,
           signed_at: signedAt,
+          document_hash: documentHash,
+          versao: versao,
         }),
       }),
       {
