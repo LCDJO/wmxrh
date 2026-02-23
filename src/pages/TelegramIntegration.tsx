@@ -136,7 +136,12 @@ export default function TelegramIntegration() {
 
   // Form states
   const [botToken, setBotToken] = useState('');
-  const [testChatId, setTestChatId] = useState('');
+  const [testChatId, setTestChatId] = useState(() => {
+    if (tenantId) {
+      return localStorage.getItem(`telegram_test_chat_id_${tenantId}`) || '';
+    }
+    return '';
+  });
   const [testMessage, setTestMessage] = useState('');
 
   // Binding form
@@ -182,6 +187,12 @@ export default function TelegramIntegration() {
   }, [tenantId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    if (tenantId) {
+      const saved = localStorage.getItem(`telegram_test_chat_id_${tenantId}`);
+      if (saved) setTestChatId(saved);
+    }
+  }, [tenantId]);
 
   // ── Bot Actions ──
   const handleConnect = async () => {
@@ -419,8 +430,25 @@ export default function TelegramIntegration() {
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="chat-id" className="text-xs">Chat ID</Label>
-                  <Input id="chat-id" placeholder="Ex: 123456789" value={testChatId}
-                    onChange={(e) => setTestChatId(e.target.value)} className="font-mono text-xs" />
+                  <div className="flex gap-2">
+                    <Input id="chat-id" placeholder="Ex: 123456789" value={testChatId}
+                      onChange={(e) => setTestChatId(e.target.value)} className="font-mono text-xs flex-1" />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1 shrink-0"
+                      disabled={!testChatId.trim()}
+                      onClick={() => {
+                        if (tenantId && testChatId.trim()) {
+                          localStorage.setItem(`telegram_test_chat_id_${tenantId}`, testChatId.trim());
+                          toast.success('Chat ID salvo!');
+                        }
+                      }}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Salvar
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Envie <code className="bg-muted px-1 rounded">/start</code> ao bot para obter o Chat ID
                   </p>
