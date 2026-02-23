@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, useRoutes, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, useRoutes, Navigate } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TenantProvider, useTenant } from "./contexts/TenantContext";
@@ -41,21 +41,9 @@ function AppRoutes() {
   const { user, loading: authLoading } = useAuth();
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { isPlatformUser, loading: platformLoading } = useAdaptiveUserType();
-  const navigate = useNavigate();
-  const redirectHandled = useRef(false);
 
-  // ── Handle pending redirect after login (e.g. display pairing QR flow) ──
-  useEffect(() => {
-    if (!user || redirectHandled.current) return;
-    const pendingRedirect = sessionStorage.getItem('redirectAfterLogin');
-    console.log('[AppRoutes useEffect] user=', !!user, 'redirectHandled=', redirectHandled.current, 'pendingRedirect=', pendingRedirect);
-    if (pendingRedirect) {
-      console.log('[AppRoutes useEffect] Consuming redirect →', pendingRedirect);
-      sessionStorage.removeItem('redirectAfterLogin');
-      redirectHandled.current = true;
-      navigate(pendingRedirect, { replace: true });
-    }
-  }, [user, navigate]);
+  // Note: redirect after login is handled by Auth.tsx's routeByIntent.
+  // hasPendingRedirect (below) only prevents wildcard routes from firing during the async gap.
 
   // ── Loading states ──
   if (authLoading || (user && tenantLoading) || (user && platformLoading)) {
@@ -74,9 +62,9 @@ function AppRoutes() {
     return useRoutes([...authRoutes, ...tvRoute]);
   }
 
-  // ── Check sessionStorage on EVERY render (not via ref, which only initializes once) ──
-  const hasPendingRedirect = redirectHandled.current || !!sessionStorage.getItem('redirectAfterLogin');
-  console.log('[AppRoutes render] user=', !!user, 'currentTenant=', !!currentTenant, 'isPlatformUser=', isPlatformUser, 'hasPendingRedirect=', hasPendingRedirect, 'redirectHandled=', redirectHandled.current, 'sessionStorage=', sessionStorage.getItem('redirectAfterLogin'), 'location=', window.location.pathname);
+  // ── Check sessionStorage on EVERY render to prevent wildcard redirects during login ──
+  const hasPendingRedirect = !!sessionStorage.getItem('redirectAfterLogin');
+  console.log('[AppRoutes render] user=', !!user, 'currentTenant=', !!currentTenant, 'isPlatformUser=', isPlatformUser, 'hasPendingRedirect=', hasPendingRedirect, 'location=', window.location.pathname);
 
   // ── Build authenticated route set ──
   const sharedRoutes: RouteObject[] = [
