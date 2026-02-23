@@ -196,50 +196,61 @@ const PublicDocumentValidation: React.FC = () => {
           )}
 
           {submitted && !loading && result && (
-            <div className={`border rounded-lg p-4 space-y-4 ${result.valid ? 'border-primary/30 bg-primary/5' : 'border-destructive/30 bg-destructive/5'}`}>
-              {/* Status header */}
-              <div className="flex items-center gap-2">
+            <div className={`border rounded-lg overflow-hidden ${result.valid ? 'border-primary/30' : 'border-destructive/30'}`}>
+              {/* Status banner */}
+              <div className={`px-4 py-3 flex items-center gap-3 ${result.valid ? 'bg-primary/10' : 'bg-destructive/10'}`}>
                 {result.valid ? (
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <CheckCircle2 className="h-6 w-6 text-primary shrink-0" />
                 ) : (
-                  <XCircle className="h-5 w-5 text-destructive" />
+                  <XCircle className="h-6 w-6 text-destructive shrink-0" />
                 )}
-                <span className="font-semibold text-foreground">
-                  {statusLabels[result.status] ?? result.status}
-                </span>
+                <div>
+                  <p className={`font-bold text-sm ${result.valid ? 'text-primary' : 'text-destructive'}`}>
+                    {result.valid ? 'Documento Autêntico' : 'Documento Inválido'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {statusLabels[result.status] ?? result.status}
+                  </p>
+                </div>
               </div>
 
               {result.valid && (
-                <>
-                  {/* Document details */}
-                  <div className="space-y-2 text-sm">
+                <div className="p-4 space-y-4">
+                  {/* Document details table */}
+                  <div className="space-y-2.5 text-sm">
                     {result.document_name && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Documento:</span>
-                        <span className="font-medium text-foreground">{result.document_name}</span>
+                      <div className="flex justify-between items-start gap-4">
+                        <span className="text-muted-foreground shrink-0">📄 Documento</span>
+                        <span className="font-medium text-foreground text-right">{result.document_name}</span>
                       </div>
                     )}
-                    {result.versao && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Versão:</span>
-                        <span className="font-medium text-foreground">v{result.versao}</span>
+                    {result.signer_name && (
+                      <div className="flex justify-between items-start gap-4">
+                        <span className="text-muted-foreground shrink-0">👤 Colaborador</span>
+                        <span className="font-medium text-foreground text-right">{result.signer_name}</span>
                       </div>
                     )}
                     {result.signed_at && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Assinado em:</span>
-                        <span className="font-medium text-foreground">
+                      <div className="flex justify-between items-start gap-4">
+                        <span className="text-muted-foreground shrink-0">📅 Data de assinatura</span>
+                        <span className="font-medium text-foreground text-right">
                           {new Date(result.signed_at).toLocaleString('pt-BR')}
                         </span>
                       </div>
                     )}
+                    {result.versao && (
+                      <div className="flex justify-between items-start gap-4">
+                        <span className="text-muted-foreground shrink-0">🔢 Versão</span>
+                        <span className="font-medium text-foreground">v{result.versao}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Hash for verification */}
+                  {/* SHA-256 Hash */}
                   {result.document_hash && (
                     <div className="bg-muted rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-foreground">Hash SHA-256</p>
+                        <p className="text-xs font-semibold text-foreground">🔒 Hash SHA-256</p>
                         <Button variant="ghost" size="sm" className="h-6 px-2" onClick={copyHash}>
                           <Copy className="h-3 w-3 mr-1" />
                           <span className="text-xs">Copiar</span>
@@ -251,7 +262,7 @@ const PublicDocumentValidation: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Badges */}
+                  {/* Status badges */}
                   <div className="flex flex-wrap gap-1.5">
                     <Badge variant="outline" className="text-primary border-primary/50 text-xs">
                       ✓ Assinatura válida
@@ -263,7 +274,7 @@ const PublicDocumentValidation: React.FC = () => {
                       ✓ LGPD registrado
                     </Badge>
                   </div>
-                </>
+                </div>
               )}
 
               {!result.valid && (
