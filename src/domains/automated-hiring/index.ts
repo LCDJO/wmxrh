@@ -105,6 +105,21 @@ export type {
   NrTrainingEtapaResult,
 } from './nr-training-admission.engine';
 
+// ── Entrega de EPI (Etapa 5) ──
+export {
+  buildEpiRequirements,
+  generateDeliveryTerm,
+  validateEpiDelivery,
+  applyEpiDeliveryToWorkflow,
+} from './epi-delivery.engine';
+export type {
+  EpiRequirement,
+  EpiDeliveryRecord,
+  EpiDeliveryTerm,
+  EpiEtapaInput,
+  EpiEtapaResult,
+} from './epi-delivery.engine';
+
 // ── Events ──
 export {
   onHiringEvent,
