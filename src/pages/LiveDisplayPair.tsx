@@ -129,7 +129,7 @@ export default function LiveDisplayPair() {
               size="lg"
               onClick={() => {
                 sessionStorage.setItem('redirectAfterLogin', `/live-display/pair?code=${code}`);
-                console.log('[LiveDisplayPair] Saved redirect to sessionStorage:', sessionStorage.getItem('redirectAfterLogin'));
+                
                 navigate('/auth/login');
               }}
             >

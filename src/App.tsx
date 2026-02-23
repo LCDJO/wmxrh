@@ -64,7 +64,6 @@ function AppRoutes() {
 
   // ── Check sessionStorage on EVERY render to prevent wildcard redirects during login ──
   const hasPendingRedirect = !!sessionStorage.getItem('redirectAfterLogin');
-  console.log('[AppRoutes v3] user=', !!user, 'tenant=', !!currentTenant, 'platform=', isPlatformUser, 'pending=', hasPendingRedirect, 'path=', window.location.pathname);
 
   // ── Build authenticated route set ──
   const sharedRoutes: RouteObject[] = [
