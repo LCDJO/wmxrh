@@ -5,11 +5,15 @@
  *   1. Signed document storage (Cloud Storage bucket: signed-documents)
  *   2. Document metadata CRUD (document_vault table)
  *
+ * Required fields per spec:
+ *   employee_id, agreement_id, versao, hash, url, timestamp, ip_assinatura
+ *
  * Path convention: {tenant_id}/{agreement_id}/{filename}
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { digitalSignatureAdapter } from './digital-signature-adapter';
+import { generateDocumentHash } from './document-hash';
 import type { SignatureProvider } from './types';
 import type { QueryScope } from '@/domains/shared/scoped-query';
 
@@ -29,6 +33,8 @@ export interface DocumentVaultRecord {
   url_arquivo: string;
   assinatura_valida: boolean;
   hash_documento: string | null;
+  versao: number | null;
+  ip_assinatura: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +50,8 @@ export interface CreateDocumentVaultDTO {
   url_arquivo: string;
   assinatura_valida?: boolean;
   hash_documento?: string | null;
+  versao?: number | null;
+  ip_assinatura?: string | null;
 }
 
 // ── Unified Service ──
@@ -85,6 +93,76 @@ export const documentVault = {
       return path;
     } catch (err) {
       console.error('[DocumentVault] storeSignedDocument error:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Full lifecycle: download signed doc, compute hash, store file,
+   * and create vault metadata record with all audit fields.
+   */
+  async archiveSignedAgreement(params: {
+    tenantId: string;
+    employeeId: string;
+    agreementId: string;
+    externalDocumentId: string;
+    providerName: SignatureProvider;
+    versao: number;
+    ipAddress?: string | null;
+    companyId?: string | null;
+    companyGroupId?: string | null;
+    templateName?: string;
+  }): Promise<DocumentVaultRecord | null> {
+    try {
+      // 1. Download from provider
+      const blob = await digitalSignatureAdapter.download(params.providerName, params.externalDocumentId);
+      if (!blob) return null;
+
+      // 2. Compute hash
+      const text = await blob.text();
+      const hash = await generateDocumentHash(text);
+
+      // 3. Upload to storage
+      const filename = `signed_v${params.versao}_${params.agreementId}.pdf`;
+      const storagePath = `${params.tenantId}/${params.agreementId}/${filename}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(storagePath, blob, { contentType: 'application/pdf', upsert: true });
+
+      if (uploadError) {
+        console.error('[DocumentVault] Upload failed:', uploadError.message);
+        return null;
+      }
+
+      // 4. Create metadata record
+      const { data, error } = await supabase
+        .from('document_vault')
+        .insert({
+          tenant_id: params.tenantId,
+          employee_id: params.employeeId,
+          agreement_id: params.agreementId,
+          nome_documento: params.templateName ?? `Acordo v${params.versao}`,
+          tipo_documento: 'acordo_assinado',
+          url_arquivo: storagePath,
+          assinatura_valida: true,
+          hash_documento: hash,
+          versao: params.versao,
+          ip_assinatura: params.ipAddress ?? null,
+          company_id: params.companyId ?? null,
+          company_group_id: params.companyGroupId ?? null,
+        } as any)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[DocumentVault] Metadata insert failed:', error.message);
+        return null;
+      }
+
+      return data as unknown as DocumentVaultRecord;
+    } catch (err) {
+      console.error('[DocumentVault] archiveSignedAgreement error:', err);
       return null;
     }
   },
@@ -134,6 +212,21 @@ export const documentVault = {
   },
 
   /**
+   * List documents for a specific agreement.
+   */
+  async listByAgreement(agreementId: string, qs: QueryScope): Promise<DocumentVaultRecord[]> {
+    const { data, error } = await supabase
+      .from('document_vault')
+      .select('*')
+      .eq('tenant_id', qs.tenantId)
+      .eq('agreement_id', agreementId)
+      .order('versao', { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as unknown as DocumentVaultRecord[];
+  },
+
+  /**
    * Create a document metadata record.
    */
   async create(dto: CreateDocumentVaultDTO, qs: QueryScope): Promise<DocumentVaultRecord> {
@@ -152,6 +245,31 @@ export const documentVault = {
    */
   async getSignedUrl(storagePath: string, expiresInSeconds = 3600): Promise<string | null> {
     return this.getViewUrl(storagePath, expiresInSeconds);
+  },
+
+  /**
+   * Verify document integrity by comparing stored hash.
+   */
+  async verifyIntegrity(vaultRecordId: string, qs: QueryScope): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('document_vault')
+      .select('url_arquivo, hash_documento')
+      .eq('id', vaultRecordId)
+      .eq('tenant_id', qs.tenantId)
+      .single();
+
+    if (error || !data?.hash_documento) return false;
+
+    // Download and re-hash
+    const { data: fileData, error: dlError } = await supabase.storage
+      .from(BUCKET)
+      .download(data.url_arquivo);
+
+    if (dlError || !fileData) return false;
+
+    const text = await fileData.text();
+    const currentHash = await generateDocumentHash(text);
+    return currentHash === data.hash_documento;
   },
 };
 

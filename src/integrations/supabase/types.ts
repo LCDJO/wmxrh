@@ -3266,11 +3266,13 @@ export type Database = {
           employee_id: string
           hash_documento: string | null
           id: string
+          ip_assinatura: string | null
           nome_documento: string
           tenant_id: string
           tipo_documento: string
           updated_at: string
           url_arquivo: string
+          versao: number | null
         }
         Insert: {
           agreement_id?: string | null
@@ -3281,11 +3283,13 @@ export type Database = {
           employee_id: string
           hash_documento?: string | null
           id?: string
+          ip_assinatura?: string | null
           nome_documento: string
           tenant_id: string
           tipo_documento?: string
           updated_at?: string
           url_arquivo: string
+          versao?: number | null
         }
         Update: {
           agreement_id?: string | null
@@ -3296,11 +3300,13 @@ export type Database = {
           employee_id?: string
           hash_documento?: string | null
           id?: string
+          ip_assinatura?: string | null
           nome_documento?: string
           tenant_id?: string
           tipo_documento?: string
           updated_at?: string
           url_arquivo?: string
+          versao?: number | null
         }
         Relationships: [
           {
