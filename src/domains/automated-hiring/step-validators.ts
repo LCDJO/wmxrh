@@ -5,6 +5,8 @@
  * Each returns { valid, errors } without side effects.
  */
 import type { HiringStep, ComplianceBlocker } from './types';
+import { isValidCPF, isValidPIS } from './document-validators';
+import { isValidCBOFormat, isValidESocialCategory } from './pre-cadastro.engine';
 
 export interface StepValidationResult {
   valid: boolean;
@@ -30,7 +32,20 @@ function blocker(step: HiringStep, code: string, message: string, legalBasis?: s
 const validatePersonalData: StepValidator = (p) => {
   const errors: ComplianceBlocker[] = [];
   if (!p.name) errors.push(blocker('personal_data', 'MISSING_NAME', 'Nome completo é obrigatório', 'CLT Art. 29'));
-  if (!p.cpf) errors.push(blocker('personal_data', 'MISSING_CPF', 'CPF é obrigatório', 'IN RFB 1.548/2015'));
+  if (!p.cpf) {
+    errors.push(blocker('personal_data', 'MISSING_CPF', 'CPF é obrigatório', 'IN RFB 1.548/2015'));
+  } else if (!isValidCPF(p.cpf as string)) {
+    errors.push(blocker('personal_data', 'INVALID_CPF', 'CPF inválido — dígitos verificadores incorretos', 'IN RFB 1.548/2015'));
+  }
+  if (p.pis_pasep && !isValidPIS(p.pis_pasep as string)) {
+    errors.push(blocker('personal_data', 'INVALID_PIS', 'PIS/PASEP inválido', 'Lei 7.998/90'));
+  }
+  if (p.cbo_code && !isValidCBOFormat(p.cbo_code as string)) {
+    errors.push(blocker('personal_data', 'INVALID_CBO', 'CBO deve ter 6 dígitos', 'Portaria 397/2002'));
+  }
+  if (p.esocial_category && !isValidESocialCategory(p.esocial_category as string)) {
+    errors.push(blocker('personal_data', 'INVALID_ESOCIAL_CAT', 'Categoria eSocial inválida', 'Layout S-2200'));
+  }
   if (!p.birth_date) errors.push(blocker('personal_data', 'MISSING_BIRTH_DATE', 'Data de nascimento é obrigatória', 'CLT Art. 29'));
   if (!p.gender) errors.push(blocker('personal_data', 'MISSING_GENDER', 'Sexo é obrigatório para eSocial S-2200'));
   return errors.length ? fail(errors) : ok();

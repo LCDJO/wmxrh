@@ -47,6 +47,24 @@ export type {
   OnboardingSafetySignal,
 } from './integration-adapters';
 
+// ── Document Validators ──
+export { isValidCPF, isValidPIS, formatCPF, formatPIS } from './document-validators';
+
+// ── Pre-Cadastro (Etapa 1) ──
+export {
+  validatePreCadastro,
+  applyPreCadastroToWorkflow,
+  isValidESocialCategory,
+  isValidCBOFormat,
+  getESocialCategoryLabel,
+  ESOCIAL_CATEGORIES,
+} from './pre-cadastro.engine';
+export type {
+  PreCadastroInput,
+  PreCadastroResult,
+  ESocialCategoryCode,
+} from './pre-cadastro.engine';
+
 // ── Events ──
 export {
   onHiringEvent,
