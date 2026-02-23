@@ -3715,6 +3715,7 @@ export type Database = {
           cpf: string | null
           created_at: string
           deleted_at: string | null
+          dependente_salario_familia: boolean
           employee_id: string
           end_date: string | null
           has_disability: boolean
@@ -3732,6 +3733,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           deleted_at?: string | null
+          dependente_salario_familia?: boolean
           employee_id: string
           end_date?: string | null
           has_disability?: boolean
@@ -3749,6 +3751,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           deleted_at?: string | null
+          dependente_salario_familia?: boolean
           employee_id?: string
           end_date?: string | null
           has_disability?: boolean

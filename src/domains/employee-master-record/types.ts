@@ -190,6 +190,7 @@ export interface EmployeeDependent {
   is_ir_dependent: boolean;
   is_benefit_dependent: boolean;
   has_disability: boolean;
+  dependente_salario_familia: boolean;
   start_date: string;
   end_date: string | null;
   created_at: string;
@@ -279,6 +280,7 @@ export interface CreateEmployeeDependentDTO {
   is_ir_dependent?: boolean;
   is_benefit_dependent?: boolean;
   has_disability?: boolean;
+  dependente_salario_familia?: boolean;
   start_date?: string;
   end_date?: string | null;
 }
