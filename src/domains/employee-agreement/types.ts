@@ -4,7 +4,25 @@
 
 // ── Enums ──
 
-export type AgreementTipo = 'geral' | 'funcao' | 'empresa' | 'risco' | 'lgpd';
+export type AgreementCategoria =
+  | 'contrato'
+  | 'confidencialidade'
+  | 'uso_imagem'
+  | 'epi'
+  | 'veiculo'
+  | 'gps'
+  | 'disciplinar'
+  | 'lgpd'
+  | 'outros';
+
+/** @deprecated Use AgreementCategoria instead */
+export type AgreementTipo = AgreementCategoria | 'geral' | 'funcao' | 'empresa' | 'risco';
+
+export type AgreementEscopo =
+  | 'global'
+  | 'cargo'
+  | 'risco'
+  | 'funcao_especifica';
 
 export type AgreementStatus =
   | 'pending'
@@ -31,12 +49,19 @@ export interface AgreementTemplate {
   tenant_id: string;
   nome_termo: string;
   descricao: string | null;
+  categoria: AgreementCategoria;
+  escopo: AgreementEscopo;
+  /** @deprecated Use categoria instead */
   tipo: AgreementTipo;
   obrigatorio: boolean;
   cargo_id: string | null;
+  cbo_codigo: string | null;
   versao: number;
   conteudo_html: string;
   ativo: boolean;
+  exige_assinatura: boolean;
+  validade_dias: number | null;
+  renovacao_obrigatoria: boolean;
 }
 
 export interface AgreementTemplateVersion {
@@ -70,20 +95,34 @@ export interface EmployeeAgreement {
 export interface CreateTemplateDTO {
   nome_termo: string;
   descricao?: string;
-  tipo: AgreementTipo;
+  categoria: AgreementCategoria;
+  escopo?: AgreementEscopo;
+  /** @deprecated Use categoria instead */
+  tipo?: AgreementTipo;
   obrigatorio?: boolean;
   cargo_id?: string | null;
+  cbo_codigo?: string | null;
   conteudo_html: string;
+  exige_assinatura?: boolean;
+  validade_dias?: number | null;
+  renovacao_obrigatoria?: boolean;
 }
 
 export interface UpdateTemplateDTO {
   nome_termo?: string;
   descricao?: string;
+  categoria?: AgreementCategoria;
+  escopo?: AgreementEscopo;
+  /** @deprecated Use categoria instead */
   tipo?: AgreementTipo;
   obrigatorio?: boolean;
   cargo_id?: string | null;
+  cbo_codigo?: string | null;
   conteudo_html?: string;
   ativo?: boolean;
+  exige_assinatura?: boolean;
+  validade_dias?: number | null;
+  renovacao_obrigatoria?: boolean;
 }
 
 export interface PublishNewVersionDTO {

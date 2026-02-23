@@ -81,17 +81,21 @@ export type Database = {
           auto_send_on_admission: boolean
           cargo_id: string | null
           category: string
+          cbo_codigo: string | null
           company_group_id: string | null
           company_id: string | null
           conteudo_html: string
           created_at: string
           deleted_at: string | null
           description: string | null
+          escopo: string
+          exige_assinatura: boolean
           expiry_days: number | null
           id: string
           is_active: boolean
           is_mandatory: boolean
           name: string
+          renovacao_obrigatoria: boolean
           requires_witness: boolean
           slug: string
           tenant_id: string
@@ -104,17 +108,21 @@ export type Database = {
           auto_send_on_admission?: boolean
           cargo_id?: string | null
           category?: string
+          cbo_codigo?: string | null
           company_group_id?: string | null
           company_id?: string | null
           conteudo_html?: string
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          escopo?: string
+          exige_assinatura?: boolean
           expiry_days?: number | null
           id?: string
           is_active?: boolean
           is_mandatory?: boolean
           name: string
+          renovacao_obrigatoria?: boolean
           requires_witness?: boolean
           slug: string
           tenant_id: string
@@ -127,17 +135,21 @@ export type Database = {
           auto_send_on_admission?: boolean
           cargo_id?: string | null
           category?: string
+          cbo_codigo?: string | null
           company_group_id?: string | null
           company_id?: string | null
           conteudo_html?: string
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          escopo?: string
+          exige_assinatura?: boolean
           expiry_days?: number | null
           id?: string
           is_active?: boolean
           is_mandatory?: boolean
           name?: string
+          renovacao_obrigatoria?: boolean
           requires_witness?: boolean
           slug?: string
           tenant_id?: string
