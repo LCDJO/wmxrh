@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 import {
   ChevronLeft, ChevronRight, Check, Briefcase, Hash,
   Lightbulb, ShieldCheck, AlertTriangle, DollarSign,
-  Stethoscope, HardHat, GraduationCap,
+  Stethoscope, HardHat, GraduationCap, FileCheck, ScrollText,
 } from 'lucide-react';
 import type { CareerNivel, CareerLegalMapping } from '@/domains/career-intelligence/types';
 import type { SuggestedSalaryBand } from '@/domains/career-intelligence/salary-band-intelligence.engine';
@@ -92,6 +92,9 @@ export default function PccsWizard() {
   const [faixaMin, setFaixaMin] = useState(0);
   const [faixaMax, setFaixaMax] = useState(0);
 
+  // ── Agreement templates state ──
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(new Set());
+
   // ── Fetch CBO catalog ──
   const { data: cboList = [] } = useQuery<CboOption[]>({
     queryKey: ['cbo-catalog', tenantId, cboSearch],
@@ -126,6 +129,23 @@ export default function PccsWizard() {
         .limit(1)
         .maybeSingle();
       return data;
+    },
+  });
+
+  // ── Fetch agreement templates for tenant ──
+  const { data: agreementTemplates = [] } = useQuery({
+    queryKey: ['agreement-templates-for-cargo', tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('agreement_templates')
+        .select('id, name, category, is_mandatory, escopo, cargo_id')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .is('deleted_at', null)
+        .order('name');
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string; category: string; is_mandatory: boolean; escopo: string; cargo_id: string | null }[];
     },
   });
 
@@ -216,6 +236,15 @@ export default function PccsWizard() {
     setSalaryBand(band);
     setFaixaMin(band.suggested_min);
     setFaixaMax(band.suggested_max);
+
+    // Pre-select mandatory agreement templates (global + matching cargo/CBO)
+    const autoSelected = new Set<string>();
+    agreementTemplates.forEach(t => {
+      if (!t.is_mandatory) return;
+      if (t.escopo === 'global') autoSelected.add(t.id);
+      // cargo-specific will be matched after position is created
+    });
+    setSelectedTemplateIds(autoSelected);
   };
 
   // ── Save mutation ──
@@ -278,6 +307,65 @@ export default function PccsWizard() {
             }))
           );
         if (mapErr) throw mapErr;
+      }
+
+      // 4. Create assignment rules for selected agreement templates
+      const templateIdsArray = Array.from(selectedTemplateIds);
+      if (templateIdsArray.length > 0) {
+        const { error: ruleErr } = await supabase
+          .from('agreement_assignment_rules')
+          .insert(
+            templateIdsArray.map(tid => ({
+              tenant_id: tenantId,
+              template_id: tid,
+              regra_tipo: 'por_cargo',
+              cargo_id: pos.id,
+              evento_disparo: 'hiring',
+              is_active: true,
+              prioridade: 10,
+            }))
+          );
+        if (ruleErr) console.error('Assignment rule creation error:', ruleErr);
+      }
+
+      // 5. Auto-dispatch agreements to existing employees with this cargo
+      // Find employees already in a position mapped to this cargo
+      const { data: existingEmployees } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('company_id', selectedCompanyId!)
+        .eq('position_id', pos.id)
+        .eq('status', 'active');
+
+      if (existingEmployees && existingEmployees.length > 0 && templateIdsArray.length > 0) {
+        // Get current version for each template
+        for (const tid of templateIdsArray) {
+          const { data: version } = await supabase
+            .from('agreement_template_versions')
+            .select('id')
+            .eq('template_id', tid)
+            .eq('is_current', true)
+            .single();
+
+          if (!version) continue;
+
+          const agreementRows = existingEmployees.map((emp: { id: string }) => ({
+            tenant_id: tenantId,
+            employee_id: emp.id,
+            template_id: tid,
+            template_version_id: version.id,
+            company_id: selectedCompanyId,
+            status: 'pending',
+            versao: 1,
+          }));
+
+          const { error: agrErr } = await supabase
+            .from('employee_agreements')
+            .insert(agreementRows);
+
+          if (agrErr) console.error('Auto-dispatch error:', agrErr);
+        }
       }
 
       return pos.id;
@@ -632,6 +720,60 @@ export default function PccsWizard() {
                     ))}
                   </div>
                 )}
+
+                {/* Agreement templates section */}
+                <Separator />
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <ScrollText className="h-4 w-4 text-primary" />
+                    <h4 className="text-xs font-semibold uppercase text-muted-foreground">
+                      Termos e Acordos Vinculados
+                    </h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Selecione os termos obrigatórios que devem ser enviados para assinatura dos colaboradores neste cargo.
+                  </p>
+                  {agreementTemplates.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-2 text-center">Nenhum template de termo cadastrado.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {agreementTemplates.map(t => {
+                        const isSelected = selectedTemplateIds.has(t.id);
+                        return (
+                          <div
+                            key={t.id}
+                            className={`flex items-center gap-3 rounded-lg border p-3 transition-colors cursor-pointer ${isSelected ? 'border-primary/30 bg-primary/5' : 'border-border hover:bg-accent/30'}`}
+                            onClick={() => {
+                              setSelectedTemplateIds(prev => {
+                                const next = new Set(prev);
+                                if (next.has(t.id)) next.delete(t.id);
+                                else next.add(t.id);
+                                return next;
+                              });
+                            }}
+                          >
+                            <Checkbox checked={isSelected} className="pointer-events-none" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium text-foreground">{t.name}</span>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-muted-foreground capitalize">{t.category}</span>
+                                {t.is_mandatory && <Badge variant="destructive" className="text-[10px]">Obrigatório</Badge>}
+                                <span className="text-[10px] text-muted-foreground">{t.escopo}</span>
+                              </div>
+                            </div>
+                            <FileCheck className="h-4 w-4 text-muted-foreground shrink-0" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {selectedTemplateIds.size > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-primary bg-primary/5 rounded-md p-2">
+                      <FileCheck className="h-3.5 w-3.5" />
+                      {selectedTemplateIds.size} termo(s) será(ão) vinculado(s) ao cargo e enviado(s) aos colaboradores existentes.
+                    </div>
+                  )}
+                </div>
 
                 {!salaryBand?.compliant && (
                   <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
