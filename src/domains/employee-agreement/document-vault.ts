@@ -1,22 +1,58 @@
 /**
- * DocumentVault
+ * DocumentVault — Unified Service
  *
- * Responsible for storing and retrieving signed agreement documents.
- * Uses Lovable Cloud Storage (bucket: signed-documents).
+ * Combines:
+ *   1. Signed document storage (Cloud Storage bucket: signed-documents)
+ *   2. Document metadata CRUD (document_vault table)
  *
  * Path convention: {tenant_id}/{agreement_id}/{filename}
- *
- * Documents are NEVER stored in the database — only URLs/paths
- * are persisted in employee_agreements.signed_document_url.
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { digitalSignatureAdapter } from './digital-signature-adapter';
 import type { SignatureProvider } from './types';
+import type { QueryScope } from '@/domains/shared/scoped-query';
 
 const BUCKET = 'signed-documents';
 
+// ── Types ──
+
+export interface DocumentVaultRecord {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  agreement_id: string | null;
+  company_id: string | null;
+  company_group_id: string | null;
+  nome_documento: string;
+  tipo_documento: string;
+  url_arquivo: string;
+  assinatura_valida: boolean;
+  hash_documento: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateDocumentVaultDTO {
+  tenant_id: string;
+  employee_id: string;
+  agreement_id?: string | null;
+  company_id?: string | null;
+  company_group_id?: string | null;
+  nome_documento: string;
+  tipo_documento: string;
+  url_arquivo: string;
+  assinatura_valida?: boolean;
+  hash_documento?: string | null;
+}
+
+// ── Unified Service ──
+
 export const documentVault = {
+
+  // ════════════════════════════════════════
+  // Storage Operations (signed PDFs)
+  // ════════════════════════════════════════
 
   /**
    * Download signed doc from provider and store in Cloud Storage.
@@ -69,12 +105,55 @@ export const documentVault = {
   },
 
   /**
-   * Remove a stored document.
+   * Remove a stored document from Cloud Storage.
    */
-  async remove(storagePath: string): Promise<boolean> {
+  async removeFromStorage(storagePath: string): Promise<boolean> {
     const { error } = await supabase.storage
       .from(BUCKET)
       .remove([storagePath]);
     return !error;
   },
+
+  // ════════════════════════════════════════
+  // Metadata Operations (document_vault table)
+  // ════════════════════════════════════════
+
+  /**
+   * List all documents for an employee.
+   */
+  async listByEmployee(employeeId: string, qs: QueryScope): Promise<DocumentVaultRecord[]> {
+    const { data, error } = await supabase
+      .from('document_vault')
+      .select('*')
+      .eq('tenant_id', qs.tenantId)
+      .eq('employee_id', employeeId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as unknown as DocumentVaultRecord[];
+  },
+
+  /**
+   * Create a document metadata record.
+   */
+  async create(dto: CreateDocumentVaultDTO, qs: QueryScope): Promise<DocumentVaultRecord> {
+    const { data, error } = await supabase
+      .from('document_vault')
+      .insert({ ...dto, tenant_id: qs.tenantId } as any)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as unknown as DocumentVaultRecord;
+  },
+
+  /**
+   * Get a signed URL (alias for getViewUrl, used by metadata consumers).
+   */
+  async getSignedUrl(storagePath: string, expiresInSeconds = 3600): Promise<string | null> {
+    return this.getViewUrl(storagePath, expiresInSeconds);
+  },
 };
+
+// ── Backward compatibility alias ──
+export const documentVaultService = documentVault;

@@ -200,8 +200,10 @@ export const agreementAssignmentService = {
     })) as EmployeeAgreement[];
   },
 
-  // ── AUTO-DISPATCH ON ADMISSION ──
-
+  /**
+   * @deprecated Use agreementAutomationService.onEmployeeHired() instead.
+   * Kept for backward compatibility — delegates to automation service.
+   */
   async autoDispatchForNewEmployee(
     employeeId: string,
     cargoId: string | null,
@@ -209,43 +211,9 @@ export const agreementAssignmentService = {
     ctx: SecurityContext,
     scope: QueryScope,
   ): Promise<number> {
-    requirePermission(buildPipeline(ctx, 'create', companyId));
-
-    const templates = await agreementTemplateService.list(ctx, scope, { active_only: true });
-
-    // Auto-dispatch obrigatórios + match de cargo
-    const autoTemplates = templates.filter(t => {
-      if (!t.obrigatorio) return false;
-      if (t.tipo === 'geral') return true;
-      if (t.tipo === 'funcao' && t.cargo_id && cargoId) return t.cargo_id === cargoId;
-      return false;
-    });
-
-    let dispatched = 0;
-    for (const template of autoTemplates) {
-      try {
-        await this.sendForSignature({
-          employee_id: employeeId,
-          template_id: template.id,
-          company_id: companyId,
-        }, ctx);
-        dispatched++;
-      } catch (err) {
-        console.error(`[AssignmentService] Auto-dispatch failed for template ${template.id}:`, err);
-      }
-    }
-
-    if (dispatched > 0) {
-      emitAgreementEvent({
-        type: 'agreement.auto_dispatch_triggered',
-        tenant_id: ctx.tenant_id,
-        employee_id: employeeId,
-        payload: { dispatched, total_templates: autoTemplates.length },
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    return dispatched;
+    const { agreementAutomationService } = await import('./agreement-automation.service');
+    const result = await agreementAutomationService.onEmployeeHired(employeeId, companyId, cargoId, ctx, scope);
+    return result.dispatched;
   },
 
   // ── CANCEL ──

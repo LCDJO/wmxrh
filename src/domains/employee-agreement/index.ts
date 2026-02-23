@@ -8,24 +8,23 @@
  * ├─────────────────────────────────────────────────────┤
  * │  AgreementTemplateService     — CRUD + versioning   │
  * │  AgreementAssignmentService   — dispatch + lifecycle│
+ * │  AgreementAutomationService   — auto-dispatch       │
+ * │  AgreementExpirationService   — auto-expire         │
  * │  DigitalSignatureProviderAdapter — provider facade  │
- * │  DocumentVault                — signed doc storage  │
+ * │  DocumentVault                — unified doc storage │
  * │  AgreementAuditService        — legal audit trail   │
  * └─────────────────────────────────────────────────────┘
- *
- * Integrations:
- *   - HR Core (auto-dispatch on admission via domain events)
- *   - Security Kernel (tenant_id + company scope)
- *   - Government Integration Gateway (eSocial if needed)
  */
 
 // ── Services ──
 export { agreementTemplateService } from './agreement-template.service';
 export { agreementAssignmentService } from './agreement-assignment.service';
 export { digitalSignatureAdapter } from './digital-signature-adapter';
-export { documentVault } from './document-vault';
+export { documentVault, documentVaultService } from './document-vault';
+export type { DocumentVaultRecord, CreateDocumentVaultDTO } from './document-vault';
 export { agreementAuditService, initAgreementAudit } from './agreement-audit.service';
 export { agreementAutomationService } from './agreement-automation.service';
+export { agreementExpirationService } from './agreement-expiration.service';
 export { internalSignatureService, legalVersionService, renewalEngineService, lgpdConsentService } from './agreement-future.service';
 
 // ── Types ──
