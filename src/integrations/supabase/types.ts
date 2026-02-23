@@ -7660,6 +7660,82 @@ export type Database = {
           },
         ]
       }
+      hiring_processes: {
+        Row: {
+          cancellation_reason: string | null
+          candidate_cpf: string
+          candidate_name: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          current_step: string
+          data_conclusao: string | null
+          data_inicio: string
+          employee_id: string | null
+          id: string
+          status: string
+          steps: Json
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          candidate_cpf: string
+          candidate_name: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          current_step?: string
+          data_conclusao?: string | null
+          data_inicio?: string
+          employee_id?: string | null
+          id?: string
+          status?: string
+          steps?: Json
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cancellation_reason?: string | null
+          candidate_cpf?: string
+          candidate_name?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          current_step?: string
+          data_conclusao?: string | null
+          data_inicio?: string
+          employee_id?: string | null
+          id?: string
+          status?: string
+          steps?: Json
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hiring_processes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hiring_processes_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hiring_processes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       impersonation_sessions: {
         Row: {
           created_at: string

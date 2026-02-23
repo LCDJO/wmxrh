@@ -49,14 +49,14 @@ export const hiringWorkflowOrchestrator = {
       employee_id: null,
       candidate_name: dto.candidate_name,
       candidate_cpf: dto.candidate_cpf,
-      status: 'in_progress',
+      status: 'draft',
       current_step: 'personal_data',
       steps: buildInitialSteps(),
       created_by: dto.created_by,
+      data_inicio: now,
+      data_conclusao: null,
       created_at: now,
       updated_at: now,
-      completed_at: null,
-      cancelled_at: null,
       cancellation_reason: null,
     };
 
@@ -133,7 +133,7 @@ export const hiringWorkflowOrchestrator = {
     if (!result.can_activate) {
       workflow.status = 'blocked';
     } else {
-      workflow.status = 'pending_esocial';
+      workflow.status = 'ready_for_esocial';
     }
 
     workflow.updated_at = new Date().toISOString();
@@ -181,8 +181,8 @@ export const hiringWorkflowOrchestrator = {
     activationStep.completed_at = now;
 
     workflow.employee_id = employeeId;
-    workflow.status = 'completed';
-    workflow.completed_at = now;
+    workflow.status = 'active';
+    workflow.data_conclusao = now;
     workflow.updated_at = now;
 
     emitHiringEvent(buildHiringEvent(
@@ -199,7 +199,7 @@ export const hiringWorkflowOrchestrator = {
   cancel(workflow: HiringWorkflow, dto: CancelWorkflowDTO): HiringWorkflow {
     const now = new Date().toISOString();
     workflow.status = 'cancelled';
-    workflow.cancelled_at = now;
+    workflow.data_conclusao = now;
     workflow.cancellation_reason = dto.reason;
     workflow.updated_at = now;
 
