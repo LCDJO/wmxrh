@@ -2,9 +2,11 @@
  * EPI Delivery Service
  *
  * Manages EPI delivery, return, replacement and expiration workflows.
+ * Integrates with epiAgreementGuard to auto-generate EPI terms on delivery.
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { epiAgreementGuard } from './epi-agreement-guard';
 import type {
   EpiDelivery,
   EpiDeliveryInput,
@@ -52,7 +54,22 @@ export async function createEpiDelivery(input: EpiDeliveryInput): Promise<EpiDel
     .single();
 
   if (error) throw new Error(`Erro ao registrar entrega de EPI: ${error.message}`);
-  return data as unknown as EpiDelivery;
+
+  const delivery = data as unknown as EpiDelivery;
+
+  // Auto-dispatch EPI agreement term for signature
+  try {
+    await epiAgreementGuard.dispatchAgreementForDelivery(
+      delivery.id,
+      input.employee_id,
+      input.tenant_id,
+      input.company_id ?? null,
+    );
+  } catch {
+    // Non-blocking — delivery is created, agreement dispatch is supplementary
+  }
+
+  return delivery;
 }
 
 // ═══════════════════════════════════════════════════════

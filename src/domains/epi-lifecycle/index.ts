@@ -71,6 +71,13 @@ export {
 } from './epi-signature.integration';
 export type { SendForSignatureInput } from './epi-signature.integration';
 
+// EPI → Agreement Guard (blocks delivery until signed)
+export { epiAgreementGuard } from './epi-agreement-guard';
+export type {
+  EpiAgreementGuardResult,
+  EpiAgreementDispatchResult,
+} from './epi-agreement-guard';
+
 // Validity & Replacement Engine (Automated checks)
 export {
   checkEPIValidity,
