@@ -14,6 +14,7 @@
  */
 
 export { documentValidationService } from './document-validation.service';
+export { signedDocumentRegistry } from './signed-document.service';
 
 export type {
   DocumentValidationToken,
@@ -24,3 +25,8 @@ export type {
   ValidationTokenStatus,
   AccessResult,
 } from './types';
+
+export type {
+  SignedDocument,
+  CreateSignedDocumentDTO,
+} from './signed-document.types';

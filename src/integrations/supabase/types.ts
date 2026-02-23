@@ -13045,6 +13045,68 @@ export type Database = {
           },
         ]
       }
+      signed_documents: {
+        Row: {
+          agreement_template_id: string | null
+          ativo: boolean
+          company_id: string | null
+          created_at: string
+          data_assinatura: string
+          documento_url: string
+          employee_id: string
+          hash_sha256: string
+          id: string
+          ip_assinatura: string | null
+          metadata: Json | null
+          provider_signature_id: string | null
+          tenant_id: string
+          validation_token: string
+          versao: number
+        }
+        Insert: {
+          agreement_template_id?: string | null
+          ativo?: boolean
+          company_id?: string | null
+          created_at?: string
+          data_assinatura?: string
+          documento_url: string
+          employee_id: string
+          hash_sha256: string
+          id?: string
+          ip_assinatura?: string | null
+          metadata?: Json | null
+          provider_signature_id?: string | null
+          tenant_id: string
+          validation_token?: string
+          versao?: number
+        }
+        Update: {
+          agreement_template_id?: string | null
+          ativo?: boolean
+          company_id?: string | null
+          created_at?: string
+          data_assinatura?: string
+          documento_url?: string
+          employee_id?: string
+          hash_sha256?: string
+          id?: string
+          ip_assinatura?: string | null
+          metadata?: Json | null
+          provider_signature_id?: string | null
+          tenant_id?: string
+          validation_token?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signed_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_events: {
         Row: {
           created_at: string
