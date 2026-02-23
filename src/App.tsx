@@ -48,8 +48,9 @@ function AppRoutes() {
   useEffect(() => {
     if (!user || redirectHandled.current) return;
     const pendingRedirect = sessionStorage.getItem('redirectAfterLogin');
+    console.log('[AppRoutes useEffect] user=', !!user, 'redirectHandled=', redirectHandled.current, 'pendingRedirect=', pendingRedirect);
     if (pendingRedirect) {
-      console.log('[AppRoutes] useEffect consuming redirect →', pendingRedirect);
+      console.log('[AppRoutes useEffect] Consuming redirect →', pendingRedirect);
       sessionStorage.removeItem('redirectAfterLogin');
       redirectHandled.current = true;
       navigate(pendingRedirect, { replace: true });
@@ -75,6 +76,7 @@ function AppRoutes() {
 
   // ── Check sessionStorage on EVERY render (not via ref, which only initializes once) ──
   const hasPendingRedirect = redirectHandled.current || !!sessionStorage.getItem('redirectAfterLogin');
+  console.log('[AppRoutes render] user=', !!user, 'currentTenant=', !!currentTenant, 'isPlatformUser=', isPlatformUser, 'hasPendingRedirect=', hasPendingRedirect, 'redirectHandled=', redirectHandled.current, 'sessionStorage=', sessionStorage.getItem('redirectAfterLogin'), 'location=', window.location.pathname);
 
   // ── Build authenticated route set ──
   const sharedRoutes: RouteObject[] = [

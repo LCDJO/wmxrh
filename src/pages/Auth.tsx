@@ -104,12 +104,14 @@ export default function Auth() {
   const routeByIntent = (intent: DetectedIntent) => {
     // Check for pending redirect (e.g. display pairing QR flow)
     const pendingRedirect = sessionStorage.getItem('redirectAfterLogin');
+    console.log('[Auth.routeByIntent] intent=', intent.intent, 'pendingRedirect=', pendingRedirect);
     if (pendingRedirect) {
       sessionStorage.removeItem('redirectAfterLogin');
       // Still set tenant context if needed
       if (intent.intent === 'tenant' && intent.tenants.length === 1) {
         localStorage.setItem('currentTenantId', intent.tenants[0].id);
       }
+      console.log('[Auth.routeByIntent] Navigating to pendingRedirect:', pendingRedirect);
       navigate(pendingRedirect, { replace: true });
       return;
     }
