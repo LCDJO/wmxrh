@@ -6,6 +6,8 @@
  *   2. Legal Version Diffing
  *   3. Automatic Renewal Engine
  *   4. LGPD Consent Management
+ *   5. Blockchain Hash Proof
+ *   6. Cartório Digital Integration
  *
  * These services define the public API surface.
  * Implementations are no-ops / stubs that log warnings
@@ -18,11 +20,17 @@ import type {
   LegalVersionPolicy,
   RenewalPolicy,
   RenewalRecord,
-  RenewalFrequency,
   LgpdConsentRecord,
   LgpdDataSubjectRequest,
   ConsentPurpose,
   ConsentLegalBasis,
+  BlockchainNetwork,
+  BlockchainProofRecord,
+  BlockchainProofRequest,
+  BlockchainVerificationResult,
+  CartorioProvider,
+  CartorioRegistrationRecord,
+  CartorioSubmissionRequest,
 } from './types-future';
 
 const STUB = (name: string) =>
@@ -33,10 +41,6 @@ const STUB = (name: string) =>
 // ════════════════════════════════════════════════
 
 export const internalSignatureService = {
-  /**
-   * Initiate an internal advanced signature flow
-   * (OTP email/SMS + device fingerprint + geolocation).
-   */
   async initiateSignature(
     _agreementId: string,
     _method: InternalSignatureMetadata['method'],
@@ -45,9 +49,6 @@ export const internalSignatureService = {
     return null;
   },
 
-  /**
-   * Validate OTP and finalize signature.
-   */
   async validateAndSign(
     _sessionToken: string,
     _otpCode: string,
@@ -63,9 +64,6 @@ export const internalSignatureService = {
 // ════════════════════════════════════════════════
 
 export const legalVersionService = {
-  /**
-   * Generate a diff between two template versions.
-   */
   async generateDiff(
     _templateId: string,
     _versionFrom: number,
@@ -75,9 +73,6 @@ export const legalVersionService = {
     return null;
   },
 
-  /**
-   * Get the legal version policy for a template.
-   */
   async getPolicy(_templateId: string): Promise<LegalVersionPolicy> {
     STUB('legalVersionService.getPolicy');
     return {
@@ -87,9 +82,6 @@ export const legalVersionService = {
     };
   },
 
-  /**
-   * Check if employees need to re-sign after version update.
-   */
   async checkReSignatureRequired(
     _templateId: string,
     _newVersion: number,
@@ -104,19 +96,10 @@ export const legalVersionService = {
 // ════════════════════════════════════════════════
 
 export const renewalEngineService = {
-  /**
-   * Set the renewal policy for a template.
-   */
-  async setPolicy(
-    _templateId: string,
-    _policy: RenewalPolicy,
-  ): Promise<void> {
+  async setPolicy(_templateId: string, _policy: RenewalPolicy): Promise<void> {
     STUB('renewalEngineService.setPolicy');
   },
 
-  /**
-   * Get the renewal policy for a template.
-   */
   async getPolicy(_templateId: string): Promise<RenewalPolicy> {
     STUB('renewalEngineService.getPolicy');
     return {
@@ -129,10 +112,6 @@ export const renewalEngineService = {
     };
   },
 
-  /**
-   * Scan for agreements expiring soon and trigger renewals.
-   * Intended to be called by a cron job / scheduled function.
-   */
   async processUpcomingRenewals(_tenantId: string): Promise<{
     scanned: number;
     renewed: number;
@@ -142,9 +121,6 @@ export const renewalEngineService = {
     return { scanned: 0, renewed: 0, notified: 0 };
   },
 
-  /**
-   * Get renewal history for an agreement.
-   */
   async getRenewalHistory(_agreementId: string): Promise<RenewalRecord[]> {
     STUB('renewalEngineService.getRenewalHistory');
     return [];
@@ -152,13 +128,10 @@ export const renewalEngineService = {
 };
 
 // ════════════════════════════════════════════════
-// 4. LGPD CONSENT MANAGEMENT
+// 4. LGPD CONSENT MANAGEMENT (Granular)
 // ════════════════════════════════════════════════
 
 export const lgpdConsentService = {
-  /**
-   * Record a new consent grant linked to an agreement.
-   */
   async grantConsent(
     _employeeId: string,
     _tenantId: string,
@@ -170,31 +143,16 @@ export const lgpdConsentService = {
     return null;
   },
 
-  /**
-   * Revoke a previously granted consent.
-   */
-  async revokeConsent(
-    _consentId: string,
-    _reason: string,
-  ): Promise<boolean> {
+  async revokeConsent(_consentId: string, _reason: string): Promise<boolean> {
     STUB('lgpdConsentService.revokeConsent');
     return false;
   },
 
-  /**
-   * List all active consents for an employee.
-   */
-  async listConsents(
-    _employeeId: string,
-    _tenantId: string,
-  ): Promise<LgpdConsentRecord[]> {
+  async listConsents(_employeeId: string, _tenantId: string): Promise<LgpdConsentRecord[]> {
     STUB('lgpdConsentService.listConsents');
     return [];
   },
 
-  /**
-   * Submit a data subject request (access, deletion, portability, etc.).
-   */
   async submitDataSubjectRequest(
     _request: Omit<LgpdDataSubjectRequest, 'status' | 'fulfilled_at' | 'denial_reason'>,
   ): Promise<LgpdDataSubjectRequest | null> {
@@ -202,19 +160,11 @@ export const lgpdConsentService = {
     return null;
   },
 
-  /**
-   * Get all data subject requests for a tenant.
-   */
-  async listDataSubjectRequests(
-    _tenantId: string,
-  ): Promise<LgpdDataSubjectRequest[]> {
+  async listDataSubjectRequests(_tenantId: string): Promise<LgpdDataSubjectRequest[]> {
     STUB('lgpdConsentService.listDataSubjectRequests');
     return [];
   },
 
-  /**
-   * Check LGPD compliance status for a tenant.
-   */
   async getComplianceStatus(_tenantId: string): Promise<{
     total_consents: number;
     active_consents: number;
@@ -222,11 +172,99 @@ export const lgpdConsentService = {
     expired_data_count: number;
   }> {
     STUB('lgpdConsentService.getComplianceStatus');
+    return { total_consents: 0, active_consents: 0, pending_requests: 0, expired_data_count: 0 };
+  },
+};
+
+// ════════════════════════════════════════════════
+// 5. BLOCKCHAIN HASH PROOF
+// ════════════════════════════════════════════════
+
+export const blockchainProofService = {
+  /**
+   * Anchor a document hash on-chain.
+   * Returns the proof record with transaction details.
+   */
+  async anchorHash(_request: BlockchainProofRequest): Promise<BlockchainProofRecord | null> {
+    STUB('blockchainProofService.anchorHash');
+    return null;
+  },
+
+  /**
+   * Verify that a document hash exists on-chain and matches.
+   */
+  async verifyProof(
+    _agreementId: string,
+    _documentHash: string,
+  ): Promise<BlockchainVerificationResult> {
+    STUB('blockchainProofService.verifyProof');
     return {
-      total_consents: 0,
-      active_consents: 0,
-      pending_requests: 0,
-      expired_data_count: 0,
+      valid: false,
+      proof: null,
+      verified_at: new Date().toISOString(),
+      chain_hash_matches: false,
     };
+  },
+
+  /**
+   * List all blockchain proofs for an agreement.
+   */
+  async listProofs(_agreementId: string): Promise<BlockchainProofRecord[]> {
+    STUB('blockchainProofService.listProofs');
+    return [];
+  },
+
+  /**
+   * Get supported blockchain networks.
+   */
+  getSupportedNetworks(): BlockchainNetwork[] {
+    return ['ethereum', 'polygon', 'bnb_chain', 'hyperledger'];
+  },
+};
+
+// ════════════════════════════════════════════════
+// 6. CARTÓRIO DIGITAL INTEGRATION
+// ════════════════════════════════════════════════
+
+export const cartorioDigitalService = {
+  /**
+   * Submit a signed document for digital notarization.
+   */
+  async submitForRegistration(
+    _request: CartorioSubmissionRequest,
+  ): Promise<CartorioRegistrationRecord | null> {
+    STUB('cartorioDigitalService.submitForRegistration');
+    return null;
+  },
+
+  /**
+   * Check the registration status at the cartório.
+   */
+  async checkStatus(_registrationId: string): Promise<CartorioRegistrationRecord | null> {
+    STUB('cartorioDigitalService.checkStatus');
+    return null;
+  },
+
+  /**
+   * List all cartório registrations for an agreement.
+   */
+  async listRegistrations(_agreementId: string): Promise<CartorioRegistrationRecord[]> {
+    STUB('cartorioDigitalService.listRegistrations');
+    return [];
+  },
+
+  /**
+   * Cancel a pending cartório registration.
+   */
+  async cancelRegistration(_registrationId: string): Promise<boolean> {
+    STUB('cartorioDigitalService.cancelRegistration');
+    return false;
+  },
+
+  /**
+   * Get supported cartório providers.
+   */
+  getSupportedProviders(): CartorioProvider[] {
+    return ['e-notariado', 'notarchain', 'cerc', 'custom'];
   },
 };

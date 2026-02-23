@@ -32,7 +32,7 @@ export { agreementRenewalEngine } from './agreement-renewal.engine';
 export type { RenewalScanResult } from './agreement-renewal.engine';
 export { agreementComplianceDashboardService } from './agreement-compliance-dashboard.service';
 export type { CompanyAgreementMetrics, TenantComplianceRanking, BlockedEmployee } from './agreement-compliance-dashboard.service';
-export { internalSignatureService, legalVersionService, renewalEngineService, lgpdConsentService } from './agreement-future.service';
+export { internalSignatureService, legalVersionService, renewalEngineService, lgpdConsentService, blockchainProofService, cartorioDigitalService } from './agreement-future.service';
 export { generateDocumentHash, verifyDocumentHash } from './document-hash';
 
 // ── Governance Engine ──

@@ -1,8 +1,14 @@
 /**
  * Employee Agreement Engine — Future-Ready Types
  *
- * Types for planned features that are not yet implemented.
- * Separated from core types for cleaner architecture.
+ * Types for planned features (stubs until fully implemented).
+ *
+ *   1. Assinatura Interna Avançada
+ *   2. Versionamento Jurídico (Diff)
+ *   3. Renovação Automática de Termos
+ *   4. Integração LGPD — Consentimento Granular
+ *   5. Blockchain Hash Proof
+ *   6. Integração com Cartório Digital
  */
 
 // ── 1. Assinatura Interna Avançada ──
@@ -55,7 +61,7 @@ export interface RenewalRecord {
   renewal_trigger: 'automatic' | 'manual' | 'version_change';
 }
 
-// ── 4. Integração LGPD — Consentimento ──
+// ── 4. Integração LGPD — Consentimento Granular ──
 
 export type ConsentPurpose =
   | 'data_processing'
@@ -97,4 +103,73 @@ export interface LgpdDataSubjectRequest {
   fulfilled_at: string | null;
   status: 'pending' | 'in_progress' | 'fulfilled' | 'denied';
   denial_reason: string | null;
+}
+
+// ── 5. Blockchain Hash Proof ──
+
+export type BlockchainNetwork = 'ethereum' | 'polygon' | 'bnb_chain' | 'hyperledger';
+
+export interface BlockchainProofRecord {
+  id: string;
+  agreement_id: string;
+  tenant_id: string;
+  document_hash: string;
+  transaction_hash: string;
+  block_number: number;
+  network: BlockchainNetwork;
+  timestamp: string;
+  contract_address: string | null;
+  verification_url: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
+export interface BlockchainProofRequest {
+  agreement_id: string;
+  document_hash: string;
+  network: BlockchainNetwork;
+  metadata?: Record<string, unknown>;
+}
+
+export interface BlockchainVerificationResult {
+  valid: boolean;
+  proof: BlockchainProofRecord | null;
+  verified_at: string;
+  chain_hash_matches: boolean;
+}
+
+// ── 6. Integração com Cartório Digital ──
+
+export type CartorioProvider = 'e-notariado' | 'notarchain' | 'cerc' | 'custom';
+export type CartorioRequestStatus = 'draft' | 'submitted' | 'processing' | 'registered' | 'rejected' | 'cancelled';
+
+export interface CartorioRegistrationRecord {
+  id: string;
+  agreement_id: string;
+  tenant_id: string;
+  provider: CartorioProvider;
+  external_protocol: string | null;
+  status: CartorioRequestStatus;
+  submitted_at: string | null;
+  registered_at: string | null;
+  registration_number: string | null;
+  selo_digital: string | null;
+  certificate_url: string | null;
+  cost_brl: number | null;
+  rejection_reason: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
+export interface CartorioSubmissionRequest {
+  agreement_id: string;
+  provider: CartorioProvider;
+  document_hash: string;
+  signers: CartorioSigner[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface CartorioSigner {
+  name: string;
+  cpf: string;
+  email: string;
+  role: 'signatory' | 'witness' | 'intervening_party';
 }
