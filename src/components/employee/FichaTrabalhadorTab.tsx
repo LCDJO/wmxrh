@@ -37,6 +37,7 @@ import { SimulacaoTrabalhistaTab } from './SimulacaoTrabalhistaTab';
 import { AddEpiDeliveryDialog } from './AddEpiDeliveryDialog';
 import { AddNrTrainingDialog } from './AddNrTrainingDialog';
 import { AddRiskExposureDialog } from './AddRiskExposureDialog';
+import { AutoProvisionDocumentsButton } from './AutoProvisionDocumentsButton';
 import { useToast } from '@/hooks/use-toast';
 import {
   useEmployeeMasterRecord,
@@ -85,6 +86,9 @@ interface Props {
     name: string;
     base_salary?: number | null;
     current_salary?: number | null;
+    position_id?: string | null;
+    department_id?: string | null;
+    company_id?: string | null;
   } | null;
   canManageCompensation?: boolean;
 }
@@ -298,6 +302,18 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit, employee, c
         {/* ═══ GRUPO 5: DOCUMENTOS LEGAIS ═══ */}
         <TabsContent value="docs_legais">
           <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-card-foreground flex items-center gap-2">
+                <FileCheck className="h-4 w-4" /> Documentos Legais
+              </h4>
+              <AutoProvisionDocumentsButton
+                employeeId={employeeId}
+                tenantId={tenantId}
+                positionId={employee?.position_id}
+                departmentId={employee?.department_id}
+                companyId={employee?.company_id}
+              />
+            </div>
             <DocumentosTab employeeId={employeeId} />
             <div className="border-t border-border pt-4">
               <h4 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
