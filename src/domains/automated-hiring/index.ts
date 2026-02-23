@@ -174,6 +174,10 @@ export type {
   ESocialEtapaResult,
 } from './esocial-submission.engine';
 
+// ── Ativação (Etapa Final) ──
+export { activateEmployee } from './activation.engine';
+export type { ActivationInput, ActivationResult } from './activation.engine';
+
 // ── Events ──
 export {
   onHiringEvent,
