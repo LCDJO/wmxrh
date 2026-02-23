@@ -11,7 +11,7 @@
  * when the external services become available.
  */
 
-import { lgpdValidationLogService, type LGPDValidationLog } from './lgpd-validation-log.service';
+import { lgpdValidationLogService } from './lgpd-validation-log.service';
 
 // ═══════════════════════════════════════════════════════════
 // 1. ICP-Brasil — Digital Certificate Signing (stub)
