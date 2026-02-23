@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard } from 'lucide-react';
+import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign } from 'lucide-react';
+import { RemuneracaoSection } from './RemuneracaoSection';
 import { useToast } from '@/hooks/use-toast';
 import {
   useEmployeeMasterRecord,
@@ -93,6 +94,9 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
           <TabsTrigger value="contrato" className="gap-1.5 text-xs">
             <Briefcase className="h-3.5 w-3.5" /> Dados Contratuais ({record?.contracts.length ?? 0})
           </TabsTrigger>
+          <TabsTrigger value="remuneracao" className="gap-1.5 text-xs">
+            <DollarSign className="h-3.5 w-3.5" /> Remuneração
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Aggregate Root ── */}
@@ -152,6 +156,14 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit }: Props) {
             employeeId={employeeId}
             tenantId={tenantId}
             canEdit={canEdit}
+          />
+        </TabsContent>
+
+        {/* ── Compensation ── */}
+        <TabsContent value="remuneracao">
+          <RemuneracaoSection
+            employeeId={employeeId}
+            tenantId={tenantId}
           />
         </TabsContent>
       </Tabs>
