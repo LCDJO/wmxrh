@@ -5,24 +5,68 @@
  * organized in 6 logical groups: Cadastro, Contrato & Trabalho,
  * Remuneração, SST & Compliance, Documentos Legais, Governança.
  */
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { usePermissions } from '@/domains/security';
-import { useEmployee } from '@/domains/hooks';
+import { useEmployee, useUpdateEmployee } from '@/domains/hooks';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Mail, Phone, Calendar, Building2, FileText } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ArrowLeft, Mail, Phone, Calendar, Building2, FileText, Pencil } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { FichaTrabalhadorTab } from '@/components/employee/FichaTrabalhadorTab';
 
 export default function EmployeeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentTenant } = useTenant();
+  const { toast } = useToast();
   const tenantId = currentTenant?.id;
   const { data: employee } = useEmployee(id!);
+  const updateEmployee = useUpdateEmployee();
   const { canManageEmployees, canManageCompensation } = usePermissions();
+
+  // Edit employee state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editCpf, setEditCpf] = useState('');
+  const [editHireDate, setEditHireDate] = useState('');
+  const [editStatus, setEditStatus] = useState('');
+
+  const openEditDialog = () => {
+    if (!employee) return;
+    setEditName(employee.name || '');
+    setEditEmail(employee.email || '');
+    setEditPhone(employee.phone || '');
+    setEditCpf(employee.cpf || '');
+    setEditHireDate(employee.hire_date ? employee.hire_date.split('T')[0] : '');
+    setEditStatus(employee.status || 'active');
+    setEditOpen(true);
+  };
+
+  const handleUpdateEmployee = () => {
+    if (!id) return;
+    updateEmployee.mutate({
+      id,
+      name: editName,
+      email: editEmail || null,
+      phone: editPhone || null,
+      cpf: editCpf || null,
+      hire_date: editHireDate || null,
+      status: editStatus,
+    }, {
+      onSuccess: () => { toast({ title: 'Colaborador atualizado!' }); setEditOpen(false); },
+      onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+    });
+  };
 
   if (!employee) {
     return (
@@ -52,6 +96,16 @@ export default function EmployeeDetail() {
             <p className="text-sm text-muted-foreground mt-1">{employee.positions?.title || '—'}</p>
             <div className="mt-3"><StatusBadge status={employee.status} /></div>
           </div>
+
+          {/* Edit button */}
+          {canManageEmployees && (
+            <div className="mt-4 flex justify-center">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={openEditDialog}>
+                <Pencil className="h-3.5 w-3.5" /> Editar Colaborador
+              </Button>
+            </div>
+          )}
+
           <div className="mt-6 space-y-3 border-t border-border pt-5">
             {employee.email && <div className="flex items-center gap-3 text-sm"><Mail className="h-4 w-4 text-muted-foreground" /><span className="text-card-foreground">{employee.email}</span></div>}
             {employee.phone && <div className="flex items-center gap-3 text-sm"><Phone className="h-4 w-4 text-muted-foreground" /><span className="text-card-foreground">{employee.phone}</span></div>}
@@ -89,6 +143,37 @@ export default function EmployeeDetail() {
           )}
         </div>
       </div>
+
+      {/* ═══════════ Edit Employee Dialog ═══════════ */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>Editar Colaborador — {employee.name}</DialogTitle></DialogHeader>
+          <form onSubmit={e => { e.preventDefault(); handleUpdateEmployee(); }} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Nome *</Label><Input value={editName} onChange={e => setEditName(e.target.value)} required /></div>
+              <div className="space-y-2"><Label>CPF</Label><Input value={editCpf} onChange={e => setEditCpf(e.target.value)} /></div>
+              <div className="space-y-2"><Label>E-mail</Label><Input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Telefone</Label><Input value={editPhone} onChange={e => setEditPhone(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Data Admissão</Label><Input type="date" value={editHireDate} onChange={e => setEditHireDate(e.target.value)} /></div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={editStatus} onValueChange={setEditStatus}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
+                    <SelectItem value="on_leave">Afastado</SelectItem>
+                    <SelectItem value="terminated">Desligado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button type="submit" className="w-full" disabled={updateEmployee.isPending}>
+              {updateEmployee.isPending ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
