@@ -93,6 +93,18 @@ export type {
   PcmsoEtapaResult,
 } from './pcmso-admissional.engine';
 
+// ── Treinamentos NR Admissional (Etapa 4) ──
+export {
+  generateAdmissionTrainings,
+  buildTrainingAssignmentDTOs,
+  applyNrTrainingToWorkflow,
+} from './nr-training-admission.engine';
+export type {
+  NrTrainingAdmissionInput,
+  GeneratedTrainingAssignment,
+  NrTrainingEtapaResult,
+} from './nr-training-admission.engine';
+
 // ── Events ──
 export {
   onHiringEvent,
