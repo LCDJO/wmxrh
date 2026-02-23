@@ -134,6 +134,21 @@ export type {
   AgreementEtapaResult,
 } from './agreements-admission.engine';
 
+// ── Integração Fleet (Etapa 7) ──
+export {
+  validateFleetCompliance,
+  applyFleetComplianceToWorkflow,
+  cnhCategorySatisfies,
+} from './fleet-admission.engine';
+export type {
+  CnhCategory,
+  CnhData,
+  FleetDeviceBinding,
+  FleetAgreementStatus,
+  FleetEtapaInput,
+  FleetEtapaResult,
+} from './fleet-admission.engine';
+
 // ── Events ──
 export {
   onHiringEvent,
