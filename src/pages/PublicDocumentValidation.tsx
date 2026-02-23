@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { CheckCircle2, XCircle, Shield, Loader2, FileText } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { CheckCircle2, XCircle, Shield, Loader2, FileText, Copy, ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ValidationResult {
   valid: boolean;
@@ -15,6 +17,9 @@ interface ValidationResult {
   hash_verified: boolean;
   document_name?: string;
   signed_at?: string;
+  document_hash?: string;
+  versao?: number;
+  signer_name?: string;
 }
 
 const PublicDocumentValidation: React.FC = () => {
@@ -23,13 +28,28 @@ const PublicDocumentValidation: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // LGPD requester fields
+  // LGPD mandatory fields
   const [requesterName, setRequesterName] = useState('');
-  const [requesterDocument, setRequesterDocument] = useState('');
+  const [requesterEmail, setRequesterEmail] = useState('');
   const [requesterPurpose, setRequesterPurpose] = useState('');
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+
+  // Validation
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validate = (): boolean => {
+    const e: Record<string, string> = {};
+    if (!requesterName.trim()) e.name = 'Nome completo é obrigatório';
+    if (!requesterEmail.trim()) e.email = 'E-mail é obrigatório';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requesterEmail.trim())) e.email = 'E-mail inválido';
+    if (!requesterPurpose.trim()) e.purpose = 'Finalidade é obrigatória';
+    if (!privacyAccepted) e.privacy = 'Você deve aceitar a política de privacidade';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const handleValidate = async () => {
-    if (!token) return;
+    if (!token || !validate()) return;
     setLoading(true);
     setSubmitted(true);
 
@@ -37,9 +57,10 @@ const PublicDocumentValidation: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('validate-document', {
         body: {
           token,
-          requester_name: requesterName || null,
-          requester_document: requesterDocument || null,
-          requester_purpose: requesterPurpose || null,
+          requester_name: requesterName.trim(),
+          requester_email: requesterEmail.trim(),
+          requester_purpose: requesterPurpose.trim(),
+          privacy_accepted: true,
         },
       });
 
@@ -55,17 +76,20 @@ const PublicDocumentValidation: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    // Auto-validate if no LGPD fields required (quick check)
-  }, [token]);
+  const copyHash = () => {
+    if (result?.document_hash) {
+      navigator.clipboard.writeText(result.document_hash);
+      toast.success('Hash copiado para a área de transferência');
+    }
+  };
 
   const statusLabels: Record<string, string> = {
-    success: 'Documento válido',
-    invalid_token: 'Token não encontrado',
-    expired: 'Token expirado',
-    revoked: 'Documento revogado',
-    hash_mismatch: 'Integridade comprometida',
-    error: 'Erro na validação',
+    success: 'Documento autêntico e íntegro',
+    invalid_token: 'Token de validação não encontrado',
+    expired: 'Token de validação expirado',
+    revoked: 'Documento foi revogado',
+    hash_mismatch: 'Integridade do documento comprometida',
+    error: 'Erro interno na validação',
   };
 
   return (
@@ -75,9 +99,9 @@ const PublicDocumentValidation: React.FC = () => {
           <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
             <Shield className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-xl">Validação de Documento</CardTitle>
+          <CardTitle className="text-xl">Validação de Documento Digital</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Verifique a autenticidade de um documento assinado digitalmente.
+            Verifique a autenticidade e integridade de um documento assinado digitalmente.
           </p>
         </CardHeader>
 
@@ -85,38 +109,52 @@ const PublicDocumentValidation: React.FC = () => {
           {/* Token display */}
           <div className="bg-muted rounded-lg p-3 text-center">
             <p className="text-xs text-muted-foreground mb-1">Token de validação</p>
-            <p className="font-mono text-sm break-all text-foreground">{token || '—'}</p>
+            <p className="font-mono text-xs break-all text-foreground">{token || '—'}</p>
           </div>
 
           {!submitted && (
             <>
-              {/* LGPD fields */}
+              {/* LGPD mandatory form */}
               <div className="border rounded-lg p-4 space-y-3">
-                <p className="text-xs text-muted-foreground font-medium">
-                  Conforme LGPD, registramos os dados do solicitante. Preencha abaixo (opcional):
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  <p className="text-xs font-semibold text-foreground">
+                    Identificação obrigatória (LGPD)
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018), todos os acessos a documentos são registrados.
                 </p>
+
                 <div>
-                  <Label htmlFor="name" className="text-xs">Nome</Label>
+                  <Label htmlFor="name" className="text-xs">Nome completo *</Label>
                   <Input
                     id="name"
                     value={requesterName}
                     onChange={(e) => setRequesterName(e.target.value)}
                     placeholder="Seu nome completo"
                     className="mt-1"
+                    maxLength={100}
                   />
+                  {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
                 </div>
+
                 <div>
-                  <Label htmlFor="doc" className="text-xs">CPF / CNPJ</Label>
+                  <Label htmlFor="email" className="text-xs">E-mail *</Label>
                   <Input
-                    id="doc"
-                    value={requesterDocument}
-                    onChange={(e) => setRequesterDocument(e.target.value)}
-                    placeholder="000.000.000-00"
+                    id="email"
+                    type="email"
+                    value={requesterEmail}
+                    onChange={(e) => setRequesterEmail(e.target.value)}
+                    placeholder="seu@email.com"
                     className="mt-1"
+                    maxLength={255}
                   />
+                  {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
                 </div>
+
                 <div>
-                  <Label htmlFor="purpose" className="text-xs">Finalidade da consulta</Label>
+                  <Label htmlFor="purpose" className="text-xs">Finalidade da consulta *</Label>
                   <Textarea
                     id="purpose"
                     value={requesterPurpose}
@@ -124,8 +162,23 @@ const PublicDocumentValidation: React.FC = () => {
                     placeholder="Ex: Verificação para processo admissional"
                     rows={2}
                     className="mt-1"
+                    maxLength={500}
                   />
+                  {errors.purpose && <p className="text-xs text-destructive mt-1">{errors.purpose}</p>}
                 </div>
+
+                <div className="flex items-start gap-2 pt-1">
+                  <Checkbox
+                    id="privacy"
+                    checked={privacyAccepted}
+                    onCheckedChange={(v) => setPrivacyAccepted(v === true)}
+                    className="mt-0.5"
+                  />
+                  <Label htmlFor="privacy" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+                    Declaro estar ciente de que meus dados serão registrados para fins de auditoria conforme a LGPD (Lei 13.709/2018) e a política de privacidade do emissor. *
+                  </Label>
+                </div>
+                {errors.privacy && <p className="text-xs text-destructive">{errors.privacy}</p>}
               </div>
 
               <Button onClick={handleValidate} className="w-full" disabled={!token || loading}>
@@ -135,8 +188,16 @@ const PublicDocumentValidation: React.FC = () => {
             </>
           )}
 
-          {submitted && result && (
-            <div className={`border rounded-lg p-4 space-y-3 ${result.valid ? 'border-primary/30 bg-primary/5' : 'border-destructive/30 bg-destructive/5'}`}>
+          {submitted && loading && (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Verificando autenticidade...</p>
+            </div>
+          )}
+
+          {submitted && !loading && result && (
+            <div className={`border rounded-lg p-4 space-y-4 ${result.valid ? 'border-primary/30 bg-primary/5' : 'border-destructive/30 bg-destructive/5'}`}>
+              {/* Status header */}
               <div className="flex items-center gap-2">
                 {result.valid ? (
                   <CheckCircle2 className="h-5 w-5 text-primary" />
@@ -149,41 +210,88 @@ const PublicDocumentValidation: React.FC = () => {
               </div>
 
               {result.valid && (
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  {result.document_name && <p><strong>Documento:</strong> {result.document_name}</p>}
-                  {result.signed_at && (
-                    <p><strong>Assinado em:</strong> {new Date(result.signed_at).toLocaleString('pt-BR')}</p>
+                <>
+                  {/* Document details */}
+                  <div className="space-y-2 text-sm">
+                    {result.document_name && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Documento:</span>
+                        <span className="font-medium text-foreground">{result.document_name}</span>
+                      </div>
+                    )}
+                    {result.versao && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Versão:</span>
+                        <span className="font-medium text-foreground">v{result.versao}</span>
+                      </div>
+                    )}
+                    {result.signed_at && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Assinado em:</span>
+                        <span className="font-medium text-foreground">
+                          {new Date(result.signed_at).toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Hash for verification */}
+                  {result.document_hash && (
+                    <div className="bg-muted rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-foreground">Hash SHA-256</p>
+                        <Button variant="ghost" size="sm" className="h-6 px-2" onClick={copyHash}>
+                          <Copy className="h-3 w-3 mr-1" />
+                          <span className="text-xs">Copiar</span>
+                        </Button>
+                      </div>
+                      <p className="font-mono text-[10px] break-all text-muted-foreground leading-relaxed">
+                        {result.document_hash}
+                      </p>
+                    </div>
                   )}
-                  <div className="flex items-center gap-1.5 mt-2">
+
+                  {/* Badges */}
+                  <div className="flex flex-wrap gap-1.5">
                     <Badge variant="outline" className="text-primary border-primary/50 text-xs">
-                      Hash SHA-256 ✓
+                      ✓ Assinatura válida
                     </Badge>
                     <Badge variant="outline" className="text-xs">
-                      Integridade verificada
+                      ✓ Hash verificado
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      ✓ LGPD registrado
                     </Badge>
                   </div>
-                </div>
+                </>
               )}
 
               {!result.valid && (
-                <p className="text-sm text-muted-foreground">
-                  Este documento não pôde ser validado. Entre em contato com o emissor.
-                </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Este documento não pôde ser validado. Entre em contato com o emissor para obter um token válido.
+                  </p>
+                  {result.status === 'hash_mismatch' && (
+                    <p className="text-xs text-destructive font-medium">
+                      ⚠️ O conteúdo do documento foi alterado após a assinatura. Este documento pode ter sido adulterado.
+                    </p>
+                  )}
+                </div>
               )}
 
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => { setSubmitted(false); setResult(null); }}
-                className="mt-2"
               >
                 Nova consulta
               </Button>
             </div>
           )}
 
-          <p className="text-[10px] text-muted-foreground text-center">
-            Os dados fornecidos são registrados conforme a Lei Geral de Proteção de Dados (LGPD).
+          <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
+            Todos os acessos são registrados conforme a Lei Geral de Proteção de Dados (LGPD — Lei 13.709/2018).
+            Os dados informados serão utilizados exclusivamente para fins de auditoria e rastreabilidade.
           </p>
         </CardContent>
       </Card>
