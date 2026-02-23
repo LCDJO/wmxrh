@@ -285,6 +285,15 @@ function PersonalDataSection({
     municipio_nascimento: '',
     nome_mae: '',
     nome_pai: '',
+    rg_numero: '',
+    rg_orgao_emissor: '',
+    rg_uf: '',
+    rg_data_emissao: '',
+    cnh_numero: '',
+    cnh_categoria: '',
+    cnh_validade: '',
+    passaporte: '',
+    rne_rnm: '',
   });
   const { toast } = useToast();
   const upsert = useUpsertEmployeePersonalData();
@@ -305,6 +314,15 @@ function PersonalDataSection({
         municipio_nascimento: personalData.municipio_nascimento || '',
         nome_mae: personalData.nome_mae || '',
         nome_pai: personalData.nome_pai || '',
+        rg_numero: personalData.rg_numero || '',
+        rg_orgao_emissor: personalData.rg_orgao_emissor || '',
+        rg_uf: personalData.rg_uf || '',
+        rg_data_emissao: personalData.rg_data_emissao || '',
+        cnh_numero: personalData.cnh_numero || '',
+        cnh_categoria: personalData.cnh_categoria || '',
+        cnh_validade: personalData.cnh_validade || '',
+        passaporte: personalData.passaporte || '',
+        rne_rnm: personalData.rne_rnm || '',
       });
     }
     setOpen(true);
@@ -328,6 +346,15 @@ function PersonalDataSection({
         municipio_nascimento: form.municipio_nascimento || null,
         nome_mae: form.nome_mae || null,
         nome_pai: form.nome_pai || null,
+        rg_numero: form.rg_numero || null,
+        rg_orgao_emissor: form.rg_orgao_emissor || null,
+        rg_uf: form.rg_uf || null,
+        rg_data_emissao: form.rg_data_emissao || null,
+        cnh_numero: form.cnh_numero || null,
+        cnh_categoria: form.cnh_categoria || null,
+        cnh_validade: form.cnh_validade || null,
+        passaporte: form.passaporte || null,
+        rne_rnm: form.rne_rnm || null,
       },
       {
         onSuccess: () => { toast({ title: 'Dados pessoais salvos!' }); setOpen(false); },
@@ -360,6 +387,20 @@ function PersonalDataSection({
           {personalData.nome_mae && <div><p className="text-xs text-muted-foreground">Nome da Mãe</p><p className="text-sm text-card-foreground">{personalData.nome_mae}</p></div>}
           {personalData.nome_pai && <div><p className="text-xs text-muted-foreground">Nome do Pai</p><p className="text-sm text-card-foreground">{personalData.nome_pai}</p></div>}
         </div>
+        {/* Documentação */}
+        {(personalData.rg_numero || personalData.cnh_numero || personalData.passaporte || personalData.rne_rnm) && (
+          <>
+            <h4 className="text-sm font-semibold text-card-foreground mt-4">Documentação</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {personalData.rg_numero && <div><p className="text-xs text-muted-foreground">RG</p><p className="text-sm font-mono text-card-foreground">{personalData.rg_numero} {personalData.rg_orgao_emissor ? `— ${personalData.rg_orgao_emissor}` : ''}{personalData.rg_uf ? `/${personalData.rg_uf}` : ''}</p></div>}
+              {personalData.rg_data_emissao && <div><p className="text-xs text-muted-foreground">Data Emissão RG</p><p className="text-sm text-card-foreground">{new Date(personalData.rg_data_emissao).toLocaleDateString('pt-BR')}</p></div>}
+              {personalData.cnh_numero && <div><p className="text-xs text-muted-foreground">CNH</p><p className="text-sm font-mono text-card-foreground">{personalData.cnh_numero} {personalData.cnh_categoria ? `(${personalData.cnh_categoria})` : ''}</p></div>}
+              {personalData.cnh_validade && <div><p className="text-xs text-muted-foreground">Validade CNH</p><p className="text-sm text-card-foreground">{new Date(personalData.cnh_validade).toLocaleDateString('pt-BR')}</p></div>}
+              {personalData.passaporte && <div><p className="text-xs text-muted-foreground">Passaporte</p><p className="text-sm font-mono text-card-foreground">{personalData.passaporte}</p></div>}
+              {personalData.rne_rnm && <div><p className="text-xs text-muted-foreground">RNE/RNM</p><p className="text-sm font-mono text-card-foreground">{personalData.rne_rnm}</p></div>}
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -414,6 +455,23 @@ function PersonalDataSection({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2"><Label>Nome da Mãe</Label><Input value={form.nome_mae} onChange={f('nome_mae')} /></div>
               <div className="space-y-2"><Label>Nome do Pai</Label><Input value={form.nome_pai} onChange={f('nome_pai')} /></div>
+            </div>
+            {/* Documentação */}
+            <h4 className="text-sm font-semibold text-card-foreground border-t border-border pt-4">Documentação</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="space-y-2"><Label>RG Número</Label><Input value={form.rg_numero} onChange={f('rg_numero')} /></div>
+              <div className="space-y-2"><Label>Órgão Emissor</Label><Input value={form.rg_orgao_emissor} onChange={f('rg_orgao_emissor')} placeholder="SSP" /></div>
+              <div className="space-y-2"><Label>UF RG</Label><Input value={form.rg_uf} onChange={f('rg_uf')} maxLength={2} /></div>
+              <div className="space-y-2"><Label>Data Emissão RG</Label><Input type="date" value={form.rg_data_emissao} onChange={f('rg_data_emissao')} /></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-2"><Label>CNH Número</Label><Input value={form.cnh_numero} onChange={f('cnh_numero')} /></div>
+              <div className="space-y-2"><Label>Categoria CNH</Label><Input value={form.cnh_categoria} onChange={f('cnh_categoria')} placeholder="AB" /></div>
+              <div className="space-y-2"><Label>Validade CNH</Label><Input type="date" value={form.cnh_validade} onChange={f('cnh_validade')} /></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2"><Label>Passaporte</Label><Input value={form.passaporte} onChange={f('passaporte')} /></div>
+              <div className="space-y-2"><Label>RNE/RNM</Label><Input value={form.rne_rnm} onChange={f('rne_rnm')} /></div>
             </div>
             <Button type="submit" className="w-full" disabled={upsert.isPending}>
               {upsert.isPending ? 'Salvando...' : 'Salvar Dados Pessoais'}

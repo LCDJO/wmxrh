@@ -4085,6 +4085,9 @@ export type Database = {
       }
       employee_personal_data: {
         Row: {
+          cnh_categoria: string | null
+          cnh_numero: string | null
+          cnh_validade: string | null
           cpf: string
           created_at: string
           data_nascimento: string
@@ -4099,13 +4102,22 @@ export type Database = {
           nome_pai: string | null
           nome_social: string | null
           pais_nascimento: string
+          passaporte: string | null
           pis_pasep_nit: string | null
+          rg_data_emissao: string | null
+          rg_numero: string | null
+          rg_orgao_emissor: string | null
+          rg_uf: string | null
+          rne_rnm: string | null
           sexo: Database["public"]["Enums"]["employee_sexo"]
           tenant_id: string
           uf_nascimento: string | null
           updated_at: string
         }
         Insert: {
+          cnh_categoria?: string | null
+          cnh_numero?: string | null
+          cnh_validade?: string | null
           cpf: string
           created_at?: string
           data_nascimento: string
@@ -4120,13 +4132,22 @@ export type Database = {
           nome_pai?: string | null
           nome_social?: string | null
           pais_nascimento?: string
+          passaporte?: string | null
           pis_pasep_nit?: string | null
+          rg_data_emissao?: string | null
+          rg_numero?: string | null
+          rg_orgao_emissor?: string | null
+          rg_uf?: string | null
+          rne_rnm?: string | null
           sexo?: Database["public"]["Enums"]["employee_sexo"]
           tenant_id: string
           uf_nascimento?: string | null
           updated_at?: string
         }
         Update: {
+          cnh_categoria?: string | null
+          cnh_numero?: string | null
+          cnh_validade?: string | null
           cpf?: string
           created_at?: string
           data_nascimento?: string
@@ -4141,7 +4162,13 @@ export type Database = {
           nome_pai?: string | null
           nome_social?: string | null
           pais_nascimento?: string
+          passaporte?: string | null
           pis_pasep_nit?: string | null
+          rg_data_emissao?: string | null
+          rg_numero?: string | null
+          rg_orgao_emissor?: string | null
+          rg_uf?: string | null
+          rne_rnm?: string | null
           sexo?: Database["public"]["Enums"]["employee_sexo"]
           tenant_id?: string
           uf_nascimento?: string | null
