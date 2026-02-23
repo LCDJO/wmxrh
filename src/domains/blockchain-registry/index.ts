@@ -28,6 +28,18 @@ export {
   registerPrecomputedHash,
   getQueueStatus,
 } from './blockchain-registration-flow';
+export {
+  selectNetwork,
+  updateNetworkHealth,
+  getAllNetworkHealth,
+  buildExplorerUrl,
+  getEnabledNetworks,
+  NETWORK_REGISTRY,
+} from './network-config';
+export {
+  runBatchNotarization,
+  getBatchStats,
+} from './batch-notarization.service';
 
 export type {
   BlockchainProof,
@@ -41,3 +53,13 @@ export type {
   RegistrationFlowInput,
   RegistrationFlowResult,
 } from './blockchain-registration-flow';
+
+export type {
+  NetworkConfig,
+  NetworkHealth,
+} from './network-config';
+
+export type {
+  BatchNotarizationConfig,
+  BatchNotarizationResult,
+} from './batch-notarization.service';
