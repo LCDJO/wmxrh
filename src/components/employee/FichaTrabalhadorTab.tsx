@@ -34,6 +34,9 @@ import { TreinamentosNrTab } from './TreinamentosNrTab';
 import { CorrectiveActionsTab } from './CorrectiveActionsTab';
 import { EpisTab } from './EpisTab';
 import { SimulacaoTrabalhistaTab } from './SimulacaoTrabalhistaTab';
+import { AddEpiDeliveryDialog } from './AddEpiDeliveryDialog';
+import { AddNrTrainingDialog } from './AddNrTrainingDialog';
+import { AddRiskExposureDialog } from './AddRiskExposureDialog';
 import { useToast } from '@/hooks/use-toast';
 import {
   useEmployeeMasterRecord,
@@ -257,18 +260,33 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit, employee, c
               <HealthExamsSection employeeId={employeeId} />
             </div>
             <div className="border-t border-border pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-semibold text-card-foreground">Exposições a Risco</h4>
+                </div>
+                <AddRiskExposureDialog employeeId={employeeId} tenantId={tenantId} />
+              </div>
               <RiskExposuresSection employeeId={employeeId} />
             </div>
             <div className="border-t border-border pt-4">
-              <h4 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
-                <HardHat className="h-4 w-4" /> EPIs
-              </h4>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <HardHat className="h-4 w-4" /> 
+                  <h4 className="text-sm font-semibold text-card-foreground">EPIs</h4>
+                </div>
+                <AddEpiDeliveryDialog employeeId={employeeId} tenantId={tenantId} />
+              </div>
               <EpisTab employeeId={employeeId} tenantId={tenantId} />
             </div>
             <div className="border-t border-border pt-4">
-              <h4 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
-                <GraduationCap className="h-4 w-4" /> Treinamentos NR
-              </h4>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4" />
+                  <h4 className="text-sm font-semibold text-card-foreground">Treinamentos NR</h4>
+                </div>
+                <AddNrTrainingDialog employeeId={employeeId} tenantId={tenantId} />
+              </div>
               <TreinamentosNrTab employeeId={employeeId} />
             </div>
             <div className="border-t border-border pt-4">

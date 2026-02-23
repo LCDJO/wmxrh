@@ -21,8 +21,7 @@ export function RiskExposuresSection({ employeeId }: Props) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-5">
-        <ShieldAlert className="h-5 w-5 text-primary" />
-        <h4 className="text-sm font-semibold text-card-foreground">Exposições a Risco ({riskExposures.length})</h4>
+        <h4 className="text-sm font-semibold text-card-foreground">({riskExposures.length} registros)</h4>
       </div>
       {riskExposures.length > 0 ? (
         <div className="space-y-3">
