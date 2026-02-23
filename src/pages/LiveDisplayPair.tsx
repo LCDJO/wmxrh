@@ -67,11 +67,21 @@ export default function LiveDisplayPair() {
     setPairing(true);
     setError('');
     try {
-      const { data: result, error: fnError } = await supabase.functions.invoke('display-pair-confirm', {
+      const { data, error: fnError } = await supabase.functions.invoke('display-pair-confirm', {
         body: { pairing_code: code, display_id: selectedDisplayId },
       });
-      if (fnError || result?.error) {
-        setError(result?.error ?? fnError?.message ?? 'Erro desconhecido');
+      if (fnError) {
+        // For non-2xx responses, try to extract the JSON error message from the response
+        let errorMsg = fnError.message ?? 'Erro desconhecido';
+        try {
+          if (fnError.context instanceof Response) {
+            const body = await fnError.context.json();
+            if (body?.error) errorMsg = body.error;
+          }
+        } catch { /* ignore parse errors */ }
+        setError(errorMsg);
+      } else if (data?.error) {
+        setError(data.error);
       } else {
         setPaired(true);
         toast.success('Display pareado com sucesso!');
