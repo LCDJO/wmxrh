@@ -24,7 +24,11 @@ import type { QueryScope } from '@/domains/shared/scoped-query';
 export type AutomationTrigger =
   | 'employee.hired'
   | 'employee.position_changed'
-  | 'employee.risk_exposure_added';
+  | 'employee.risk_exposure_added'
+  | 'employee.epi_delivered'
+  | 'employee.fleet_assigned'
+  | 'employee.nr_training_completed'
+  | 'employee.department_transferred';
 
 export interface AutomationResult {
   trigger: AutomationTrigger;

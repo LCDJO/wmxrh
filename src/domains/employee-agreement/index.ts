@@ -27,6 +27,23 @@ export { agreementAutomationService } from './agreement-automation.service';
 export { agreementExpirationService } from './agreement-expiration.service';
 export { internalSignatureService, legalVersionService, renewalEngineService, lgpdConsentService } from './agreement-future.service';
 
+// ── Governance Engine ──
+export { agreementGovernanceOrchestrator } from './agreement-governance.orchestrator';
+export type {
+  GovernanceTrigger,
+  GovernanceTriggerSource,
+  GovernanceDispatchResult,
+  ComplianceGateResult,
+  HiringWorkflowTrigger,
+  CareerEngineTrigger,
+  EPILifecycleTrigger,
+  FleetComplianceTrigger,
+  NRTrainingTrigger,
+  EmployeeRecordTrigger,
+  TemplateMatchRule,
+} from './integration-contracts';
+export { TRIGGER_MATCH_RULES } from './integration-contracts';
+
 // ── Types ──
 export type {
   AgreementTipo,

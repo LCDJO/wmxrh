@@ -15,7 +15,17 @@ export type AgreementEventType =
   | 'agreement.signed'
   | 'agreement.rejected'
   | 'agreement.expired'
-  | 'agreement.auto_dispatch_triggered';
+  | 'agreement.auto_dispatch_triggered'
+  // Governance Engine events
+  | 'agreement.governance.dispatch_triggered'
+  | 'agreement.governance.compliance_gate_checked'
+  | 'agreement.governance.compliance_blocked'
+  | 'agreement.governance.all_mandatory_signed'
+  // Cross-engine integration events
+  | 'agreement.integration.epi_term_dispatched'
+  | 'agreement.integration.fleet_term_dispatched'
+  | 'agreement.integration.nr_training_term_dispatched'
+  | 'agreement.integration.career_term_dispatched';
 
 export interface AgreementDomainEvent {
   type: AgreementEventType;
@@ -65,5 +75,13 @@ export const __DOMAIN_CATALOG = {
     { name: 'agreement.rejected', description: 'Acordo rejeitado' },
     { name: 'agreement.expired', description: 'Acordo expirado' },
     { name: 'agreement.auto_dispatch_triggered', description: 'Envio automático de acordo acionado' },
+    { name: 'agreement.governance.dispatch_triggered', description: 'Governance engine disparou termos' },
+    { name: 'agreement.governance.compliance_gate_checked', description: 'Compliance gate verificado' },
+    { name: 'agreement.governance.compliance_blocked', description: 'Ativação bloqueada por termos pendentes' },
+    { name: 'agreement.governance.all_mandatory_signed', description: 'Todos os termos obrigatórios assinados' },
+    { name: 'agreement.integration.epi_term_dispatched', description: 'Termo de EPI disparado' },
+    { name: 'agreement.integration.fleet_term_dispatched', description: 'Termo veicular disparado' },
+    { name: 'agreement.integration.nr_training_term_dispatched', description: 'Termo de treinamento NR disparado' },
+    { name: 'agreement.integration.career_term_dispatched', description: 'Termo de cargo disparado' },
   ],
 };
