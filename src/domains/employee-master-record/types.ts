@@ -28,9 +28,41 @@ export type FgtsRegime = 'optante' | 'nao_optante' | 'retroativo';
 
 export type EsocialCategory = string; // e.g. '101', '201', etc.
 
+export type EmployeeRecordStatus = 'pre_admissao' | 'ativo' | 'afastado' | 'desligado';
+
+export type EmployeeSexo = 'masculino' | 'feminino' | 'intersexo' | 'nao_informado';
+
+export type EmployeeEstadoCivil =
+  | 'solteiro' | 'casado' | 'divorciado' | 'viuvo'
+  | 'separado' | 'uniao_estavel' | 'nao_informado';
+
 // ════════════════════════════════════════
 // LABEL MAPS
 // ════════════════════════════════════════
+
+export const RECORD_STATUS_LABELS: Record<EmployeeRecordStatus, string> = {
+  pre_admissao: 'Pré-Admissão',
+  ativo: 'Ativo',
+  afastado: 'Afastado',
+  desligado: 'Desligado',
+};
+
+export const SEXO_LABELS: Record<EmployeeSexo, string> = {
+  masculino: 'Masculino',
+  feminino: 'Feminino',
+  intersexo: 'Intersexo',
+  nao_informado: 'Não Informado',
+};
+
+export const ESTADO_CIVIL_LABELS: Record<EmployeeEstadoCivil, string> = {
+  solteiro: 'Solteiro(a)',
+  casado: 'Casado(a)',
+  divorciado: 'Divorciado(a)',
+  viuvo: 'Viúvo(a)',
+  separado: 'Separado(a)',
+  uniao_estavel: 'União Estável',
+  nao_informado: 'Não Informado',
+};
 
 export const DOCUMENT_TYPE_LABELS: Record<EmployeeDocumentType, string> = {
   rg: 'RG',
@@ -249,8 +281,84 @@ export interface CreateEmployeeContractDTO {
 // AGGREGATE: Full Master Record
 // ════════════════════════════════════════
 
+// ════════════════════════════════════════
+// Aggregate Root: Employee Record
+// ════════════════════════════════════════
+
+export interface EmployeeRecord {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  matricula_interna: string;
+  status: EmployeeRecordStatus;
+  data_admissao: string;
+  data_desligamento: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface CreateEmployeeRecordDTO {
+  tenant_id: string;
+  employee_id: string;
+  matricula_interna: string;
+  status?: EmployeeRecordStatus;
+  data_admissao: string;
+  data_desligamento?: string | null;
+}
+
+// ════════════════════════════════════════
+// Personal Data
+// ════════════════════════════════════════
+
+export interface EmployeePersonalData {
+  id: string;
+  tenant_id: string;
+  employee_id: string;
+  nome_completo: string;
+  nome_social: string | null;
+  cpf: string;
+  pis_pasep_nit: string | null;
+  data_nascimento: string;
+  sexo: EmployeeSexo;
+  estado_civil: EmployeeEstadoCivil;
+  nacionalidade: string;
+  pais_nascimento: string;
+  uf_nascimento: string | null;
+  municipio_nascimento: string | null;
+  nome_mae: string | null;
+  nome_pai: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface CreateEmployeePersonalDataDTO {
+  tenant_id: string;
+  employee_id: string;
+  nome_completo: string;
+  nome_social?: string | null;
+  cpf: string;
+  pis_pasep_nit?: string | null;
+  data_nascimento: string;
+  sexo?: EmployeeSexo;
+  estado_civil?: EmployeeEstadoCivil;
+  nacionalidade?: string;
+  pais_nascimento?: string;
+  uf_nascimento?: string | null;
+  municipio_nascimento?: string | null;
+  nome_mae?: string | null;
+  nome_pai?: string | null;
+}
+
+// ════════════════════════════════════════
+// Full Master Record Aggregate
+// ════════════════════════════════════════
+
 export interface EmployeeMasterRecord {
   employee_id: string;
+  record: EmployeeRecord | null;
+  personalData: EmployeePersonalData | null;
   documents: EmployeeDocument[];
   addresses: EmployeeAddress[];
   dependents: EmployeeDependent[];
