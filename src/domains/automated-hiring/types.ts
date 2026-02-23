@@ -44,10 +44,12 @@ export type HiringStep = typeof HIRING_STEPS[number];
 
 export type HiringWorkflowStatus =
   | 'draft'
-  | 'in_progress'
-  | 'pending_compliance'
-  | 'pending_esocial'
-  | 'completed'
+  | 'validation'
+  | 'exams_pending'
+  | 'documents_pending'
+  | 'sst_pending'
+  | 'ready_for_esocial'
+  | 'active'
   | 'cancelled'
   | 'blocked';
 
@@ -74,18 +76,18 @@ export interface HiringWorkflow {
   id: string;
   tenant_id: string;
   company_id: string;
-  employee_id: string | null;          // Null until employee record created
+  employee_id: string | null;
   candidate_name: string;
   candidate_cpf: string;
   status: HiringWorkflowStatus;
   current_step: HiringStep;
   steps: HiringStepState[];
   created_by: string;
+  data_inicio: string;
+  data_conclusao: string | null;
+  cancellation_reason: string | null;
   created_at: string;
   updated_at: string;
-  completed_at: string | null;
-  cancelled_at: string | null;
-  cancellation_reason: string | null;
 }
 
 // ═══════════════════════════════════════════════
