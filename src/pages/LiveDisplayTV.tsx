@@ -52,6 +52,7 @@ import { useRotationMode, VIEW_LABELS, type RotationView } from '@/hooks/useRota
 import {
   FleetLiveView,
   RiskHeatmapView,
+  SSTView,
   ComplianceSummaryView,
   ExecutiveOverviewView,
 } from '@/components/tv/TVRotationViews';
@@ -599,6 +600,7 @@ export default function LiveDisplayTV() {
       <main className="flex-1 flex gap-4 px-6 py-3 min-h-0">
         {rotation.currentView === 'fleet_live' && <FleetLiveView data={data} />}
         {rotation.currentView === 'risk_heatmap' && <RiskHeatmapView data={data} />}
+        {rotation.currentView === 'sst_view' && <SSTView data={data} />}
         {rotation.currentView === 'compliance_summary' && <ComplianceSummaryView data={data} />}
         {rotation.currentView === 'executive_overview' && <ExecutiveOverviewView data={data} />}
       </main>

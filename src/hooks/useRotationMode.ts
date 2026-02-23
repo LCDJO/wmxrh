@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-export type RotationView = 'fleet_live' | 'risk_heatmap' | 'compliance_summary' | 'executive_overview';
+export type RotationView = 'fleet_live' | 'risk_heatmap' | 'sst_view' | 'compliance_summary' | 'executive_overview';
 
 const DEFAULT_VIEWS: RotationView[] = [
   'fleet_live',
@@ -18,6 +18,7 @@ const DEFAULT_VIEWS: RotationView[] = [
 const VIEW_LABELS: Record<RotationView, string> = {
   fleet_live: 'Frota ao Vivo',
   risk_heatmap: 'Mapa de Risco',
+  sst_view: 'SST — Saúde e Segurança',
   compliance_summary: 'Compliance',
   executive_overview: 'Visão Executiva',
 };
