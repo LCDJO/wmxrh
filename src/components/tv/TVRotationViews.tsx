@@ -107,6 +107,56 @@ export const RiskHeatmapView = memo(function RiskHeatmapView({ data }: { data: D
   );
 });
 
+// ── 2b. SST View (Saúde e Segurança do Trabalho) ──
+export const SSTView = memo(function SSTView({ data }: { data: DisplayData }) {
+  const blocks = data.active_blocks ?? [];
+  const nrExams = data.nr_overdue_exams ?? [];
+  const warnings = data.recent_warnings ?? [];
+  const sst = data.sst_summary;
+
+  return (
+    <div className="flex-1 flex gap-4 min-h-0 tv-fade-in">
+      {/* Left: KPIs + NR exams */}
+      <div className="flex-1 flex flex-col gap-4 min-h-0">
+        <div className="grid grid-cols-3 gap-3 shrink-0">
+          <KpiTile icon={Heart} label="Exames Vencidos" value={sst?.overdue_count ?? nrExams.length} sub="Total" color={sst?.critical_overdue ? "text-red-400" : "text-amber-400"} />
+          <KpiTile icon={Lock} label="Bloqueios SST" value={sst?.active_blocks_count ?? blocks.length} sub="Ativos" color="text-red-400" />
+          <KpiTile icon={ShieldAlert} label="Críticos" value={sst?.critical_overdue ?? 0} sub="Urgentes" color="text-red-400" />
+        </div>
+        <TVCard title="Exames e NRs Vencidos" icon={Heart} className="flex-1 min-h-0 overflow-hidden">
+          {nrExams.length === 0 ? (
+            <p className="text-white/30 text-xs text-center py-6">Nenhum exame vencido</p>
+          ) : (
+            <div className="space-y-2 overflow-y-auto max-h-full">
+              {nrExams.map((exam: any, i: number) => (
+                <div key={exam.id ?? i} className="bg-white/5 rounded-lg p-2.5 border border-white/5 tv-slide-up">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-white/80">{exam.employee_name}</span>
+                    <span className="text-[9px] font-bold text-red-400 uppercase">{exam.exam_type}</span>
+                  </div>
+                  <p className="text-[10px] text-white/40 mt-0.5">
+                    Vencido em: {exam.due_date ? new Date(exam.due_date).toLocaleDateString('pt-BR') : 'N/I'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </TVCard>
+        <TVCard title="Advertências SST" icon={FileWarning} className="shrink-0 max-h-[30%] overflow-hidden">
+          <RecentWarnings warnings={warnings.filter((w: any) => w.motivo?.toLowerCase().includes('epi') || w.motivo?.toLowerCase().includes('nr') || true)} />
+        </TVCard>
+      </div>
+
+      {/* Right: Blocked employees */}
+      <aside className="w-72 2xl:w-80 shrink-0 flex flex-col gap-3 min-h-0">
+        <TVCard title="Colaboradores Bloqueados" icon={Lock} className="flex-1 min-h-0 overflow-hidden">
+          <BlockedEmployees blocks={blocks} />
+        </TVCard>
+      </aside>
+    </div>
+  );
+});
+
 // ── 3. Compliance Summary ──
 export const ComplianceSummaryView = memo(function ComplianceSummaryView({ data }: { data: DisplayData }) {
   const blocks = data.active_blocks ?? [];

@@ -21,6 +21,7 @@ import { useRotationMode } from '@/hooks/useRotationMode';
 import {
   FleetLiveView,
   RiskHeatmapView,
+  SSTView,
   ComplianceSummaryView,
   ExecutiveOverviewView,
 } from '@/components/tv/TVRotationViews';
@@ -30,7 +31,7 @@ import type { RotationView } from '@/hooks/useRotationMode';
 /** Map display board tipo → rotation view */
 const TIPO_TO_VIEW: Record<string, RotationView> = {
   fleet: 'fleet_live',
-  sst: 'risk_heatmap',
+  sst: 'sst_view',
   compliance: 'compliance_summary',
   executivo: 'executive_overview',
 };
@@ -76,6 +77,7 @@ export default function LiveDisplayPreview({ tipo, displayName }: LiveDisplayPre
     switch (initialView) {
       case 'fleet_live': return <FleetLiveView data={data} />;
       case 'risk_heatmap': return <RiskHeatmapView data={data} />;
+      case 'sst_view': return <SSTView data={data} />;
       case 'compliance_summary': return <ComplianceSummaryView data={data} />;
       case 'executive_overview': return <ExecutiveOverviewView data={data} />;
       default: return <ExecutiveOverviewView data={data} />;
