@@ -206,6 +206,24 @@ export type {
   TenantAdmissionMetrics,
 } from './admission-dashboard.engine';
 
+// ── Auditoria Completa ──
+export {
+  recordAuditEntry,
+  recordWorkflowEvent,
+  recordStepTransition,
+  queryAuditLog,
+  getWorkflowTimeline,
+  getUserDecisions,
+  resetAuditLog,
+} from './hiring-audit.engine';
+export type {
+  AuditDecision,
+  HiringAuditEntry,
+  CreateAuditEntryDTO,
+  AuditQueryFilters,
+  AuditTimeline,
+} from './hiring-audit.engine';
+
 // ── Events ──
 export {
   onHiringEvent,
