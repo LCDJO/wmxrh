@@ -29,6 +29,7 @@ import { TreinamentosNrTab } from '@/components/employee/TreinamentosNrTab';
 import { CorrectiveActionsTab } from '@/components/employee/CorrectiveActionsTab';
 import { EpisTab } from '@/components/employee/EpisTab';
 import { useToast } from '@/hooks/use-toast';
+import { FichaTrabalhadorTab } from '@/components/employee/FichaTrabalhadorTab';
 
 // ── Labels ──
 
@@ -267,6 +268,7 @@ export default function EmployeeDetail() {
               <TabsTrigger value="timeline" className="gap-1.5 text-xs"><Clock className="h-3.5 w-3.5" />Timeline</TabsTrigger>
               <TabsTrigger value="corrective_actions" className="gap-1.5 text-xs"><ShieldAlert className="h-3.5 w-3.5" />Ações Corretivas</TabsTrigger>
               <TabsTrigger value="epis" className="gap-1.5 text-xs"><HardHat className="h-3.5 w-3.5" />EPIs</TabsTrigger>
+              <TabsTrigger value="ficha" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" />Ficha Completa</TabsTrigger>
             </TabsList>
 
             {/* ── TAB: Dados Trabalhistas ── */}
@@ -707,6 +709,15 @@ export default function EmployeeDetail() {
             <TabsContent value="epis">
               {tenantId && id ? (
                 <EpisTab employeeId={id} tenantId={tenantId} />
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">Dados não disponíveis.</p>
+              )}
+            </TabsContent>
+
+            {/* ── TAB: Ficha Completa do Trabalhador ── */}
+            <TabsContent value="ficha">
+              {tenantId && id ? (
+                <FichaTrabalhadorTab employeeId={id} tenantId={tenantId} canEdit={canManageEmployees} />
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">Dados não disponíveis.</p>
               )}

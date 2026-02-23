@@ -3255,6 +3255,78 @@ export type Database = {
           },
         ]
       }
+      employee_addresses: {
+        Row: {
+          address_type: string
+          bairro: string | null
+          cep: string | null
+          cidade: string
+          complemento: string | null
+          created_at: string
+          deleted_at: string | null
+          employee_id: string
+          id: string
+          is_primary: boolean
+          logradouro: string
+          numero: string | null
+          pais: string
+          tenant_id: string
+          uf: string
+          updated_at: string
+        }
+        Insert: {
+          address_type?: string
+          bairro?: string | null
+          cep?: string | null
+          cidade: string
+          complemento?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          employee_id: string
+          id?: string
+          is_primary?: boolean
+          logradouro: string
+          numero?: string | null
+          pais?: string
+          tenant_id: string
+          uf: string
+          updated_at?: string
+        }
+        Update: {
+          address_type?: string
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string
+          complemento?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          employee_id?: string
+          id?: string
+          is_primary?: boolean
+          logradouro?: string
+          numero?: string | null
+          pais?: string
+          tenant_id?: string
+          uf?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_addresses_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_addresses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_agreements: {
         Row: {
           cancelled_at: string | null
@@ -3480,6 +3552,278 @@ export type Database = {
           },
           {
             foreignKeyName: "employee_benefits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_contracts: {
+        Row: {
+          admission_date: string
+          cbo_code: string | null
+          collective_agreement_id: string | null
+          company_id: string | null
+          contract_end_date: string | null
+          contract_type: Database["public"]["Enums"]["contract_type"]
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          employee_id: string
+          end_reason: string | null
+          ended_at: string | null
+          esocial_category:
+            | Database["public"]["Enums"]["esocial_category"]
+            | null
+          esocial_matricula: string | null
+          experience_end_date: string | null
+          fgts_regime: Database["public"]["Enums"]["fgts_regime"]
+          id: string
+          is_current: boolean
+          is_night_shift: boolean
+          job_function: string | null
+          shift_description: string | null
+          started_at: string
+          tenant_id: string
+          union_code: string | null
+          union_name: string | null
+          updated_at: string
+          weekly_hours: number
+          work_regime: Database["public"]["Enums"]["work_regime"]
+        }
+        Insert: {
+          admission_date: string
+          cbo_code?: string | null
+          collective_agreement_id?: string | null
+          company_id?: string | null
+          contract_end_date?: string | null
+          contract_type?: Database["public"]["Enums"]["contract_type"]
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id: string
+          end_reason?: string | null
+          ended_at?: string | null
+          esocial_category?:
+            | Database["public"]["Enums"]["esocial_category"]
+            | null
+          esocial_matricula?: string | null
+          experience_end_date?: string | null
+          fgts_regime?: Database["public"]["Enums"]["fgts_regime"]
+          id?: string
+          is_current?: boolean
+          is_night_shift?: boolean
+          job_function?: string | null
+          shift_description?: string | null
+          started_at: string
+          tenant_id: string
+          union_code?: string | null
+          union_name?: string | null
+          updated_at?: string
+          weekly_hours?: number
+          work_regime?: Database["public"]["Enums"]["work_regime"]
+        }
+        Update: {
+          admission_date?: string
+          cbo_code?: string | null
+          collective_agreement_id?: string | null
+          company_id?: string | null
+          contract_end_date?: string | null
+          contract_type?: Database["public"]["Enums"]["contract_type"]
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id?: string
+          end_reason?: string | null
+          ended_at?: string | null
+          esocial_category?:
+            | Database["public"]["Enums"]["esocial_category"]
+            | null
+          esocial_matricula?: string | null
+          experience_end_date?: string | null
+          fgts_regime?: Database["public"]["Enums"]["fgts_regime"]
+          id?: string
+          is_current?: boolean
+          is_night_shift?: boolean
+          job_function?: string | null
+          shift_description?: string | null
+          started_at?: string
+          tenant_id?: string
+          union_code?: string | null
+          union_name?: string | null
+          updated_at?: string
+          weekly_hours?: number
+          work_regime?: Database["public"]["Enums"]["work_regime"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_contracts_collective_agreement_id_fkey"
+            columns: ["collective_agreement_id"]
+            isOneToOne: false
+            referencedRelation: "collective_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_contracts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_contracts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_contracts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_dependents: {
+        Row: {
+          birth_date: string | null
+          cpf: string | null
+          created_at: string
+          deleted_at: string | null
+          employee_id: string
+          end_date: string | null
+          has_disability: boolean
+          id: string
+          is_benefit_dependent: boolean
+          is_ir_dependent: boolean
+          name: string
+          relationship: Database["public"]["Enums"]["employee_dependent_type"]
+          start_date: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          cpf?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          employee_id: string
+          end_date?: string | null
+          has_disability?: boolean
+          id?: string
+          is_benefit_dependent?: boolean
+          is_ir_dependent?: boolean
+          name: string
+          relationship: Database["public"]["Enums"]["employee_dependent_type"]
+          start_date?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          cpf?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          employee_id?: string
+          end_date?: string | null
+          has_disability?: boolean
+          id?: string
+          is_benefit_dependent?: boolean
+          is_ir_dependent?: boolean
+          name?: string
+          relationship?: Database["public"]["Enums"]["employee_dependent_type"]
+          start_date?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_dependents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_dependents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_documents: {
+        Row: {
+          category: string | null
+          created_at: string
+          deleted_at: string | null
+          document_number: string
+          document_type: Database["public"]["Enums"]["employee_document_type"]
+          employee_id: string
+          expiry_date: string | null
+          id: string
+          issue_date: string | null
+          issuing_authority: string | null
+          issuing_state: string | null
+          metadata: Json | null
+          section: string | null
+          series: string | null
+          tenant_id: string
+          updated_at: string
+          zone: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          document_number: string
+          document_type: Database["public"]["Enums"]["employee_document_type"]
+          employee_id: string
+          expiry_date?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_authority?: string | null
+          issuing_state?: string | null
+          metadata?: Json | null
+          section?: string | null
+          series?: string | null
+          tenant_id: string
+          updated_at?: string
+          zone?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          document_number?: string
+          document_type?: Database["public"]["Enums"]["employee_document_type"]
+          employee_id?: string
+          expiry_date?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_authority?: string | null
+          issuing_state?: string | null
+          metadata?: Json | null
+          section?: string | null
+          series?: string | null
+          tenant_id?: string
+          updated_at?: string
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_documents_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -14757,9 +15101,36 @@ export type Database = {
       benefit_type: "va" | "vr" | "vt" | "health" | "dental" | "cesta" | "flex"
       compliance_rule_severity: "info" | "warning" | "critical"
       compliance_rule_status: "active" | "disabled" | "archived"
+      contract_type:
+        | "clt_indeterminado"
+        | "clt_determinado"
+        | "clt_intermitente"
+        | "clt_temporario"
+        | "clt_aprendiz"
+        | "estagio"
+        | "autonomo"
       display_board_tipo: "fleet" | "sst" | "compliance" | "executivo"
       display_session_status: "pending" | "active" | "expired"
       display_status: "active" | "paused" | "disconnected" | "offline"
+      employee_dependent_type:
+        | "conjuge"
+        | "filho"
+        | "enteado"
+        | "pai_mae"
+        | "tutelado"
+        | "outros"
+      employee_document_type:
+        | "rg"
+        | "ctps"
+        | "pis_pasep"
+        | "titulo_eleitor"
+        | "cnh"
+        | "certidao_nascimento"
+        | "certidao_casamento"
+        | "reservista"
+        | "passaporte"
+        | "crnm"
+        | "outros"
       employee_event_type:
         | "company_transfer"
         | "position_change"
@@ -14773,6 +15144,43 @@ export type Database = {
         | "additional_added"
         | "job_changed"
       employee_status: "active" | "inactive" | "on_leave"
+      esocial_category:
+        | "101"
+        | "102"
+        | "103"
+        | "104"
+        | "105"
+        | "106"
+        | "107"
+        | "108"
+        | "111"
+        | "201"
+        | "202"
+        | "301"
+        | "302"
+        | "303"
+        | "304"
+        | "305"
+        | "306"
+        | "401"
+        | "410"
+        | "501"
+        | "701"
+        | "711"
+        | "712"
+        | "721"
+        | "722"
+        | "723"
+        | "731"
+        | "734"
+        | "738"
+        | "741"
+        | "751"
+        | "761"
+        | "771"
+        | "781"
+        | "901"
+        | "902"
       esocial_event_category:
         | "tabelas"
         | "nao_periodicos"
@@ -14794,6 +15202,7 @@ export type Database = {
         | "demissional"
         | "mudanca_funcao"
         | "retorno_trabalho"
+      fgts_regime: "optante" | "nao_optante" | "retroativo"
       health_program_type: "pcmso" | "pgr" | "ltcat" | "ppra"
       labor_rule_calc_type:
         | "percentage"
@@ -14912,6 +15321,13 @@ export type Database = {
         | "rh"
         | "gestor"
         | "financeiro"
+      work_regime:
+        | "clt"
+        | "estatutario"
+        | "temporario"
+        | "avulso"
+        | "cooperado"
+        | "estagiario"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -15052,9 +15468,39 @@ export const Constants = {
       benefit_type: ["va", "vr", "vt", "health", "dental", "cesta", "flex"],
       compliance_rule_severity: ["info", "warning", "critical"],
       compliance_rule_status: ["active", "disabled", "archived"],
+      contract_type: [
+        "clt_indeterminado",
+        "clt_determinado",
+        "clt_intermitente",
+        "clt_temporario",
+        "clt_aprendiz",
+        "estagio",
+        "autonomo",
+      ],
       display_board_tipo: ["fleet", "sst", "compliance", "executivo"],
       display_session_status: ["pending", "active", "expired"],
       display_status: ["active", "paused", "disconnected", "offline"],
+      employee_dependent_type: [
+        "conjuge",
+        "filho",
+        "enteado",
+        "pai_mae",
+        "tutelado",
+        "outros",
+      ],
+      employee_document_type: [
+        "rg",
+        "ctps",
+        "pis_pasep",
+        "titulo_eleitor",
+        "cnh",
+        "certidao_nascimento",
+        "certidao_casamento",
+        "reservista",
+        "passaporte",
+        "crnm",
+        "outros",
+      ],
       employee_event_type: [
         "company_transfer",
         "position_change",
@@ -15069,6 +15515,44 @@ export const Constants = {
         "job_changed",
       ],
       employee_status: ["active", "inactive", "on_leave"],
+      esocial_category: [
+        "101",
+        "102",
+        "103",
+        "104",
+        "105",
+        "106",
+        "107",
+        "108",
+        "111",
+        "201",
+        "202",
+        "301",
+        "302",
+        "303",
+        "304",
+        "305",
+        "306",
+        "401",
+        "410",
+        "501",
+        "701",
+        "711",
+        "712",
+        "721",
+        "722",
+        "723",
+        "731",
+        "734",
+        "738",
+        "741",
+        "751",
+        "761",
+        "771",
+        "781",
+        "901",
+        "902",
+      ],
       esocial_event_category: [
         "tabelas",
         "nao_periodicos",
@@ -15093,6 +15577,7 @@ export const Constants = {
         "mudanca_funcao",
         "retorno_trabalho",
       ],
+      fgts_regime: ["optante", "nao_optante", "retroativo"],
       health_program_type: ["pcmso", "pgr", "ltcat", "ppra"],
       labor_rule_calc_type: [
         "percentage",
@@ -15222,6 +15707,14 @@ export const Constants = {
         "rh",
         "gestor",
         "financeiro",
+      ],
+      work_regime: [
+        "clt",
+        "estatutario",
+        "temporario",
+        "avulso",
+        "cooperado",
+        "estagiario",
       ],
     },
   },
