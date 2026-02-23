@@ -36,6 +36,7 @@ import OccupationalCompliance from '@/pages/OccupationalCompliance';
 import NrComplianceDashboard from '@/pages/NrComplianceDashboard';
 import SafetyAutomation from '@/pages/SafetyAutomation';
 import LegalIntelligenceDashboard from '@/pages/LegalIntelligenceDashboard';
+import AgreementComplianceDashboard from '@/pages/AgreementComplianceDashboard';
 import EsocialGovernanceDashboard from '@/pages/EsocialGovernanceDashboard';
 import FleetDashboard from '@/pages/FleetDashboard';
 import FleetLiveView from '@/pages/FleetLiveView';
@@ -96,6 +97,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/legal-dashboard', element: pr('legal_dashboard', <LegalDashboard />) },
       { path: '/regulatory-dashboard', element: pr('legal_dashboard', <RegulatoryDashboard />) },
       { path: '/legal-intelligence', element: pr('legal_dashboard', <LegalIntelligenceDashboard />) },
+      { path: '/agreement-compliance', element: pr('legal_dashboard', <AgreementComplianceDashboard />) },
       // ── eSocial ──
       { path: '/esocial', element: pr('esocial', <ESocialDashboard />) },
       { path: '/esocial-governance', element: pr('esocial', <EsocialGovernanceDashboard />) },
