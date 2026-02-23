@@ -18,7 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Shield, Mail, Lock, ArrowRight, Loader2, KeyRound, Building2, Crown, User, Phone, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 type LoginIntent = 'platform' | 'tenant' | 'both';
 
@@ -49,6 +49,8 @@ export default function Auth() {
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectAfterLogin = searchParams.get('redirect');
 
   /**
    * Detect login intent: PlatformUser, TenantUser, or Both.
@@ -102,12 +104,9 @@ export default function Auth() {
    * Honors ?redirect= param from URL (e.g. from display pairing QR code flow).
    */
   const routeByIntent = (intent: DetectedIntent) => {
-    const params = new URLSearchParams(window.location.search);
-    const redirectTo = params.get('redirect');
-
     // If there's an explicit redirect, go there directly after auth
-    if (redirectTo && redirectTo.startsWith('/')) {
-      navigate(redirectTo, { replace: true });
+    if (redirectAfterLogin && redirectAfterLogin.startsWith('/')) {
+      navigate(redirectAfterLogin, { replace: true });
       return;
     }
 
@@ -137,18 +136,14 @@ export default function Auth() {
   const handleSelectWorkspace = (choice: 'platform' | 'tenant', tenantId?: string) => {
     setSelectorOpen(false);
 
-    // Honor redirect param if present
-    const params = new URLSearchParams(window.location.search);
-    const redirectTo = params.get('redirect');
-
     if (choice === 'platform') {
       platformEvents.userLoggedIn('', email);
-      navigate(redirectTo && redirectTo.startsWith('/') ? redirectTo : '/platform/dashboard', { replace: true });
+      navigate(redirectAfterLogin && redirectAfterLogin.startsWith('/') ? redirectAfterLogin : '/platform/dashboard', { replace: true });
     } else {
       if (tenantId) {
         localStorage.setItem('currentTenantId', tenantId);
       }
-      navigate(redirectTo && redirectTo.startsWith('/') ? redirectTo : '/', { replace: true });
+      navigate(redirectAfterLogin && redirectAfterLogin.startsWith('/') ? redirectAfterLogin : '/', { replace: true });
     }
   };
 
