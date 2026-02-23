@@ -15033,6 +15033,39 @@ export type Database = {
           },
         ]
       }
+      validation_rate_limits: {
+        Row: {
+          attempt_count: number
+          blocked_until: string | null
+          created_at: string
+          failed_count: number
+          id: string
+          ip_address: string
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          attempt_count?: number
+          blocked_until?: string | null
+          created_at?: string
+          failed_count?: number
+          id?: string
+          ip_address: string
+          updated_at?: string
+          window_start?: string
+        }
+        Update: {
+          attempt_count?: number
+          blocked_until?: string | null
+          created_at?: string
+          failed_count?: number
+          id?: string
+          ip_address?: string
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       versioning_releases: {
         Row: {
           changelog_entries: string[]
