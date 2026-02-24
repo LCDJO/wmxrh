@@ -7659,6 +7659,59 @@ export type Database = {
           },
         ]
       }
+      footer_configs: {
+        Row: {
+          compliance_items: Json
+          created_at: string
+          custom_bottom_text: string | null
+          id: string
+          show_bottom_text: boolean
+          show_compliance: boolean
+          show_institutional: boolean
+          show_support: boolean
+          show_technical: boolean
+          support_links: Json
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          compliance_items?: Json
+          created_at?: string
+          custom_bottom_text?: string | null
+          id?: string
+          show_bottom_text?: boolean
+          show_compliance?: boolean
+          show_institutional?: boolean
+          show_support?: boolean
+          show_technical?: boolean
+          support_links?: Json
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          compliance_items?: Json
+          created_at?: string
+          custom_bottom_text?: string | null
+          id?: string
+          show_bottom_text?: boolean
+          show_compliance?: boolean
+          show_institutional?: boolean
+          show_support?: boolean
+          show_technical?: boolean
+          support_links?: Json
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "footer_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gamification_leaderboard: {
         Row: {
           current_tier: string

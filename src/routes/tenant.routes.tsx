@@ -68,6 +68,7 @@ import TerminatedEmployees from '@/pages/TerminatedEmployees';
 import ReferenceLetters from '@/pages/ReferenceLetters';
 import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
 import LgpdCompliance from '@/pages/LgpdCompliance';
+import FooterSettings from '@/pages/FooterSettings';
 
 const TenantOnboarding = lazy(() => import('@/pages/TenantOnboarding'));
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
@@ -153,6 +154,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/settings/users', element: pr('iam_users', <SettingsUsers />) },
       { path: '/settings/roles', element: pr('iam_roles', <SettingsRoles />) },
       { path: '/settings/webhooks', element: pr('iam_users', <WebhookSettings />) },
+      { path: '/settings/footer', element: pr('iam_users', <FooterSettings />) },
       // ── Referral ──
       { path: '/referral', element: pr('dashboard', <ReferralPage />) },
       // ── Support ──
