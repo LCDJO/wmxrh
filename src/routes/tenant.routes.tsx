@@ -65,6 +65,7 @@ import SupportWiki from '@/pages/support/SupportWiki';
 import SupportLiveChat from '@/pages/support/SupportLiveChat';
 import OffboardingDashboard from '@/pages/OffboardingDashboard';
 import TerminatedEmployees from '@/pages/TerminatedEmployees';
+import ReferenceLetters from '@/pages/ReferenceLetters';
 import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
 
 const TenantOnboarding = lazy(() => import('@/pages/TenantOnboarding'));
@@ -86,6 +87,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/employees/:id', element: pr('employees', <EmployeeDetail />) },
       { path: '/offboarding', element: pr('employees', <OffboardingDashboard />) },
       { path: '/terminated-employees', element: pr('employees', <TerminatedEmployees />) },
+      { path: '/reference-letters', element: pr('employees', <ReferenceLetters />) },
       { path: '/companies', element: pr('companies', <Companies />) },
       { path: '/groups', element: pr('groups', <CompanyGroups />) },
       { path: '/positions', element: pr('positions', <Positions />) },
