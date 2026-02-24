@@ -7,20 +7,22 @@
  */
 
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryScope } from '@/domains/hooks';
 import {
   FileText, Clock, CheckCircle2, Search, Users,
-  AlertTriangle, Filter, XCircle, ExternalLink, Plus,
+  AlertTriangle, Filter, XCircle, ExternalLink, Plus, Pencil, Trash2,
 } from 'lucide-react';
 import { CreateTemplateDialog } from '@/components/agreements/CreateTemplateDialog';
+import { EditTemplateDialog } from '@/components/agreements/EditTemplateDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { StatsCard } from '@/components/shared/StatsCard';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,11 +32,16 @@ interface TemplateRow {
   id: string;
   name: string;
   category: string;
+  escopo: string;
   is_mandatory: boolean;
   is_active: boolean;
   versao: number;
   description: string | null;
   created_at: string;
+  exige_assinatura: boolean;
+  expiry_days: number | null;
+  renovacao_obrigatoria: boolean;
+  conteudo_html: string;
 }
 
 interface PendingAgreementRow {
@@ -66,11 +73,14 @@ const statusLabels: Record<string, { label: string; className: string }> = {
 export default function AgreementManagement() {
   const qs = useQueryScope();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [templateSearch, setTemplateSearch] = useState('');
   const [templateCategory, setTemplateCategory] = useState('all');
   const [pendingSearch, setPendingSearch] = useState('');
   const [pendingStatus, setPendingStatus] = useState('all');
   const [createOpen, setCreateOpen] = useState(false);
+  const [editTemplate, setEditTemplate] = useState<TemplateRow | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // ── Templates query ──
   const { data: templates = [], isLoading: loadingTemplates } = useQuery({
@@ -78,7 +88,7 @@ export default function AgreementManagement() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agreement_templates')
-        .select('id, name, category, is_mandatory, is_active, versao, description, created_at')
+        .select('id, name, category, escopo, is_mandatory, is_active, versao, description, created_at, exige_assinatura, expiry_days, renovacao_obrigatoria, conteudo_html')
         .eq('tenant_id', qs!.tenantId)
         .is('deleted_at', null)
         .order('name');
@@ -145,6 +155,23 @@ export default function AgreementManagement() {
       return true;
     });
   }, [allAgreements, pendingSearch, pendingStatus]);
+
+  const handleDeleteTemplate = async () => {
+    if (!deleteId) return;
+    try {
+      const { error } = await supabase
+        .from('agreement_templates')
+        .update({ deleted_at: new Date().toISOString(), is_active: false })
+        .eq('id', deleteId);
+      if (error) throw error;
+      toast({ title: 'Termo removido com sucesso!' });
+      queryClient.invalidateQueries({ queryKey: ['agreement_templates_admin'] });
+    } catch (err: any) {
+      toast({ title: 'Erro ao remover', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleteId(null);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -213,6 +240,7 @@ export default function AgreementManagement() {
                       <TableHead className="text-center">Versão</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                       <TableHead>Criado em</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -246,6 +274,16 @@ export default function AgreementManagement() {
                         </TableCell>
                         <TableCell>
                           <span className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString('pt-BR')}</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTemplate(t)}>
+                              <Pencil className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(t.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -347,6 +385,29 @@ export default function AgreementManagement() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <EditTemplateDialog
+        open={!!editTemplate}
+        onOpenChange={(v) => { if (!v) setEditTemplate(null); }}
+        template={editTemplate}
+      />
+
+      <AlertDialog open={!!deleteId} onOpenChange={(v) => { if (!v) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              O termo será desativado e removido da lista. Termos já assinados por colaboradores permanecerão no histórico.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTemplate} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirmar Exclusão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
