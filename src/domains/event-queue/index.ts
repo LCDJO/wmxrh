@@ -9,6 +9,7 @@ export {
   CONSUMER_GROUPS,
   EVENT_TYPE_DOMAIN_MAP,
   buildEventTopic,
+  buildFleetSubTopic,
   parseEventTopic,
   createPublishPayload,
 } from './types';

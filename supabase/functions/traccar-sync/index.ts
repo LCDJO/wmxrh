@@ -271,9 +271,10 @@ async function syncTenant(
   // ── 7. Dispatch to event queue (non-blocking) ──
   if (newEvents.length > 0) {
     try {
-      const queueEvents = newEvents.map(e => ({
+      // fleet.events topic
+      const trackingQueue = newEvents.map(e => ({
         event_type: 'TrackingEvent',
-        domain: 'fleet',
+        domain: 'fleet.events',
         payload: {
           device_id: e.device_id,
           latitude: e.latitude,
@@ -288,10 +289,29 @@ async function syncTenant(
         source: 'traccar-polling',
       }));
 
+      // fleet.behavior topic
+      const behaviorQueue = behaviorEvents.map(b => ({
+        event_type: 'BehaviorEvent',
+        domain: 'fleet.behavior',
+        payload: {
+          device_id: b.device_id,
+          event_type: b.event_type,
+          severity: b.severity,
+          speed_kmh: (b.details as Record<string, unknown>).speed_kmh,
+          speed_limit_kmh: (b.details as Record<string, unknown>).limit_kmh,
+          description: `Excesso: ${(b.details as Record<string, unknown>).speed_kmh} km/h`,
+        },
+        priority: b.severity === 'critical' ? 'critical' : 'normal',
+        ttl_seconds: 7200,
+        source: 'traccar-polling',
+      }));
+
+      const allEvents = [...trackingQueue, ...behaviorQueue];
+
       fetch(`${supabaseUrl}/functions/v1/tenant-event-queue?action=publish&tenant_id=${tenantId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
-        body: JSON.stringify(queueEvents),
+        body: JSON.stringify(allEvents),
       }).catch(() => {});
     } catch {}
   }

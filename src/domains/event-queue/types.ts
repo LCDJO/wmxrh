@@ -23,6 +23,9 @@ export type EventType = typeof EVENT_TYPES[keyof typeof EVENT_TYPES];
 
 export const EVENT_DOMAINS = {
   FLEET: 'fleet',
+  FLEET_EVENTS: 'fleet.events',
+  FLEET_BEHAVIOR: 'fleet.behavior',
+  FLEET_INCIDENTS: 'fleet.incidents',
   COMPLIANCE: 'compliance',
   RISK: 'risk',
   WORKFORCE: 'workforce',
@@ -156,18 +159,25 @@ export function buildEventTopic(tenantId: string, domain: EventDomain): string {
   return `tenant.${tenantId}.${domain}`;
 }
 
-export function parseEventTopic(topic: string): { tenantId: string; domain: EventDomain } | null {
+export function buildFleetSubTopic(tenantId: string, sub: 'events' | 'behavior' | 'incidents'): string {
+  return `tenant.${tenantId}.fleet.${sub}`;
+}
+
+export function parseEventTopic(topic: string): { tenantId: string; domain: EventDomain; subDomain?: string } | null {
   const parts = topic.split('.');
-  if (parts.length !== 3 || parts[0] !== 'tenant') return null;
+  if (parts.length < 3 || parts[0] !== 'tenant') return null;
+  if (parts.length === 4) {
+    return { tenantId: parts[1], domain: `${parts[2]}.${parts[3]}` as EventDomain, subDomain: parts[3] };
+  }
   return { tenantId: parts[1], domain: parts[2] as EventDomain };
 }
 
 // ── Event Type → Domain Mapping ──
 
 export const EVENT_TYPE_DOMAIN_MAP: Record<EventType, EventDomain> = {
-  TrackingEvent: 'fleet',
-  BehaviorEvent: 'fleet',
-  ComplianceIncident: 'compliance',
+  TrackingEvent: 'fleet.events',
+  BehaviorEvent: 'fleet.behavior',
+  ComplianceIncident: 'fleet.incidents',
   EmployeeOperationBlocked: 'compliance',
   RiskScoreUpdated: 'risk',
   WarningIssued: 'compliance',
