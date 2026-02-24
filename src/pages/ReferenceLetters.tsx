@@ -19,6 +19,7 @@ import {
   STATUS_LABELS,
   STATUS_COLORS,
   LETTER_TEMPLATES,
+  referenceLetterDocumentService,
 } from '@/domains/reference-letter';
 import type { ReferenceLetter, ReferenceLetterStatus } from '@/domains/reference-letter';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +41,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   FileText, Plus, Loader2, Eye, PenLine, XCircle,
   CheckCircle2, Clock, Shield, Search, UserCheck,
+  Download, QrCode, Link2, Hash,
 } from 'lucide-react';
 
 export default function ReferenceLetters() {
@@ -81,6 +83,21 @@ export default function ReferenceLetters() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reference_letters'] });
       toast.success('Carta cancelada');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const generateDocMutation = useMutation({
+    mutationFn: async (letter: ReferenceLetter) => {
+      const result = await referenceLetterDocumentService.generate(letter, user!.id);
+      if (!result.success) throw new Error(result.error || 'Falha ao gerar documento');
+      return result;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['reference_letters'] });
+      toast.success('Documento gerado com sucesso!', {
+        description: `Hash: ${result.hash_sha256?.slice(0, 16)}... | Blockchain: ${result.blockchain_status}`,
+      });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -195,6 +212,34 @@ export default function ReferenceLetters() {
                             <PenLine className="h-4 w-4" />
                           </Button>
                         )}
+                        {letter.status === 'signed' && (
+                          <Button
+                            variant="ghost" size="icon" className="h-7 w-7 text-primary"
+                            onClick={() => generateDocMutation.mutate(letter)}
+                            disabled={generateDocMutation.isPending}
+                            title="Gerar Documento Final"
+                          >
+                            {generateDocMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                          </Button>
+                        )}
+                        {letter.status === 'delivered' && (letter.metadata as any)?.document?.storage_path && (
+                          <Button
+                            variant="ghost" size="icon" className="h-7 w-7 text-chart-2"
+                            onClick={async () => {
+                              const blob = await referenceLetterDocumentService.downloadPdf((letter.metadata as any).document.storage_path);
+                              if (blob) {
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a'); a.href = url; a.download = `carta-referencia-${letter.id.slice(0, 8)}.pdf`; a.click();
+                                URL.revokeObjectURL(url);
+                              } else {
+                                toast.error('Erro ao baixar documento');
+                              }
+                            }}
+                            title="Baixar PDF"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        )}
                         {!['signed', 'delivered', 'cancelled', 'eligibility_denied'].includes(letter.status) && (
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => cancelMutation.mutate(letter.id)}>
                             <XCircle className="h-4 w-4" />
@@ -295,6 +340,70 @@ export default function ReferenceLetters() {
                   )}
                 </div>
               </div>
+
+              {/* Document Info (after generation) */}
+              {(selectedLetter.metadata as any)?.document && (
+                <div className="mb-4 p-3 rounded-md border border-primary/20 bg-primary/5 space-y-2">
+                  <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                    <Shield className="h-3.5 w-3.5 text-primary" /> Documento Gerado
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Hash className="h-3 w-3" />
+                      <span className="truncate font-mono">
+                        {(selectedLetter.metadata as any).document.hash_sha256?.slice(0, 24)}...
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <QrCode className="h-3 w-3" />
+                      <a
+                        href={(selectedLetter.metadata as any).document.validation_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline truncate"
+                      >
+                        Validação Pública
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Link2 className="h-3 w-3" />
+                      <span>
+                        Blockchain: <Badge variant="outline" className="text-[9px] ml-1">
+                          {(selectedLetter.metadata as any).document.blockchain_status}
+                        </Badge>
+                      </span>
+                    </div>
+                    {(selectedLetter.metadata as any).document.transaction_hash && (
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <CheckCircle2 className="h-3 w-3 text-chart-2" />
+                        <span className="font-mono truncate">
+                          Tx: {(selectedLetter.metadata as any).document.transaction_hash.slice(0, 16)}...
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    Gerado em {format(parseISO((selectedLetter.metadata as any).document.generated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </div>
+                </div>
+              )}
+
+              {/* Generate button (if signed but not yet delivered) */}
+              {selectedLetter.status === 'signed' && (
+                <div className="mb-4 flex justify-center">
+                  <Button
+                    onClick={() => {
+                      generateDocMutation.mutate(selectedLetter);
+                      setSelectedLetter(null);
+                    }}
+                    disabled={generateDocMutation.isPending}
+                    className="gap-2"
+                  >
+                    {generateDocMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    Gerar Documento Final (PDF + QR + Blockchain)
+                  </Button>
+                </div>
+              )}
 
               <Separator className="my-4" />
 
