@@ -1,11 +1,7 @@
 /**
  * TenantTraccarSettings — Tenant-level Traccar integration page
  * 
- * Allows tenant admins to:
- * - Test connection to Traccar server
- * - Sync and view devices from Traccar
- * - View tracking events
- * - Configure speed policies and enforcement zones
+ * Tabs: Dispositivos, Eventos, Políticas, Configurações
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
@@ -13,10 +9,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { MapPin, Loader2, RefreshCw, Satellite, Shield, Activity, CheckCircle2, WifiOff, Plug, ArrowDownToLine } from 'lucide-react';
+import {
+  MapPin, Loader2, RefreshCw, Satellite, Shield, Activity,
+  CheckCircle2, WifiOff, Plug, ArrowDownToLine, Settings, Save, Eye, EyeOff,
+} from 'lucide-react';
 
 interface TraccarDevice {
   id: number;
@@ -35,6 +36,12 @@ interface TraccarServerInfo {
   [key: string]: unknown;
 }
 
+function maskToken(token: string | null | undefined): string {
+  if (!token) return '';
+  if (token.length <= 6) return '••••••';
+  return `${token.slice(0, 2)}${'•'.repeat(Math.min(token.length - 4, 20))}${token.slice(-2)}`;
+}
+
 export default function TenantTraccarSettings() {
   const { currentTenant } = useTenant();
   const tenantId = currentTenant?.id ?? null;
@@ -46,30 +53,50 @@ export default function TenantTraccarSettings() {
   const [devices, setDevices] = useState<TraccarDevice[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(false);
 
+  // Settings tab state
+  const [configUrl, setConfigUrl] = useState('');
+  const [configToken, setConfigToken] = useState('');
+  const [savedUrl, setSavedUrl] = useState('');
+  const [savedToken, setSavedToken] = useState('');
+  const [showToken, setShowToken] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+
   const fetchEvents = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
-
     const { data: evts } = await supabase
       .from('raw_tracking_events')
       .select('*')
       .eq('tenant_id', tenantId)
       .order('event_timestamp', { ascending: false })
       .limit(20);
-
     if (evts) setEvents(evts);
     setLoading(false);
   }, [tenantId]);
 
-  useEffect(() => { fetchEvents(); }, [fetchEvents]);
+  // Load saved config from platform_settings
+  const fetchConfig = useCallback(async () => {
+    const { data } = await supabase
+      .from('platform_settings')
+      .select('*')
+      .eq('key', 'traccar_config')
+      .maybeSingle();
+    if (data?.value && typeof data.value === 'object') {
+      const val = data.value as Record<string, any>;
+      setSavedUrl(val.api_url || '');
+      setSavedToken(val.api_token || '');
+      setConfigUrl(val.api_url || '');
+      setConfigToken(''); // never pre-fill token for security
+    }
+  }, []);
+
+  useEffect(() => { fetchEvents(); fetchConfig(); }, [fetchEvents, fetchConfig]);
 
   const testConnection = async () => {
     setTestingConnection(true);
     try {
       const { data, error } = await supabase.functions.invoke('traccar-proxy', {});
-
       if (error) throw error;
-
       if (data?.success) {
         setConnectionStatus('connected');
         setServerInfo(data.data as TraccarServerInfo);
@@ -90,9 +117,7 @@ export default function TenantTraccarSettings() {
     setLoadingDevices(true);
     try {
       const { data: devData, error: devError } = await supabase.functions.invoke('traccar-proxy?action=devices', {});
-
       if (devError) throw devError;
-
       if (devData?.success && Array.isArray(devData.data)) {
         setDevices(devData.data);
         toast.success(`${devData.data.length} dispositivo(s) encontrado(s)`);
@@ -103,6 +128,58 @@ export default function TenantTraccarSettings() {
       toast.error(`Erro: ${err.message}`);
     } finally {
       setLoadingDevices(false);
+    }
+  };
+
+  const handleSaveConfig = async () => {
+    if (!configUrl) {
+      toast.error('URL do servidor é obrigatória.');
+      return;
+    }
+    setSavingConfig(true);
+    try {
+      const { data: existing } = await supabase
+        .from('platform_settings')
+        .select('id, value')
+        .eq('key', 'traccar_config')
+        .maybeSingle();
+
+      const tokenToSave = configToken || savedToken; // keep old token if not changed
+      const value = {
+        ...(existing?.value && typeof existing.value === 'object' ? existing.value : {}),
+        api_url: configUrl,
+        api_token: tokenToSave,
+        is_active: true,
+      };
+
+      if (existing) {
+        const { error } = await supabase
+          .from('platform_settings')
+          .update({ value })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('platform_settings')
+          .insert({
+            key: 'traccar_config',
+            value,
+            label: 'Traccar Integration',
+            description: 'Configuração do servidor Traccar',
+            category: 'integrations',
+          });
+        if (error) throw error;
+      }
+
+      setSavedUrl(configUrl);
+      setSavedToken(tokenToSave);
+      setConfigToken('');
+      setConnectionStatus('unknown'); // reset status after config change
+      toast.success('Configuração salva com sucesso!');
+    } catch (err: any) {
+      toast.error(`Erro ao salvar: ${err.message}`);
+    } finally {
+      setSavingConfig(false);
     }
   };
 
@@ -156,10 +233,16 @@ export default function TenantTraccarSettings() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
-            <Button onClick={testConnection} disabled={testingConnection} className="gap-2">
+            <Button onClick={testConnection} disabled={testingConnection || !savedUrl} className="gap-2">
               {testingConnection ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
               {testingConnection ? 'Testando...' : 'Testar Conexão'}
             </Button>
+
+            {!savedUrl && (
+              <p className="text-sm text-muted-foreground">
+                Configure a URL e o token na aba "Configurações" antes de testar.
+              </p>
+            )}
 
             {connectionStatus === 'connected' && serverInfo && (
               <div className="text-sm text-muted-foreground">
@@ -176,12 +259,75 @@ export default function TenantTraccarSettings() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="devices" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="settings" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="settings" className="gap-1.5 text-xs"><Settings className="h-3.5 w-3.5" /> Configurações</TabsTrigger>
           <TabsTrigger value="devices" className="gap-1.5 text-xs"><Satellite className="h-3.5 w-3.5" /> Dispositivos</TabsTrigger>
           <TabsTrigger value="events" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" /> Eventos</TabsTrigger>
           <TabsTrigger value="policies" className="gap-1.5 text-xs"><Shield className="h-3.5 w-3.5" /> Políticas</TabsTrigger>
         </TabsList>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-card-foreground">
+                <Settings className="h-5 w-5" /> Configuração do Servidor
+              </CardTitle>
+              <CardDescription>Informe a URL e o token de acesso do servidor Traccar</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* URL */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">URL do Servidor Traccar</Label>
+                <Input
+                  value={configUrl}
+                  onChange={e => setConfigUrl(e.target.value)}
+                  placeholder="https://rastreamento.exemplo.com.br"
+                />
+                {savedUrl && (
+                  <p className="text-xs text-muted-foreground">Salvo: {savedUrl}</p>
+                )}
+              </div>
+
+              {/* Token */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Token de Acesso</Label>
+                <div className="relative">
+                  <Input
+                    type={showToken ? 'text' : 'password'}
+                    value={configToken}
+                    onChange={e => setConfigToken(e.target.value)}
+                    placeholder={savedToken ? 'Deixe vazio para manter o token atual' : 'Cole o token de acesso aqui'}
+                    className="pr-10 font-mono text-xs"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                    onClick={() => setShowToken(!showToken)}
+                  >
+                    {showToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+                {savedToken && (
+                  <p className="text-xs text-muted-foreground">
+                    Token salvo: <span className="font-mono">{maskToken(savedToken)}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Save */}
+              <div className="pt-2">
+                <Button onClick={handleSaveConfig} disabled={savingConfig} className="gap-2">
+                  {savingConfig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Salvar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Devices Tab */}
         <TabsContent value="devices">
@@ -194,7 +340,7 @@ export default function TenantTraccarSettings() {
                   </CardTitle>
                   <CardDescription>Dispositivos registrados no servidor Traccar</CardDescription>
                 </div>
-                <Button onClick={syncDevices} disabled={loadingDevices} size="sm" className="gap-1.5">
+                <Button onClick={syncDevices} disabled={loadingDevices || !savedUrl} size="sm" className="gap-1.5">
                   {loadingDevices ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowDownToLine className="h-3.5 w-3.5" />}
                   Sincronizar
                 </Button>
@@ -203,7 +349,9 @@ export default function TenantTraccarSettings() {
             <CardContent>
               {devices.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  Clique em "Sincronizar" para buscar os dispositivos do servidor Traccar.
+                  {savedUrl
+                    ? 'Clique em "Sincronizar" para buscar os dispositivos do servidor Traccar.'
+                    : 'Configure a URL e o token na aba "Configurações" primeiro.'}
                 </p>
               ) : (
                 <div className="overflow-x-auto">
