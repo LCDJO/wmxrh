@@ -51,7 +51,6 @@ export const offboardingService = {
   },
 
   async create(dto: CreateOffboardingDTO) {
-    // 1. Create workflow
     const { data: wf, error: wfErr } = await supabase
       .from('offboarding_workflows')
       .insert({
@@ -60,7 +59,8 @@ export const offboardingService = {
         company_id: dto.company_id || null,
         company_group_id: dto.company_group_id || null,
         offboarding_type: dto.offboarding_type,
-        effective_date: dto.effective_date,
+        motivo: dto.motivo || null,
+        data_desligamento: dto.data_desligamento,
         last_working_day: dto.last_working_day || null,
         aviso_previo_type: dto.aviso_previo_type || 'nao_aplicavel',
         aviso_previo_days: dto.aviso_previo_days || 0,
@@ -74,7 +74,7 @@ export const offboardingService = {
       .single();
     if (wfErr) throw wfErr;
 
-    // 2. Generate checklist items
+    // Generate checklist items
     const templates = getChecklistTemplatesByType(dto.offboarding_type);
     const checklistRows = templates.map((t, idx) => ({
       tenant_id: dto.tenant_id,
@@ -95,7 +95,7 @@ export const offboardingService = {
       if (clErr) throw clErr;
     }
 
-    // 3. Audit log
+    // Audit log
     await supabase.from('offboarding_audit_log').insert({
       tenant_id: dto.tenant_id,
       workflow_id: (wf as any).id,
@@ -108,7 +108,7 @@ export const offboardingService = {
 
   async updateStatus(id: string, tenantId: string, status: OffboardingStatus, extra?: Record<string, unknown>) {
     const payload: Record<string, unknown> = { status, ...extra };
-    if (status === 'approved') payload.approved_at = new Date().toISOString();
+    if (status === 'completed') payload.approved_at = new Date().toISOString();
 
     const { data, error } = await supabase
       .from('offboarding_workflows')
@@ -130,7 +130,8 @@ export const offboardingService = {
   },
 
   async cancel(id: string, tenantId: string, reason: string) {
-    return this.updateStatus(id, tenantId, 'cancelled', { cancellation_reason: reason });
+    // Cancel sets archived status with cancellation reason
+    return this.updateStatus(id, tenantId, 'archived', { cancellation_reason: reason });
   },
 
   // ── Checklist ──
@@ -227,7 +228,7 @@ export const offboardingService = {
     const criteria: Record<string, boolean> = {
       not_justa_causa: workflow.offboarding_type !== 'justa_causa',
       has_employee_data: !!workflow.employee,
-      workflow_not_cancelled: workflow.status !== 'cancelled',
+      workflow_active: workflow.status !== 'archived',
     };
 
     const passed = Object.values(criteria).filter(Boolean).length;
