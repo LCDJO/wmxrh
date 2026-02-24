@@ -35,8 +35,9 @@ const JUSTA_CAUSA_EXTRA: ChecklistTemplate[] = [
   { category: 'documentacao', title: 'Notificar sindicato (se aplicável)', description: 'Comunicar entidade sindical quando exigido por convenção coletiva.', is_mandatory: false, is_automated: false },
 ];
 
-const ACORDO_MUTUO_EXTRA: ChecklistTemplate[] = [
-  { category: 'documentacao', title: 'Formalizar acordo mútuo', description: 'Gerar termo de acordo conforme Art. 484-A CLT com assinaturas.', is_mandatory: true, is_automated: false },
+const TERMINO_CONTRATO_EXTRA: ChecklistTemplate[] = [
+  { category: 'documentacao', title: 'Verificar data de término do contrato', description: 'Confirmar a data final do contrato de experiência ou prazo determinado.', is_mandatory: true, is_automated: false },
+  { category: 'documentacao', title: 'Emitir termo de encerramento de contrato', description: 'Gerar termo formal de encerramento por término de contrato.', is_mandatory: true, is_automated: false },
 ];
 
 const PEDIDO_DEMISSAO_EXTRA: ChecklistTemplate[] = [
@@ -49,8 +50,8 @@ export function getChecklistTemplatesByType(type: OffboardingType): ChecklistTem
     case 'justa_causa':
       items.push(...JUSTA_CAUSA_EXTRA);
       break;
-    case 'acordo_mutuo':
-      items.push(...ACORDO_MUTUO_EXTRA);
+    case 'termino_contrato':
+      items.push(...TERMINO_CONTRATO_EXTRA);
       break;
     case 'pedido_demissao':
       items.push(...PEDIDO_DEMISSAO_EXTRA);

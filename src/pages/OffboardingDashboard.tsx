@@ -31,11 +31,11 @@ import {
 // ── Status badge colors ──
 const statusBadge: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; className?: string }> = {
   draft: { variant: 'secondary' },
-  in_progress: { variant: 'default', className: 'bg-primary/80' },
-  pending_approval: { variant: 'outline', className: 'border-chart-3 text-chart-3' },
-  approved: { variant: 'default', className: 'bg-chart-2' },
+  validation: { variant: 'default', className: 'bg-primary/80' },
+  documents_pending: { variant: 'outline', className: 'border-chart-3 text-chart-3' },
+  esocial_pending: { variant: 'outline', className: 'border-chart-4 text-chart-4' },
+  archived: { variant: 'destructive' },
   completed: { variant: 'default', className: 'bg-chart-2' },
-  cancelled: { variant: 'destructive' },
 };
 
 export default function OffboardingDashboard() {
@@ -71,7 +71,7 @@ export default function OffboardingDashboard() {
   });
 
   // ── Stats ──
-  const active = workflows.filter(w => ['draft', 'in_progress', 'pending_approval'].includes(w.status));
+  const active = workflows.filter(w => ['draft', 'validation', 'documents_pending', 'esocial_pending'].includes(w.status));
   const completed = workflows.filter(w => w.status === 'completed');
 
   return (
@@ -117,8 +117,8 @@ export default function OffboardingDashboard() {
         <Card><CardContent className="pt-4 flex items-center gap-3">
           <AlertTriangle className="h-8 w-8 text-destructive/60" />
           <div>
-            <p className="text-2xl font-bold text-foreground">{workflows.filter(w => w.status === 'pending_approval').length}</p>
-            <p className="text-xs text-muted-foreground">Aguardando Aprovação</p>
+            <p className="text-2xl font-bold text-foreground">{workflows.filter(w => w.status === 'esocial_pending').length}</p>
+            <p className="text-xs text-muted-foreground">eSocial Pendente</p>
           </div>
         </CardContent></Card>
       </div>
@@ -142,7 +142,7 @@ export default function OffboardingDashboard() {
                   <TableHead>Colaborador</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Data Efetiva</TableHead>
+                  <TableHead>Data Desligamento</TableHead>
                   <TableHead>eSocial</TableHead>
                   <TableHead>Carta Ref.</TableHead>
                   <TableHead className="w-[80px]">Ações</TableHead>
@@ -156,7 +156,7 @@ export default function OffboardingDashboard() {
                       <TableCell className="font-medium">{wf.employee?.name || '—'}</TableCell>
                       <TableCell><Badge variant="outline" className="text-xs">{OFFBOARDING_TYPE_LABELS[wf.offboarding_type]}</Badge></TableCell>
                       <TableCell><Badge variant={badge.variant} className={badge.className}>{OFFBOARDING_STATUS_LABELS[wf.status]}</Badge></TableCell>
-                      <TableCell className="text-sm">{new Date(wf.effective_date).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell className="text-sm">{new Date(wf.data_desligamento).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-[10px]">
                           {wf.esocial_status === 'sent' ? '✔ Enviado' : wf.esocial_status === 'error' ? '✖ Erro' : '⏳ Pendente'}
@@ -255,7 +255,8 @@ function CreateOffboardingDialog({ open, onOpenChange, employees, tenantId, onCr
   const { toast } = useToast();
   const [employeeId, setEmployeeId] = useState('');
   const [type, setType] = useState<OffboardingType>('sem_justa_causa');
-  const [effectiveDate, setEffectiveDate] = useState('');
+  const [dataDesligamento, setDataDesligamento] = useState('');
+  const [motivo, setMotivo] = useState('');
   const [avisoType, setAvisoType] = useState<AvisoPrevioType>('nao_aplicavel');
   const [avisoDays, setAvisoDays] = useState(30);
   const [justaCausaMotivo, setJustaCausaMotivo] = useState('');
@@ -263,14 +264,15 @@ function CreateOffboardingDialog({ open, onOpenChange, employees, tenantId, onCr
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
-    if (!employeeId || !effectiveDate) return;
+    if (!employeeId || !dataDesligamento) return;
     setLoading(true);
     try {
       await offboardingService.create({
         tenant_id: tenantId,
         employee_id: employeeId,
         offboarding_type: type,
-        effective_date: effectiveDate,
+        motivo: motivo || undefined,
+        data_desligamento: dataDesligamento,
         aviso_previo_type: avisoType,
         aviso_previo_days: avisoDays,
         justa_causa_motivo: type === 'justa_causa' ? justaCausaMotivo : undefined,
@@ -278,10 +280,10 @@ function CreateOffboardingDialog({ open, onOpenChange, employees, tenantId, onCr
       });
       toast({ title: 'Processo de desligamento criado!' });
       onCreated();
-      // Reset
       setEmployeeId('');
       setType('sem_justa_causa');
-      setEffectiveDate('');
+      setDataDesligamento('');
+      setMotivo('');
       setNotes('');
     } catch {
       toast({ title: 'Erro ao criar processo', variant: 'destructive' });
@@ -320,8 +322,12 @@ function CreateOffboardingDialog({ open, onOpenChange, employees, tenantId, onCr
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Data Efetiva *</Label>
-            <Input type="date" value={effectiveDate} onChange={e => setEffectiveDate(e.target.value)} />
+            <Label>Motivo</Label>
+            <Textarea value={motivo} onChange={e => setMotivo(e.target.value)} rows={2} placeholder="Motivo do desligamento..." />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Data de Desligamento *</Label>
+            <Input type="date" value={dataDesligamento} onChange={e => setDataDesligamento(e.target.value)} />
           </div>
           {type !== 'justa_causa' && (
             <div className="grid grid-cols-2 gap-4">
@@ -344,7 +350,7 @@ function CreateOffboardingDialog({ open, onOpenChange, employees, tenantId, onCr
           )}
           {type === 'justa_causa' && (
             <div className="space-y-1.5">
-              <Label>Motivo (Art. 482 CLT) *</Label>
+              <Label>Motivo Justa Causa (Art. 482 CLT) *</Label>
               <Textarea value={justaCausaMotivo} onChange={e => setJustaCausaMotivo(e.target.value)} rows={3} placeholder="Descreva o motivo da justa causa..." />
             </div>
           )}
@@ -355,7 +361,7 @@ function CreateOffboardingDialog({ open, onOpenChange, employees, tenantId, onCr
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleCreate} disabled={loading || !employeeId || !effectiveDate}>
+          <Button onClick={handleCreate} disabled={loading || !employeeId || !dataDesligamento}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
             Iniciar Desligamento
           </Button>
@@ -406,10 +412,10 @@ function OffboardingDetailDialog({ workflow, tenantId, onClose, onCancel }: {
   };
 
   const handleAdvanceStatus = async () => {
-    const nextStatus = workflow.status === 'draft' ? 'in_progress'
-      : workflow.status === 'in_progress' ? 'pending_approval'
-      : workflow.status === 'pending_approval' ? 'approved'
-      : workflow.status === 'approved' ? 'completed'
+    const nextStatus = workflow.status === 'draft' ? 'validation'
+      : workflow.status === 'validation' ? 'documents_pending'
+      : workflow.status === 'documents_pending' ? 'esocial_pending'
+      : workflow.status === 'esocial_pending' ? 'completed'
       : null;
     if (!nextStatus) return;
     try {
@@ -438,9 +444,12 @@ function OffboardingDetailDialog({ workflow, tenantId, onClose, onCancel }: {
           {/* Summary */}
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div><span className="text-muted-foreground">Status:</span> <Badge variant={statusBadge[workflow.status]?.variant || 'secondary'} className={statusBadge[workflow.status]?.className}>{OFFBOARDING_STATUS_LABELS[workflow.status]}</Badge></div>
-            <div><span className="text-muted-foreground">Data Efetiva:</span> {new Date(workflow.effective_date).toLocaleDateString('pt-BR')}</div>
+            <div><span className="text-muted-foreground">Data Desligamento:</span> {new Date(workflow.data_desligamento).toLocaleDateString('pt-BR')}</div>
             <div><span className="text-muted-foreground">Aviso Prévio:</span> {AVISO_PREVIO_LABELS[workflow.aviso_previo_type]} ({workflow.aviso_previo_days} dias)</div>
             <div><span className="text-muted-foreground">eSocial:</span> {workflow.esocial_status}</div>
+            {workflow.motivo && (
+              <div className="col-span-2"><span className="text-muted-foreground">Motivo:</span> {workflow.motivo}</div>
+            )}
             {workflow.justa_causa_motivo && (
               <div className="col-span-2"><span className="text-muted-foreground">Motivo Justa Causa:</span> {workflow.justa_causa_motivo}</div>
             )}
@@ -477,7 +486,7 @@ function OffboardingDetailDialog({ workflow, tenantId, onClose, onCancel }: {
                     <Checkbox
                       checked={item.status === 'completed'}
                       onCheckedChange={() => handleToggleItem(item)}
-                      disabled={workflow.status === 'completed' || workflow.status === 'cancelled'}
+                      disabled={workflow.status === 'completed' || workflow.status === 'archived'}
                     />
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm ${item.status === 'completed' ? 'line-through text-muted-foreground' : 'text-card-foreground'}`}>
@@ -530,14 +539,14 @@ function OffboardingDetailDialog({ workflow, tenantId, onClose, onCancel }: {
         </div>
 
         <DialogFooter className="flex-wrap gap-2">
-          {workflow.status !== 'completed' && workflow.status !== 'cancelled' && (
+          {workflow.status !== 'completed' && workflow.status !== 'archived' && (
             <Button variant="destructive" size="sm" onClick={onCancel} className="gap-1">
               <Ban className="h-3.5 w-3.5" />
               Cancelar Processo
             </Button>
           )}
           <Button variant="outline" onClick={onClose}>Fechar</Button>
-          {!['completed', 'cancelled'].includes(workflow.status) && (
+          {!['completed', 'archived'].includes(workflow.status) && (
             <Button onClick={handleAdvanceStatus} className="gap-1">
               <ChevronRight className="h-4 w-4" />
               Avançar Etapa

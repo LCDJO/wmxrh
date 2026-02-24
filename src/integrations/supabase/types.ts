@@ -10911,7 +10911,8 @@ export type Database = {
           company_group_id: string | null
           company_id: string | null
           created_at: string
-          effective_date: string
+          data_aviso_previo: string
+          data_desligamento: string
           employee_id: string
           esocial_event_id: string | null
           esocial_protocol: string | null
@@ -10923,8 +10924,8 @@ export type Database = {
           justa_causa_motivo: string | null
           last_working_day: string | null
           metadata: Json | null
+          motivo: string | null
           notes: string | null
-          notification_date: string
           offboarding_type: Database["public"]["Enums"]["offboarding_type"]
           reference_letter_approved: boolean | null
           reference_letter_approved_by: string | null
@@ -10952,7 +10953,8 @@ export type Database = {
           company_group_id?: string | null
           company_id?: string | null
           created_at?: string
-          effective_date: string
+          data_aviso_previo?: string
+          data_desligamento: string
           employee_id: string
           esocial_event_id?: string | null
           esocial_protocol?: string | null
@@ -10964,8 +10966,8 @@ export type Database = {
           justa_causa_motivo?: string | null
           last_working_day?: string | null
           metadata?: Json | null
+          motivo?: string | null
           notes?: string | null
-          notification_date?: string
           offboarding_type: Database["public"]["Enums"]["offboarding_type"]
           reference_letter_approved?: boolean | null
           reference_letter_approved_by?: string | null
@@ -10993,7 +10995,8 @@ export type Database = {
           company_group_id?: string | null
           company_id?: string | null
           created_at?: string
-          effective_date?: string
+          data_aviso_previo?: string
+          data_desligamento?: string
           employee_id?: string
           esocial_event_id?: string | null
           esocial_protocol?: string | null
@@ -11005,8 +11008,8 @@ export type Database = {
           justa_causa_motivo?: string | null
           last_working_day?: string | null
           metadata?: Json | null
+          motivo?: string | null
           notes?: string | null
-          notification_date?: string
           offboarding_type?: Database["public"]["Enums"]["offboarding_type"]
           reference_letter_approved?: boolean | null
           reference_letter_approved_by?: string | null
@@ -16571,11 +16574,16 @@ export type Database = {
         | "approved"
         | "completed"
         | "cancelled"
+        | "validation"
+        | "documents_pending"
+        | "esocial_pending"
+        | "archived"
       offboarding_type:
         | "sem_justa_causa"
         | "justa_causa"
         | "pedido_demissao"
         | "acordo_mutuo"
+        | "termino_contrato"
       payroll_incidence:
         | "inss"
         | "irrf"
@@ -16986,12 +16994,17 @@ export const Constants = {
         "approved",
         "completed",
         "cancelled",
+        "validation",
+        "documents_pending",
+        "esocial_pending",
+        "archived",
       ],
       offboarding_type: [
         "sem_justa_causa",
         "justa_causa",
         "pedido_demissao",
         "acordo_mutuo",
+        "termino_contrato",
       ],
       payroll_incidence: [
         "inss",

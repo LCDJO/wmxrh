@@ -2,8 +2,8 @@
  * Automated Offboarding Workflow Engine — Types
  */
 
-export type OffboardingType = 'sem_justa_causa' | 'justa_causa' | 'pedido_demissao' | 'acordo_mutuo';
-export type OffboardingStatus = 'draft' | 'in_progress' | 'pending_approval' | 'approved' | 'completed' | 'cancelled';
+export type OffboardingType = 'sem_justa_causa' | 'justa_causa' | 'pedido_demissao' | 'termino_contrato';
+export type OffboardingStatus = 'draft' | 'validation' | 'documents_pending' | 'esocial_pending' | 'archived' | 'completed';
 export type ChecklistItemStatus = 'pending' | 'in_progress' | 'completed' | 'skipped' | 'blocked';
 export type AvisoPrevioType = 'trabalhado' | 'indenizado' | 'nao_aplicavel';
 
@@ -11,16 +11,16 @@ export const OFFBOARDING_TYPE_LABELS: Record<OffboardingType, string> = {
   sem_justa_causa: 'Sem Justa Causa',
   justa_causa: 'Por Justa Causa',
   pedido_demissao: 'Pedido de Demissão',
-  acordo_mutuo: 'Acordo Mútuo',
+  termino_contrato: 'Término de Contrato',
 };
 
 export const OFFBOARDING_STATUS_LABELS: Record<OffboardingStatus, string> = {
   draft: 'Rascunho',
-  in_progress: 'Em Andamento',
-  pending_approval: 'Aguardando Aprovação',
-  approved: 'Aprovado',
+  validation: 'Validação',
+  documents_pending: 'Documentos Pendentes',
+  esocial_pending: 'eSocial Pendente',
+  archived: 'Arquivado',
   completed: 'Concluído',
-  cancelled: 'Cancelado',
 };
 
 export const CHECKLIST_CATEGORY_LABELS: Record<string, string> = {
@@ -49,8 +49,9 @@ export interface OffboardingWorkflow {
   company_group_id: string | null;
   offboarding_type: OffboardingType;
   status: OffboardingStatus;
-  notification_date: string;
-  effective_date: string;
+  motivo: string | null;
+  data_aviso_previo: string;
+  data_desligamento: string;
   last_working_day: string | null;
   aviso_previo_type: AvisoPrevioType;
   aviso_previo_days: number;
@@ -136,7 +137,8 @@ export interface CreateOffboardingDTO {
   company_id?: string | null;
   company_group_id?: string | null;
   offboarding_type: OffboardingType;
-  effective_date: string;
+  motivo?: string;
+  data_desligamento: string;
   last_working_day?: string;
   aviso_previo_type?: AvisoPrevioType;
   aviso_previo_days?: number;
