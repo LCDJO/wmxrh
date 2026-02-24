@@ -94,6 +94,31 @@ export default function TenantTraccarSettings() {
 
   useEffect(() => { fetchEvents(); fetchConfig(); }, [fetchEvents, fetchConfig]);
 
+  // Auto-check connection when config is loaded, and poll every 60s
+  const autoTestConnection = useCallback(async () => {
+    if (!savedUrl || !savedToken || !tenantId) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('traccar-proxy', {
+        body: { action: 'test-connection', tenantId },
+      });
+      if (error) { setConnectionStatus('error'); return; }
+      if (data?.success) {
+        setConnectionStatus('connected');
+        setServerInfo(data.data as TraccarServerInfo);
+      } else {
+        setConnectionStatus('error');
+      }
+    } catch {
+      setConnectionStatus('error');
+    }
+  }, [savedUrl, savedToken, tenantId]);
+
+  useEffect(() => {
+    autoTestConnection();
+    const interval = setInterval(autoTestConnection, 60_000);
+    return () => clearInterval(interval);
+  }, [autoTestConnection]);
+
   const testConnection = async () => {
     setTestingConnection(true);
     try {
