@@ -12,6 +12,7 @@ import { useFleetRealtime } from '@/hooks/useFleetRealtime';
 import type { RealtimeEventType, ConnectionStatus } from '@/hooks/useFleetRealtime';
 import { useFleetCache } from '@/hooks/useFleetCache';
 import { useFleetSecurity } from '@/hooks/useFleetSecurity';
+import { useTraccarFleet, type TraccarVehicle } from '@/hooks/useTraccarFleet';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import L from 'leaflet';
@@ -55,8 +56,8 @@ const STATUS_INDICATOR: Record<ConnectionStatus, { label: string; icon: any; col
 
 const SUBSCRIBED_TYPES: RealtimeEventType[] = ['tracking', 'behavior', 'compliance_incident', 'disciplinary', 'violation'];
 
-// ── Mock data ──
-interface MockVehicle {
+// ── Map vehicle type for internal use ──
+interface MapVehicle {
   device_id: string;
   plate: string;
   driver: string;
@@ -67,65 +68,22 @@ interface MockVehicle {
   status: 'moving' | 'idle' | 'stopped' | 'speeding';
 }
 
-function generateMockData() {
-  const baseLat = -23.55;
-  const baseLng = -46.63;
-  const drivers = [
-    'João Silva', 'Maria Santos', 'Carlos Lima', 'Ana Costa', 'Pedro Alves',
-    'Fernanda Reis', 'Lucas Mendes', 'Roberto Dias', 'Juliana Ferreira', 'Rafael Oliveira',
-    'Patrícia Gomes', 'Bruno Souza',
-  ];
-  const plates = [
-    'ABC-1234', 'DEF-5678', 'GHI-9012', 'JKL-3456', 'MNO-7890',
-    'PQR-1122', 'STU-3344', 'VWX-5566', 'YZA-7788', 'BCD-9900',
-    'EFG-2233', 'HIJ-4455',
-  ];
-
-  const vehicles: MockVehicle[] = drivers.map((driver, i) => {
-    const angle = (i / drivers.length) * Math.PI * 2;
-    const radius = 0.02 + Math.random() * 0.06;
-    const speed = Math.random() > 0.3 ? Math.floor(Math.random() * 120) : 0;
-    const status: MockVehicle['status'] =
-      speed > 80 ? 'speeding' : speed > 5 ? 'moving' : speed > 0 ? 'idle' : 'stopped';
-    return {
-      device_id: `v${i + 1}`,
-      plate: plates[i],
-      driver,
-      lat: baseLat + Math.cos(angle) * radius,
-      lng: baseLng + Math.sin(angle) * radius,
-      speed,
-      ignition: speed > 0 || Math.random() > 0.3,
-      status,
-    };
-  });
-
-  const behaviorEvents = [
-    { id: 'be1', event_type: 'overspeed', severity: 'critical', employee_id: 'João Silva', device_id: 'ABC-1234', created_at: new Date(Date.now() - 600000).toISOString(), status: 'pending' },
-    { id: 'be2', event_type: 'overspeed', severity: 'high', employee_id: 'Carlos Lima', device_id: 'GHI-9012', created_at: new Date(Date.now() - 1200000).toISOString(), status: 'pending' },
-    { id: 'be3', event_type: 'geofence_violation', severity: 'medium', employee_id: 'Ana Costa', device_id: 'JKL-3456', created_at: new Date(Date.now() - 1800000).toISOString(), status: 'reviewed' },
-    { id: 'be4', event_type: 'route_deviation', severity: 'low', employee_id: 'Pedro Alves', device_id: 'MNO-7890', created_at: new Date(Date.now() - 2400000).toISOString(), status: 'closed' },
-    { id: 'be5', event_type: 'after_hours_use', severity: 'high', employee_id: 'Fernanda Reis', device_id: 'PQR-1122', created_at: new Date(Date.now() - 3000000).toISOString(), status: 'pending' },
-    { id: 'be6', event_type: 'overspeed', severity: 'medium', employee_id: 'João Silva', device_id: 'ABC-1234', created_at: new Date(Date.now() - 3600000).toISOString(), status: 'warning_issued' },
-    { id: 'be7', event_type: 'geofence_violation', severity: 'critical', employee_id: 'Lucas Mendes', device_id: 'STU-3344', created_at: new Date(Date.now() - 4200000).toISOString(), status: 'pending' },
-    { id: 'be8', event_type: 'overspeed', severity: 'high', employee_id: 'Roberto Dias', device_id: 'VWX-5566', created_at: new Date(Date.now() - 4800000).toISOString(), status: 'reviewed' },
-    { id: 'be9', event_type: 'route_deviation', severity: 'medium', employee_id: 'Carlos Lima', device_id: 'GHI-9012', created_at: new Date(Date.now() - 5400000).toISOString(), status: 'pending' },
-    { id: 'be10', event_type: 'after_hours_use', severity: 'low', employee_id: 'Maria Santos', device_id: 'DEF-5678', created_at: new Date(Date.now() - 6000000).toISOString(), status: 'closed' },
-    { id: 'be11', event_type: 'overspeed', severity: 'critical', employee_id: 'João Silva', device_id: 'ABC-1234', created_at: new Date(Date.now() - 7200000).toISOString(), status: 'pending' },
-    { id: 'be12', event_type: 'geofence_violation', severity: 'high', employee_id: 'Patrícia Gomes', device_id: 'EFG-2233', created_at: new Date(Date.now() - 8400000).toISOString(), status: 'pending' },
-  ];
-
-  const incidents = behaviorEvents.map((e) => ({
-    ...e,
-    violation_type: e.event_type,
-  }));
-
-  return { vehicles, behaviorEvents, incidents };
+function traccarToMapVehicle(dev: TraccarVehicle): MapVehicle | null {
+  if (dev.lat == null || dev.lng == null) return null;
+  return {
+    device_id: String(dev.id),
+    plate: dev.name || dev.uniqueId,
+    driver: (dev.attributes?.driver as string) || dev.phone || dev.name || '—',
+    lat: dev.lat,
+    lng: dev.lng,
+    speed: dev.speed ?? 0,
+    ignition: dev.ignition ?? false,
+    status: dev.computedStatus ?? 'stopped',
+  };
 }
 
-const MOCK = generateMockData();
-
 // ── Fleet Map (Leaflet) ──
-function FleetMap({ vehicles, expanded, onToggleExpand }: { vehicles: MockVehicle[]; expanded?: boolean; onToggleExpand?: () => void }) {
+function FleetMap({ vehicles, expanded, onToggleExpand }: { vehicles: MapVehicle[]; expanded?: boolean; onToggleExpand?: () => void }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletRef = useRef<L.Map | null>(null);
 
@@ -214,6 +172,16 @@ export default function FleetDashboard() {
   const { currentTenant } = useTenant();
   const tenantId = currentTenant?.id ?? null;
 
+  // Traccar real data
+  const { vehicles: traccarVehicles, isConfigured: traccarConfigured } = useTraccarFleet({
+    tenantId,
+    pollIntervalMs: 15_000,
+  });
+
+  const mapVehicles = useMemo<MapVehicle[]>(() => {
+    return traccarVehicles.map(traccarToMapVehicle).filter((v): v is MapVehicle => v !== null);
+  }, [traccarVehicles]);
+
   const { events, status, refresh } = useFleetRealtime({
     eventTypes: SUBSCRIBED_TYPES,
     tenantId,
@@ -228,16 +196,12 @@ export default function FleetDashboard() {
 
   const { filterByAccess } = useFleetSecurity();
 
-  // Use real data if available, otherwise fall back to mock
   const realBehavior = useMemo(() => filterByAccess(events.behavior?.items ?? []), [events.behavior, filterByAccess]);
   const realIncidents = useMemo(() => filterByAccess(events.compliance_incident?.items ?? []), [events.compliance_incident, filterByAccess]);
-  const realTracking = events.tracking?.items ?? [];
 
-  const useMock = realBehavior.length === 0 && realIncidents.length === 0 && realTracking.length === 0;
-
-  const behaviorEvents = useMock ? MOCK.behaviorEvents : realBehavior;
-  const incidents = useMock ? MOCK.incidents : realIncidents;
-  const latestEvents = useMock ? MOCK.vehicles : realTracking;
+  const behaviorEvents = realBehavior;
+  const incidents = realIncidents;
+  const latestEvents = mapVehicles;
 
   // Stats
   const stats = useMemo(() => {
@@ -297,9 +261,9 @@ export default function FleetDashboard() {
           <p className="text-muted-foreground mt-1">Monitoramento de frota, infrações e alertas em tempo real</p>
         </div>
         <div className="flex items-center gap-3">
-          {useMock && (
+          {!traccarConfigured && (
             <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-500">
-              Dados Demonstração
+              Traccar não configurado
             </Badge>
           )}
           <div className={cn("flex items-center gap-1.5 text-xs font-medium", connStatus.color)}>
@@ -337,7 +301,7 @@ export default function FleetDashboard() {
           </CardHeader>
           <CardContent>
             <div className={cn("rounded-lg overflow-hidden transition-all duration-300", mapExpanded ? "h-[600px]" : "h-[300px]")}>
-              <FleetMap vehicles={MOCK.vehicles} expanded={mapExpanded} onToggleExpand={() => setMapExpanded(e => !e)} />
+              <FleetMap vehicles={mapVehicles} expanded={mapExpanded} onToggleExpand={() => setMapExpanded(e => !e)} />
             </div>
           </CardContent>
         </Card>
