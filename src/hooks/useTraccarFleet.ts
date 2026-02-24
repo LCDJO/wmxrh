@@ -1,10 +1,19 @@
 /**
- * useTraccarFleet — Hook for fetching real Traccar fleet data.
- * Provides devices, positions, events with automatic polling.
- * Falls back gracefully when Traccar is not configured.
+ * useTraccarFleet — Robust hook for real-time Traccar fleet data.
+ *
+ * Architecture:
+ *  ├── Dual data source: API polling (primary) + device cache (fallback)
+ *  ├── Automatic speed violation detection
+ *  ├── Enrichment with employee/vehicle mappings
+ *  ├── Health monitoring with sync status
+ *  └── Configurable polling interval
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+
+// ══════════════════════════════════════════════════════════
+// TYPES
+// ══════════════════════════════════════════════════════════
 
 export interface TraccarVehicle {
   id: number;
@@ -19,14 +28,20 @@ export interface TraccarVehicle {
   model: string | null;
   category: string | null;
   attributes: Record<string, unknown>;
-  // Enriched from position
+  // Position data
   lat?: number;
   lng?: number;
   speed?: number;
   course?: number;
+  altitude?: number;
   address?: string | null;
   ignition?: boolean;
+  // Computed
   computedStatus?: 'moving' | 'idle' | 'stopped' | 'speeding';
+  // Enrichment (from cache)
+  employeeId?: string | null;
+  vehicleId?: string | null;
+  fleetDeviceId?: string | null;
 }
 
 export interface TraccarPosition {
@@ -41,11 +56,21 @@ export interface TraccarPosition {
   attributes: Record<string, unknown>;
 }
 
+export interface SyncHealth {
+  isHealthy: boolean;
+  lastSyncAt: string | null;
+  deviceCount: number;
+  positionCount: number;
+  lastError: string | null;
+  consecutiveFailures: number;
+}
+
 interface UseTraccarFleetOptions {
   tenantId: string | null;
   enabled?: boolean;
   pollIntervalMs?: number;
   speedLimitKmh?: number;
+  useCache?: boolean;
 }
 
 interface UseTraccarFleetReturn {
@@ -53,9 +78,24 @@ interface UseTraccarFleetReturn {
   loading: boolean;
   error: string | null;
   isConfigured: boolean;
+  syncHealth: SyncHealth | null;
   refresh: () => void;
+  triggerSync: () => Promise<void>;
   lastUpdate: Date | null;
+  stats: {
+    total: number;
+    moving: number;
+    idle: number;
+    stopped: number;
+    speeding: number;
+    online: number;
+    offline: number;
+  };
 }
+
+// ══════════════════════════════════════════════════════════
+// PROXY INVOKE
+// ══════════════════════════════════════════════════════════
 
 async function invokeProxy<T>(tenantId: string, action: string, params: Record<string, unknown> = {}): Promise<T | null> {
   const { data, error } = await supabase.functions.invoke('traccar-proxy', {
@@ -63,7 +103,6 @@ async function invokeProxy<T>(tenantId: string, action: string, params: Record<s
   });
 
   if (error) {
-    // Extract specific error from response body
     if (error.context && error.context instanceof Response) {
       try {
         const body = await error.context.json();
@@ -77,84 +116,128 @@ async function invokeProxy<T>(tenantId: string, action: string, params: Record<s
 
   const resp = data as { success: boolean; data: T; error?: string };
   if (!resp.success) throw new Error(resp.error || 'Erro desconhecido do Traccar');
-
   return resp.data;
 }
 
+// ══════════════════════════════════════════════════════════
+// HOOK
+// ══════════════════════════════════════════════════════════
+
 export function useTraccarFleet(opts: UseTraccarFleetOptions): UseTraccarFleetReturn {
-  const { tenantId, enabled = true, pollIntervalMs = 10_000, speedLimitKmh = 80 } = opts;
+  const { tenantId, enabled = true, pollIntervalMs = 10_000, speedLimitKmh = 80, useCache = false } = opts;
   const [vehicles, setVehicles] = useState<TraccarVehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isConfigured, setIsConfigured] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [syncHealth, setSyncHealth] = useState<SyncHealth | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
+  // Fetch from API (primary)
+  const fetchFromApi = useCallback(async () => {
+    if (!tenantId) return;
+
+    const syncData = await invokeProxy<{ devices: any[]; positions: any[] }>(
+      tenantId, 'sync-devices-positions'
+    );
+
+    if (!syncData?.devices || !Array.isArray(syncData.devices)) {
+      throw new Error('Nenhum dispositivo encontrado');
+    }
+
+    const posMap = new Map<number, any>();
+    if (syncData.positions && Array.isArray(syncData.positions)) {
+      for (const pos of syncData.positions) posMap.set(pos.deviceId, pos);
+    }
+
+    return enrichDevices(syncData.devices, posMap, speedLimitKmh);
+  }, [tenantId, speedLimitKmh]);
+
+  // Fetch from cache (fallback)
+  const fetchFromCache = useCallback(async () => {
+    if (!tenantId) return [];
+
+    const { data, error } = await supabase
+      .from('traccar_device_cache')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('name');
+
+    if (error || !data) return [];
+
+    return data.map((d: any): TraccarVehicle => ({
+      id: d.traccar_id,
+      name: d.name,
+      uniqueId: d.unique_id,
+      status: d.status as 'online' | 'offline' | 'unknown',
+      disabled: d.disabled,
+      lastUpdate: d.last_update,
+      positionId: d.position_id,
+      groupId: d.group_id,
+      phone: d.phone,
+      model: d.model,
+      category: d.category,
+      attributes: d.attributes || {},
+      lat: d.latitude,
+      lng: d.longitude,
+      speed: d.speed,
+      course: d.course,
+      altitude: d.altitude,
+      address: d.address,
+      ignition: d.ignition,
+      computedStatus: d.computed_status as TraccarVehicle['computedStatus'],
+      employeeId: d.employee_id,
+      vehicleId: d.vehicle_id,
+      fleetDeviceId: d.fleet_device_id,
+    }));
+  }, [tenantId]);
+
+  // Fetch sync health
+  const fetchSyncHealth = useCallback(async () => {
+    if (!tenantId) return;
+    const { data } = await supabase
+      .from('traccar_sync_status')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    if (data) {
+      setSyncHealth({
+        isHealthy: data.is_healthy ?? true,
+        lastSyncAt: data.last_sync_at,
+        deviceCount: data.last_device_count ?? 0,
+        positionCount: data.last_position_count ?? 0,
+        lastError: data.last_error,
+        consecutiveFailures: data.consecutive_failures ?? 0,
+      });
+    }
+  }, [tenantId]);
+
+  // Main fetch logic
   const fetchFleetData = useCallback(async () => {
     if (!tenantId || !enabled) return;
 
     try {
-      setLoading(prev => !prev ? true : prev); // only set true on first load
+      setLoading(prev => !prev ? true : prev);
 
-      // Fetch devices and positions in parallel
-      const [devices, positions] = await Promise.all([
-        invokeProxy<any[]>(tenantId, 'devices'),
-        invokeProxy<any[]>(tenantId, 'positions'),
-      ]);
-
-      if (!devices || !Array.isArray(devices)) {
-        setError('Nenhum dispositivo encontrado no Traccar');
-        setVehicles([]);
-        return;
-      }
-
-      setIsConfigured(true);
-
-      // Build position lookup by deviceId
-      const posMap = new Map<number, any>();
-      if (positions && Array.isArray(positions)) {
-        for (const pos of positions) {
-          posMap.set(pos.deviceId, pos);
+      let result: TraccarVehicle[];
+      try {
+        result = (await fetchFromApi()) || [];
+        setIsConfigured(true);
+      } catch (apiErr: any) {
+        // Fallback to cache
+        if (useCache) {
+          result = await fetchFromCache();
+          if (result.length > 0) setIsConfigured(true);
+        } else {
+          throw apiErr;
         }
       }
 
-      // Enrich devices with position data
-      const enriched: TraccarVehicle[] = devices.map((dev: any) => {
-        const pos = posMap.get(dev.id);
-        const speedKmh = pos ? pos.speed * 1.852 : 0; // knots to km/h
-        const ignition = pos?.attributes?.ignition ?? false;
-
-        let computedStatus: TraccarVehicle['computedStatus'] = 'stopped';
-        if (speedKmh > speedLimitKmh) computedStatus = 'speeding';
-        else if (speedKmh > 5) computedStatus = 'moving';
-        else if (ignition) computedStatus = 'idle';
-
-        return {
-          id: dev.id,
-          name: dev.name,
-          uniqueId: dev.uniqueId,
-          status: dev.status || 'unknown',
-          disabled: dev.disabled,
-          lastUpdate: dev.lastUpdate,
-          positionId: dev.positionId,
-          groupId: dev.groupId,
-          phone: dev.phone,
-          model: dev.model,
-          category: dev.category,
-          attributes: dev.attributes || {},
-          lat: pos?.latitude,
-          lng: pos?.longitude,
-          speed: Math.round(speedKmh),
-          course: pos?.course ?? 0,
-          address: pos?.address,
-          ignition,
-          computedStatus,
-        };
-      });
-
-      setVehicles(enriched);
+      setVehicles(result);
       setError(null);
       setLastUpdate(new Date());
+      fetchSyncHealth();
     } catch (err: any) {
       const msg = err?.message || 'Erro ao buscar dados do Traccar';
       setError(msg);
@@ -164,26 +247,89 @@ export function useTraccarFleet(opts: UseTraccarFleetOptions): UseTraccarFleetRe
     } finally {
       setLoading(false);
     }
-  }, [tenantId, enabled, speedLimitKmh]);
+  }, [tenantId, enabled, fetchFromApi, fetchFromCache, fetchSyncHealth, useCache]);
 
-  // Initial fetch + polling
+  // Manual sync trigger (calls traccar-sync edge function)
+  const triggerSync = useCallback(async () => {
+    if (!tenantId) return;
+    await supabase.functions.invoke('traccar-sync', {
+      body: { tenant_id: tenantId, speed_limit_kmh: speedLimitKmh },
+    });
+    await fetchFleetData();
+  }, [tenantId, speedLimitKmh, fetchFleetData]);
+
+  // Polling
   useEffect(() => {
     if (!tenantId || !enabled) return;
-
     fetchFleetData();
     intervalRef.current = setInterval(fetchFleetData, pollIntervalMs);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [fetchFleetData, pollIntervalMs, tenantId, enabled]);
+
+  // Compute stats
+  const stats = {
+    total: vehicles.length,
+    moving: vehicles.filter(v => v.computedStatus === 'moving').length,
+    idle: vehicles.filter(v => v.computedStatus === 'idle').length,
+    stopped: vehicles.filter(v => v.computedStatus === 'stopped').length,
+    speeding: vehicles.filter(v => v.computedStatus === 'speeding').length,
+    online: vehicles.filter(v => v.status === 'online').length,
+    offline: vehicles.filter(v => v.status === 'offline').length,
+  };
 
   return {
     vehicles,
     loading,
     error,
     isConfigured,
+    syncHealth,
     refresh: fetchFleetData,
+    triggerSync,
     lastUpdate,
+    stats,
   };
+}
+
+// ══════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════
+
+function enrichDevices(
+  devices: any[],
+  posMap: Map<number, any>,
+  speedLimitKmh: number
+): TraccarVehicle[] {
+  return devices.map((dev: any) => {
+    const pos = posMap.get(dev.id);
+    const speedKmh = pos ? pos.speed * 1.852 : 0;
+    const ignition = pos?.attributes?.ignition ?? false;
+
+    let computedStatus: TraccarVehicle['computedStatus'] = 'stopped';
+    if (speedKmh > speedLimitKmh) computedStatus = 'speeding';
+    else if (speedKmh > 5) computedStatus = 'moving';
+    else if (ignition) computedStatus = 'idle';
+
+    return {
+      id: dev.id,
+      name: dev.name,
+      uniqueId: dev.uniqueId,
+      status: dev.status || 'unknown',
+      disabled: dev.disabled,
+      lastUpdate: dev.lastUpdate,
+      positionId: dev.positionId,
+      groupId: dev.groupId,
+      phone: dev.phone,
+      model: dev.model,
+      category: dev.category,
+      attributes: dev.attributes || {},
+      lat: pos?.latitude,
+      lng: pos?.longitude,
+      speed: Math.round(speedKmh),
+      course: pos?.course ?? 0,
+      altitude: pos?.altitude ?? undefined,
+      address: pos?.address,
+      ignition: ignition ?? false,
+      computedStatus,
+    };
+  });
 }

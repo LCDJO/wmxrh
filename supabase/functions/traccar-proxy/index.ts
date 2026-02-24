@@ -1,7 +1,12 @@
 /**
  * traccar-proxy — Authenticated proxy to the Traccar REST API.
- * Multi-strategy auth: session-cookie (primary) → token-param → bearer header.
- * Strict Content-Type validation to detect HTML error pages.
+ *
+ * Architecture:
+ *  ├── Multi-strategy auth: session-cookie → token-param → bearer
+ *  ├── Strict Content-Type validation (HTML detection)
+ *  ├── Health check endpoint for monitoring
+ *  ├── Audit logging for mutations
+ *  └── Array validation for list endpoints
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -12,70 +17,110 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// ── Action → Traccar path builder ──
+// ══════════════════════════════════════════════════════════
+// ACTION MAP — Traccar API path definitions
+// ══════════════════════════════════════════════════════════
+
 type ActionDef = {
   buildPath: (p: Record<string, unknown>) => string;
   method?: string;
   hasBody?: boolean;
+  isMutation?: boolean;
 };
 
 function qs(params: Record<string, string | string[] | undefined>): string {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (v === undefined || v === '') continue;
-    if (Array.isArray(v)) {
-      for (const item of v) sp.append(k, item);
-    } else {
-      sp.set(k, v);
-    }
+    if (Array.isArray(v)) for (const item of v) sp.append(k, item);
+    else sp.set(k, v);
   }
   const s = sp.toString();
   return s ? `?${s}` : '';
 }
 
 const ACTION_MAP: Record<string, ActionDef> = {
+  // Server
   'test-connection':    { buildPath: () => '/api/server' },
   'server-info':        { buildPath: () => '/api/server' },
+  'health-check':       { buildPath: () => '/api/server' },
+
+  // Devices
   'devices':            { buildPath: () => '/api/devices' },
   'device-detail':      { buildPath: (p) => `/api/devices${qs({ id: String(p.deviceId ?? '') })}` },
-  'device-create':      { buildPath: () => '/api/devices', method: 'POST', hasBody: true },
-  'device-update':      { buildPath: () => '/api/devices', method: 'PUT', hasBody: true },
-  'device-delete':      { buildPath: (p) => `/api/devices/${p.deviceId}`, method: 'DELETE' },
+  'device-create':      { buildPath: () => '/api/devices', method: 'POST', hasBody: true, isMutation: true },
+  'device-update':      { buildPath: () => '/api/devices', method: 'PUT', hasBody: true, isMutation: true },
+  'device-delete':      { buildPath: (p) => `/api/devices/${p.deviceId}`, method: 'DELETE', isMutation: true },
+
+  // Groups
   'groups':             { buildPath: () => '/api/groups' },
-  'group-create':       { buildPath: () => '/api/groups', method: 'POST', hasBody: true },
-  'group-update':       { buildPath: () => '/api/groups', method: 'PUT', hasBody: true },
-  'group-delete':       { buildPath: (p) => `/api/groups/${p.groupId}`, method: 'DELETE' },
+  'group-create':       { buildPath: () => '/api/groups', method: 'POST', hasBody: true, isMutation: true },
+  'group-update':       { buildPath: () => '/api/groups', method: 'PUT', hasBody: true, isMutation: true },
+  'group-delete':       { buildPath: (p) => `/api/groups/${p.groupId}`, method: 'DELETE', isMutation: true },
+
+  // Positions
   'positions':          { buildPath: (p) => `/api/positions${qs({ deviceId: String(p.deviceId ?? ''), from: String(p.from ?? ''), to: String(p.to ?? '') })}` },
+
+  // Events
   'event-detail':       { buildPath: (p) => `/api/events/${p.eventId}` },
+
+  // Reports
   'reports-events':     { buildPath: (p) => `/api/reports/events${qs({ deviceId: p.deviceId as string | string[], groupId: p.groupId as string | string[], type: p.eventType as string | string[], from: String(p.from ?? ''), to: String(p.to ?? '') })}` },
   'reports-route':      { buildPath: (p) => `/api/reports/route${qs({ deviceId: p.deviceId as string | string[], groupId: p.groupId as string | string[], from: String(p.from ?? ''), to: String(p.to ?? '') })}` },
   'reports-summary':    { buildPath: (p) => `/api/reports/summary${qs({ deviceId: p.deviceId as string | string[], groupId: p.groupId as string | string[], from: String(p.from ?? ''), to: String(p.to ?? '') })}` },
   'reports-trips':      { buildPath: (p) => `/api/reports/trips${qs({ deviceId: p.deviceId as string | string[], groupId: p.groupId as string | string[], from: String(p.from ?? ''), to: String(p.to ?? '') })}` },
   'reports-stops':      { buildPath: (p) => `/api/reports/stops${qs({ deviceId: p.deviceId as string | string[], groupId: p.groupId as string | string[], from: String(p.from ?? ''), to: String(p.to ?? '') })}` },
+
+  // Notifications
   'notifications':      { buildPath: () => '/api/notifications' },
   'notification-types': { buildPath: () => '/api/notifications/types' },
-  'notification-create':{ buildPath: () => '/api/notifications', method: 'POST', hasBody: true },
-  'notification-update':{ buildPath: (p) => `/api/notifications/${p.notificationId}`, method: 'PUT', hasBody: true },
-  'notification-delete':{ buildPath: (p) => `/api/notifications/${p.notificationId}`, method: 'DELETE' },
+  'notification-create':{ buildPath: () => '/api/notifications', method: 'POST', hasBody: true, isMutation: true },
+  'notification-update':{ buildPath: (p) => `/api/notifications/${p.notificationId}`, method: 'PUT', hasBody: true, isMutation: true },
+  'notification-delete':{ buildPath: (p) => `/api/notifications/${p.notificationId}`, method: 'DELETE', isMutation: true },
+
+  // Geofences
   'geofences':          { buildPath: () => '/api/geofences' },
-  'geofence-create':    { buildPath: () => '/api/geofences', method: 'POST', hasBody: true },
-  'geofence-update':    { buildPath: () => '/api/geofences', method: 'PUT', hasBody: true },
-  'geofence-delete':    { buildPath: (p) => `/api/geofences/${p.geofenceId}`, method: 'DELETE' },
+  'geofence-create':    { buildPath: () => '/api/geofences', method: 'POST', hasBody: true, isMutation: true },
+  'geofence-update':    { buildPath: () => '/api/geofences', method: 'PUT', hasBody: true, isMutation: true },
+  'geofence-delete':    { buildPath: (p) => `/api/geofences/${p.geofenceId}`, method: 'DELETE', isMutation: true },
+
+  // Commands
   'commands':           { buildPath: () => '/api/commands' },
-  'commands-send':      { buildPath: () => '/api/commands/send', method: 'POST', hasBody: true },
+  'commands-send':      { buildPath: () => '/api/commands/send', method: 'POST', hasBody: true, isMutation: true },
   'commands-types':     { buildPath: (p) => `/api/commands/types${qs({ deviceId: String(p.deviceId ?? '') })}` },
+
+  // Drivers
   'drivers':            { buildPath: () => '/api/drivers' },
-  'driver-create':      { buildPath: () => '/api/drivers', method: 'POST', hasBody: true },
-  'driver-update':      { buildPath: () => '/api/drivers', method: 'PUT', hasBody: true },
-  'driver-delete':      { buildPath: (p) => `/api/drivers/${p.driverId}`, method: 'DELETE' },
+  'driver-create':      { buildPath: () => '/api/drivers', method: 'POST', hasBody: true, isMutation: true },
+  'driver-update':      { buildPath: () => '/api/drivers', method: 'PUT', hasBody: true, isMutation: true },
+  'driver-delete':      { buildPath: (p) => `/api/drivers/${p.driverId}`, method: 'DELETE', isMutation: true },
+
+  // Maintenance
   'maintenance':        { buildPath: () => '/api/maintenance' },
-  'maintenance-create': { buildPath: () => '/api/maintenance', method: 'POST', hasBody: true },
-  'maintenance-update': { buildPath: () => '/api/maintenance', method: 'PUT', hasBody: true },
-  'maintenance-delete': { buildPath: (p) => `/api/maintenance/${p.maintenanceId}`, method: 'DELETE' },
-  'permission-link':    { buildPath: () => '/api/permissions', method: 'POST', hasBody: true },
-  'permission-unlink':  { buildPath: () => '/api/permissions', method: 'DELETE', hasBody: true },
+  'maintenance-create': { buildPath: () => '/api/maintenance', method: 'POST', hasBody: true, isMutation: true },
+  'maintenance-update': { buildPath: () => '/api/maintenance', method: 'PUT', hasBody: true, isMutation: true },
+  'maintenance-delete': { buildPath: (p) => `/api/maintenance/${p.maintenanceId}`, method: 'DELETE', isMutation: true },
+
+  // Permissions
+  'permission-link':    { buildPath: () => '/api/permissions', method: 'POST', hasBody: true, isMutation: true },
+  'permission-unlink':  { buildPath: () => '/api/permissions', method: 'DELETE', hasBody: true, isMutation: true },
+
+  // Statistics
   'statistics':         { buildPath: (p) => `/api/statistics${qs({ from: String(p.from ?? ''), to: String(p.to ?? '') })}` },
+
+  // Sync (bulk fetch for polling fallback)
+  'sync-devices-positions': { buildPath: () => '/api/devices' },
 };
+
+const LIST_ACTIONS = new Set([
+  'devices', 'groups', 'positions', 'notifications', 'geofences', 'drivers',
+  'maintenance', 'commands', 'reports-events', 'reports-route', 'reports-summary',
+  'reports-trips', 'reports-stops', 'statistics', 'sync-devices-positions',
+]);
+
+// ══════════════════════════════════════════════════════════
+// RESPONSE HELPERS
+// ══════════════════════════════════════════════════════════
 
 function jsonResp(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -84,154 +129,111 @@ function jsonResp(data: unknown, status = 200) {
   });
 }
 
-/** Safely parse response, validating Content-Type and detecting HTML */
-async function parseResponse(resp: Response, label: string): Promise<{ ok: boolean; status: number; data: unknown; isHtml: boolean }> {
-  const contentType = resp.headers.get('content-type') || '';
-  const textBody = await resp.text();
+interface ParseResult {
+  ok: boolean;
+  status: number;
+  data: unknown;
+  isHtml: boolean;
+}
 
-  // Detect HTML error pages
+async function parseResponse(resp: Response, label: string): Promise<ParseResult> {
+  const textBody = await resp.text();
   const trimmed = textBody.trim();
+
+  // Detect HTML error pages from reverse proxies
   if (trimmed.startsWith('<!') || trimmed.startsWith('<html') || trimmed.toLowerCase().includes('<!doctype')) {
-    console.error(`[traccar-proxy] [${label}] HTML response (status ${resp.status}): ${trimmed.substring(0, 200)}`);
+    console.error(`[traccar-proxy] [${label}] HTML response (${resp.status}): ${trimmed.substring(0, 200)}`);
     return {
       ok: false,
       status: resp.status,
       data: {
-        error: `Traccar retornou HTML em vez de JSON (HTTP ${resp.status}). Verifique se a URL do servidor está correta e acessível.`,
-        hint: 'Possíveis causas: proxy reverso interceptando, URL incorreta, ou servidor Traccar inacessível.',
+        error: `Traccar retornou HTML em vez de JSON (HTTP ${resp.status}). Verifique a URL do servidor.`,
+        hint: 'Possíveis causas: proxy reverso, URL incorreta, servidor inacessível.',
       },
       isHtml: true,
     };
   }
 
-  // Try JSON parse
   try {
-    const parsed = JSON.parse(textBody);
-    return { ok: resp.ok, status: resp.status, data: parsed, isHtml: false };
+    return { ok: resp.ok, status: resp.status, data: JSON.parse(textBody), isHtml: false };
   } catch {
-    // Not JSON, not HTML — unknown format
-    console.error(`[traccar-proxy] [${label}] Non-JSON response (${contentType}): ${textBody.substring(0, 200)}`);
+    const ct = resp.headers.get('content-type') || '';
+    console.error(`[traccar-proxy] [${label}] Non-JSON (${ct}): ${textBody.substring(0, 200)}`);
     return {
       ok: false,
       status: resp.status,
-      data: {
-        error: `Formato de resposta inesperado do Traccar (Content-Type: ${contentType || 'ausente'}).`,
-        raw: textBody.substring(0, 300),
-      },
+      data: { error: `Formato inesperado (Content-Type: ${ct || 'ausente'}).`, raw: textBody.substring(0, 300) },
       isHtml: false,
     };
   }
 }
 
-/**
- * Multi-strategy Traccar auth:
- * 1. Session cookie via /api/session?token=... (most reliable)
- * 2. Token as query parameter fallback
- * 3. Basic Auth fallback (email:password style tokens)
- */
+// ══════════════════════════════════════════════════════════
+// TRACCAR CLIENT — Multi-strategy authentication
+// ══════════════════════════════════════════════════════════
+
 async function traccarFetch(
-  baseUrl: string,
-  path: string,
-  token: string,
-  method: string,
-  body?: string
-): Promise<{ ok: boolean; status: number; data: unknown }> {
-  const headers: Record<string, string> = {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  };
+  baseUrl: string, path: string, token: string, method: string, body?: string
+): Promise<ParseResult> {
+  const headers: Record<string, string> = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
 
-  // ── Strategy 1: Establish session via /api/session, then use JSESSIONID cookie ──
-  console.log(`[traccar-proxy] Strategy 1: session cookie for ${method} ${path}`);
+  // Strategy 1: Session cookie via /api/session
   try {
-    const sessionUrl = `${baseUrl}/api/session?token=${encodeURIComponent(token)}`;
-    const sessionResp = await fetch(sessionUrl, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-      redirect: 'manual', // Don't follow redirects to catch HTML pages
+    const sessionResp = await fetch(`${baseUrl}/api/session?token=${encodeURIComponent(token)}`, {
+      method: 'GET', headers: { 'Accept': 'application/json' }, redirect: 'manual',
     });
-
     const setCookie = sessionResp.headers.get('set-cookie') || '';
     const cookieMatch = setCookie.match(/JSESSIONID=[^;]+/);
-
-    // Consume session response body
-    const sessionParsed = await parseResponse(sessionResp, 'session');
+    await parseResponse(sessionResp, 'session'); // consume body
 
     if (cookieMatch && sessionResp.ok) {
-      console.log(`[traccar-proxy] Session established, cookie obtained`);
-      const cookieHeaders = { ...headers, 'Cookie': cookieMatch[0] };
-      const opts: RequestInit = { method, headers: cookieHeaders, redirect: 'manual' };
+      const opts: RequestInit = { method, headers: { ...headers, 'Cookie': cookieMatch[0] }, redirect: 'manual' };
       if (body) opts.body = body;
-
       const resp = await fetch(`${baseUrl}${path}`, opts);
-      const result = await parseResponse(resp, 'cookie-request');
-
-      if (result.ok && !result.isHtml) {
-        return result;
-      }
-      console.warn(`[traccar-proxy] Cookie request failed (${result.status}), trying next strategy...`);
-    } else {
-      console.warn(`[traccar-proxy] Session creation failed: status=${sessionResp.status}, cookie=${!!cookieMatch}, body=${JSON.stringify(sessionParsed.data).substring(0, 150)}`);
+      const result = await parseResponse(resp, 'cookie');
+      if (result.ok && !result.isHtml) return result;
     }
   } catch (e) {
-    console.warn(`[traccar-proxy] Strategy 1 (session) error:`, e);
+    console.warn(`[traccar-proxy] Session strategy failed:`, e);
   }
 
-  // ── Strategy 2: Token as query parameter ──
-  console.log(`[traccar-proxy] Strategy 2: token-as-param for ${method} ${path}`);
+  // Strategy 2: Token as query parameter
   try {
-    const separator = path.includes('?') ? '&' : '?';
-    const urlWithToken = `${baseUrl}${path}${separator}token=${encodeURIComponent(token)}`;
+    const sep = path.includes('?') ? '&' : '?';
     const opts: RequestInit = { method, headers, redirect: 'manual' };
     if (body) opts.body = body;
-
-    const resp = await fetch(urlWithToken, opts);
+    const resp = await fetch(`${baseUrl}${path}${sep}token=${encodeURIComponent(token)}`, opts);
     const result = await parseResponse(resp, 'token-param');
-
-    if (result.ok && !result.isHtml) {
-      return result;
-    }
-    console.warn(`[traccar-proxy] Token-param failed (${result.status})`);
+    if (result.ok && !result.isHtml) return result;
   } catch (e) {
-    console.warn(`[traccar-proxy] Strategy 2 (token-param) error:`, e);
+    console.warn(`[traccar-proxy] Token-param strategy failed:`, e);
   }
 
-  // ── Strategy 3: Authorization Bearer header ──
-  console.log(`[traccar-proxy] Strategy 3: bearer header for ${method} ${path}`);
+  // Strategy 3: Bearer header (last resort)
   try {
-    const bearerHeaders = { ...headers, 'Authorization': `Bearer ${token}` };
-    const opts: RequestInit = { method, headers: bearerHeaders, redirect: 'manual' };
+    const opts: RequestInit = { method, headers: { ...headers, 'Authorization': `Bearer ${token}` }, redirect: 'manual' };
     if (body) opts.body = body;
-
     const resp = await fetch(`${baseUrl}${path}`, opts);
-    const result = await parseResponse(resp, 'bearer');
-
-    // Return whatever we got — it's the last strategy
-    return result;
+    return await parseResponse(resp, 'bearer');
   } catch (e) {
-    console.error(`[traccar-proxy] All strategies failed:`, e);
     return {
-      ok: false,
-      status: 502,
-      data: {
-        error: 'Todas as estratégias de autenticação falharam. Verifique: 1) URL do Traccar correta e acessível, 2) Token de API válido, 3) Servidor Traccar online.',
-        details: e instanceof Error ? e.message : String(e),
-      },
+      ok: false, status: 502, isHtml: false,
+      data: { error: 'Todas as estratégias de autenticação falharam.', details: String(e) },
     };
   }
 }
 
+// ══════════════════════════════════════════════════════════
+// MAIN HANDLER
+// ══════════════════════════════════════════════════════════
+
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
     // ── Auth ──
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return jsonResp({ error: 'Unauthorized' }, 401);
-    }
+    if (!authHeader?.startsWith('Bearer ')) return jsonResp({ error: 'Unauthorized' }, 401);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -240,37 +242,24 @@ Deno.serve(async (req) => {
     const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-    if (userError || !user) {
-      return jsonResp({ error: 'Unauthorized' }, 401);
-    }
+    if (userError || !user) return jsonResp({ error: 'Unauthorized' }, 401);
 
-    // ── Parse body ──
+    // ── Parse request ──
     let reqBody: Record<string, unknown> = {};
-    try {
-      reqBody = await req.json();
-    } catch {
+    try { reqBody = await req.json(); } catch {
       const url = new URL(req.url);
-      reqBody = {
-        action: url.searchParams.get('action') || 'test-connection',
-        tenantId: url.searchParams.get('tenantId') || '',
-      };
+      reqBody = { action: url.searchParams.get('action') || 'test-connection', tenantId: url.searchParams.get('tenantId') || '' };
     }
 
     const action = String(reqBody.action || 'test-connection');
     const tenantId = String(reqBody.tenantId || '');
-
-    if (!tenantId) {
-      return jsonResp({ error: 'tenantId is required' }, 400);
-    }
+    if (!tenantId) return jsonResp({ error: 'tenantId is required' }, 400);
 
     const actionDef = ACTION_MAP[action];
-    if (!actionDef) {
-      return jsonResp({ error: `Ação desconhecida: ${action}. Disponíveis: ${Object.keys(ACTION_MAP).join(', ')}` }, 400);
-    }
+    if (!actionDef) return jsonResp({ error: `Ação desconhecida: ${action}` }, 400);
 
-    // ── Fetch Traccar credentials ──
+    // ── Fetch tenant credentials ──
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
     const { data: configRow, error: configError } = await supabaseAdmin
       .from('tenant_integration_configs')
@@ -280,61 +269,104 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (configError || !configRow?.config) {
-      return jsonResp({
-        success: false,
-        error: 'Configuração do Traccar não encontrada. Salve a URL e o token na aba Configurações.',
-      }, 400);
+      return jsonResp({ success: false, error: 'Configuração do Traccar não encontrada.' }, 400);
     }
 
     const cfg = configRow.config as Record<string, string>;
-    const TRACCAR_BASE_URL = cfg.api_url;
-    const TRACCAR_API_TOKEN = cfg.api_token;
-
-    if (!TRACCAR_BASE_URL || !TRACCAR_API_TOKEN) {
+    if (!cfg.api_url || !cfg.api_token) {
       return jsonResp({ success: false, error: 'URL ou Token do Traccar não configurados.' }, 400);
     }
 
-    const baseUrl = TRACCAR_BASE_URL.replace(/\/+$/, '');
+    const baseUrl = cfg.api_url.replace(/\/+$/, '');
+
+    // ── Special: sync-devices-positions (fetches both in one call) ──
+    if (action === 'sync-devices-positions') {
+      const [devResult, posResult] = await Promise.all([
+        traccarFetch(baseUrl, '/api/devices', cfg.api_token, 'GET'),
+        traccarFetch(baseUrl, '/api/positions', cfg.api_token, 'GET'),
+      ]);
+
+      // Update sync status
+      const devices = devResult.ok ? devResult.data as unknown[] : [];
+      const positions = posResult.ok ? posResult.data as unknown[] : [];
+      const isHealthy = devResult.ok && posResult.ok;
+
+      await supabaseAdmin.from('traccar_sync_status').upsert({
+        tenant_id: tenantId,
+        sync_type: 'full',
+        last_sync_at: new Date().toISOString(),
+        last_device_count: Array.isArray(devices) ? devices.length : 0,
+        last_position_count: Array.isArray(positions) ? positions.length : 0,
+        last_error: isHealthy ? null : 'Partial sync failure',
+        consecutive_failures: isHealthy ? 0 : 1,
+        is_healthy: isHealthy,
+      }, { onConflict: 'tenant_id,sync_type' });
+
+      return jsonResp({
+        success: true,
+        action,
+        data: {
+          devices: Array.isArray(devices) ? devices : [],
+          positions: Array.isArray(positions) ? positions : [],
+        },
+      });
+    }
+
+    // ── Standard proxy call ──
     const traccarPath = actionDef.buildPath(reqBody);
     const httpMethod = actionDef.method || 'GET';
     const actionBody = actionDef.hasBody && reqBody.payload ? JSON.stringify(reqBody.payload) : undefined;
 
-    console.log(`[traccar-proxy] action=${action}, tenant=${tenantId}, url=${baseUrl}${traccarPath}`);
-
-    // ── Make the API call ──
-    const result = await traccarFetch(baseUrl, traccarPath, TRACCAR_API_TOKEN, httpMethod, actionBody);
+    const result = await traccarFetch(baseUrl, traccarPath, cfg.api_token, httpMethod, actionBody);
 
     if (!result.ok) {
-      const errorData = result.data as Record<string, unknown>;
-      return jsonResp(
-        {
-          success: false,
-          error: errorData?.error || `Traccar API retornou HTTP ${result.status}`,
-          details: errorData,
-        },
-        result.status >= 400 && result.status < 600 ? result.status : 502
-      );
+      return jsonResp({
+        success: false,
+        error: (result.data as Record<string, unknown>)?.error || `Traccar HTTP ${result.status}`,
+        details: result.data,
+      }, result.status >= 400 && result.status < 600 ? result.status : 502);
     }
 
     // Validate list endpoints return arrays
-    const listActions = [
-      'devices', 'groups', 'positions', 'notifications', 'geofences', 'drivers',
-      'maintenance', 'commands', 'reports-events', 'reports-route', 'reports-summary',
-      'reports-trips', 'reports-stops', 'statistics',
-    ];
-    if (listActions.includes(action) && !Array.isArray(result.data)) {
-      console.warn(`[traccar-proxy] Expected array for "${action}" but got ${typeof result.data}: ${JSON.stringify(result.data).substring(0, 200)}`);
+    if (LIST_ACTIONS.has(action) && !Array.isArray(result.data)) {
       return jsonResp({
         success: false,
-        error: `Resposta inesperada para "${action}": esperava uma lista, recebeu ${typeof result.data}.`,
+        error: `Resposta inesperada para "${action}": esperava lista, recebeu ${typeof result.data}.`,
         details: result.data,
       }, 502);
     }
 
+    // ── Audit mutation actions ──
+    if (actionDef.isMutation) {
+      supabaseAdmin.from('fleet_audit_log').insert({
+        tenant_id: tenantId,
+        action: `traccar:${action}`,
+        entity_type: 'traccar_resource',
+        user_id: user.id,
+        details: { action, payload: reqBody.payload },
+      }).then(() => {}).catch(() => {});
+    }
+
+    // ── Health check enrichment ──
+    if (action === 'health-check') {
+      const serverData = result.data as Record<string, unknown>;
+      return jsonResp({
+        success: true,
+        action,
+        data: {
+          ...serverData,
+          _health: {
+            status: 'connected',
+            checked_at: new Date().toISOString(),
+            proxy_version: '2.0.0',
+          },
+        },
+      });
+    }
+
     return jsonResp({ success: true, action, data: result.data });
   } catch (err) {
-    console.error('[traccar-proxy] Unhandled error:', err);
-    const message = err instanceof Error ? err.message : 'Erro desconhecido';
-    return jsonResp({ success: false, error: message }, 500);
+    console.error('[traccar-proxy] Error:', err);
+    return jsonResp({ success: false, error: err instanceof Error ? err.message : 'Erro desconhecido' }, 500);
   }
 });
