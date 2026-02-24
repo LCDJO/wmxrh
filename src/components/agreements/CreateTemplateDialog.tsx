@@ -24,15 +24,12 @@ interface Props {
 }
 
 const CATEGORIAS = [
-  { value: 'contrato', label: 'Contrato' },
-  { value: 'confidencialidade', label: 'Confidencialidade' },
-  { value: 'uso_imagem', label: 'Uso de Imagem' },
-  { value: 'epi', label: 'EPI' },
-  { value: 'veiculo', label: 'Veículo' },
-  { value: 'gps', label: 'GPS / Monitoramento' },
-  { value: 'disciplinar', label: 'Disciplinar' },
-  { value: 'lgpd', label: 'LGPD' },
-  { value: 'outros', label: 'Outros' },
+  { value: 'general', label: 'Geral' },
+  { value: 'position_specific', label: 'Específico por Cargo' },
+  { value: 'department_specific', label: 'Específico por Departamento' },
+  { value: 'onboarding', label: 'Onboarding / Admissão' },
+  { value: 'compliance', label: 'Compliance' },
+  { value: 'policy', label: 'Política Interna' },
 ];
 
 const ESCOPOS = [
@@ -50,7 +47,7 @@ export function CreateTemplateDialog({ open, onOpenChange, tenantId }: Props) {
   // Form state
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [categoria, setCategoria] = useState('contrato');
+  const [categoria, setCategoria] = useState('general');
   const [escopo, setEscopo] = useState('global');
   const [cargoId, setCargoId] = useState<string | null>(null);
   const [obrigatorio, setObrigatorio] = useState(true);
