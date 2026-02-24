@@ -20,3 +20,14 @@ export type {
   EligibilityResult,
   RequestLetterInput,
 } from './reference-letter.engine';
+
+// ── Reputation Score Engine ──
+export {
+  computeReputationScore,
+} from './reputation-score.engine';
+
+export type {
+  ReputationScoreResult,
+  ReputationFactor,
+  ReputationScoreConfig,
+} from './reputation-score.engine';

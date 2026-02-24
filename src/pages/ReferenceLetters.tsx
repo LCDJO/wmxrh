@@ -223,11 +223,50 @@ export default function ReferenceLetters() {
               </DialogTitle>
             </DialogHeader>
             <ScrollArea className="flex-1">
-              {/* Eligibility info */}
+              {/* Eligibility + Reputation Score */}
               <div className="mb-4 p-3 rounded-md border border-border bg-muted/30">
                 <p className="text-xs text-muted-foreground mb-1">Elegibilidade</p>
                 <p className="text-sm text-foreground">{selectedLetter.eligibility_reason || '—'}</p>
               </div>
+
+              {/* Reputation Score Breakdown (stored in metadata) */}
+              {(selectedLetter.metadata as any)?.reputation_score && (
+                <div className="mb-4 p-3 rounded-md border border-border space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-foreground">Reputation Score</p>
+                    <div className="flex items-center gap-2">
+                      <Badge className={`text-xs ${
+                        (selectedLetter.metadata as any).reputation_score.score >= 75 ? 'bg-chart-2/10 text-chart-2' :
+                        (selectedLetter.metadata as any).reputation_score.score >= 60 ? 'bg-chart-4/10 text-chart-4' :
+                        'bg-destructive/10 text-destructive'
+                      }`}>
+                        {(selectedLetter.metadata as any).reputation_score.score}/100 ({(selectedLetter.metadata as any).reputation_score.grade})
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    {((selectedLetter.metadata as any).reputation_score.factors || []).map((f: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">{f.label}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${f.penalty > 50 ? 'bg-destructive' : f.penalty > 20 ? 'bg-chart-4' : 'bg-chart-2'}`}
+                              style={{ width: `${Math.min(100, f.penalty)}%` }}
+                            />
+                          </div>
+                          <span className="text-muted-foreground w-8 text-right">-{f.penalty}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {(selectedLetter.metadata as any).reputation_score.suggested_text && (
+                    <p className="text-xs italic text-chart-2 border-t border-border pt-2">
+                      "{(selectedLetter.metadata as any).reputation_score.suggested_text}"
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Signature status */}
               <div className="grid grid-cols-2 gap-4 mb-4">

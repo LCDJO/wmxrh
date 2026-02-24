@@ -11,6 +11,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO, differenceInMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { computeReputationScore } from './reputation-score.engine';
+import type { ReputationScoreResult } from './reputation-score.engine';
 
 // ── Types ──
 
@@ -53,6 +55,7 @@ export interface EligibilityResult {
   eligible: boolean;
   reason: string;
   suggested_template: string;
+  reputation_score?: ReputationScoreResult;
 }
 
 export interface RequestLetterInput {
@@ -113,6 +116,18 @@ export async function evaluateEligibility(
     }
   }
 
+  // ── Reputation Score Engine ──
+  const reputationScore = await computeReputationScore(tenantId, employeeId);
+
+  if (!reputationScore.eligible) {
+    return {
+      eligible: false,
+      reason: reputationScore.justification,
+      suggested_template: 'none',
+      reputation_score: reputationScore,
+    };
+  }
+
   // Suggest template based on tenure
   const tenure = admissionDate
     ? differenceInMonths(parseISO(endDate), parseISO(admissionDate))
@@ -124,8 +139,9 @@ export async function evaluateEligibility(
 
   return {
     eligible: true,
-    reason: `${empName} — elegível. Tempo: ${tenure} meses.`,
+    reason: reputationScore.justification,
     suggested_template: suggestedTemplate,
+    reputation_score: reputationScore,
   };
 }
 
@@ -254,20 +270,25 @@ export async function requestReferenceLetter(input: RequestLetterInput): Promise
     contentHtml = generateLetterHtml(eligibility.suggested_template, empName, cargo, admDate, termDate, companyName);
   }
 
+  const insertPayload = {
+    tenant_id: input.tenant_id,
+    employee_id: input.employee_id,
+    requested_by: input.requested_by,
+    purpose: input.purpose || null,
+    is_eligible: eligibility.eligible,
+    eligibility_reason: eligibility.reason,
+    eligibility_checked_at: new Date().toISOString(),
+    template_key: eligibility.suggested_template,
+    content_html: contentHtml,
+    status,
+    metadata: {
+      reputation_score: eligibility.reputation_score || null,
+    },
+  };
+
   const { data, error } = await supabase
     .from('reference_letters')
-    .insert({
-      tenant_id: input.tenant_id,
-      employee_id: input.employee_id,
-      requested_by: input.requested_by,
-      purpose: input.purpose || null,
-      is_eligible: eligibility.eligible,
-      eligibility_reason: eligibility.reason,
-      eligibility_checked_at: new Date().toISOString(),
-      template_key: eligibility.suggested_template,
-      content_html: contentHtml,
-      status,
-    })
+    .insert(insertPayload as any)
     .select('*')
     .single();
 
