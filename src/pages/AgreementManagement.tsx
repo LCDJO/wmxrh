@@ -12,10 +12,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryScope } from '@/domains/hooks';
 import {
   FileText, Clock, CheckCircle2, Search, Users,
-  AlertTriangle, Filter, XCircle, ExternalLink, Plus, Pencil, Trash2,
+  AlertTriangle, Filter, XCircle, ExternalLink, Plus, Pencil, Trash2, Eye,
 } from 'lucide-react';
 import { CreateTemplateDialog } from '@/components/agreements/CreateTemplateDialog';
 import { EditTemplateDialog } from '@/components/agreements/EditTemplateDialog';
+import { PreviewTemplateDialog } from '@/components/agreements/PreviewTemplateDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -81,6 +82,7 @@ export default function AgreementManagement() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editTemplate, setEditTemplate] = useState<TemplateRow | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<{ name: string; html: string } | null>(null);
 
   // ── Templates query ──
   const { data: templates = [], isLoading: loadingTemplates } = useQuery({
@@ -277,7 +279,10 @@ export default function AgreementManagement() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTemplate(t)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPreviewTemplate({ name: t.name, html: t.conteudo_html })} title="Visualizar">
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTemplate(t)} title="Editar">
                               <Pencil className="h-4 w-4 text-muted-foreground" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(t.id)}>
@@ -385,6 +390,13 @@ export default function AgreementManagement() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <PreviewTemplateDialog
+        open={!!previewTemplate}
+        onOpenChange={(v) => { if (!v) setPreviewTemplate(null); }}
+        name={previewTemplate?.name || ''}
+        contentHtml={previewTemplate?.html || ''}
+      />
 
       <EditTemplateDialog
         open={!!editTemplate}
