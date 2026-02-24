@@ -12,8 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryScope } from '@/domains/hooks';
 import {
   FileText, Clock, CheckCircle2, Search, Users,
-  AlertTriangle, Filter, XCircle, ExternalLink,
+  AlertTriangle, Filter, XCircle, ExternalLink, Plus,
 } from 'lucide-react';
+import { CreateTemplateDialog } from '@/components/agreements/CreateTemplateDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +50,9 @@ interface PendingAgreementRow {
 }
 
 const categoryLabels: Record<string, string> = {
-  geral: 'Geral', funcao: 'Função', empresa: 'Empresa', risco: 'Risco',
+  contrato: 'Contrato', confidencialidade: 'Confidencialidade', uso_imagem: 'Uso de Imagem',
+  epi: 'EPI', veiculo: 'Veículo', gps: 'GPS', disciplinar: 'Disciplinar', lgpd: 'LGPD',
+  outros: 'Outros', geral: 'Geral', funcao: 'Função', empresa: 'Empresa', risco: 'Risco',
 };
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -67,6 +70,7 @@ export default function AgreementManagement() {
   const [templateCategory, setTemplateCategory] = useState('all');
   const [pendingSearch, setPendingSearch] = useState('');
   const [pendingStatus, setPendingStatus] = useState('all');
+  const [createOpen, setCreateOpen] = useState(false);
 
   // ── Templates query ──
   const { data: templates = [], isLoading: loadingTemplates } = useQuery({
@@ -144,10 +148,17 @@ export default function AgreementManagement() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold font-display text-foreground">Termos e Acordos</h1>
-        <p className="text-sm text-muted-foreground mt-1">Biblioteca de termos e gestão de assinaturas</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold font-display text-foreground">Termos e Acordos</h1>
+          <p className="text-sm text-muted-foreground mt-1">Biblioteca de termos e gestão de assinaturas</p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)} className="gap-2">
+          <Plus className="h-4 w-4" /> Novo Termo
+        </Button>
       </div>
+
+      {qs && <CreateTemplateDialog open={createOpen} onOpenChange={setCreateOpen} tenantId={qs.tenantId} />}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
