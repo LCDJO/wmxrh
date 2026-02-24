@@ -25,30 +25,55 @@ const corsHeaders = {
 async function traccarFetch(baseUrl: string, path: string, token: string): Promise<{ ok: boolean; data: unknown }> {
   // Strategy 1: Session cookie
   try {
-    const sess = await fetch(`${baseUrl}/api/session?token=${encodeURIComponent(token)}`, {
+    console.log(`[traccar-sync] Strategy 1: session cookie for ${baseUrl}${path}`);
+    const sessUrl = `${baseUrl}/api/session?token=${encodeURIComponent(token)}`;
+    const sess = await fetch(sessUrl, {
       method: 'GET', headers: { 'Accept': 'application/json' }, redirect: 'manual',
     });
+    const sessText = await sess.text();
     const cookie = (sess.headers.get('set-cookie') || '').match(/JSESSIONID=[^;]+/);
-    await sess.text(); // consume
+    console.log(`[traccar-sync] Session status=${sess.status}, hasCookie=${!!cookie}, body=${sessText.substring(0, 200)}`);
+
     if (cookie && sess.ok) {
       const resp = await fetch(`${baseUrl}${path}`, {
         headers: { 'Accept': 'application/json', 'Cookie': cookie[0] }, redirect: 'manual',
       });
       const text = await resp.text();
+      console.log(`[traccar-sync] Cookie fetch status=${resp.status}, body=${text.substring(0, 300)}`);
       try { return { ok: resp.ok, data: JSON.parse(text) }; } catch { return { ok: false, data: null }; }
     }
-  } catch {}
+  } catch (e) {
+    console.error(`[traccar-sync] Strategy 1 failed:`, e);
+  }
 
   // Strategy 2: Token param
   try {
+    console.log(`[traccar-sync] Strategy 2: token param for ${baseUrl}${path}`);
     const sep = path.includes('?') ? '&' : '?';
     const resp = await fetch(`${baseUrl}${path}${sep}token=${encodeURIComponent(token)}`, {
       headers: { 'Accept': 'application/json' }, redirect: 'manual',
     });
     const text = await resp.text();
+    console.log(`[traccar-sync] Token-param fetch status=${resp.status}, body=${text.substring(0, 300)}`);
     try { return { ok: resp.ok, data: JSON.parse(text) }; } catch { return { ok: false, data: null }; }
-  } catch {}
+  } catch (e) {
+    console.error(`[traccar-sync] Strategy 2 failed:`, e);
+  }
 
+  // Strategy 3: Bearer header
+  try {
+    console.log(`[traccar-sync] Strategy 3: bearer for ${baseUrl}${path}`);
+    const resp = await fetch(`${baseUrl}${path}`, {
+      headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` }, redirect: 'manual',
+    });
+    const text = await resp.text();
+    console.log(`[traccar-sync] Bearer fetch status=${resp.status}, body=${text.substring(0, 300)}`);
+    try { return { ok: resp.ok, data: JSON.parse(text) }; } catch { return { ok: false, data: null }; }
+  } catch (e) {
+    console.error(`[traccar-sync] Strategy 3 failed:`, e);
+  }
+
+  console.error(`[traccar-sync] All strategies failed for ${path}`);
   return { ok: false, data: null };
 }
 
@@ -151,6 +176,12 @@ async function syncTenant(
 
   const devices = (devRes.ok && Array.isArray(devRes.data) ? devRes.data : []) as any[];
   const positions = (posRes.ok && Array.isArray(posRes.data) ? posRes.data : []) as any[];
+
+  console.log(`[traccar-sync] Tenant ${tenantId}: devRes.ok=${devRes.ok}, devices=${devices.length}, posRes.ok=${posRes.ok}, positions=${positions.length}`);
+
+  if (!devRes.ok) {
+    throw new Error(`Traccar devices API failed. Check server URL and token.`);
+  }
 
   // Build position lookup
   const posMap = new Map<number, any>();
