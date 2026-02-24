@@ -10674,6 +10674,384 @@ export type Database = {
           },
         ]
       }
+      offboarding_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          new_value: Json | null
+          old_value: Json | null
+          tenant_id: string
+          workflow_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          tenant_id: string
+          workflow_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          tenant_id?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offboarding_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offboarding_audit_log_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "offboarding_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offboarding_checklist_items: {
+        Row: {
+          automation_action: string | null
+          automation_result: Json | null
+          category: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_automated: boolean
+          is_mandatory: boolean
+          ordem: number
+          skipped_reason: string | null
+          status: Database["public"]["Enums"]["checklist_item_status"]
+          tenant_id: string
+          title: string
+          updated_at: string
+          workflow_id: string
+        }
+        Insert: {
+          automation_action?: string | null
+          automation_result?: Json | null
+          category: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_automated?: boolean
+          is_mandatory?: boolean
+          ordem?: number
+          skipped_reason?: string | null
+          status?: Database["public"]["Enums"]["checklist_item_status"]
+          tenant_id: string
+          title: string
+          updated_at?: string
+          workflow_id: string
+        }
+        Update: {
+          automation_action?: string | null
+          automation_result?: Json | null
+          category?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_automated?: boolean
+          is_mandatory?: boolean
+          ordem?: number
+          skipped_reason?: string | null
+          status?: Database["public"]["Enums"]["checklist_item_status"]
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offboarding_checklist_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offboarding_checklist_items_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "offboarding_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offboarding_reference_letters: {
+        Row: {
+          approved: boolean | null
+          approved_at: string | null
+          approved_by: string | null
+          blockchain_proof_id: string | null
+          content_html: string
+          content_plain: string | null
+          created_at: string
+          document_hash: string | null
+          document_url: string | null
+          eligibility_criteria: Json | null
+          eligibility_score: number | null
+          employee_id: string
+          employee_signed: boolean | null
+          employee_signed_at: string | null
+          employer_signed: boolean | null
+          employer_signed_at: string | null
+          employer_signer_name: string | null
+          id: string
+          rejection_reason: string | null
+          tenant_id: string
+          updated_at: string
+          workflow_id: string
+        }
+        Insert: {
+          approved?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
+          blockchain_proof_id?: string | null
+          content_html: string
+          content_plain?: string | null
+          created_at?: string
+          document_hash?: string | null
+          document_url?: string | null
+          eligibility_criteria?: Json | null
+          eligibility_score?: number | null
+          employee_id: string
+          employee_signed?: boolean | null
+          employee_signed_at?: string | null
+          employer_signed?: boolean | null
+          employer_signed_at?: string | null
+          employer_signer_name?: string | null
+          id?: string
+          rejection_reason?: string | null
+          tenant_id: string
+          updated_at?: string
+          workflow_id: string
+        }
+        Update: {
+          approved?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
+          blockchain_proof_id?: string | null
+          content_html?: string
+          content_plain?: string | null
+          created_at?: string
+          document_hash?: string | null
+          document_url?: string | null
+          eligibility_criteria?: Json | null
+          eligibility_score?: number | null
+          employee_id?: string
+          employee_signed?: boolean | null
+          employee_signed_at?: string | null
+          employer_signed?: boolean | null
+          employer_signed_at?: string | null
+          employer_signer_name?: string | null
+          id?: string
+          rejection_reason?: string | null
+          tenant_id?: string
+          updated_at?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offboarding_reference_letters_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offboarding_reference_letters_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offboarding_reference_letters_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "offboarding_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offboarding_workflows: {
+        Row: {
+          acordo_multa_fgts_pct: number | null
+          approved_at: string | null
+          approved_by: string | null
+          archive_snapshot: Json | null
+          archived_at: string | null
+          archived_by: string | null
+          aviso_previo_days: number | null
+          aviso_previo_type: string | null
+          cancellation_reason: string | null
+          company_group_id: string | null
+          company_id: string | null
+          created_at: string
+          effective_date: string
+          employee_id: string
+          esocial_event_id: string | null
+          esocial_protocol: string | null
+          esocial_sent_at: string | null
+          esocial_status: string | null
+          id: string
+          initiated_by: string | null
+          justa_causa_artigo: string | null
+          justa_causa_motivo: string | null
+          last_working_day: string | null
+          metadata: Json | null
+          notes: string | null
+          notification_date: string
+          offboarding_type: Database["public"]["Enums"]["offboarding_type"]
+          reference_letter_approved: boolean | null
+          reference_letter_approved_by: string | null
+          reference_letter_document_id: string | null
+          reference_letter_eligible: boolean | null
+          reference_letter_generated_at: string | null
+          rescisao_bruta: number | null
+          rescisao_descontos: number | null
+          rescisao_liquida: number | null
+          simulation_snapshot: Json | null
+          status: Database["public"]["Enums"]["offboarding_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          acordo_multa_fgts_pct?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          archive_snapshot?: Json | null
+          archived_at?: string | null
+          archived_by?: string | null
+          aviso_previo_days?: number | null
+          aviso_previo_type?: string | null
+          cancellation_reason?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          effective_date: string
+          employee_id: string
+          esocial_event_id?: string | null
+          esocial_protocol?: string | null
+          esocial_sent_at?: string | null
+          esocial_status?: string | null
+          id?: string
+          initiated_by?: string | null
+          justa_causa_artigo?: string | null
+          justa_causa_motivo?: string | null
+          last_working_day?: string | null
+          metadata?: Json | null
+          notes?: string | null
+          notification_date?: string
+          offboarding_type: Database["public"]["Enums"]["offboarding_type"]
+          reference_letter_approved?: boolean | null
+          reference_letter_approved_by?: string | null
+          reference_letter_document_id?: string | null
+          reference_letter_eligible?: boolean | null
+          reference_letter_generated_at?: string | null
+          rescisao_bruta?: number | null
+          rescisao_descontos?: number | null
+          rescisao_liquida?: number | null
+          simulation_snapshot?: Json | null
+          status?: Database["public"]["Enums"]["offboarding_status"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          acordo_multa_fgts_pct?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          archive_snapshot?: Json | null
+          archived_at?: string | null
+          archived_by?: string | null
+          aviso_previo_days?: number | null
+          aviso_previo_type?: string | null
+          cancellation_reason?: string | null
+          company_group_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          effective_date?: string
+          employee_id?: string
+          esocial_event_id?: string | null
+          esocial_protocol?: string | null
+          esocial_sent_at?: string | null
+          esocial_status?: string | null
+          id?: string
+          initiated_by?: string | null
+          justa_causa_artigo?: string | null
+          justa_causa_motivo?: string | null
+          last_working_day?: string | null
+          metadata?: Json | null
+          notes?: string | null
+          notification_date?: string
+          offboarding_type?: Database["public"]["Enums"]["offboarding_type"]
+          reference_letter_approved?: boolean | null
+          reference_letter_approved_by?: string | null
+          reference_letter_document_id?: string | null
+          reference_letter_eligible?: boolean | null
+          reference_letter_generated_at?: string | null
+          rescisao_bruta?: number | null
+          rescisao_descontos?: number | null
+          rescisao_liquida?: number | null
+          simulation_snapshot?: Json | null
+          status?: Database["public"]["Enums"]["offboarding_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offboarding_workflows_company_group_id_fkey"
+            columns: ["company_group_id"]
+            isOneToOne: false
+            referencedRelation: "company_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offboarding_workflows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offboarding_workflows_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offboarding_workflows_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       onboarding_progress: {
         Row: {
           completed_at: string | null
@@ -16030,6 +16408,12 @@ export type Database = {
       announcement_priority: "low" | "medium" | "high" | "critical"
       assist_mode: "silent" | "visible"
       benefit_type: "va" | "vr" | "vt" | "health" | "dental" | "cesta" | "flex"
+      checklist_item_status:
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "skipped"
+        | "blocked"
       compliance_rule_severity: "info" | "warning" | "critical"
       compliance_rule_status: "active" | "disabled" | "archived"
       contract_type:
@@ -16180,6 +16564,18 @@ export type Database = {
         | "banco_horas"
         | "custom"
       notification_type: "info" | "warning" | "critical" | "success"
+      offboarding_status:
+        | "draft"
+        | "in_progress"
+        | "pending_approval"
+        | "approved"
+        | "completed"
+        | "cancelled"
+      offboarding_type:
+        | "sem_justa_causa"
+        | "justa_causa"
+        | "pedido_demissao"
+        | "acordo_mutuo"
       payroll_incidence:
         | "inss"
         | "irrf"
@@ -16414,6 +16810,13 @@ export const Constants = {
       announcement_priority: ["low", "medium", "high", "critical"],
       assist_mode: ["silent", "visible"],
       benefit_type: ["va", "vr", "vt", "health", "dental", "cesta", "flex"],
+      checklist_item_status: [
+        "pending",
+        "in_progress",
+        "completed",
+        "skipped",
+        "blocked",
+      ],
       compliance_rule_severity: ["info", "warning", "critical"],
       compliance_rule_status: ["active", "disabled", "archived"],
       contract_type: [
@@ -16576,6 +16979,20 @@ export const Constants = {
         "custom",
       ],
       notification_type: ["info", "warning", "critical", "success"],
+      offboarding_status: [
+        "draft",
+        "in_progress",
+        "pending_approval",
+        "approved",
+        "completed",
+        "cancelled",
+      ],
+      offboarding_type: [
+        "sem_justa_causa",
+        "justa_causa",
+        "pedido_demissao",
+        "acordo_mutuo",
+      ],
       payroll_incidence: [
         "inss",
         "irrf",
