@@ -3,7 +3,7 @@
  * Replaces template variables with sample data and renders styled document preview.
  */
 
-import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import { useMemo } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Eye } from 'lucide-react';
 
@@ -43,32 +43,11 @@ interface Props {
   title?: string;
   companyName?: string;
   primaryColor?: string;
-  scaleFit?: boolean;
 }
 
-export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName = 'Empresa Exemplo Ltda', primaryColor = '#0f7a4d', scaleFit = false }: Props) {
+export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName = 'Empresa Exemplo Ltda', primaryColor = '#0f7a4d' }: Props) {
   const previewHtml = useMemo(() => replaceVariables(contentHtml, true), [contentHtml]);
   const today = new Date().toLocaleDateString('pt-BR');
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pageRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-
-  const computeScale = useCallback(() => {
-    if (!scaleFit || !containerRef.current || !pageRef.current) return;
-    const containerW = containerRef.current.clientWidth - 48; // padding
-    const containerH = containerRef.current.clientHeight - 48;
-    const pageW = pageRef.current.scrollWidth;
-    const pageH = pageRef.current.scrollHeight;
-    const s = Math.min(containerW / pageW, containerH / pageH, 1);
-    setScale(s);
-  }, [scaleFit]);
-
-  useEffect(() => {
-    computeScale();
-    window.addEventListener('resize', computeScale);
-    return () => window.removeEventListener('resize', computeScale);
-  }, [computeScale, contentHtml]);
 
   if (!contentHtml.trim()) {
     return (
@@ -89,16 +68,14 @@ export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName 
       </div>
 
       {/* A4 page simulation */}
-      <div ref={containerRef} className="flex-1 overflow-hidden bg-gray-200/60 p-6 flex justify-center items-start">
+      <div className="flex-1 overflow-auto bg-gray-200/60 p-6 flex justify-center items-start">
         <div
-          ref={pageRef}
           className="bg-white shadow-lg flex flex-col origin-top"
           style={{
             width: '210mm',
             minHeight: '297mm',
             maxWidth: '100%',
             fontFamily: 'Georgia, serif',
-            zoom: scaleFit ? scale : undefined,
           }}
         >
           {/* Header */}

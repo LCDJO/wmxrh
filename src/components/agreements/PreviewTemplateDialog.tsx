@@ -50,7 +50,7 @@ export function PreviewTemplateDialog({ open, onOpenChange, name, contentHtml, c
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden border border-border rounded-lg min-h-0">
-          <TemplateHtmlPreview contentHtml={contentHtml} title={name} companyName={companyName} scaleFit />
+          <TemplateHtmlPreview contentHtml={contentHtml} title={name} companyName={companyName} />
         </div>
 
         <p className="text-[11px] text-muted-foreground">
