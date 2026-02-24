@@ -651,6 +651,111 @@ export type Database = {
         }
         Relationships: []
       }
+      archived_employee_profiles: {
+        Row: {
+          addresses_snapshot: Json
+          agreements_snapshot: Json
+          anonymization_request_id: string | null
+          anonymized_at: string | null
+          anonymized_by: string | null
+          archive_reason: string
+          archived_at: string
+          archived_by: string | null
+          benefits_snapshot: Json
+          contracts_snapshot: Json
+          created_at: string
+          data_desligamento: string
+          dependents_snapshot: Json
+          disciplinary_snapshot: Json
+          documents_snapshot: Json
+          employee_id: string
+          employee_snapshot: Json
+          financial_snapshot: Json
+          id: string
+          is_anonymized: boolean
+          offboarding_type: string
+          rescission_result: Json | null
+          snapshot_hash: string | null
+          sst_snapshot: Json
+          tenant_id: string
+          updated_at: string
+          workflow_id: string | null
+        }
+        Insert: {
+          addresses_snapshot?: Json
+          agreements_snapshot?: Json
+          anonymization_request_id?: string | null
+          anonymized_at?: string | null
+          anonymized_by?: string | null
+          archive_reason?: string
+          archived_at?: string
+          archived_by?: string | null
+          benefits_snapshot?: Json
+          contracts_snapshot?: Json
+          created_at?: string
+          data_desligamento: string
+          dependents_snapshot?: Json
+          disciplinary_snapshot?: Json
+          documents_snapshot?: Json
+          employee_id: string
+          employee_snapshot?: Json
+          financial_snapshot?: Json
+          id?: string
+          is_anonymized?: boolean
+          offboarding_type: string
+          rescission_result?: Json | null
+          snapshot_hash?: string | null
+          sst_snapshot?: Json
+          tenant_id: string
+          updated_at?: string
+          workflow_id?: string | null
+        }
+        Update: {
+          addresses_snapshot?: Json
+          agreements_snapshot?: Json
+          anonymization_request_id?: string | null
+          anonymized_at?: string | null
+          anonymized_by?: string | null
+          archive_reason?: string
+          archived_at?: string
+          archived_by?: string | null
+          benefits_snapshot?: Json
+          contracts_snapshot?: Json
+          created_at?: string
+          data_desligamento?: string
+          dependents_snapshot?: Json
+          disciplinary_snapshot?: Json
+          documents_snapshot?: Json
+          employee_id?: string
+          employee_snapshot?: Json
+          financial_snapshot?: Json
+          id?: string
+          is_anonymized?: boolean
+          offboarding_type?: string
+          rescission_result?: Json | null
+          snapshot_hash?: string | null
+          sst_snapshot?: Json
+          tenant_id?: string
+          updated_at?: string
+          workflow_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archived_employee_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archived_employee_profiles_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "offboarding_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string

@@ -82,3 +82,14 @@ export type {
   ESocialSubmissionResult,
   ESocialStatusCheckResult,
 } from './offboarding-esocial.engine';
+
+// ── Etapa 6: Archival Engine ──
+export {
+  archiveEmployeeProfile,
+  getArchivedProfile,
+  verifyArchiveIntegrity,
+} from './offboarding-archive.engine';
+export type {
+  ArchivedEmployeeProfile,
+  ArchiveResult,
+} from './offboarding-archive.engine';
