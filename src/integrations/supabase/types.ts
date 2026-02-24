@@ -12265,6 +12265,99 @@ export type Database = {
           },
         ]
       }
+      reference_letters: {
+        Row: {
+          content_html: string | null
+          created_at: string
+          delivered_at: string | null
+          delivered_to_email: string | null
+          eligibility_checked_at: string | null
+          eligibility_reason: string | null
+          employee_id: string
+          hr_signature_note: string | null
+          hr_signed_at: string | null
+          hr_signer_id: string | null
+          id: string
+          is_eligible: boolean
+          manager_signature_note: string | null
+          manager_signed_at: string | null
+          manager_signer_id: string | null
+          metadata: Json | null
+          purpose: string | null
+          requested_at: string
+          requested_by: string
+          status: Database["public"]["Enums"]["reference_letter_status"]
+          template_key: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          content_html?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivered_to_email?: string | null
+          eligibility_checked_at?: string | null
+          eligibility_reason?: string | null
+          employee_id: string
+          hr_signature_note?: string | null
+          hr_signed_at?: string | null
+          hr_signer_id?: string | null
+          id?: string
+          is_eligible?: boolean
+          manager_signature_note?: string | null
+          manager_signed_at?: string | null
+          manager_signer_id?: string | null
+          metadata?: Json | null
+          purpose?: string | null
+          requested_at?: string
+          requested_by: string
+          status?: Database["public"]["Enums"]["reference_letter_status"]
+          template_key?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          content_html?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivered_to_email?: string | null
+          eligibility_checked_at?: string | null
+          eligibility_reason?: string | null
+          employee_id?: string
+          hr_signature_note?: string | null
+          hr_signed_at?: string | null
+          hr_signer_id?: string | null
+          id?: string
+          is_eligible?: boolean
+          manager_signature_note?: string | null
+          manager_signed_at?: string | null
+          manager_signer_id?: string | null
+          metadata?: Json | null
+          purpose?: string | null
+          requested_at?: string
+          requested_by?: string
+          status?: Database["public"]["Enums"]["reference_letter_status"]
+          template_key?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reference_letters_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reference_letters_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       referral_links: {
         Row: {
           code: string
@@ -16862,6 +16955,14 @@ export type Database = {
         | "platform_support_agent"
         | "platform_support_manager"
         | "platform_support_coordinator"
+      reference_letter_status:
+        | "requested"
+        | "eligibility_denied"
+        | "pending_manager_signature"
+        | "pending_hr_signature"
+        | "signed"
+        | "delivered"
+        | "cancelled"
       risk_category:
         | "fisico"
         | "quimico"
@@ -17285,6 +17386,15 @@ export const Constants = {
         "platform_support_agent",
         "platform_support_manager",
         "platform_support_coordinator",
+      ],
+      reference_letter_status: [
+        "requested",
+        "eligibility_denied",
+        "pending_manager_signature",
+        "pending_hr_signature",
+        "signed",
+        "delivered",
+        "cancelled",
       ],
       risk_category: [
         "fisico",
