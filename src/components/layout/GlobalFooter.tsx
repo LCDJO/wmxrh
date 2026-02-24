@@ -2,7 +2,7 @@
  * GlobalFooter — Enterprise SaaS footer with dynamic tenant/platform data.
  * Reads footer_configs to allow per-tenant section toggling & content editing.
  */
-import { useMemo } from 'react';
+import { useMemo, forwardRef } from 'react';
 import { Shield, Headphones, Cpu, ExternalLink } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useTenant } from '@/contexts/TenantContext';
@@ -70,7 +70,7 @@ function StatusDot({ online }: { online: boolean }) {
   );
 }
 
-export function GlobalFooter() {
+export const GlobalFooter = forwardRef<HTMLElement, {}>(function GlobalFooter(_props, ref) {
   const { currentTenant } = useTenant();
   const { isTenantAdmin } = usePermissions();
 
@@ -125,7 +125,7 @@ export function GlobalFooter() {
   const gridCols = visibleSections <= 2 ? 'sm:grid-cols-2' : visibleSections === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4';
 
   return (
-    <footer className="border-t border-border bg-card text-card-foreground print:hidden">
+    <footer ref={ref} className="border-t border-border bg-card text-card-foreground print:hidden">
       <div className="mx-auto max-w-[1600px] px-8 py-6">
         <div className={`grid grid-cols-1 gap-6 ${gridCols}`}>
           {/* 1. Institucional */}
@@ -234,4 +234,4 @@ export function GlobalFooter() {
       </div>
     </footer>
   );
-}
+});

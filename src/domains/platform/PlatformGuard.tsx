@@ -2,7 +2,7 @@
  * PlatformGuard — Route guard for platform-level routes.
  * Now joins platform_roles to resolve role slug from role_id.
  */
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, ReactNode, forwardRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -83,7 +83,7 @@ export function usePlatformIdentity() {
   return { identity, loading, hasRole, canWrite, isPlatformUser: !!identity };
 }
 
-export function PlatformGuard({ children, allowedRoles }: PlatformGuardProps) {
+export const PlatformGuard = forwardRef<HTMLDivElement, PlatformGuardProps>(function PlatformGuard({ children, allowedRoles }, _ref) {
   const { identity, loading } = usePlatformIdentity();
 
   if (loading) {
@@ -106,4 +106,4 @@ export function PlatformGuard({ children, allowedRoles }: PlatformGuardProps) {
   }
 
   return <>{children}</>;
-}
+});
