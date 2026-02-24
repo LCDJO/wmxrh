@@ -9948,6 +9948,59 @@ export type Database = {
           },
         ]
       }
+      lgpd_ex_employee_access_logs: {
+        Row: {
+          access_type: string
+          accessed_by: string
+          created_at: string
+          employee_id: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          purpose: string | null
+          resource_id: string | null
+          resource_type: string
+          tenant_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          access_type?: string
+          accessed_by: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          purpose?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          tenant_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          access_type?: string
+          accessed_by?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          purpose?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          tenant_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lgpd_ex_employee_access_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lgpd_legal_basis: {
         Row: {
           created_at: string
@@ -16342,6 +16395,14 @@ export type Database = {
       }
     }
     Functions: {
+      anonymize_archived_profile: {
+        Args: {
+          p_anonymized_by: string
+          p_archive_id: string
+          p_tenant_id: string
+        }
+        Returns: boolean
+      }
       calculate_payroll_simulation: {
         Args: {
           _base_salary: number
@@ -16414,6 +16475,16 @@ export type Database = {
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       expire_inactive_display_sessions: { Args: never; Returns: number }
+      find_profiles_for_anonymization: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          archive_id: string
+          data_desligamento: string
+          employee_id: string
+          retention_end_date: string
+          retention_months: number
+        }[]
+      }
       fn_regulatory_audit_insert: {
         Args: {
           _actor_id: string

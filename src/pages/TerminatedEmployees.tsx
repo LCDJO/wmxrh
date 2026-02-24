@@ -10,12 +10,14 @@
  *   - Permission-controlled access
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useQueryScope } from '@/domains/hooks';
 import { usePermissions } from '@/domains/security';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { OFFBOARDING_TYPE_LABELS } from '@/domains/automated-offboarding';
+import { logExEmployeeAccess } from '@/domains/lgpd';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -64,11 +66,27 @@ interface ArchivedProfile {
 
 export default function TerminatedEmployees() {
   const qs = useQueryScope();
+  const { user } = useAuth();
   const { canManageEmployees } = usePermissions();
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [selectedProfile, setSelectedProfile] = useState<ArchivedProfile | null>(null);
+
+  // LGPD: log access when viewing an ex-employee profile
+  useEffect(() => {
+    if (selectedProfile && qs?.tenantId && user?.id && !selectedProfile.is_anonymized) {
+      logExEmployeeAccess({
+        tenantId: qs.tenantId,
+        employeeId: selectedProfile.employee_id,
+        accessedBy: user.id,
+        accessType: 'view',
+        resourceType: 'archived_profile',
+        resourceId: selectedProfile.id,
+        purpose: 'Consulta ficha de colaborador desligado',
+      }).catch(() => {}); // non-blocking
+    }
+  }, [selectedProfile?.id]);
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ['archived_employees', qs?.tenantId],
