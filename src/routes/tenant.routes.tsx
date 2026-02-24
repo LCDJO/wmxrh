@@ -63,6 +63,7 @@ import SupportNewTicket from '@/pages/support/SupportNewTicket';
 import SupportTickets from '@/pages/support/SupportTickets';
 import SupportWiki from '@/pages/support/SupportWiki';
 import SupportLiveChat from '@/pages/support/SupportLiveChat';
+import OffboardingDashboard from '@/pages/OffboardingDashboard';
 
 const TenantOnboarding = lazy(() => import('@/pages/TenantOnboarding'));
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
@@ -81,6 +82,7 @@ export const tenantRoutes: RouteObject[] = [
       // ── People ──
       { path: '/employees', element: pr('employees', <Employees />) },
       { path: '/employees/:id', element: pr('employees', <EmployeeDetail />) },
+      { path: '/offboarding', element: pr('employees', <OffboardingDashboard />) },
       { path: '/companies', element: pr('companies', <Companies />) },
       { path: '/groups', element: pr('groups', <CompanyGroups />) },
       { path: '/positions', element: pr('positions', <Positions />) },

@@ -16,7 +16,7 @@ import {
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
   Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook, Store, Bot,
-  HardHat, Activity, Stethoscope, Car, Monitor, Radio,
+  HardHat, Activity, Stethoscope, Car, Monitor, Radio, UserMinus,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -88,6 +88,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/employees', icon: Users, label: 'Colaboradores', key: 'employees' },
       { to: '/agreements', icon: ScrollText, label: 'Termos e Acordos', key: 'employees' },
+      { to: '/offboarding', icon: UserMinus, label: 'Desligamento', key: 'employees' },
       {
         to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation',
         children: [
