@@ -9,11 +9,13 @@
  *  5. Queue health (lag)
  *  6. Alert generation
  *
- * Computes health_score (0-100) and stores results.
+ * Internal Alerts:
+ *  - TENANT_SERVER_DOWN
+ *  - NO_EVENTS_DETECTED
+ *  - DEVICE_SYNC_ERROR
+ *  - ALERT_ENGINE_FAILURE
  *
- * Modes:
- *  - POST { tenant_id } → check single tenant
- *  - POST { all: true }  → check all configured tenants
+ * Computes health_score (0-100) and stores results.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -26,6 +28,15 @@ interface CheckResult {
   status: 'pass' | 'fail' | 'warn' | 'unknown';
   message: string;
   duration_ms?: number;
+  details?: Record<string, unknown>;
+}
+
+interface InternalAlert {
+  tenant_id: string;
+  health_check_id?: string;
+  alert_type: string;
+  severity: 'info' | 'warning' | 'critical';
+  message: string;
   details?: Record<string, unknown>;
 }
 
@@ -44,9 +55,7 @@ Deno.serve(async (req) => {
         global: { headers: { Authorization: authHeader } },
       });
       const { data: { user } } = await anonClient.auth.getUser();
-      if (!user) {
-        return json({ error: 'Unauthorized' }, 401);
-      }
+      if (!user) return json({ error: 'Unauthorized' }, 401);
       const { data: pu } = await supabase
         .from('platform_users')
         .select('role')
@@ -61,7 +70,6 @@ Deno.serve(async (req) => {
     const checkAll = body.all === true;
     const singleTenantId = body.tenant_id as string | undefined;
 
-    // Get tenants with Traccar configured
     let tenantIds: string[] = [];
     if (singleTenantId) {
       tenantIds = [singleTenantId];
@@ -82,8 +90,8 @@ Deno.serve(async (req) => {
       const result = await runHealthChecks(supabase, supabaseUrl, serviceKey, tenantId);
       result.check_duration_ms = Date.now() - startTime;
 
-      // Store in DB
-      await supabase.from('integration_health_checks').insert({
+      // Store health check in DB
+      const { data: insertedCheck } = await supabase.from('integration_health_checks').insert({
         tenant_id: tenantId,
         server_connection: result.server_connection,
         api_authentication: result.api_authentication,
@@ -101,9 +109,41 @@ Deno.serve(async (req) => {
         health_status: result.health_status,
         check_duration_ms: result.check_duration_ms,
         error_summary: result.error_summary,
-      });
+      }).select('id').maybeSingle();
 
-      results.push({ tenant_id: tenantId, ...result });
+      const checkId = insertedCheck?.id;
+
+      // ── Generate Internal Alerts ──
+      const alerts = generateAlerts(tenantId, checkId, result);
+      if (alerts.length > 0) {
+        // Auto-resolve previous unresolved alerts of same types for this tenant
+        const alertTypes = alerts.map(a => a.alert_type);
+        await supabase
+          .from('integration_health_alerts')
+          .update({ is_resolved: true, resolved_at: new Date().toISOString() })
+          .eq('tenant_id', tenantId)
+          .eq('is_resolved', false)
+          .in('alert_type', alertTypes);
+
+        // Insert new alerts (only for active failures)
+        const activeAlerts = alerts.filter(a => a.severity !== 'info');
+        if (activeAlerts.length > 0) {
+          await supabase.from('integration_health_alerts').insert(activeAlerts);
+        }
+      }
+
+      // Auto-resolve alerts for checks that now pass
+      const resolvedTypes = getResolvedAlertTypes(result);
+      if (resolvedTypes.length > 0) {
+        await supabase
+          .from('integration_health_alerts')
+          .update({ is_resolved: true, resolved_at: new Date().toISOString() })
+          .eq('tenant_id', tenantId)
+          .eq('is_resolved', false)
+          .in('alert_type', resolvedTypes);
+      }
+
+      results.push({ tenant_id: tenantId, alerts_generated: alerts.filter(a => a.severity !== 'info').length, ...result });
     }
 
     return json({ checked: results.length, results });
@@ -120,13 +160,107 @@ function json(data: unknown, status = 200) {
   });
 }
 
+/**
+ * Generate internal alerts based on health check results.
+ */
+function generateAlerts(
+  tenantId: string,
+  checkId: string | undefined,
+  result: Record<string, any>
+): InternalAlert[] {
+  const alerts: InternalAlert[] = [];
+
+  // TENANT_SERVER_DOWN — server connection failed
+  if (result.server_connection?.status === 'fail') {
+    alerts.push({
+      tenant_id: tenantId,
+      health_check_id: checkId,
+      alert_type: 'TENANT_SERVER_DOWN',
+      severity: 'critical',
+      message: `Servidor Traccar inacessível: ${result.server_connection.message}`,
+      details: { check: 'server_connection', ...result.server_connection },
+    });
+  }
+
+  // NO_EVENTS_DETECTED — no events in 24h with active devices
+  if (result.event_flow?.status === 'fail') {
+    alerts.push({
+      tenant_id: tenantId,
+      health_check_id: checkId,
+      alert_type: 'NO_EVENTS_DETECTED',
+      severity: 'critical',
+      message: `Nenhum evento detectado nas últimas 24h: ${result.event_flow.message}`,
+      details: {
+        check: 'event_flow',
+        devices_synced: result.devices_synced,
+        events_last_24h: result.events_last_24h,
+      },
+    });
+  } else if (result.event_flow?.status === 'warn') {
+    alerts.push({
+      tenant_id: tenantId,
+      health_check_id: checkId,
+      alert_type: 'NO_EVENTS_DETECTED',
+      severity: 'warning',
+      message: `Fluxo de eventos degradado: ${result.event_flow.message}`,
+      details: { check: 'event_flow', events_last_24h: result.events_last_24h },
+    });
+  }
+
+  // DEVICE_SYNC_ERROR — device sync failed or stale
+  if (result.device_sync?.status === 'fail') {
+    alerts.push({
+      tenant_id: tenantId,
+      health_check_id: checkId,
+      alert_type: 'DEVICE_SYNC_ERROR',
+      severity: 'critical',
+      message: `Sincronização de dispositivos falhou: ${result.device_sync.message}`,
+      details: { check: 'device_sync', ...result.device_sync.details },
+    });
+  } else if (result.device_sync?.status === 'warn') {
+    alerts.push({
+      tenant_id: tenantId,
+      health_check_id: checkId,
+      alert_type: 'DEVICE_SYNC_ERROR',
+      severity: 'warning',
+      message: `Sincronização de dispositivos atrasada: ${result.device_sync.message}`,
+      details: { check: 'device_sync', ...result.device_sync.details },
+    });
+  }
+
+  // ALERT_ENGINE_FAILURE — queue backlog critical
+  if (result.queue_health?.status === 'fail') {
+    alerts.push({
+      tenant_id: tenantId,
+      health_check_id: checkId,
+      alert_type: 'ALERT_ENGINE_FAILURE',
+      severity: 'critical',
+      message: `Fila de eventos em backlog crítico: ${result.queue_health.message}`,
+      details: { check: 'queue_health', queue_lag: result.queue_lag },
+    });
+  }
+
+  return alerts;
+}
+
+/**
+ * Determine which alert types should be auto-resolved based on passing checks.
+ */
+function getResolvedAlertTypes(result: Record<string, any>): string[] {
+  const resolved: string[] = [];
+  if (result.server_connection?.status === 'pass') resolved.push('TENANT_SERVER_DOWN');
+  if (result.event_flow?.status === 'pass') resolved.push('NO_EVENTS_DETECTED');
+  if (result.device_sync?.status === 'pass') resolved.push('DEVICE_SYNC_ERROR');
+  if (result.queue_health?.status === 'pass') resolved.push('ALERT_ENGINE_FAILURE');
+  return resolved;
+}
+
 async function runHealthChecks(
   supabase: any,
   supabaseUrl: string,
   serviceKey: string,
   tenantId: string
 ) {
-  // Get tenant Traccar config
   const { data: config } = await supabase
     .from('tenant_integration_configs')
     .select('config')
@@ -214,7 +348,6 @@ async function runHealthChecks(
   if (devicesSynced === 0) {
     checks.device_sync = { status: 'warn', message: 'No devices synced', details: { count: 0 } };
   } else {
-    // Check freshness of sync
     const latestSync = devices?.[0]?.synced_at;
     const syncAge = latestSync ? (Date.now() - new Date(latestSync).getTime()) / 60000 : Infinity;
 
@@ -311,7 +444,6 @@ async function runHealthChecks(
   if (devicesSynced === 0) {
     checks.alert_generation = { status: 'unknown', message: 'No devices to evaluate' };
   } else if (eventsLast24h > 0 && alertsLast24h === 0) {
-    // Events flowing but no alerts — could be normal (no violations) or warn
     checks.alert_generation = {
       status: 'pass',
       message: `No alerts in 24h (${eventsLast24h} events processed)`,
@@ -345,7 +477,6 @@ async function runHealthChecks(
     else if (check.status === 'fail') {
       errors.push(`${key}: ${check.message}`);
     }
-    // unknown contributes 0
   }
 
   const healthScore = Math.round(score);

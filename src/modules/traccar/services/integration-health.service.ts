@@ -32,11 +32,21 @@ export interface CheckResult {
   details?: Record<string, unknown>;
 }
 
-/**
- * Get latest health check per tenant (for dashboard overview).
- */
+export interface HealthAlert {
+  id: string;
+  tenant_id: string;
+  health_check_id: string | null;
+  alert_type: 'TENANT_SERVER_DOWN' | 'NO_EVENTS_DETECTED' | 'DEVICE_SYNC_ERROR' | 'ALERT_ENGINE_FAILURE';
+  severity: 'info' | 'warning' | 'critical';
+  message: string;
+  details: Record<string, unknown> | null;
+  is_resolved: boolean;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+}
+
 export async function getLatestHealthChecks(): Promise<HealthCheckResult[]> {
-  // Get distinct latest check per tenant
   const { data, error } = await supabase
     .from('integration_health_checks')
     .select('*')
@@ -45,7 +55,6 @@ export async function getLatestHealthChecks(): Promise<HealthCheckResult[]> {
 
   if (error) throw new Error(error.message);
 
-  // Deduplicate by tenant_id (keep latest)
   const byTenant = new Map<string, HealthCheckResult>();
   for (const row of (data || [])) {
     if (!byTenant.has(row.tenant_id)) {
@@ -55,9 +64,6 @@ export async function getLatestHealthChecks(): Promise<HealthCheckResult[]> {
   return Array.from(byTenant.values());
 }
 
-/**
- * Get health check history for a specific tenant.
- */
 export async function getTenantHealthHistory(
   tenantId: string,
   limit = 50
@@ -73,9 +79,6 @@ export async function getTenantHealthHistory(
   return (data || []) as unknown as HealthCheckResult[];
 }
 
-/**
- * Trigger health check for a specific tenant or all tenants.
- */
 export async function triggerHealthCheck(tenantId?: string): Promise<{
   checked: number;
   results: Array<HealthCheckResult & { tenant_id: string }>;
@@ -84,4 +87,46 @@ export async function triggerHealthCheck(tenantId?: string): Promise<{
   const { data, error } = await supabase.functions.invoke('integration-health-check', { body });
   if (error) throw new Error(error.message);
   return data as any;
+}
+
+/**
+ * Get active (unresolved) health alerts.
+ */
+export async function getActiveHealthAlerts(): Promise<HealthAlert[]> {
+  const { data, error } = await supabase
+    .from('integration_health_alerts')
+    .select('*')
+    .eq('is_resolved', false)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error) throw new Error(error.message);
+  return (data || []) as unknown as HealthAlert[];
+}
+
+/**
+ * Get all health alerts (including resolved) for a tenant.
+ */
+export async function getTenantHealthAlerts(tenantId: string, limit = 50): Promise<HealthAlert[]> {
+  const { data, error } = await supabase
+    .from('integration_health_alerts')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+  return (data || []) as unknown as HealthAlert[];
+}
+
+/**
+ * Resolve an alert manually.
+ */
+export async function resolveHealthAlert(alertId: string): Promise<void> {
+  const { error } = await supabase
+    .from('integration_health_alerts')
+    .update({ is_resolved: true, resolved_at: new Date().toISOString() })
+    .eq('id', alertId);
+
+  if (error) throw new Error(error.message);
 }

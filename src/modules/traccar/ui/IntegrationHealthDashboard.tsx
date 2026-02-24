@@ -1,7 +1,7 @@
 /**
  * IntegrationHealthDashboard — SuperAdmin dashboard for Integration Health & Monitoring Engine.
  *
- * Features: tenant status table, criticality colors, advanced filters, historical logs.
+ * Features: tenant status table, criticality colors, advanced filters, historical logs, internal alerts.
  */
 import React, { useState, useMemo, Fragment } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -12,19 +12,24 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Activity, AlertTriangle, CheckCircle2, XCircle, RefreshCw,
   Loader2, Server, ShieldCheck, Cpu, Radio, Clock, Layers,
-  ChevronDown, ChevronUp, Gauge, Search, Filter,
+  ChevronDown, ChevronUp, Gauge, Search, Filter, Bell, BellOff,
 } from 'lucide-react';
 import {
   getLatestHealthChecks,
   getTenantHealthHistory,
   triggerHealthCheck,
+  getActiveHealthAlerts,
+  resolveHealthAlert,
   type HealthCheckResult,
   type CheckResult,
+  type HealthAlert,
 } from '../services/integration-health.service';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const STATUS_CONFIG = {
   healthy: { color: 'text-emerald-500', bg: 'bg-emerald-500/10', label: 'Saudável', icon: CheckCircle2 },
@@ -32,6 +37,13 @@ const STATUS_CONFIG = {
   critical: { color: 'text-destructive', bg: 'bg-destructive/10', label: 'Crítico', icon: XCircle },
   unknown: { color: 'text-muted-foreground', bg: 'bg-muted/30', label: 'Desconhecido', icon: Clock },
 } as const;
+
+const ALERT_TYPE_CONFIG: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string }> = {
+  TENANT_SERVER_DOWN: { icon: Server, label: 'Servidor Indisponível' },
+  NO_EVENTS_DETECTED: { icon: Radio, label: 'Sem Eventos Detectados' },
+  DEVICE_SYNC_ERROR: { icon: Cpu, label: 'Erro de Sincronização' },
+  ALERT_ENGINE_FAILURE: { icon: Layers, label: 'Falha no Motor de Alertas' },
+};
 
 const CHECK_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   server_connection: Server,
@@ -71,6 +83,12 @@ export default function IntegrationHealthDashboard() {
   const { data: checks = [], isLoading } = useQuery({
     queryKey: ['integration-health-checks'],
     queryFn: getLatestHealthChecks,
+  });
+
+  // Fetch active alerts
+  const { data: activeAlerts = [], isLoading: alertsLoading } = useQuery({
+    queryKey: ['integration-health-alerts'],
+    queryFn: getActiveHealthAlerts,
   });
 
   // Fetch tenant names
@@ -114,7 +132,9 @@ export default function IntegrationHealthDashboard() {
     try {
       await triggerHealthCheck();
       await queryClient.invalidateQueries({ queryKey: ['integration-health-checks'] });
-    } catch { /* */ }
+      await queryClient.invalidateQueries({ queryKey: ['integration-health-alerts'] });
+      toast.success('Verificação concluída');
+    } catch { toast.error('Erro ao executar verificação'); }
     setRunning(false);
   };
 
@@ -123,8 +143,17 @@ export default function IntegrationHealthDashboard() {
     try {
       await triggerHealthCheck(tenantId);
       await queryClient.invalidateQueries({ queryKey: ['integration-health-checks'] });
+      await queryClient.invalidateQueries({ queryKey: ['integration-health-alerts'] });
     } catch { /* */ }
     setRunning(false);
+  };
+
+  const handleResolveAlert = async (alertId: string) => {
+    try {
+      await resolveHealthAlert(alertId);
+      await queryClient.invalidateQueries({ queryKey: ['integration-health-alerts'] });
+      toast.success('Alerta resolvido');
+    } catch { toast.error('Erro ao resolver alerta'); }
   };
 
   // Aggregated stats
@@ -133,6 +162,9 @@ export default function IntegrationHealthDashboard() {
   const degradedCount = checks.filter(c => c.health_status === 'degraded').length;
   const criticalCount = checks.filter(c => c.health_status === 'critical').length;
   const avgScore = totalTenants > 0 ? Math.round(checks.reduce((s, c) => s + c.health_score, 0) / totalTenants) : 0;
+
+  const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical');
+  const warningAlerts = activeAlerts.filter(a => a.severity === 'warning');
 
   return (
     <div className="space-y-6">
@@ -153,10 +185,10 @@ export default function IntegrationHealthDashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card><CardContent className="p-4 text-center">
           <div className="text-3xl font-bold">{totalTenants}</div>
-          <div className="text-xs text-muted-foreground mt-1">Tenants Monitorados</div>
+          <div className="text-xs text-muted-foreground mt-1">Tenants</div>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
           <div className="text-3xl font-bold text-emerald-500">{healthyCount}</div>
@@ -177,217 +209,343 @@ export default function IntegrationHealthDashboard() {
           </div>
           <div className="text-xs text-muted-foreground mt-1">Score Médio</div>
         </CardContent></Card>
+        <Card><CardContent className="p-4 text-center">
+          <div className="flex items-center justify-center gap-1">
+            <Bell className="h-5 w-5 text-destructive" />
+            <span className="text-3xl font-bold text-destructive">{activeAlerts.length}</span>
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">Alertas Ativos</div>
+        </CardContent></Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <div className="relative flex-1 min-w-[200px] max-w-xs">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar tenant..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="pl-9 h-9"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[160px] h-9">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                <SelectItem value="healthy">Saudável</SelectItem>
-                <SelectItem value="degraded">Degradado</SelectItem>
-                <SelectItem value="critical">Crítico</SelectItem>
-                <SelectItem value="unknown">Desconhecido</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={scoreFilter} onValueChange={setScoreFilter}>
-              <SelectTrigger className="w-[160px] h-9">
-                <SelectValue placeholder="Score" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Scores</SelectItem>
-                <SelectItem value="high">Alto (≥80)</SelectItem>
-                <SelectItem value="mid">Médio (50-79)</SelectItem>
-                <SelectItem value="low">Baixo (&lt;50)</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-xs text-muted-foreground ml-auto">
-              {filteredChecks.length} de {checks.length} tenants
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="tenants" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="tenants">Tenants</TabsTrigger>
+          <TabsTrigger value="alerts" className="gap-1.5">
+            Alertas Internos
+            {activeAlerts.length > 0 && (
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0 ml-1">{activeAlerts.length}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Tenant Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Saúde por Tenant</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : filteredChecks.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              Nenhum tenant encontrado com os filtros aplicados.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-8" />
-                    <TableHead>Tenant</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Dispositivos</TableHead>
-                    <TableHead>Eventos (24h)</TableHead>
-                    <TableHead>Alertas (24h)</TableHead>
-                    <TableHead>Queue Lag</TableHead>
-                    <TableHead>Latência</TableHead>
-                    <TableHead>Verificado</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredChecks.map(check => {
-                    const cfg = STATUS_CONFIG[check.health_status];
-                    const StatusIcon = cfg.icon;
-                    const isExpanded = expandedTenant === check.tenant_id;
+        {/* ── Tab: Tenants ── */}
+        <TabsContent value="tenants" className="space-y-4">
+          {/* Filters */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <div className="relative flex-1 min-w-[200px] max-w-xs">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Buscar tenant..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 h-9" />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Status</SelectItem>
+                    <SelectItem value="healthy">Saudável</SelectItem>
+                    <SelectItem value="degraded">Degradado</SelectItem>
+                    <SelectItem value="critical">Crítico</SelectItem>
+                    <SelectItem value="unknown">Desconhecido</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={scoreFilter} onValueChange={setScoreFilter}>
+                  <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="Score" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Scores</SelectItem>
+                    <SelectItem value="high">Alto (≥80)</SelectItem>
+                    <SelectItem value="mid">Médio (50-79)</SelectItem>
+                    <SelectItem value="low">Baixo (&lt;50)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-muted-foreground ml-auto">{filteredChecks.length} de {checks.length} tenants</span>
+              </div>
+            </CardContent>
+          </Card>
 
-                    return (
-                      <Fragment key={check.id}>
-                        <TableRow
-                          className={`cursor-pointer hover:bg-muted/50 border-l-4 ${
-                            check.health_status === 'critical' ? 'border-l-destructive' :
-                            check.health_status === 'degraded' ? 'border-l-amber-500' :
-                            check.health_status === 'healthy' ? 'border-l-emerald-500' :
-                            'border-l-muted'
-                          }`}
-                          onClick={() => setExpandedTenant(isExpanded ? null : check.tenant_id)}
-                        >
-                          <TableCell>
-                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {tenantNames[check.tenant_id] || check.tenant_id.slice(0, 8)}
-                          </TableCell>
-                          <TableCell>
-                            <div className={`flex items-center gap-1.5 ${cfg.color}`}>
-                              <StatusIcon className="h-4 w-4" />
-                              <span className="text-xs font-medium">{cfg.label}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2 min-w-[100px]">
-                              <Progress value={check.health_score} className="h-2 flex-1" />
-                              <span className="text-xs font-mono w-8 text-right">{check.health_score}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm">{check.devices_synced}</TableCell>
-                          <TableCell className="text-sm">{check.events_last_24h}</TableCell>
-                          <TableCell className="text-sm">{check.alerts_last_24h}</TableCell>
-                          <TableCell className="text-sm">
-                            <span className={check.queue_lag > 100 ? 'text-destructive font-medium' : ''}>
-                              {check.queue_lag}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {check.server_response_time_ms ? `${check.server_response_time_ms}ms` : '—'}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                            {new Date(check.checked_at).toLocaleString('pt-BR')}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={(e) => { e.stopPropagation(); handleRunSingle(check.tenant_id); }}
-                              disabled={running}
+          {/* Tenant Table */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Saúde por Tenant</CardTitle></CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredChecks.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhum tenant encontrado.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-8" />
+                        <TableHead>Tenant</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Score</TableHead>
+                        <TableHead>Dispositivos</TableHead>
+                        <TableHead>Eventos (24h)</TableHead>
+                        <TableHead>Alertas (24h)</TableHead>
+                        <TableHead>Queue Lag</TableHead>
+                        <TableHead>Latência</TableHead>
+                        <TableHead>Verificado</TableHead>
+                        <TableHead />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredChecks.map(check => {
+                        const cfg = STATUS_CONFIG[check.health_status];
+                        const StatusIcon = cfg.icon;
+                        const isExpanded = expandedTenant === check.tenant_id;
+                        const tenantAlerts = activeAlerts.filter(a => a.tenant_id === check.tenant_id);
+
+                        return (
+                          <Fragment key={check.id}>
+                            <TableRow
+                              className={`cursor-pointer hover:bg-muted/50 border-l-4 ${
+                                check.health_status === 'critical' ? 'border-l-destructive' :
+                                check.health_status === 'degraded' ? 'border-l-amber-500' :
+                                check.health_status === 'healthy' ? 'border-l-emerald-500' :
+                                'border-l-muted'
+                              }`}
+                              onClick={() => setExpandedTenant(isExpanded ? null : check.tenant_id)}
                             >
-                              <RefreshCw className="h-3.5 w-3.5" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-
-                        {/* Expanded Detail */}
-                        {isExpanded && (
-                          <TableRow>
-                            <TableCell colSpan={11} className="bg-muted/20 p-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Individual Checks */}
-                                <div className="space-y-2">
-                                  <h4 className="text-sm font-semibold mb-3">Testes de Saúde</h4>
-                                  {Object.entries(CHECK_LABELS).map(([key, label]) => {
-                                    const checkData = (check as any)[key] as CheckResult | undefined;
-                                    const Icon = CHECK_ICONS[key] || Activity;
-                                    return (
-                                      <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
-                                        <div className="flex items-center gap-2">
-                                          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                                          <span className="text-sm">{label}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs text-muted-foreground max-w-[200px] truncate">
-                                            {checkData?.message}
-                                          </span>
-                                          <CheckStatusBadge check={checkData || { status: 'unknown', message: '' }} />
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
+                              <TableCell>
+                                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  {tenantNames[check.tenant_id] || check.tenant_id.slice(0, 8)}
+                                  {tenantAlerts.length > 0 && (
+                                    <Badge variant="destructive" className="text-[10px] px-1 py-0">{tenantAlerts.length}</Badge>
+                                  )}
                                 </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className={`flex items-center gap-1.5 ${cfg.color}`}>
+                                  <StatusIcon className="h-4 w-4" />
+                                  <span className="text-xs font-medium">{cfg.label}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2 min-w-[100px]">
+                                  <Progress value={check.health_score} className="h-2 flex-1" />
+                                  <span className="text-xs font-mono w-8 text-right">{check.health_score}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm">{check.devices_synced}</TableCell>
+                              <TableCell className="text-sm">{check.events_last_24h}</TableCell>
+                              <TableCell className="text-sm">{check.alerts_last_24h}</TableCell>
+                              <TableCell className="text-sm">
+                                <span className={check.queue_lag > 100 ? 'text-destructive font-medium' : ''}>{check.queue_lag}</span>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {check.server_response_time_ms ? `${check.server_response_time_ms}ms` : '—'}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                {new Date(check.checked_at).toLocaleString('pt-BR')}
+                              </TableCell>
+                              <TableCell>
+                                <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleRunSingle(check.tenant_id); }} disabled={running}>
+                                  <RefreshCw className="h-3.5 w-3.5" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
 
-                                {/* History */}
-                                <div>
-                                  <h4 className="text-sm font-semibold mb-3">Histórico Recente</h4>
-                                  {history.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground">Carregando...</p>
-                                  ) : (
-                                    <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-                                      {history.map(h => {
-                                        const hCfg = STATUS_CONFIG[h.health_status];
+                            {isExpanded && (
+                              <TableRow>
+                                <TableCell colSpan={11} className="bg-muted/20 p-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* Individual Checks */}
+                                    <div className="space-y-2">
+                                      <h4 className="text-sm font-semibold mb-3">Testes de Saúde</h4>
+                                      {Object.entries(CHECK_LABELS).map(([key, label]) => {
+                                        const checkData = (check as any)[key] as CheckResult | undefined;
+                                        const Icon = CHECK_ICONS[key] || Activity;
                                         return (
-                                          <div key={h.id} className="flex items-center justify-between text-xs py-1 border-b border-border/30 last:border-0">
-                                            <span className="text-muted-foreground">
-                                              {new Date(h.checked_at).toLocaleString('pt-BR')}
-                                            </span>
+                                          <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
                                             <div className="flex items-center gap-2">
-                                              <Progress value={h.health_score} className="h-1.5 w-16" />
-                                              <span className="font-mono w-6 text-right">{h.health_score}</span>
-                                              <span className={`${hCfg.color} text-xs`}>{hCfg.label}</span>
+                                              <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                                              <span className="text-sm">{label}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-xs text-muted-foreground max-w-[200px] truncate">{checkData?.message}</span>
+                                              <CheckStatusBadge check={checkData || { status: 'unknown', message: '' }} />
                                             </div>
                                           </div>
                                         );
                                       })}
                                     </div>
-                                  )}
-                                </div>
-                              </div>
 
-                              {check.error_summary && (
-                                <div className="mt-3 p-2 bg-destructive/10 border border-destructive/20 rounded text-xs text-destructive">
-                                  {check.error_summary}
-                                </div>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </Fragment>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                                    {/* Tenant Alerts */}
+                                    <div>
+                                      <h4 className="text-sm font-semibold mb-3">Alertas Ativos</h4>
+                                      {tenantAlerts.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Nenhum alerta ativo
+                                        </p>
+                                      ) : (
+                                        <div className="space-y-2">
+                                          {tenantAlerts.map(alert => {
+                                            const alertCfg = ALERT_TYPE_CONFIG[alert.alert_type];
+                                            const AlertIcon = alertCfg?.icon || AlertTriangle;
+                                            return (
+                                              <div key={alert.id} className={`p-2 rounded border text-xs ${
+                                                alert.severity === 'critical' ? 'bg-destructive/10 border-destructive/20' : 'bg-amber-500/10 border-amber-500/20'
+                                              }`}>
+                                                <div className="flex items-center justify-between">
+                                                  <div className="flex items-center gap-1.5">
+                                                    <AlertIcon className={`h-3.5 w-3.5 ${alert.severity === 'critical' ? 'text-destructive' : 'text-amber-500'}`} />
+                                                    <span className="font-medium">{alertCfg?.label || alert.alert_type}</span>
+                                                  </div>
+                                                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => handleResolveAlert(alert.id)}>
+                                                    <BellOff className="h-3 w-3 mr-1" /> Resolver
+                                                  </Button>
+                                                </div>
+                                                <p className="text-muted-foreground mt-1">{alert.message}</p>
+                                                <p className="text-muted-foreground/70 mt-0.5">{new Date(alert.created_at).toLocaleString('pt-BR')}</p>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* History */}
+                                    <div>
+                                      <h4 className="text-sm font-semibold mb-3">Histórico Recente</h4>
+                                      {history.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground">Carregando...</p>
+                                      ) : (
+                                        <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                                          {history.map(h => {
+                                            const hCfg = STATUS_CONFIG[h.health_status];
+                                            return (
+                                              <div key={h.id} className="flex items-center justify-between text-xs py-1 border-b border-border/30 last:border-0">
+                                                <span className="text-muted-foreground">{new Date(h.checked_at).toLocaleString('pt-BR')}</span>
+                                                <div className="flex items-center gap-2">
+                                                  <Progress value={h.health_score} className="h-1.5 w-16" />
+                                                  <span className="font-mono w-6 text-right">{h.health_score}</span>
+                                                  <span className={`${hCfg.color} text-xs`}>{hCfg.label}</span>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {check.error_summary && (
+                                    <div className="mt-3 p-2 bg-destructive/10 border border-destructive/20 rounded text-xs text-destructive">
+                                      {check.error_summary}
+                                    </div>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Tab: Alertas Internos ── */}
+        <TabsContent value="alerts" className="space-y-4">
+          {/* Alert summary */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Object.entries(ALERT_TYPE_CONFIG).map(([type, cfg]) => {
+              const count = activeAlerts.filter(a => a.alert_type === type).length;
+              const AlertIcon = cfg.icon;
+              return (
+                <Card key={type}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <AlertIcon className={`h-5 w-5 ${count > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+                      <div>
+                        <div className="text-2xl font-bold">{count}</div>
+                        <div className="text-xs text-muted-foreground">{cfg.label}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Active Alerts Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Bell className="h-4 w-4" /> Alertas Ativos ({activeAlerts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {alertsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : activeAlerts.length === 0 ? (
+                <div className="text-center py-8 space-y-2">
+                  <CheckCircle2 className="h-8 w-8 mx-auto text-emerald-500" />
+                  <p className="text-sm text-muted-foreground">Nenhum alerta ativo. Todos os sistemas operacionais.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Severidade</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Tenant</TableHead>
+                      <TableHead>Mensagem</TableHead>
+                      <TableHead>Criado em</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {activeAlerts.map(alert => {
+                      const alertCfg = ALERT_TYPE_CONFIG[alert.alert_type];
+                      const AlertIcon = alertCfg?.icon || AlertTriangle;
+                      return (
+                        <TableRow key={alert.id} className={`border-l-4 ${
+                          alert.severity === 'critical' ? 'border-l-destructive' : 'border-l-amber-500'
+                        }`}>
+                          <TableCell>
+                            <Badge variant={alert.severity === 'critical' ? 'destructive' : 'secondary'} className="text-xs">
+                              {alert.severity === 'critical' ? '🔴 Crítico' : '🟡 Alerta'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5">
+                              <AlertIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-sm font-medium">{alertCfg?.label || alert.alert_type}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">{tenantNames[alert.tenant_id] || alert.tenant_id.slice(0, 8)}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground max-w-[300px] truncate">{alert.message}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                            {new Date(alert.created_at).toLocaleString('pt-BR')}
+                          </TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => handleResolveAlert(alert.id)}>
+                              <BellOff className="h-3 w-3" /> Resolver
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
