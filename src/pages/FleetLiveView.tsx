@@ -1,7 +1,7 @@
 /**
  * FleetLiveView — Interactive live map with vehicles, speed, alerts.
- * Uses plain Leaflet (no react-leaflet) for React 18 compatibility.
- * Mock data until Traccar integration provides real positions.
+ * Uses plain Leaflet for React 18 compatibility.
+ * Real Traccar data with mock fallback when not configured.
  */
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import L from 'leaflet';
@@ -12,15 +12,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  Pause, Play, Search, Car, AlertTriangle, Gauge, MapPin, Wifi,
+  Pause, Play, Search, Car, AlertTriangle, Gauge, MapPin, Wifi, WifiOff,
   Filter, Navigation, Zap, Clock, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EventDetailPanel, type EventDetail } from '@/components/fleet/EventDetailPanel';
 import { useToast } from '@/hooks/use-toast';
+import { useTenant } from '@/contexts/TenantContext';
+import { useTraccarFleet, type TraccarVehicle } from '@/hooks/useTraccarFleet';
 
-// ── Types ──
-interface MockVehicle {
+// ── Unified Vehicle type ──
+interface FleetVehicle {
   id: string;
   plate: string;
   driver: string;
@@ -31,9 +33,10 @@ interface MockVehicle {
   ignition: boolean;
   status: 'moving' | 'idle' | 'stopped' | 'speeding';
   lastUpdate: Date;
+  address?: string | null;
 }
 
-interface MockAlert {
+interface FleetAlert {
   id: string;
   type: 'overspeed' | 'harsh_brake' | 'route_deviation' | 'geofence' | 'idle_excess';
   vehicleId: string;
@@ -46,80 +49,54 @@ interface MockAlert {
   limit?: number;
 }
 
-// ── Mock data generator ──
-function generateMockVehicles(): MockVehicle[] {
-  const baseLat = -23.55;
-  const baseLng = -46.63;
-  const drivers = [
-    'João Silva', 'Maria Santos', 'Carlos Lima', 'Ana Costa', 'Pedro Alves',
-    'Fernanda Reis', 'Lucas Mendes', 'Roberto Dias', 'Juliana Ferreira', 'Rafael Oliveira',
-    'Patrícia Gomes', 'Bruno Souza', 'Camila Rodrigues', 'Diego Pereira', 'Larissa Martins',
-  ];
-
-  return drivers.map((driver, i) => {
-    const angle = (i / drivers.length) * Math.PI * 2;
-    const radius = 0.02 + Math.random() * 0.06;
-    const speed = Math.random() > 0.3 ? Math.floor(Math.random() * 120) : 0;
-    const status: MockVehicle['status'] =
-      speed > 80 ? 'speeding' : speed > 5 ? 'moving' : speed > 0 ? 'idle' : 'stopped';
-
-    return {
-      id: `v${i + 1}`,
-      plate: `${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(65 + ((i * 3) % 26))}${String.fromCharCode(65 + ((i * 7) % 26))}-${String(1000 + i * 111).slice(0, 4)}`,
-      driver,
-      lat: baseLat + Math.cos(angle) * radius + (Math.random() - 0.5) * 0.01,
-      lng: baseLng + Math.sin(angle) * radius + (Math.random() - 0.5) * 0.01,
-      speed,
-      heading: Math.floor(Math.random() * 360),
-      ignition: speed > 0 || Math.random() > 0.3,
-      status,
-      lastUpdate: new Date(Date.now() - Math.floor(Math.random() * 60000)),
-    };
-  });
+// ── Map Traccar devices to FleetVehicle ──
+function traccarToFleetVehicle(dev: TraccarVehicle): FleetVehicle | null {
+  if (dev.lat == null || dev.lng == null) return null;
+  return {
+    id: String(dev.id),
+    plate: dev.name || dev.uniqueId,
+    driver: dev.attributes?.driver as string || dev.phone || dev.name || '—',
+    lat: dev.lat,
+    lng: dev.lng,
+    speed: dev.speed ?? 0,
+    heading: dev.course ?? 0,
+    ignition: dev.ignition ?? false,
+    status: dev.computedStatus ?? 'stopped',
+    lastUpdate: dev.lastUpdate ? new Date(dev.lastUpdate) : new Date(),
+    address: dev.address,
+  };
 }
 
-function generateMockAlerts(vehicles: MockVehicle[]): MockAlert[] {
-  const alerts: MockAlert[] = [];
-  const types: MockAlert['type'][] = ['overspeed', 'harsh_brake', 'route_deviation', 'geofence', 'idle_excess'];
-  const severities: MockAlert['severity'][] = ['low', 'medium', 'high', 'critical'];
-  const messages: Record<MockAlert['type'], string> = {
-    overspeed: 'Excesso de velocidade detectado',
-    harsh_brake: 'Frenagem brusca registrada',
-    route_deviation: 'Desvio de rota detectado',
-    geofence: 'Violação de geofence',
-    idle_excess: 'Tempo ocioso excessivo',
-  };
-
-  vehicles.forEach((v, i) => {
+function generateAlertsFromVehicles(vehicles: FleetVehicle[]): FleetAlert[] {
+  const alerts: FleetAlert[] = [];
+  vehicles.forEach(v => {
     if (v.status === 'speeding') {
       alerts.push({
-        id: `a${alerts.length}`,
+        id: `alert-speed-${v.id}`,
         type: 'overspeed',
         vehicleId: v.id,
         plate: v.plate,
         driver: v.driver,
         message: `${v.plate} a ${v.speed}km/h — limite: 80km/h`,
         severity: v.speed > 100 ? 'critical' : 'high',
-        timestamp: new Date(Date.now() - Math.floor(Math.random() * 300000)),
+        timestamp: v.lastUpdate,
         speed: v.speed,
         limit: 80,
       });
     }
-    if (i % 4 === 0) {
-      const type = types[Math.floor(Math.random() * types.length)];
+    if (v.status === 'idle' && v.ignition) {
       alerts.push({
-        id: `a${alerts.length}`,
-        type,
+        id: `alert-idle-${v.id}`,
+        type: 'idle_excess',
         vehicleId: v.id,
         plate: v.plate,
         driver: v.driver,
-        message: `${messages[type]} — ${v.plate}`,
-        severity: severities[Math.floor(Math.random() * severities.length)],
-        timestamp: new Date(Date.now() - Math.floor(Math.random() * 600000)),
+        message: `Ociosidade excessiva — ${v.plate}`,
+        severity: 'medium',
+        timestamp: v.lastUpdate,
       });
     }
   });
-
   return alerts.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 }
 
@@ -160,7 +137,7 @@ function timeAgo(d: Date) {
   return `${Math.floor(s / 3600)}h atrás`;
 }
 
-function makeVehicleIcon(status: MockVehicle['status']) {
+function makeVehicleIcon(status: FleetVehicle['status']) {
   const color = STATUS_COLORS[status];
   return L.divIcon({
     className: '',
@@ -180,8 +157,27 @@ function makeVehicleIcon(status: MockVehicle['status']) {
 // ══════════════════════════════════════════════
 
 export default function FleetLiveView() {
-  const [vehicles, setVehicles] = useState<MockVehicle[]>(() => generateMockVehicles());
-  const [alerts, setAlerts] = useState<MockAlert[]>(() => generateMockAlerts(vehicles));
+  const { currentTenant } = useTenant();
+  const tenantId = currentTenant?.id ?? null;
+
+  const {
+    vehicles: traccarVehicles,
+    loading: traccarLoading,
+    error: traccarError,
+    isConfigured,
+    refresh,
+    lastUpdate,
+  } = useTraccarFleet({ tenantId, pollIntervalMs: 10_000 });
+
+  // Map Traccar data to fleet vehicles
+  const vehicles = useMemo<FleetVehicle[]>(() => {
+    return traccarVehicles
+      .map(traccarToFleetVehicle)
+      .filter((v): v is FleetVehicle => v !== null);
+  }, [traccarVehicles]);
+
+  const alerts = useMemo(() => generateAlertsFromVehicles(vehicles), [vehicles]);
+
   const [isPaused, setIsPaused] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [eventFilter, setEventFilter] = useState<string>('all');
@@ -192,7 +188,6 @@ export default function FleetLiveView() {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
   // ── Initialize Leaflet map ──
   useEffect(() => {
@@ -211,18 +206,22 @@ export default function FleetLiveView() {
     L.control.zoom({ position: 'topright' }).addTo(map);
     leafletMap.current = map;
 
-    // Fit bounds to initial vehicles
-    if (vehicles.length > 0) {
-      const bounds = L.latLngBounds(vehicles.map(v => [v.lat, v.lng] as L.LatLngTuple));
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
-    }
-
     return () => {
       map.remove();
       leafletMap.current = null;
       markersRef.current.clear();
     };
   }, []);
+
+  // Fit bounds when vehicles first load
+  const hasFittedRef = useRef(false);
+  useEffect(() => {
+    if (vehicles.length > 0 && leafletMap.current && !hasFittedRef.current) {
+      const bounds = L.latLngBounds(vehicles.map(v => [v.lat, v.lng] as L.LatLngTuple));
+      leafletMap.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+      hasFittedRef.current = true;
+    }
+  }, [vehicles]);
 
   // ── Update markers on map ──
   useEffect(() => {
@@ -246,93 +245,40 @@ export default function FleetLiveView() {
 
     // Add/update markers
     filtered.forEach(v => {
+      const popupContent = `
+        <div style="min-width:170px;font-family:sans-serif">
+          <p style="font-weight:700;font-size:15px;margin:0">${v.plate}</p>
+          <p style="color:#666;margin:2px 0">${v.driver}</p>
+          <hr style="margin:6px 0;border-color:#eee"/>
+          <p style="margin:2px 0"><b>Velocidade:</b> ${v.speed} km/h</p>
+          <p style="margin:2px 0"><b>Ignição:</b> ${v.ignition ? '🟢 Ligada' : '⚪ Desligada'}</p>
+          <p style="margin:2px 0"><b>Status:</b> ${STATUS_LABELS[v.status]?.label}</p>
+          ${v.address ? `<p style="margin:2px 0;font-size:11px;color:#999">${v.address}</p>` : ''}
+          <p style="color:#999;font-size:11px;margin-top:6px">${timeAgo(v.lastUpdate)}</p>
+        </div>
+      `;
+
       const existing = markersRef.current.get(v.id);
       if (existing) {
         existing.setLatLng([v.lat, v.lng]);
         existing.setIcon(makeVehicleIcon(v.status));
-        existing.setPopupContent(`
-          <div style="min-width:170px;font-family:sans-serif">
-            <p style="font-weight:700;font-size:15px;margin:0">${v.plate}</p>
-            <p style="color:#666;margin:2px 0">${v.driver}</p>
-            <hr style="margin:6px 0;border-color:#eee"/>
-            <p style="margin:2px 0"><b>Velocidade:</b> ${v.speed} km/h</p>
-            <p style="margin:2px 0"><b>Ignição:</b> ${v.ignition ? '🟢 Ligada' : '⚪ Desligada'}</p>
-            <p style="margin:2px 0"><b>Status:</b> ${STATUS_LABELS[v.status]?.label}</p>
-            <p style="color:#999;font-size:11px;margin-top:6px">${timeAgo(v.lastUpdate)}</p>
-          </div>
-        `);
+        existing.setPopupContent(popupContent);
       } else {
         const marker = L.marker([v.lat, v.lng], { icon: makeVehicleIcon(v.status) })
           .addTo(map)
-          .bindPopup(`
-            <div style="min-width:170px;font-family:sans-serif">
-              <p style="font-weight:700;font-size:15px;margin:0">${v.plate}</p>
-              <p style="color:#666;margin:2px 0">${v.driver}</p>
-              <hr style="margin:6px 0;border-color:#eee"/>
-              <p style="margin:2px 0"><b>Velocidade:</b> ${v.speed} km/h</p>
-              <p style="margin:2px 0"><b>Ignição:</b> ${v.ignition ? '🟢 Ligada' : '⚪ Desligada'}</p>
-              <p style="margin:2px 0"><b>Status:</b> ${STATUS_LABELS[v.status]?.label}</p>
-              <p style="color:#999;font-size:11px;margin-top:6px">${timeAgo(v.lastUpdate)}</p>
-            </div>
-          `);
+          .bindPopup(popupContent);
         marker.on('click', () => setSelectedVehicle(v.id));
         markersRef.current.set(v.id, marker);
       }
     });
   }, [vehicles, searchTerm]);
 
-  // ── Simulate real-time updates ──
-  useEffect(() => {
-    if (isPaused) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
-    }
-
-    intervalRef.current = setInterval(() => {
-      setVehicles(prev => {
-        const updated = prev.map(v => {
-          if (v.status === 'stopped' && Math.random() > 0.9) return v;
-          const dLat = (Math.random() - 0.5) * 0.002;
-          const dLng = (Math.random() - 0.5) * 0.002;
-          const newSpeed = Math.max(0, v.speed + (Math.random() - 0.5) * 20);
-          const status: MockVehicle['status'] =
-            newSpeed > 80 ? 'speeding' : newSpeed > 5 ? 'moving' : newSpeed > 0 ? 'idle' : 'stopped';
-          return { ...v, lat: v.lat + dLat, lng: v.lng + dLng, speed: Math.floor(newSpeed), heading: (v.heading + (Math.random() - 0.5) * 30 + 360) % 360, status, lastUpdate: new Date() };
-        });
-
-        // Random new alert
-        if (Math.random() > 0.7) {
-          const rv = updated[Math.floor(Math.random() * updated.length)];
-          const types: MockAlert['type'][] = ['overspeed', 'harsh_brake', 'route_deviation', 'geofence', 'idle_excess'];
-          const type = types[Math.floor(Math.random() * types.length)];
-          const sev: MockAlert['severity'][] = ['low', 'medium', 'high', 'critical'];
-          const msgs: Record<string, string> = {
-            overspeed: `${rv.plate} a ${rv.speed}km/h`,
-            harsh_brake: `Frenagem brusca — ${rv.plate}`,
-            route_deviation: `Desvio de rota — ${rv.plate}`,
-            geofence: `Saída de geofence — ${rv.plate}`,
-            idle_excess: `Ociosidade excessiva — ${rv.plate}`,
-          };
-          setAlerts(prev => [{
-            id: `a${Date.now()}`, type, vehicleId: rv.id, plate: rv.plate, driver: rv.driver,
-            message: msgs[type], severity: sev[Math.floor(Math.random() * sev.length)], timestamp: new Date(),
-            speed: type === 'overspeed' ? rv.speed : undefined, limit: type === 'overspeed' ? 80 : undefined,
-          }, ...prev].slice(0, 50));
-        }
-
-        return updated;
-      });
-    }, 3000);
-
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [isPaused]);
-
   // ── Fly to selected vehicle ──
   useEffect(() => {
     if (!selectedVehicle || !leafletMap.current) return;
     const v = vehicles.find(x => x.id === selectedVehicle);
     if (v) leafletMap.current.flyTo([v.lat, v.lng], 15, { duration: 0.8 });
-  }, [selectedVehicle]);
+  }, [selectedVehicle, vehicles]);
 
   // Filters
   const filteredVehicles = useMemo(() => {
@@ -371,20 +317,41 @@ export default function FleetLiveView() {
             <Navigation className="h-6 w-6 text-primary" />
             Live View — Rastreamento
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">Monitoramento em tempo real da frota · Dados simulados</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            Monitoramento em tempo real da frota
+            {!isConfigured && ' · Traccar não configurado'}
+            {lastUpdate && ` · Atualizado ${timeAgo(lastUpdate)}`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className={cn("flex items-center gap-1.5 text-xs font-medium", isPaused ? "text-amber-500" : "text-emerald-500")}>
-            <span className={cn("h-2 w-2 rounded-full", isPaused ? "bg-amber-500" : "bg-emerald-500 animate-pulse")} />
-            <Wifi className="h-3.5 w-3.5" />
-            {isPaused ? 'Pausado' : 'Ao vivo'}
-          </div>
-          <Button size="sm" variant={isPaused ? 'default' : 'outline'} onClick={() => setIsPaused(!isPaused)} className="gap-1.5">
-            {isPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-            {isPaused ? 'Retomar' : 'Pausar'}
+          {!isConfigured && (
+            <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-500">
+              <WifiOff className="h-3 w-3 mr-1" /> Sem integração
+            </Badge>
+          )}
+          {isConfigured && (
+            <div className={cn("flex items-center gap-1.5 text-xs font-medium text-emerald-500")}>
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <Wifi className="h-3.5 w-3.5" />
+              Ao vivo
+            </div>
+          )}
+          <Button size="sm" variant="outline" onClick={refresh} className="gap-1.5">
+            <Navigation className="h-3.5 w-3.5" />
+            Atualizar
           </Button>
         </div>
       </div>
+
+      {/* Error banner */}
+      {traccarError && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="p-3 text-sm text-destructive flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {traccarError}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats bar */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
@@ -412,7 +379,7 @@ export default function FleetLiveView() {
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Filtrar por placa ou colaborador..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
+          <Input placeholder="Filtrar por nome ou ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
         </div>
         <Select value={eventFilter} onValueChange={setEventFilter}>
           <SelectTrigger className="w-[200px]">
@@ -431,6 +398,20 @@ export default function FleetLiveView() {
         {searchTerm && <Button variant="ghost" size="sm" onClick={() => setSearchTerm('')}>Limpar filtro</Button>}
       </div>
 
+      {/* No data message */}
+      {!traccarLoading && vehicles.length === 0 && !traccarError && (
+        <Card className="border-border">
+          <CardContent className="p-8 text-center text-muted-foreground">
+            <Car className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm font-medium">
+              {isConfigured
+                ? 'Nenhum dispositivo com posição encontrado. Verifique se os dispositivos estão enviando dados ao Traccar.'
+                : 'Configure a integração com o Traccar nas configurações do tenant para ver os dispositivos.'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Map + Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ minHeight: 520 }}>
         {/* Map */}
@@ -443,11 +424,6 @@ export default function FleetLiveView() {
             <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-amber-500" /> Ocioso</div>
             <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-muted-foreground" /> Parado</div>
           </div>
-          {isPaused && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-amber-500/90 text-white px-4 py-1.5 rounded-full text-xs font-semibold z-[1000] flex items-center gap-2">
-              <Pause className="h-3 w-3" /> Feed pausado
-            </div>
-          )}
         </Card>
 
         {/* Vehicle list / Selected detail */}
@@ -481,6 +457,9 @@ export default function FleetLiveView() {
                   </Badge>
                   <Badge variant="outline">{selectedData.ignition ? '🟢 Ligada' : '⚪ Desligada'}</Badge>
                 </div>
+                {selectedData.address && (
+                  <p className="text-xs text-muted-foreground">{selectedData.address}</p>
+                )}
                 <p className="text-xs text-muted-foreground">Atualizado: {timeAgo(selectedData.lastUpdate)}</p>
                 <p className="text-xs text-muted-foreground font-mono">{selectedData.lat.toFixed(5)}, {selectedData.lng.toFixed(5)}</p>
               </CardContent>
@@ -535,7 +514,7 @@ export default function FleetLiveView() {
             <CardTitle className="flex items-center gap-2 text-card-foreground">
               <AlertTriangle className="h-5 w-5" />
               Alertas em Tempo Real
-              {!isPaused && <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />}
+              {isConfigured && <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />}
             </CardTitle>
             <Badge variant="outline" className="text-xs">{filteredAlerts.length} alertas</Badge>
           </div>

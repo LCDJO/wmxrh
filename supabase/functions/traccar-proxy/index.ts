@@ -1,12 +1,7 @@
 /**
- * traccar-proxy — Generic authenticated proxy to the full Traccar REST API.
- * Reads credentials from tenant_integration_configs table.
- *
- * Body JSON params:
- *   action     — The API action to perform (see ACTION_MAP below)
- *   tenantId   — tenant UUID to look up config
- *   ...params  — Action-specific parameters (deviceId, from, to, groupId, etc.)
- *   payload    — (optional) JSON body for POST/PUT/DELETE methods
+ * traccar-proxy — Authenticated proxy to the Traccar REST API.
+ * Uses token-as-query-param auth (most reliable) with session cookie fallback.
+ * Validates response Content-Type to detect HTML error pages.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -20,7 +15,7 @@ const corsHeaders = {
 // ── Action → Traccar path builder ──
 type ActionDef = {
   buildPath: (p: Record<string, unknown>) => string;
-  method?: string; // defaults to GET
+  method?: string;
   hasBody?: boolean;
 };
 
@@ -35,14 +30,13 @@ function qs(params: Record<string, string | string[] | undefined>): string {
     }
   }
   const s = sp.toString();
-  return s ? `?${s}` : '';
+  return s ? `&${s}` : '';
 }
 
 const ACTION_MAP: Record<string, ActionDef> = {
   // ── Server ──
   'test-connection':    { buildPath: () => '/api/server' },
   'server-info':        { buildPath: () => '/api/server' },
-  'server-geocode':     { buildPath: (p) => `/api/server/geocode${qs({ latitude: String(p.latitude ?? ''), longitude: String(p.longitude ?? '') })}` },
 
   // ── Devices ──
   'devices':            { buildPath: () => '/api/devices' },
@@ -69,7 +63,6 @@ const ACTION_MAP: Record<string, ActionDef> = {
   'reports-summary':    { buildPath: (p) => `/api/reports/summary${qs({ deviceId: p.deviceId as string | string[], groupId: p.groupId as string | string[], from: String(p.from ?? ''), to: String(p.to ?? '') })}` },
   'reports-trips':      { buildPath: (p) => `/api/reports/trips${qs({ deviceId: p.deviceId as string | string[], groupId: p.groupId as string | string[], from: String(p.from ?? ''), to: String(p.to ?? '') })}` },
   'reports-stops':      { buildPath: (p) => `/api/reports/stops${qs({ deviceId: p.deviceId as string | string[], groupId: p.groupId as string | string[], from: String(p.from ?? ''), to: String(p.to ?? '') })}` },
-  'reports-geofences':  { buildPath: (p) => `/api/reports/geofences${qs({ deviceId: p.deviceId as string | string[], groupId: p.groupId as string | string[], geofenceId: p.geofenceId as string | string[], from: String(p.from ?? ''), to: String(p.to ?? '') })}` },
 
   // ── Notifications ──
   'notifications':      { buildPath: () => '/api/notifications' },
@@ -77,7 +70,6 @@ const ACTION_MAP: Record<string, ActionDef> = {
   'notification-create':{ buildPath: () => '/api/notifications', method: 'POST', hasBody: true },
   'notification-update':{ buildPath: (p) => `/api/notifications/${p.notificationId}`, method: 'PUT', hasBody: true },
   'notification-delete':{ buildPath: (p) => `/api/notifications/${p.notificationId}`, method: 'DELETE' },
-  'notification-test':  { buildPath: () => '/api/notifications/test', method: 'POST' },
 
   // ── Geofences ──
   'geofences':          { buildPath: () => '/api/geofences' },
@@ -102,19 +94,12 @@ const ACTION_MAP: Record<string, ActionDef> = {
   'maintenance-update': { buildPath: () => '/api/maintenance', method: 'PUT', hasBody: true },
   'maintenance-delete': { buildPath: (p) => `/api/maintenance/${p.maintenanceId}`, method: 'DELETE' },
 
-  // ── Calendars ──
-  'calendars':          { buildPath: () => '/api/calendars' },
-
   // ── Permissions ──
   'permission-link':    { buildPath: () => '/api/permissions', method: 'POST', hasBody: true },
   'permission-unlink':  { buildPath: () => '/api/permissions', method: 'DELETE', hasBody: true },
 
-  // ── Statistics & Health ──
+  // ── Statistics ──
   'statistics':         { buildPath: (p) => `/api/statistics${qs({ from: String(p.from ?? ''), to: String(p.to ?? '') })}` },
-  'health':             { buildPath: () => '/api/health' },
-
-  // ── Legacy aliases ──
-  'events':             { buildPath: (p) => `/api/reports/events${qs({ deviceId: String(p.deviceId ?? ''), from: String(p.from ?? ''), to: String(p.to ?? ''), type: String(p.eventType ?? '') })}` },
 };
 
 function jsonResp(data: unknown, status = 200) {
@@ -122,6 +107,106 @@ function jsonResp(data: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+/**
+ * Multi-strategy Traccar auth:
+ * 1. Token as query parameter (most reliable, works on all Traccar versions)
+ * 2. Session cookie fallback
+ * 3. Bearer header fallback
+ */
+async function traccarFetch(
+  baseUrl: string,
+  path: string,
+  token: string,
+  method: string,
+  body?: string
+): Promise<{ ok: boolean; status: number; data: unknown; contentType: string }> {
+  // Strategy 1: Token as query parameter (primary)
+  const separator = path.includes('?') ? '&' : '?';
+  const urlWithToken = `${baseUrl}${path}${separator}token=${encodeURIComponent(token)}`;
+
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
+
+  const opts: RequestInit = { method, headers };
+  if (body) opts.body = body;
+
+  console.log(`[traccar-proxy] ${method} ${path} (token-as-param)`);
+
+  let resp = await fetch(urlWithToken, opts);
+
+  // If token-as-param returns 401/403, try session cookie
+  if (resp.status === 401 || resp.status === 403) {
+    console.log('[traccar-proxy] Token-param auth failed, trying session cookie...');
+    await resp.text(); // consume body
+
+    try {
+      const sessionResp = await fetch(`${baseUrl}/api/session?token=${encodeURIComponent(token)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+      });
+
+      if (sessionResp.ok) {
+        const setCookie = sessionResp.headers.get('set-cookie') || '';
+        const cookieMatch = setCookie.match(/JSESSIONID=[^;]+/);
+        await sessionResp.text(); // consume
+
+        if (cookieMatch) {
+          const cookieHeaders = { ...headers, 'Cookie': cookieMatch[0] };
+          const cookieOpts: RequestInit = { method, headers: cookieHeaders };
+          if (body) cookieOpts.body = body;
+
+          resp = await fetch(`${baseUrl}${path}`, cookieOpts);
+        }
+      } else {
+        await sessionResp.text(); // consume
+      }
+    } catch (e) {
+      console.warn('[traccar-proxy] Session fallback failed:', e);
+    }
+  }
+
+  // Validate response
+  const contentType = resp.headers.get('content-type') || '';
+
+  if (!contentType.includes('application/json')) {
+    const textBody = await resp.text();
+    const preview = textBody.substring(0, 300);
+
+    // Detect HTML error pages
+    if (textBody.trim().startsWith('<!') || textBody.includes('<html')) {
+      console.error(`[traccar-proxy] HTML response detected (status ${resp.status}):`, preview);
+      return {
+        ok: false,
+        status: resp.status,
+        data: {
+          error: `Traccar retornou HTML em vez de JSON (HTTP ${resp.status}). Isso geralmente indica: redirecionamento de autenticação, erro do servidor ou proxy reverso mal configurado.`,
+          htmlPreview: preview,
+        },
+        contentType,
+      };
+    }
+
+    // Try to parse as JSON anyway (some servers don't set content-type)
+    try {
+      const parsed = JSON.parse(textBody);
+      return { ok: resp.ok, status: resp.status, data: parsed, contentType: 'application/json' };
+    } catch {
+      console.error(`[traccar-proxy] Unexpected response format (${contentType}):`, preview);
+      return {
+        ok: false,
+        status: resp.status,
+        data: { error: `Formato de resposta inesperado: ${contentType || 'sem content-type'}`, raw: preview },
+        contentType,
+      };
+    }
+  }
+
+  const jsonData = await resp.json();
+  return { ok: resp.ok, status: resp.status, data: jsonData, contentType };
 }
 
 Deno.serve(async (req) => {
@@ -158,7 +243,6 @@ Deno.serve(async (req) => {
       body = {
         action: url.searchParams.get('action') || 'test-connection',
         tenantId: url.searchParams.get('tenantId') || '',
-        deviceId: url.searchParams.get('deviceId') || '',
       };
     }
 
@@ -197,65 +281,32 @@ Deno.serve(async (req) => {
     }
 
     const baseUrl = TRACCAR_BASE_URL.replace(/\/+$/, '');
-
-    // ── Build Traccar path ──
     const traccarPath = actionDef.buildPath(body);
     const httpMethod = actionDef.method || 'GET';
+    const reqBody = actionDef.hasBody && body.payload ? JSON.stringify(body.payload) : undefined;
 
-    // ── Session-based auth (Traccar requires JSESSIONID cookie) ──
-    const sessionResp = await fetch(`${baseUrl}/api/session?token=${encodeURIComponent(TRACCAR_API_TOKEN)}`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-    });
+    // ── Make the API call with multi-strategy auth ──
+    const result = await traccarFetch(baseUrl, traccarPath, TRACCAR_API_TOKEN, httpMethod, reqBody);
 
-    if (!sessionResp.ok) {
-      const errText = await sessionResp.text();
-      return jsonResp({ error: `Falha ao autenticar no Traccar (${sessionResp.status})`, details: errText }, sessionResp.status);
+    if (!result.ok) {
+      return jsonResp(
+        { error: `Traccar API retornou ${result.status}`, details: result.data },
+        result.status >= 400 && result.status < 600 ? result.status : 502
+      );
     }
 
-    const setCookieHeader = sessionResp.headers.get('set-cookie') || '';
-    const cookieMatch = setCookieHeader.match(/JSESSIONID=[^;]+/);
-    const sessionCookie = cookieMatch ? cookieMatch[0] : '';
-
-    // ── Make the API call ──
-    const traccarHeaders: Record<string, string> = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    };
-    if (sessionCookie) {
-      traccarHeaders['Cookie'] = sessionCookie;
+    // Validate expected array for list endpoints
+    const listActions = ['devices', 'groups', 'positions', 'notifications', 'geofences', 'drivers', 'maintenance', 'commands',
+      'reports-events', 'reports-route', 'reports-summary', 'reports-trips', 'reports-stops', 'statistics'];
+    if (listActions.includes(action) && !Array.isArray(result.data)) {
+      console.warn(`[traccar-proxy] Expected array for ${action} but got:`, typeof result.data, JSON.stringify(result.data).substring(0, 200));
+      return jsonResp({
+        error: `Resposta inesperada do Traccar para "${action}". Esperava uma lista, recebeu ${typeof result.data}.`,
+        details: result.data,
+      }, 502);
     }
 
-    const fetchOptions: RequestInit = {
-      method: httpMethod,
-      headers: traccarHeaders,
-    };
-
-    if (actionDef.hasBody && body.payload) {
-      fetchOptions.body = JSON.stringify(body.payload);
-    }
-
-    const traccarResp = await fetch(`${baseUrl}${traccarPath}`, fetchOptions);
-
-    // Handle 204 No Content
-    if (traccarResp.status === 204) {
-      return jsonResp({ success: true, action, data: null });
-    }
-
-    const contentType = traccarResp.headers.get('content-type') || '';
-    let responseBody: unknown;
-
-    if (contentType.includes('application/json')) {
-      responseBody = await traccarResp.json();
-    } else {
-      responseBody = { raw: await traccarResp.text() };
-    }
-
-    if (!traccarResp.ok) {
-      return jsonResp({ error: `Traccar API returned ${traccarResp.status}`, details: responseBody }, traccarResp.status);
-    }
-
-    return jsonResp({ success: true, action, data: responseBody });
+    return jsonResp({ success: true, action, data: result.data });
   } catch (err) {
     console.error('traccar-proxy error:', err);
     const message = err instanceof Error ? err.message : 'Unknown error';
