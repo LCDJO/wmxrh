@@ -31,3 +31,7 @@ export type {
   ReputationFactor,
   ReputationScoreConfig,
 } from './reputation-score.engine';
+
+// ── Document Generation ──
+export { referenceLetterDocumentService } from './reference-letter-document.service';
+export type { ReferenceLetterDocumentResult } from './reference-letter-document.service';
