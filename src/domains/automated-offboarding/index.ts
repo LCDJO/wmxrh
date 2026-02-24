@@ -107,3 +107,16 @@ export type {
   OffboardingAuditEntry,
   RecordAuditParams,
 } from './offboarding-audit.service';
+
+// ── Preparação Futura: Relatório de Risco Pós-Desligamento ──
+export {
+  postTerminationRiskService,
+} from './post-termination-risk.service';
+export type {
+  RiskSeverity,
+  RiskCategory as PostTermRiskCategory,
+  PrescriptionStatus,
+  PostTerminationRiskFactor,
+  PostTerminationRiskReport,
+  RiskReportSummary,
+} from './post-termination-risk.service';
