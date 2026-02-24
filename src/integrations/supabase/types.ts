@@ -10837,7 +10837,10 @@ export type Database = {
           action: string
           actor_id: string | null
           created_at: string
+          decisao: string | null
+          etapa: string | null
           id: string
+          justificativa: string | null
           metadata: Json | null
           new_value: Json | null
           old_value: Json | null
@@ -10848,7 +10851,10 @@ export type Database = {
           action: string
           actor_id?: string | null
           created_at?: string
+          decisao?: string | null
+          etapa?: string | null
           id?: string
+          justificativa?: string | null
           metadata?: Json | null
           new_value?: Json | null
           old_value?: Json | null
@@ -10859,7 +10865,10 @@ export type Database = {
           action?: string
           actor_id?: string | null
           created_at?: string
+          decisao?: string | null
+          etapa?: string | null
           id?: string
+          justificativa?: string | null
           metadata?: Json | null
           new_value?: Json | null
           old_value?: Json | null
