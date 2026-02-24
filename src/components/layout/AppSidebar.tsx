@@ -200,6 +200,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/settings/users', icon: Users, label: 'Usuários', key: 'iam_users' },
       { to: '/settings/roles', icon: ShieldCheck, label: 'Cargos & Permissões', key: 'iam_roles' },
+      { to: '/settings/pdf-layout', icon: FileText, label: 'Layout do PDF', key: 'iam_users' },
       { to: '/settings/webhooks', icon: Webhook, label: 'Webhooks', key: 'dashboard' },
       { to: '/announcements', icon: Megaphone, label: 'Avisos do Sistema', key: 'dashboard' },
     ],
