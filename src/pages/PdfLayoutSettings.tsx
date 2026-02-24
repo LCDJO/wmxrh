@@ -61,6 +61,7 @@ export interface PdfLayoutConfig {
   watermark_position: string;
   created_at: string;
   updated_at: string;
+  page_size: string;
 }
 
 const DEFAULT_LAYOUT: Omit<PdfLayoutConfig, 'id' | 'tenant_id' | 'created_at' | 'updated_at'> = {
@@ -103,6 +104,7 @@ const DEFAULT_LAYOUT: Omit<PdfLayoutConfig, 'id' | 'tenant_id' | 'created_at' | 
   watermark_font_size: 60,
   watermark_color: '#000000',
   watermark_position: 'center',
+  page_size: 'a4',
 };
 
 const FONT_OPTIONS = [

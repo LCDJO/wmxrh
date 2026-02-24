@@ -119,7 +119,7 @@ export function PdfSectionEditor({ editData, onUpdate }: Props) {
              section.id === 'body' ? `${editData.body_font_size || 13}px` :
              section.id === 'watermark' ? (editData.watermark_enabled ? editData.watermark_type || 'text' : 'Desativada') :
              section.id === 'colors' ? editData.primary_color || '#1a1a2e' :
-             `${editData.margin_top || 15}mm`}
+             `${editData.margin_top || 15}mm · ${(editData.page_size || 'a4').toUpperCase()}`}
           </Badge>
           {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
         </div>
@@ -385,24 +385,58 @@ function ColorsSection({ editData, onUpdate }: Props) {
 }
 
 function MarginsSection({ editData, onUpdate }: Props) {
+  const applyAbnt = () => {
+    onUpdate('margin_top', 30);
+    onUpdate('margin_bottom', 20);
+    onUpdate('margin_left', 30);
+    onUpdate('margin_right', 20);
+  };
+
   return (
     <div className="space-y-4">
+      {/* Paper size */}
+      <div>
+        <Label className="text-xs">Tamanho da Folha</Label>
+        <Select value={editData.page_size || 'a4'} onValueChange={v => onUpdate('page_size', v)}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="a4">A4 (210 × 297 mm)</SelectItem>
+            <SelectItem value="a5">A5 (148 × 210 mm)</SelectItem>
+            <SelectItem value="letter">Carta (216 × 279 mm)</SelectItem>
+            <SelectItem value="legal">Ofício (216 × 356 mm)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator />
+
+      {/* ABNT preset */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-medium">Margens ABNT</p>
+          <p className="text-[10px] text-muted-foreground">Superior 3cm, Inferior 2cm, Esquerda 3cm, Direita 2cm</p>
+        </div>
+        <Button variant="outline" size="sm" className="text-xs h-7" onClick={applyAbnt}>
+          Aplicar ABNT
+        </Button>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label className="text-xs">Superior: {editData.margin_top || 15}mm</Label>
-          <Slider value={[editData.margin_top || 15]} min={5} max={40} step={1} onValueChange={([v]) => onUpdate('margin_top', v)} />
+          <Slider value={[editData.margin_top || 15]} min={5} max={50} step={1} onValueChange={([v]) => onUpdate('margin_top', v)} />
         </div>
         <div>
           <Label className="text-xs">Inferior: {editData.margin_bottom || 15}mm</Label>
-          <Slider value={[editData.margin_bottom || 15]} min={5} max={40} step={1} onValueChange={([v]) => onUpdate('margin_bottom', v)} />
+          <Slider value={[editData.margin_bottom || 15]} min={5} max={50} step={1} onValueChange={([v]) => onUpdate('margin_bottom', v)} />
         </div>
         <div>
           <Label className="text-xs">Esquerda: {editData.margin_left || 15}mm</Label>
-          <Slider value={[editData.margin_left || 15]} min={5} max={40} step={1} onValueChange={([v]) => onUpdate('margin_left', v)} />
+          <Slider value={[editData.margin_left || 15]} min={5} max={50} step={1} onValueChange={([v]) => onUpdate('margin_left', v)} />
         </div>
         <div>
           <Label className="text-xs">Direita: {editData.margin_right || 15}mm</Label>
-          <Slider value={[editData.margin_right || 15]} min={5} max={40} step={1} onValueChange={([v]) => onUpdate('margin_right', v)} />
+          <Slider value={[editData.margin_right || 15]} min={5} max={50} step={1} onValueChange={([v]) => onUpdate('margin_right', v)} />
         </div>
       </div>
       <Separator />

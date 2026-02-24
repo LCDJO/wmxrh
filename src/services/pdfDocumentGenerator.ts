@@ -15,8 +15,15 @@ import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
 
 // ── Constants ──────────────────────────────────────────────
-const A4_WIDTH_MM = 210;
-const A4_HEIGHT_MM = 297;
+// Paper size definitions (width x height in mm)
+const PAGE_SIZES: Record<string, { width: number; height: number; label: string }> = {
+  a4: { width: 210, height: 297, label: 'A4 (210×297mm)' },
+  a5: { width: 148, height: 210, label: 'A5 (148×210mm)' },
+  letter: { width: 216, height: 279, label: 'Carta (216×279mm)' },
+  legal: { width: 216, height: 356, label: 'Ofício (216×356mm)' },
+};
+
+export { PAGE_SIZES };
 
 // Default values (overridable by layout config)
 const DEFAULT_MARGIN_MM = 15;
@@ -60,6 +67,7 @@ export interface PdfLayoutOverrides {
   watermarkFontSize?: number;
   watermarkColor?: string;
   watermarkPosition?: string;
+  pageSize?: string;
 }
 
 export interface PdfDocumentOptions {
@@ -194,13 +202,16 @@ export async function generateDocumentPdf(options: PdfDocumentOptions): Promise<
   } = options;
 
   // Derive layout-aware constants
+  const pageSize = PAGE_SIZES[L.pageSize || 'a4'] || PAGE_SIZES.a4;
+  const PAGE_WIDTH_MM = pageSize.width;
+  const PAGE_HEIGHT_MM = pageSize.height;
   const MARGIN_TOP = L.marginTop ?? DEFAULT_MARGIN_MM;
   const MARGIN_BOTTOM = L.marginBottom ?? DEFAULT_MARGIN_MM;
   const MARGIN_LEFT = L.marginLeft ?? DEFAULT_MARGIN_MM;
   const MARGIN_RIGHT = L.marginRight ?? DEFAULT_MARGIN_MM;
   const SECTION_GAP = L.sectionGap ?? DEFAULT_SECTION_GAP_MM;
-  const CONTENT_WIDTH = A4_WIDTH_MM - MARGIN_LEFT - MARGIN_RIGHT;
-  const BODY_AREA = A4_HEIGHT_MM - MARGIN_TOP - MARGIN_BOTTOM - DEFAULT_HEADER_HEIGHT_MM - DEFAULT_FOOTER_HEIGHT_MM - SECTION_GAP * 2;
+  const CONTENT_WIDTH = PAGE_WIDTH_MM - MARGIN_LEFT - MARGIN_RIGHT;
+  const BODY_AREA = PAGE_HEIGHT_MM - MARGIN_TOP - MARGIN_BOTTOM - DEFAULT_HEADER_HEIGHT_MM - DEFAULT_FOOTER_HEIGHT_MM - SECTION_GAP * 2;
 
   const displayName = L.companyNameOverride || companyName;
   const validatorCode = generateValidatorCode(contentHtml + displayName + documentTitle);
@@ -239,7 +250,7 @@ export async function generateDocumentPdf(options: PdfDocumentOptions): Promise<
     document.body.removeChild(footerEl);
   }
 
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAGE_WIDTH_MM, PAGE_HEIGHT_MM] });
 
   // ── Step 2: Render pages — header & footer fixed on every page ──
   for (let page = 0; page < totalPages; page++) {
@@ -250,7 +261,7 @@ export async function generateDocumentPdf(options: PdfDocumentOptions): Promise<
 
     // -- Footer (fixed position, page number varies) --
     const footer = footerCache[page];
-    const footerY = A4_HEIGHT_MM - MARGIN_BOTTOM - footer.dims.heightMM;
+    const footerY = PAGE_HEIGHT_MM - MARGIN_BOTTOM - footer.dims.heightMM;
     pdf.addImage(footer.dataUrl, 'PNG', MARGIN_LEFT, footerY, footer.dims.widthMM, footer.dims.heightMM);
 
     // -- Body slice --
@@ -304,14 +315,14 @@ export async function generateDocumentPdf(options: PdfDocumentOptions): Promise<
         pdf.setTextColor(wmColor);
 
         if (L.watermarkPosition === 'tiled') {
-          for (let y = 30; y < A4_HEIGHT_MM; y += 60) {
-            for (let x = -30; x < A4_WIDTH_MM + 30; x += 100) {
+          for (let y = 30; y < PAGE_HEIGHT_MM; y += 60) {
+            for (let x = -30; x < PAGE_WIDTH_MM + 30; x += 100) {
               pdf.text(L.watermarkText, x, y, { angle: wmRotation });
             }
           }
         } else {
-          const cx = A4_WIDTH_MM / 2;
-          const cy = A4_HEIGHT_MM / 2;
+          const cx = PAGE_WIDTH_MM / 2;
+          const cy = PAGE_HEIGHT_MM / 2;
           pdf.text(L.watermarkText, cx, cy, { angle: wmRotation, align: 'center' });
         }
         pdf.restoreGraphicsState();
@@ -324,8 +335,8 @@ export async function generateDocumentPdf(options: PdfDocumentOptions): Promise<
           pdf.setGState(new (pdf as any).GState({ opacity: wmOpacity }));
           const imgW = 80;
           const imgH = 80;
-          const imgX = (A4_WIDTH_MM - imgW) / 2;
-          const imgY = (A4_HEIGHT_MM - imgH) / 2;
+          const imgX = (PAGE_WIDTH_MM - imgW) / 2;
+          const imgY = (PAGE_HEIGHT_MM - imgH) / 2;
           pdf.addImage(L.watermarkImageUrl, 'PNG', imgX, imgY, imgW, imgH);
           pdf.restoreGraphicsState();
         } catch { /* skip if image fails */ }
@@ -342,13 +353,13 @@ export async function generateDocumentPdf(options: PdfDocumentOptions): Promise<
             const g = parseInt(hex.slice(3, 5), 16);
             const b = parseInt(hex.slice(5, 7), 16);
             pdf.setFillColor(r, g, b);
-            pdf.rect(0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, 'F');
+            pdf.rect(0, 0, PAGE_WIDTH_MM, PAGE_HEIGHT_MM, 'F');
             pdf.restoreGraphicsState();
           } else {
             pdf.saveGraphicsState();
             // @ts-ignore
             pdf.setGState(new (pdf as any).GState({ opacity: wmOpacity }));
-            pdf.addImage(L.watermarkImageUrl, 'PNG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM);
+            pdf.addImage(L.watermarkImageUrl, 'PNG', 0, 0, PAGE_WIDTH_MM, PAGE_HEIGHT_MM);
             pdf.restoreGraphicsState();
           }
         } catch { /* skip */ }
