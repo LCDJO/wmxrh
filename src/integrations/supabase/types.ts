@@ -11343,6 +11343,128 @@ export type Database = {
           },
         ]
       }
+      pdf_layout_configs: {
+        Row: {
+          body_font_family: string | null
+          body_font_size: number | null
+          body_line_height: number | null
+          company_name_override: string | null
+          created_at: string
+          created_by: string | null
+          footer_font_family: string | null
+          footer_font_size: number | null
+          footer_position: string | null
+          footer_text: string | null
+          header_border_color: string | null
+          header_font_family: string | null
+          header_font_size: number | null
+          header_subtitle: string | null
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          margin_bottom: number | null
+          margin_left: number | null
+          margin_right: number | null
+          margin_top: number | null
+          name: string
+          primary_color: string | null
+          qr_code_size: number | null
+          secondary_text_color: string | null
+          section_gap: number | null
+          show_date: boolean | null
+          show_logo: boolean | null
+          show_page_numbers: boolean | null
+          show_qr_code: boolean | null
+          show_validator_code: boolean | null
+          tenant_id: string
+          text_color: string | null
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          body_font_family?: string | null
+          body_font_size?: number | null
+          body_line_height?: number | null
+          company_name_override?: string | null
+          created_at?: string
+          created_by?: string | null
+          footer_font_family?: string | null
+          footer_font_size?: number | null
+          footer_position?: string | null
+          footer_text?: string | null
+          header_border_color?: string | null
+          header_font_family?: string | null
+          header_font_size?: number | null
+          header_subtitle?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          margin_bottom?: number | null
+          margin_left?: number | null
+          margin_right?: number | null
+          margin_top?: number | null
+          name: string
+          primary_color?: string | null
+          qr_code_size?: number | null
+          secondary_text_color?: string | null
+          section_gap?: number | null
+          show_date?: boolean | null
+          show_logo?: boolean | null
+          show_page_numbers?: boolean | null
+          show_qr_code?: boolean | null
+          show_validator_code?: boolean | null
+          tenant_id: string
+          text_color?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          body_font_family?: string | null
+          body_font_size?: number | null
+          body_line_height?: number | null
+          company_name_override?: string | null
+          created_at?: string
+          created_by?: string | null
+          footer_font_family?: string | null
+          footer_font_size?: number | null
+          footer_position?: string | null
+          footer_text?: string | null
+          header_border_color?: string | null
+          header_font_family?: string | null
+          header_font_size?: number | null
+          header_subtitle?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          margin_bottom?: number | null
+          margin_left?: number | null
+          margin_right?: number | null
+          margin_top?: number | null
+          name?: string
+          primary_color?: string | null
+          qr_code_size?: number | null
+          secondary_text_color?: string | null
+          section_gap?: number | null
+          show_date?: boolean | null
+          show_logo?: boolean | null
+          show_page_numbers?: boolean | null
+          show_qr_code?: boolean | null
+          show_validator_code?: boolean | null
+          tenant_id?: string
+          text_color?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_layout_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permission_definitions: {
         Row: {
           action: string

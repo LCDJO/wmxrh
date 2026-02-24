@@ -64,6 +64,7 @@ import SupportTickets from '@/pages/support/SupportTickets';
 import SupportWiki from '@/pages/support/SupportWiki';
 import SupportLiveChat from '@/pages/support/SupportLiveChat';
 import OffboardingDashboard from '@/pages/OffboardingDashboard';
+import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
 
 const TenantOnboarding = lazy(() => import('@/pages/TenantOnboarding'));
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
@@ -141,6 +142,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/notifications', element: <Notifications /> },
       { path: '/audit', element: pr('audit', <Audit />) },
       // ── Settings ──
+      { path: '/settings/pdf-layout', element: pr('iam_users', <PdfLayoutSettings />) },
       { path: '/iam', element: <Navigate to="/settings/users" replace /> },
       { path: '/settings/users', element: pr('iam_users', <SettingsUsers />) },
       { path: '/settings/roles', element: pr('iam_roles', <SettingsRoles />) },
