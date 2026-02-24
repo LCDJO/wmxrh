@@ -267,7 +267,17 @@ function HeaderSection({ editData, onUpdate }: Props) {
         <Label className="text-xs">Tamanho da fonte: {editData.header_font_size || 16}px</Label>
         <Slider value={[editData.header_font_size || 16]} min={10} max={28} step={1} onValueChange={([v]) => onUpdate('header_font_size', v)} />
       </div>
-      <div className="flex gap-6">
+      <div>
+        <Label className="text-xs">Texto adicional no cabeçalho</Label>
+        <Input
+          value={editData.header_extra_text || ''}
+          onChange={e => onUpdate('header_extra_text', e.target.value)}
+          placeholder="Ex: Departamento de RH — Uso Interno"
+        />
+        <p className="text-[10px] text-muted-foreground mt-1">Exibido abaixo do título do documento</p>
+      </div>
+      <Separator />
+      <div className="flex flex-wrap gap-6">
         <div className="flex items-center gap-2">
           <Switch checked={editData.show_logo ?? true} onCheckedChange={v => onUpdate('show_logo', v)} />
           <Label className="text-xs">Exibir Logo</Label>
@@ -276,6 +286,19 @@ function HeaderSection({ editData, onUpdate }: Props) {
           <Switch checked={editData.show_date ?? true} onCheckedChange={v => onUpdate('show_date', v)} />
           <Label className="text-xs">Exibir Data</Label>
         </div>
+      </div>
+      <Separator />
+      <div>
+        <Label className="text-xs">Paginação</Label>
+        <Select value={editData.pagination_location || 'footer'} onValueChange={v => onUpdate('pagination_location', v)}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="footer">Somente no Rodapé</SelectItem>
+            <SelectItem value="header">Somente no Cabeçalho</SelectItem>
+            <SelectItem value="both">Cabeçalho e Rodapé</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-[10px] text-muted-foreground mt-1">Define onde "Página X de Y" será exibido</p>
       </div>
     </div>
   );
@@ -324,6 +347,21 @@ function FooterSection({ editData, onUpdate }: Props) {
           <Label className="text-xs">Nº Páginas</Label>
         </div>
       </div>
+
+      <Separator />
+
+      {/* QR Position */}
+      <div>
+        <Label className="text-xs">Posição do QR Code</Label>
+        <Select value={editData.qr_position || 'left'} onValueChange={v => onUpdate('qr_position', v)}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="left">Esquerda</SelectItem>
+            <SelectItem value="right">Direita</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label className="text-xs">Tamanho QR: {editData.qr_code_size || 56}px</Label>
@@ -339,6 +377,25 @@ function FooterSection({ editData, onUpdate }: Props) {
           </Select>
         </div>
       </div>
+
+      <Separator />
+
+      {/* Footer variables */}
+      <div>
+        <Label className="text-xs font-medium">Variáveis do Rodapé</Label>
+        <p className="text-[10px] text-muted-foreground mb-2">Informações adicionais exibidas no rodapé</p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Switch checked={editData.footer_show_doc_name ?? false} onCheckedChange={v => onUpdate('footer_show_doc_name', v)} />
+            <Label className="text-xs">Nome do Documento</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={editData.footer_show_validator_link ?? false} onCheckedChange={v => onUpdate('footer_show_validator_link', v)} />
+            <Label className="text-xs">Link do Validador</Label>
+          </div>
+        </div>
+      </div>
+
       <div>
         <Label className="text-xs">Texto adicional</Label>
         <Input value={editData.footer_text || ''} onChange={e => onUpdate('footer_text', e.target.value)} placeholder="Ex: Confidencial — Uso interno" />

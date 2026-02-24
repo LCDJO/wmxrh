@@ -11584,8 +11584,11 @@ export type Database = {
           footer_font_family: string | null
           footer_font_size: number | null
           footer_position: string | null
+          footer_show_doc_name: boolean
+          footer_show_validator_link: boolean
           footer_text: string | null
           header_border_color: string | null
+          header_extra_text: string | null
           header_font_family: string | null
           header_font_size: number | null
           header_subtitle: string | null
@@ -11598,8 +11601,10 @@ export type Database = {
           margin_top: number | null
           name: string
           page_size: string
+          pagination_location: string
           primary_color: string | null
           qr_code_size: number | null
+          qr_position: string
           secondary_text_color: string | null
           section_gap: number | null
           show_date: boolean | null
@@ -11631,8 +11636,11 @@ export type Database = {
           footer_font_family?: string | null
           footer_font_size?: number | null
           footer_position?: string | null
+          footer_show_doc_name?: boolean
+          footer_show_validator_link?: boolean
           footer_text?: string | null
           header_border_color?: string | null
+          header_extra_text?: string | null
           header_font_family?: string | null
           header_font_size?: number | null
           header_subtitle?: string | null
@@ -11645,8 +11653,10 @@ export type Database = {
           margin_top?: number | null
           name: string
           page_size?: string
+          pagination_location?: string
           primary_color?: string | null
           qr_code_size?: number | null
+          qr_position?: string
           secondary_text_color?: string | null
           section_gap?: number | null
           show_date?: boolean | null
@@ -11678,8 +11688,11 @@ export type Database = {
           footer_font_family?: string | null
           footer_font_size?: number | null
           footer_position?: string | null
+          footer_show_doc_name?: boolean
+          footer_show_validator_link?: boolean
           footer_text?: string | null
           header_border_color?: string | null
+          header_extra_text?: string | null
           header_font_family?: string | null
           header_font_size?: number | null
           header_subtitle?: string | null
@@ -11692,8 +11705,10 @@ export type Database = {
           margin_top?: number | null
           name?: string
           page_size?: string
+          pagination_location?: string
           primary_color?: string | null
           qr_code_size?: number | null
+          qr_position?: string
           secondary_text_color?: string | null
           section_gap?: number | null
           show_date?: boolean | null
