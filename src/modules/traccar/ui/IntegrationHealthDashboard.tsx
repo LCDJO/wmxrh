@@ -1,18 +1,21 @@
 /**
  * IntegrationHealthDashboard — SuperAdmin dashboard for Integration Health & Monitoring Engine.
  *
- * Shows health scores per tenant, drill-down per check, metrics, and history.
+ * Features: tenant status table, criticality colors, advanced filters, historical logs.
  */
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, Fragment } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import {
   Activity, AlertTriangle, CheckCircle2, XCircle, RefreshCw,
   Loader2, Server, ShieldCheck, Cpu, Radio, Clock, Layers,
-  ChevronDown, ChevronUp, Gauge,
+  ChevronDown, ChevronUp, Gauge, Search, Filter,
 } from 'lucide-react';
 import {
   getLatestHealthChecks,
@@ -24,13 +27,13 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 
 const STATUS_CONFIG = {
-  healthy: { color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', label: 'Saudável', icon: CheckCircle2 },
-  degraded: { color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20', label: 'Degradado', icon: AlertTriangle },
-  critical: { color: 'text-destructive', bg: 'bg-destructive/10', border: 'border-destructive/20', label: 'Crítico', icon: XCircle },
-  unknown: { color: 'text-muted-foreground', bg: 'bg-muted/30', border: 'border-muted', label: 'Desconhecido', icon: Clock },
+  healthy: { color: 'text-emerald-500', bg: 'bg-emerald-500/10', label: 'Saudável', icon: CheckCircle2 },
+  degraded: { color: 'text-amber-500', bg: 'bg-amber-500/10', label: 'Degradado', icon: AlertTriangle },
+  critical: { color: 'text-destructive', bg: 'bg-destructive/10', label: 'Crítico', icon: XCircle },
+  unknown: { color: 'text-muted-foreground', bg: 'bg-muted/30', label: 'Desconhecido', icon: Clock },
 } as const;
 
-const CHECK_ICONS: Record<string, typeof Server> = {
+const CHECK_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   server_connection: Server,
   api_authentication: ShieldCheck,
   device_sync: Cpu,
@@ -50,52 +53,68 @@ const CHECK_LABELS: Record<string, string> = {
 
 function CheckStatusBadge({ check }: { check: CheckResult }) {
   const variants: Record<string, 'default' | 'destructive' | 'secondary' | 'outline'> = {
-    pass: 'default',
-    fail: 'destructive',
-    warn: 'secondary',
-    unknown: 'outline',
+    pass: 'default', fail: 'destructive', warn: 'secondary', unknown: 'outline',
   };
   const labels: Record<string, string> = { pass: '✓ OK', fail: '✗ Falha', warn: '⚠ Alerta', unknown: '? N/A' };
   return <Badge variant={variants[check.status] || 'outline'} className="text-xs">{labels[check.status] || check.status}</Badge>;
 }
 
 export default function IntegrationHealthDashboard() {
-  const [checks, setChecks] = useState<HealthCheckResult[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [running, setRunning] = useState(false);
   const [expandedTenant, setExpandedTenant] = useState<string | null>(null);
-  const [history, setHistory] = useState<HealthCheckResult[]>([]);
-  const [tenantNames, setTenantNames] = useState<Record<string, string>>({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [scoreFilter, setScoreFilter] = useState<string>('all');
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getLatestHealthChecks();
-      setChecks(data);
+  // Fetch health checks
+  const { data: checks = [], isLoading } = useQuery({
+    queryKey: ['integration-health-checks'],
+    queryFn: getLatestHealthChecks,
+  });
 
-      // Fetch tenant names
-      if (data.length > 0) {
-        const ids = data.map(d => d.tenant_id);
-        const { data: tenants } = await supabase
-          .from('tenants')
-          .select('id, name')
-          .in('id', ids);
-        const names: Record<string, string> = {};
-        for (const t of (tenants || [])) names[t.id] = t.name;
-        setTenantNames(names);
+  // Fetch tenant names
+  const tenantIds = useMemo(() => checks.map(c => c.tenant_id), [checks]);
+  const { data: tenantNames = {} } = useQuery({
+    queryKey: ['tenant-names', tenantIds],
+    queryFn: async () => {
+      if (tenantIds.length === 0) return {};
+      const { data } = await supabase.from('tenants').select('id, name').in('id', tenantIds);
+      const names: Record<string, string> = {};
+      for (const t of (data || [])) names[t.id] = t.name;
+      return names;
+    },
+    enabled: tenantIds.length > 0,
+  });
+
+  // Fetch history for expanded tenant
+  const { data: history = [] } = useQuery({
+    queryKey: ['integration-health-history', expandedTenant],
+    queryFn: () => getTenantHealthHistory(expandedTenant!, 20),
+    enabled: !!expandedTenant,
+  });
+
+  // Filtered checks
+  const filteredChecks = useMemo(() => {
+    return checks.filter(c => {
+      if (statusFilter !== 'all' && c.health_status !== statusFilter) return false;
+      if (scoreFilter === 'low' && c.health_score >= 50) return false;
+      if (scoreFilter === 'mid' && (c.health_score < 50 || c.health_score >= 80)) return false;
+      if (scoreFilter === 'high' && c.health_score < 80) return false;
+      if (searchTerm) {
+        const name = (tenantNames[c.tenant_id] || c.tenant_id).toLowerCase();
+        if (!name.includes(searchTerm.toLowerCase())) return false;
       }
-    } catch {}
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
+      return true;
+    });
+  }, [checks, statusFilter, scoreFilter, searchTerm, tenantNames]);
 
   const handleRunAll = async () => {
     setRunning(true);
     try {
       await triggerHealthCheck();
-      await fetchData();
-    } catch {}
+      await queryClient.invalidateQueries({ queryKey: ['integration-health-checks'] });
+    } catch { /* */ }
     setRunning(false);
   };
 
@@ -103,20 +122,9 @@ export default function IntegrationHealthDashboard() {
     setRunning(true);
     try {
       await triggerHealthCheck(tenantId);
-      await fetchData();
-    } catch {}
+      await queryClient.invalidateQueries({ queryKey: ['integration-health-checks'] });
+    } catch { /* */ }
     setRunning(false);
-  };
-
-  const toggleExpand = async (tenantId: string) => {
-    if (expandedTenant === tenantId) {
-      setExpandedTenant(null);
-      setHistory([]);
-    } else {
-      setExpandedTenant(tenantId);
-      const h = await getTenantHealthHistory(tenantId, 20);
-      setHistory(h);
-    }
   };
 
   // Aggregated stats
@@ -131,7 +139,7 @@ export default function IntegrationHealthDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold font-display text-foreground flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Activity className="h-6 w-6" /> Integration Health Monitor
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -146,40 +154,74 @@ export default function IntegrationHealthDashboard() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold">{totalTenants}</div>
-            <div className="text-xs text-muted-foreground mt-1">Tenants Monitorados</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-emerald-500">{healthyCount}</div>
-            <div className="text-xs text-muted-foreground mt-1">Saudáveis</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-amber-500">{degradedCount}</div>
-            <div className="text-xs text-muted-foreground mt-1">Degradados</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-destructive">{criticalCount}</div>
-            <div className="text-xs text-muted-foreground mt-1">Críticos</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center gap-1">
-              <Gauge className="h-5 w-5 text-muted-foreground" />
-              <span className="text-3xl font-bold">{avgScore}</span>
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">Score Médio</div>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-4 text-center">
+          <div className="text-3xl font-bold">{totalTenants}</div>
+          <div className="text-xs text-muted-foreground mt-1">Tenants Monitorados</div>
+        </CardContent></Card>
+        <Card><CardContent className="p-4 text-center">
+          <div className="text-3xl font-bold text-emerald-500">{healthyCount}</div>
+          <div className="text-xs text-muted-foreground mt-1">Saudáveis</div>
+        </CardContent></Card>
+        <Card><CardContent className="p-4 text-center">
+          <div className="text-3xl font-bold text-amber-500">{degradedCount}</div>
+          <div className="text-xs text-muted-foreground mt-1">Degradados</div>
+        </CardContent></Card>
+        <Card><CardContent className="p-4 text-center">
+          <div className="text-3xl font-bold text-destructive">{criticalCount}</div>
+          <div className="text-xs text-muted-foreground mt-1">Críticos</div>
+        </CardContent></Card>
+        <Card><CardContent className="p-4 text-center">
+          <div className="flex items-center justify-center gap-1">
+            <Gauge className="h-5 w-5 text-muted-foreground" />
+            <span className="text-3xl font-bold">{avgScore}</span>
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">Score Médio</div>
+        </CardContent></Card>
       </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <div className="relative flex-1 min-w-[200px] max-w-xs">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar tenant..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[160px] h-9">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                <SelectItem value="healthy">Saudável</SelectItem>
+                <SelectItem value="degraded">Degradado</SelectItem>
+                <SelectItem value="critical">Crítico</SelectItem>
+                <SelectItem value="unknown">Desconhecido</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={scoreFilter} onValueChange={setScoreFilter}>
+              <SelectTrigger className="w-[160px] h-9">
+                <SelectValue placeholder="Score" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Scores</SelectItem>
+                <SelectItem value="high">Alto (≥80)</SelectItem>
+                <SelectItem value="mid">Médio (50-79)</SelectItem>
+                <SelectItem value="low">Baixo (&lt;50)</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground ml-auto">
+              {filteredChecks.length} de {checks.length} tenants
+            </span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tenant Table */}
       <Card>
@@ -187,20 +229,20 @@ export default function IntegrationHealthDashboard() {
           <CardTitle className="text-base">Saúde por Tenant</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : checks.length === 0 ? (
+          ) : filteredChecks.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              Nenhum tenant com integração Traccar encontrado. Execute uma verificação.
+              Nenhum tenant encontrado com os filtros aplicados.
             </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-8"></TableHead>
+                    <TableHead className="w-8" />
                     <TableHead>Tenant</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Score</TableHead>
@@ -210,21 +252,25 @@ export default function IntegrationHealthDashboard() {
                     <TableHead>Queue Lag</TableHead>
                     <TableHead>Latência</TableHead>
                     <TableHead>Verificado</TableHead>
-                    <TableHead></TableHead>
+                    <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {checks.map(check => {
+                  {filteredChecks.map(check => {
                     const cfg = STATUS_CONFIG[check.health_status];
                     const StatusIcon = cfg.icon;
                     const isExpanded = expandedTenant === check.tenant_id;
 
                     return (
-                      <>
+                      <Fragment key={check.id}>
                         <TableRow
-                          key={check.id}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => toggleExpand(check.tenant_id)}
+                          className={`cursor-pointer hover:bg-muted/50 border-l-4 ${
+                            check.health_status === 'critical' ? 'border-l-destructive' :
+                            check.health_status === 'degraded' ? 'border-l-amber-500' :
+                            check.health_status === 'healthy' ? 'border-l-emerald-500' :
+                            'border-l-muted'
+                          }`}
+                          onClick={() => setExpandedTenant(isExpanded ? null : check.tenant_id)}
                         >
                           <TableCell>
                             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -272,14 +318,14 @@ export default function IntegrationHealthDashboard() {
 
                         {/* Expanded Detail */}
                         {isExpanded && (
-                          <TableRow key={`${check.id}-detail`}>
+                          <TableRow>
                             <TableCell colSpan={11} className="bg-muted/20 p-4">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Individual Checks */}
                                 <div className="space-y-2">
                                   <h4 className="text-sm font-semibold mb-3">Testes de Saúde</h4>
                                   {Object.entries(CHECK_LABELS).map(([key, label]) => {
-                                    const checkData = check[key as keyof HealthCheckResult] as CheckResult;
+                                    const checkData = (check as any)[key] as CheckResult | undefined;
                                     const Icon = CHECK_ICONS[key] || Activity;
                                     return (
                                       <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
@@ -333,7 +379,7 @@ export default function IntegrationHealthDashboard() {
                             </TableCell>
                           </TableRow>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </TableBody>
