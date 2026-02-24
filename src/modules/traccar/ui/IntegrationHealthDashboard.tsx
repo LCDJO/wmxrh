@@ -17,6 +17,7 @@ import {
   Activity, AlertTriangle, CheckCircle2, XCircle, RefreshCw,
   Loader2, Server, ShieldCheck, Cpu, Radio, Clock, Layers,
   ChevronDown, ChevronUp, Gauge, Search, Filter, Bell, BellOff,
+  User, ShieldAlert, Info,
 } from 'lucide-react';
 import {
   getLatestHealthChecks,
@@ -24,9 +25,11 @@ import {
   triggerHealthCheck,
   getActiveHealthAlerts,
   resolveHealthAlert,
+  getTokenOwnersByTenant,
   type HealthCheckResult,
   type CheckResult,
   type HealthAlert,
+  type TraccarTokenOwner,
 } from '../services/integration-health.service';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -103,6 +106,12 @@ export default function IntegrationHealthDashboard() {
       return names;
     },
     enabled: tenantIds.length > 0,
+  });
+
+  // Fetch token owners per tenant
+  const { data: tokenOwners = {} } = useQuery({
+    queryKey: ['traccar-token-owners'],
+    queryFn: getTokenOwnersByTenant,
   });
 
   // Fetch history for expanded tenant
@@ -355,6 +364,52 @@ export default function IntegrationHealthDashboard() {
                             {isExpanded && (
                               <TableRow>
                                 <TableCell colSpan={11} className="bg-muted/20 p-4">
+                                  {/* Token Owner Info */}
+                                  {(() => {
+                                    const owner = tokenOwners[check.tenant_id];
+                                    return (
+                                      <div className="mb-4 p-3 rounded-lg border border-border bg-card">
+                                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                          <User className="h-4 w-4 text-primary" /> Proprietário do Token (API Key)
+                                        </h4>
+                                        {owner ? (
+                                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                            <div>
+                                              <span className="text-xs text-muted-foreground block">Nome</span>
+                                              <span className="font-medium text-foreground">{owner.name || '—'}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-xs text-muted-foreground block">E-mail</span>
+                                              <span className="font-medium text-foreground">{owner.email}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-xs text-muted-foreground block">Função</span>
+                                              <Badge variant={owner.administrator ? 'default' : owner.readonly ? 'outline' : 'secondary'} className="text-xs mt-0.5">
+                                                {owner.administrator ? '🛡️ Administrador' : owner.readonly ? '👁️ Somente Leitura' : '👤 Usuário Padrão'}
+                                              </Badge>
+                                            </div>
+                                            <div>
+                                              <span className="text-xs text-muted-foreground block">Acesso Total</span>
+                                              {owner.administrator ? (
+                                                <span className="text-xs font-medium flex items-center gap-1 mt-0.5 text-emerald-600">
+                                                  <CheckCircle2 className="h-3.5 w-3.5" /> Sim — vê todos os dispositivos
+                                                </span>
+                                              ) : (
+                                                <span className="text-xs font-medium flex items-center gap-1 mt-0.5 text-amber-600">
+                                                  <AlertTriangle className="h-3.5 w-3.5" /> Não — acesso limitado
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <p className="text-xs text-muted-foreground italic">
+                                            Informação indisponível — execute uma sincronização para identificar o proprietário do token.
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+
                                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     {/* Individual Checks */}
                                     <div className="space-y-2">
@@ -546,6 +601,37 @@ export default function IntegrationHealthDashboard() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Admin Legend */}
+      <Card className="border-dashed">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <div className="space-y-1.5">
+              <h4 className="text-sm font-semibold text-foreground">Legenda — Níveis de Acesso do Token Traccar</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Badge variant="default" className="text-[10px]">🛡️ Administrador</Badge>
+                  <span>Acesso total a todos os dispositivos, grupos e relatórios do servidor.</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-[10px]">👤 Usuário Padrão</Badge>
+                  <span>Acesso apenas a dispositivos explicitamente vinculados ao seu perfil.</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px]">👁️ Somente Leitura</Badge>
+                  <span>Visualização sem permissão de alterações ou comandos.</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground/80 pt-1 flex items-center gap-1.5">
+                <ShieldAlert className="h-3.5 w-3.5 text-primary" />
+                <strong>Importante:</strong> Apenas tokens vinculados a usuários <strong>Administradores</strong> possuem visibilidade completa de todos os dispositivos.
+                Tokens de usuários padrão retornam apenas os dispositivos atribuídos a eles.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
