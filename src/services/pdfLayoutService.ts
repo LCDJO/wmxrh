@@ -1,8 +1,39 @@
 /**
  * PDF Layout Service — Fetches active layout config and applies to PDF generator.
+ * Always returns a usable config (falls back to hardcoded defaults if none in DB).
  */
 import { supabase } from '@/integrations/supabase/client';
 import type { PdfLayoutConfig } from '@/pages/PdfLayoutSettings';
+import type { PdfLayoutOverrides } from '@/services/pdfDocumentGenerator';
+
+const FALLBACK_DEFAULTS: PdfLayoutOverrides = {
+  marginTop: 15,
+  marginBottom: 15,
+  marginLeft: 15,
+  marginRight: 15,
+  sectionGap: 3,
+  headerFontFamily: 'Helvetica Neue, Arial, sans-serif',
+  bodyFontFamily: 'Georgia, Times New Roman, serif',
+  footerFontFamily: 'Helvetica Neue, Arial, sans-serif',
+  headerFontSize: 16,
+  bodyFontSize: 13,
+  footerFontSize: 9,
+  bodyLineHeight: 1.7,
+  primaryColor: '#1a1a2e',
+  textColor: '#222222',
+  secondaryTextColor: '#666666',
+  headerBorderColor: '#1a1a2e',
+  showLogo: false,
+  logoUrl: null,
+  companyNameOverride: null,
+  headerSubtitle: 'Documento Oficial',
+  showDate: true,
+  showQrCode: true,
+  showValidatorCode: true,
+  showPageNumbers: true,
+  qrCodeSize: 56,
+  footerText: null,
+};
 
 export async function getActivePdfLayout(tenantId: string): Promise<PdfLayoutConfig | null> {
   const { data, error } = await supabase
@@ -17,7 +48,7 @@ export async function getActivePdfLayout(tenantId: string): Promise<PdfLayoutCon
 }
 
 /** Maps a PdfLayoutConfig to the constants used by pdfDocumentGenerator */
-export function layoutToGeneratorConfig(layout: PdfLayoutConfig) {
+export function layoutToGeneratorConfig(layout: PdfLayoutConfig): PdfLayoutOverrides {
   return {
     marginTop: Number(layout.margin_top) || 15,
     marginBottom: Number(layout.margin_bottom) || 15,
@@ -46,4 +77,14 @@ export function layoutToGeneratorConfig(layout: PdfLayoutConfig) {
     qrCodeSize: layout.qr_code_size,
     footerText: layout.footer_text,
   };
+}
+
+/**
+ * Returns the active layout for a tenant, or safe fallback defaults.
+ * Use this in PDF generation flows to guarantee no null config.
+ */
+export async function getLayoutOrDefaults(tenantId: string): Promise<PdfLayoutOverrides> {
+  const layout = await getActivePdfLayout(tenantId);
+  if (layout) return layoutToGeneratorConfig(layout);
+  return { ...FALLBACK_DEFAULTS };
 }
