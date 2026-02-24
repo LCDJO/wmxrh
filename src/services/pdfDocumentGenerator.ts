@@ -68,6 +68,11 @@ export interface PdfLayoutOverrides {
   watermarkColor?: string;
   watermarkPosition?: string;
   pageSize?: string;
+  qrPosition?: string;
+  paginationLocation?: string;
+  headerExtraText?: string | null;
+  footerShowDocName?: boolean;
+  footerShowValidatorLink?: boolean;
 }
 
 export interface PdfDocumentOptions {
@@ -123,7 +128,7 @@ function canvasToMM(canvas: HTMLCanvasElement, contentWidthMM: number): { widthM
 }
 
 // ── Header HTML ────────────────────────────────────────────
-function buildHeaderHtml(companyName: string, title: string, date: string, L: PdfLayoutOverrides): string {
+function buildHeaderHtml(companyName: string, title: string, date: string, pageNum: number, totalPages: string, L: PdfLayoutOverrides): string {
   const font = L.headerFontFamily || 'Helvetica Neue, Arial, sans-serif';
   const size = L.headerFontSize || 16;
   const border = L.headerBorderColor || '#1a1a2e';
@@ -133,10 +138,16 @@ function buildHeaderHtml(companyName: string, title: string, date: string, L: Pd
   const showDate = L.showDate ?? true;
   const showLogo = L.showLogo ?? true;
   const logoUrl = L.logoUrl;
+  const paginationInHeader = L.paginationLocation === 'header' || L.paginationLocation === 'both';
+  const extraText = L.headerExtraText;
 
   const logoHtml = showLogo && logoUrl
     ? `<img src="${logoUrl}" style="height:32px;width:auto;margin-right:8px;" />`
     : '';
+
+  const rightItems: string[] = [];
+  if (showDate) rightItems.push(`<div style="font-size: 10px; color: ${secondary};">${date}</div>`);
+  if (paginationInHeader) rightItems.push(`<div style="font-size: 9px; color: #999;">Página ${pageNum} de ${totalPages}</div>`);
 
   return `
     <div style="font-family: '${font}'; padding: 16px 24px; border-bottom: 2px solid ${border};">
@@ -148,35 +159,66 @@ function buildHeaderHtml(companyName: string, title: string, date: string, L: Pd
             <div style="font-size: 11px; color: ${secondary}; margin-top: 2px;">${subtitle}</div>
           </div>
         </div>
-        ${showDate ? `<div style="text-align: right;"><div style="font-size: 10px; color: ${secondary};">${date}</div></div>` : ''}
+        ${rightItems.length ? `<div style="text-align: right;">${rightItems.join('')}</div>` : ''}
       </div>
       <div style="margin-top: 10px; font-size: 14px; font-weight: 600; color: #333; text-align: center; text-transform: uppercase; letter-spacing: 1px;">
         ${title}
       </div>
+      ${extraText ? `<div style="margin-top: 6px; font-size: 10px; color: ${secondary}; text-align: center;">${extraText}</div>` : ''}
     </div>
   `;
 }
 
-function buildFooterHtml(qrDataUrl: string, validatorCode: string, pageNum: number, totalPages: string, L: PdfLayoutOverrides): string {
+function buildFooterHtml(qrDataUrl: string, validatorCode: string, pageNum: number, totalPages: string, documentTitle: string, verifyUrl: string, L: PdfLayoutOverrides): string {
   const showQr = L.showQrCode ?? true;
   const showValidator = L.showValidatorCode ?? true;
-  const showPages = L.showPageNumbers ?? true;
+  const paginationInFooter = L.paginationLocation !== 'header';
   const qrSize = L.qrCodeSize || 56;
   const text = L.textColor || '#333';
   const footerText = L.footerText;
+  const qrPosition = L.qrPosition || 'left';
+  const showDocName = L.footerShowDocName ?? false;
+  const showValidatorLink = L.footerShowValidatorLink ?? false;
+
+  const qrHtml = showQr ? `<img src="${qrDataUrl}" width="${qrSize}" height="${qrSize}" style="border: 1px solid #eee; border-radius: 4px;" />` : '';
+
+  const infoLines: string[] = [];
+  if (showValidator) {
+    infoLines.push(`<div style="font-size: 8px; color: #999; text-transform: uppercase; letter-spacing: 0.5px;">Código Validador</div>`);
+    infoLines.push(`<div style="font-size: 11px; font-weight: 600; color: ${text}; font-family: monospace; letter-spacing: 1px;">${validatorCode}</div>`);
+  }
+  if (showDocName) {
+    infoLines.push(`<div style="font-size: 8px; color: #999; margin-top: 2px;">${documentTitle}</div>`);
+  }
+  if (showValidatorLink) {
+    infoLines.push(`<div style="font-size: 7px; color: #4a90d9; margin-top: 1px; word-break: break-all;">${verifyUrl}</div>`);
+  }
+  if (footerText) {
+    infoLines.push(`<div style="font-size: 7px; color: #aaa; margin-top: 2px;">${footerText}</div>`);
+  } else if (showQr && !footerText) {
+    infoLines.push(`<div style="font-size: 7px; color: #aaa; margin-top: 2px;">Escaneie o QR Code para verificar autenticidade</div>`);
+  }
+
+  const infoHtml = infoLines.length ? `<div>${infoLines.join('')}</div>` : '';
+
+  // QR + info block, ordered by qrPosition
+  const leftBlock = qrPosition === 'left'
+    ? `<div style="display: flex; align-items: center; gap: 10px;">${qrHtml}${infoHtml}</div>`
+    : `<div>${infoHtml}</div>`;
+  const rightBlock = qrPosition === 'right'
+    ? `<div style="display: flex; align-items: center; gap: 10px; flex-direction: row-reverse; text-align: right;">${qrHtml}${infoHtml}</div>`
+    : (paginationInFooter ? `<div style="text-align: right;"><div style="font-size: 9px; color: #999;">Página ${pageNum} de ${totalPages}</div></div>` : '');
+
+  // If QR is on the right, pagination goes to the left side
+  const paginationHtml = paginationInFooter
+    ? `<div style="font-size: 9px; color: #999;">Página ${pageNum} de ${totalPages}</div>`
+    : '';
 
   return `
     <div style="font-family: '${L.footerFontFamily || 'Helvetica Neue, Arial, sans-serif'}'; padding: 12px 24px; border-top: 1px solid #ddd;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          ${showQr ? `<img src="${qrDataUrl}" width="${qrSize}" height="${qrSize}" style="border: 1px solid #eee; border-radius: 4px;" />` : ''}
-          ${showValidator ? `<div>
-            <div style="font-size: 8px; color: #999; text-transform: uppercase; letter-spacing: 0.5px;">Código Validador</div>
-            <div style="font-size: 11px; font-weight: 600; color: ${text}; font-family: monospace; letter-spacing: 1px;">${validatorCode}</div>
-            ${footerText ? `<div style="font-size: 7px; color: #aaa; margin-top: 2px;">${footerText}</div>` : '<div style="font-size: 7px; color: #aaa; margin-top: 2px;">Escaneie o QR Code para verificar autenticidade</div>'}
-          </div>` : ''}
-        </div>
-        ${showPages ? `<div style="text-align: right;"><div style="font-size: 9px; color: #999;">Página ${pageNum} de ${totalPages}</div></div>` : ''}
+        ${qrPosition === 'left' ? leftBlock : (paginationInFooter ? `<div>${paginationHtml}</div>` : `<div>${infoHtml}</div>`)}
+        ${qrPosition === 'left' ? (paginationInFooter ? `<div style="text-align:right;">${paginationHtml}</div>` : '') : `<div style="display:flex;align-items:center;gap:10px;">${infoHtml}${qrHtml}</div>`}
       </div>
     </div>
   `;
@@ -233,17 +275,20 @@ export async function generateDocumentPdf(options: PdfDocumentOptions): Promise<
 
   const totalPages = Math.max(1, Math.ceil(totalBodyMM / BODY_AREA));
 
-  // ── Step 1b: Pre-render header (fixed, identical on all pages) ──
-  const headerEl = createOffscreen(buildHeaderHtml(displayName, documentTitle, date, L));
-  const headerCanvas = await captureElement(headerEl);
-  const headerDims = canvasToMM(headerCanvas, CONTENT_WIDTH);
-  const headerDataUrl = headerCanvas.toDataURL('image/png');
-  document.body.removeChild(headerEl);
+  // ── Step 1b: Pre-render headers (one per page for pagination) ──
+  const headerCache: { dataUrl: string; dims: { widthMM: number; heightMM: number } }[] = [];
+  for (let p = 0; p < totalPages; p++) {
+    const headerEl = createOffscreen(buildHeaderHtml(displayName, documentTitle, date, p + 1, String(totalPages), L));
+    const headerCanvas = await captureElement(headerEl);
+    const headerDims = canvasToMM(headerCanvas, CONTENT_WIDTH);
+    headerCache.push({ dataUrl: headerCanvas.toDataURL('image/png'), dims: headerDims });
+    document.body.removeChild(headerEl);
+  }
 
   // ── Step 1c: Pre-render footers (one per page for page number) ──
   const footerCache: { dataUrl: string; dims: { widthMM: number; heightMM: number } }[] = [];
   for (let p = 0; p < totalPages; p++) {
-    const footerEl = createOffscreen(buildFooterHtml(qrDataUrl, validatorCode, p + 1, String(totalPages), L));
+    const footerEl = createOffscreen(buildFooterHtml(qrDataUrl, validatorCode, p + 1, String(totalPages), documentTitle, verifyUrl, L));
     const footerCanvas = await captureElement(footerEl);
     const footerDims = canvasToMM(footerCanvas, CONTENT_WIDTH);
     footerCache.push({ dataUrl: footerCanvas.toDataURL('image/png'), dims: footerDims });
@@ -256,8 +301,9 @@ export async function generateDocumentPdf(options: PdfDocumentOptions): Promise<
   for (let page = 0; page < totalPages; page++) {
     if (page > 0) pdf.addPage();
 
-    // -- Header (fixed, same on all pages) --
-    pdf.addImage(headerDataUrl, 'PNG', MARGIN_LEFT, MARGIN_TOP, headerDims.widthMM, headerDims.heightMM);
+    // -- Header (per-page for pagination support) --
+    const header = headerCache[page];
+    pdf.addImage(header.dataUrl, 'PNG', MARGIN_LEFT, MARGIN_TOP, header.dims.widthMM, header.dims.heightMM);
 
     // -- Footer (fixed position, page number varies) --
     const footer = footerCache[page];
@@ -267,7 +313,7 @@ export async function generateDocumentPdf(options: PdfDocumentOptions): Promise<
     // -- Body slice --
     const bodyStartMM = page * BODY_AREA;
     const bodySliceMM = Math.min(BODY_AREA, totalBodyMM - bodyStartMM);
-    const bodyTopY = MARGIN_TOP + headerDims.heightMM + SECTION_GAP;
+    const bodyTopY = MARGIN_TOP + header.dims.heightMM + SECTION_GAP;
 
     if (bodySliceMM > 0) {
       const scale = 2;

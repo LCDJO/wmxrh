@@ -62,6 +62,11 @@ export interface PdfLayoutConfig {
   created_at: string;
   updated_at: string;
   page_size: string;
+  qr_position: string;
+  pagination_location: string;
+  header_extra_text: string | null;
+  footer_show_doc_name: boolean;
+  footer_show_validator_link: boolean;
 }
 
 const DEFAULT_LAYOUT: Omit<PdfLayoutConfig, 'id' | 'tenant_id' | 'created_at' | 'updated_at'> = {
@@ -105,6 +110,11 @@ const DEFAULT_LAYOUT: Omit<PdfLayoutConfig, 'id' | 'tenant_id' | 'created_at' | 
   watermark_color: '#000000',
   watermark_position: 'center',
   page_size: 'a4',
+  qr_position: 'left',
+  pagination_location: 'footer',
+  header_extra_text: null,
+  footer_show_doc_name: false,
+  footer_show_validator_link: false,
 };
 
 const FONT_OPTIONS = [

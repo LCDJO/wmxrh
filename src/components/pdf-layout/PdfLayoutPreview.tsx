@@ -47,6 +47,11 @@ export function PdfLayoutPreview({ config }: Props) {
     wmColor: config.watermark_color || '#000000',
     wmPosition: config.watermark_position || 'center',
     pageSize: config.page_size || 'a4',
+    qrPosition: config.qr_position || 'left',
+    paginationLocation: config.pagination_location || 'footer',
+    headerExtraText: config.header_extra_text || '',
+    footerShowDocName: config.footer_show_doc_name ?? false,
+    footerShowValidatorLink: config.footer_show_validator_link ?? false,
   };
 
   const pageDef = PAGE_SIZES[c.pageSize] || PAGE_SIZES.a4;
@@ -189,6 +194,11 @@ export function PdfLayoutPreview({ config }: Props) {
                 </div>
               )}
             </div>
+            {(c.paginationLocation === 'header' || c.paginationLocation === 'both') && (
+              <div style={{ fontSize: px(2), color: '#999', textAlign: 'right', marginTop: px(1) }}>
+                Página 1 de 1
+              </div>
+            )}
             <div
               style={{
                 marginTop: px(2),
@@ -202,6 +212,11 @@ export function PdfLayoutPreview({ config }: Props) {
             >
               TÍTULO DO DOCUMENTO
             </div>
+            {c.headerExtraText && (
+              <div style={{ marginTop: px(1), fontSize: px(2.2), color: c.secondary, textAlign: 'center' }}>
+                {c.headerExtraText}
+              </div>
+            )}
           </div>
 
           {/* Body area */}
@@ -242,8 +257,9 @@ export function PdfLayoutPreview({ config }: Props) {
             }}
           >
             <div className="flex justify-between items-center">
-              <div className="flex items-center" style={{ gap: px(2) }}>
-                {c.showQr && (
+              {/* Left side */}
+              <div className="flex items-center" style={{ gap: px(2), flexDirection: c.qrPosition === 'right' ? 'row' : 'row' }}>
+                {c.qrPosition === 'left' && c.showQr && (
                   <div
                     style={{
                       width: px(c.qrSize / 4),
@@ -267,6 +283,12 @@ export function PdfLayoutPreview({ config }: Props) {
                     <div style={{ fontSize: px(2.5), fontWeight: 600, color: c.text, fontFamily: 'monospace', letterSpacing: px(0.2) }}>
                       DOC-ABC123-XYZ
                     </div>
+                    {c.footerShowDocName && (
+                      <div style={{ fontSize: px(1.8), color: '#999', marginTop: px(0.3) }}>TÍTULO DO DOCUMENTO</div>
+                    )}
+                    {c.footerShowValidatorLink && (
+                      <div style={{ fontSize: px(1.5), color: '#4a90d9', marginTop: px(0.2) }}>exemplo.com/verificar/DOC-ABC123</div>
+                    )}
                     {c.footerText && (
                       <div style={{ fontSize: px(1.5), color: '#aaa', marginTop: px(0.5) }}>
                         {c.footerText}
@@ -275,11 +297,30 @@ export function PdfLayoutPreview({ config }: Props) {
                   </div>
                 )}
               </div>
-              {c.showPages && (
-                <div style={{ fontSize: px(c.footerSize / 4), color: '#999' }}>
-                  Página 1 de 1
-                </div>
-              )}
+              {/* Right side */}
+              <div className="flex items-center" style={{ gap: px(2) }}>
+                {(c.paginationLocation !== 'header') && c.showPages && (
+                  <div style={{ fontSize: px(c.footerSize / 4), color: '#999' }}>
+                    Página 1 de 1
+                  </div>
+                )}
+                {c.qrPosition === 'right' && c.showQr && (
+                  <div
+                    style={{
+                      width: px(c.qrSize / 4),
+                      height: px(c.qrSize / 4),
+                      border: `1px solid #eee`,
+                      borderRadius: px(0.5),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#f9f9f9',
+                    }}
+                  >
+                    <span style={{ fontSize: px(1.5), color: '#999' }}>QR</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

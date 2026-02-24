@@ -43,6 +43,11 @@ const FALLBACK_DEFAULTS: PdfLayoutOverrides = {
   watermarkColor: '#000000',
   watermarkPosition: 'center',
   pageSize: 'a4',
+  qrPosition: 'left',
+  paginationLocation: 'footer',
+  headerExtraText: null,
+  footerShowDocName: false,
+  footerShowValidatorLink: false,
 };
 
 export async function getActivePdfLayout(tenantId: string): Promise<PdfLayoutConfig | null> {
@@ -96,6 +101,11 @@ export function layoutToGeneratorConfig(layout: PdfLayoutConfig): PdfLayoutOverr
     watermarkColor: layout.watermark_color,
     watermarkPosition: layout.watermark_position,
     pageSize: layout.page_size || 'a4',
+    qrPosition: layout.qr_position || 'left',
+    paginationLocation: layout.pagination_location || 'footer',
+    headerExtraText: layout.header_extra_text,
+    footerShowDocName: layout.footer_show_doc_name ?? false,
+    footerShowValidatorLink: layout.footer_show_validator_link ?? false,
   };
 }
 
