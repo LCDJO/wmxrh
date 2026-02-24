@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { PdfLayoutPicker } from './PdfLayoutPicker';
 
 const VARIAVEIS = [
   { key: '{{nome_colaborador}}', label: 'Nome do Colaborador' },
@@ -76,6 +77,7 @@ export function CreateTemplateDialog({ open, onOpenChange, tenantId }: Props) {
   const [validadeDias, setValidadeDias] = useState('');
   const [renovacaoObrigatoria, setRenovacaoObrigatoria] = useState(false);
   const [conteudoHtml, setConteudoHtml] = useState('');
+  const [pdfLayoutId, setPdfLayoutId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const insertVariable = (varKey: string) => {
@@ -114,7 +116,7 @@ export function CreateTemplateDialog({ open, onOpenChange, tenantId }: Props) {
     setNome(''); setDescricao(''); setCategoria('contrato');
     setEscopo('global'); setCargoId(null); setObrigatorio(true);
     setExigeAssinatura(true); setValidadeDias(''); setRenovacaoObrigatoria(false);
-    setConteudoHtml('');
+    setConteudoHtml(''); setPdfLayoutId(null);
   };
 
   const handleSubmit = async () => {
@@ -152,6 +154,7 @@ export function CreateTemplateDialog({ open, onOpenChange, tenantId }: Props) {
           exige_assinatura: exigeAssinatura,
           expiry_days: validadeDias ? parseInt(validadeDias) : null,
           renovacao_obrigatoria: renovacaoObrigatoria,
+          pdf_layout_config_id: pdfLayoutId,
         })
         .select()
         .single();
@@ -257,6 +260,9 @@ export function CreateTemplateDialog({ open, onOpenChange, tenantId }: Props) {
             <Label htmlFor="tmpl-val">Validade (dias)</Label>
             <Input id="tmpl-val" type="number" min="0" placeholder="Deixe vazio para sem expiração" value={validadeDias} onChange={e => setValidadeDias(e.target.value)} />
           </div>
+
+          {/* Layout PDF */}
+          <PdfLayoutPicker tenantId={tenantId} value={pdfLayoutId} onChange={setPdfLayoutId} />
 
           {/* Conteúdo HTML */}
           <div className="space-y-1.5">

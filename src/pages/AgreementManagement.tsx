@@ -43,6 +43,8 @@ interface TemplateRow {
   expiry_days: number | null;
   renovacao_obrigatoria: boolean;
   conteudo_html: string;
+  pdf_layout_config_id: string | null;
+  tenant_id: string;
 }
 
 interface PendingAgreementRow {

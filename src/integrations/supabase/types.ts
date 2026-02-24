@@ -168,6 +168,7 @@ export type Database = {
           is_active: boolean
           is_mandatory: boolean
           name: string
+          pdf_layout_config_id: string | null
           renovacao_obrigatoria: boolean
           requires_witness: boolean
           slug: string
@@ -195,6 +196,7 @@ export type Database = {
           is_active?: boolean
           is_mandatory?: boolean
           name: string
+          pdf_layout_config_id?: string | null
           renovacao_obrigatoria?: boolean
           requires_witness?: boolean
           slug: string
@@ -222,6 +224,7 @@ export type Database = {
           is_active?: boolean
           is_mandatory?: boolean
           name?: string
+          pdf_layout_config_id?: string | null
           renovacao_obrigatoria?: boolean
           requires_witness?: boolean
           slug?: string
@@ -249,6 +252,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreement_templates_pdf_layout_config_id_fkey"
+            columns: ["pdf_layout_config_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_layout_configs"
             referencedColumns: ["id"]
           },
           {

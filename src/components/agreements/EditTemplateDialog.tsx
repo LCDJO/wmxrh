@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { PdfLayoutPicker } from './PdfLayoutPicker';
 
 const VARIAVEIS = [
   { key: '{{nome_colaborador}}', label: 'Nome do Colaborador' },
@@ -50,6 +51,8 @@ interface TemplateData {
   expiry_days: number | null;
   renovacao_obrigatoria: boolean;
   conteudo_html: string;
+  pdf_layout_config_id: string | null;
+  tenant_id: string;
 }
 
 interface Props {
@@ -81,6 +84,7 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
   const [validadeDias, setValidadeDias] = useState('');
   const [renovacaoObrigatoria, setRenovacaoObrigatoria] = useState(false);
   const [conteudoHtml, setConteudoHtml] = useState('');
+  const [pdfLayoutId, setPdfLayoutId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const insertVariable = (varKey: string) => {
@@ -107,6 +111,7 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
       setValidadeDias(template.expiry_days?.toString() || '');
       setRenovacaoObrigatoria(template.renovacao_obrigatoria);
       setConteudoHtml(template.conteudo_html);
+      setPdfLayoutId(template.pdf_layout_config_id ?? null);
     }
   }, [template]);
 
@@ -131,6 +136,7 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
           expiry_days: validadeDias ? parseInt(validadeDias) : null,
           renovacao_obrigatoria: renovacaoObrigatoria,
           conteudo_html: conteudoHtml,
+          pdf_layout_config_id: pdfLayoutId,
         })
         .eq('id', template.id);
 
@@ -198,6 +204,9 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
             <Label>Validade (dias)</Label>
             <Input type="number" min="0" placeholder="Sem expiração" value={validadeDias} onChange={e => setValidadeDias(e.target.value)} />
           </div>
+
+          {/* Layout PDF */}
+          {template && <PdfLayoutPicker tenantId={template.tenant_id} value={pdfLayoutId} onChange={setPdfLayoutId} />}
 
           <div className="space-y-1.5">
             <Label>Conteúdo do Termo (HTML)</Label>
