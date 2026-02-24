@@ -16420,6 +16420,10 @@ export type Database = {
         }
         Returns: Json
       }
+      can_access_employee_data: {
+        Args: { p_tenant_id: string; p_user_id: string }
+        Returns: boolean
+      }
       can_manage_compensation: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
@@ -16792,6 +16796,10 @@ export type Database = {
       }
       user_has_group_access: {
         Args: { _group_id: string; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_has_permission: {
+        Args: { p_permission: string; p_user_id: string }
         Returns: boolean
       }
       user_has_role: {
