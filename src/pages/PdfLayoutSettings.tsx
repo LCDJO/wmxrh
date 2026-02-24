@@ -16,7 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Save, Copy, Trash2, FileText, Eye } from 'lucide-react';
+import { Plus, Save, Copy, Trash2, FileText, Eye, Pencil } from 'lucide-react';
 import { PdfLayoutPreview } from '@/components/pdf-layout/PdfLayoutPreview';
 
 export interface PdfLayoutConfig {
@@ -277,6 +277,16 @@ export default function PdfLayoutSettings() {
                       size="icon"
                       variant="ghost"
                       className="h-6 w-6"
+                      title="Editar"
+                      onClick={(e) => { e.stopPropagation(); handleSelect(layout); }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      title="Duplicar"
                       onClick={(e) => { e.stopPropagation(); duplicateMutation.mutate(layout); }}
                     >
                       <Copy className="h-3 w-3" />
@@ -285,6 +295,7 @@ export default function PdfLayoutSettings() {
                       size="icon"
                       variant="ghost"
                       className="h-6 w-6 text-destructive"
+                      title="Excluir"
                       onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(layout.id); }}
                     >
                       <Trash2 className="h-3 w-3" />
