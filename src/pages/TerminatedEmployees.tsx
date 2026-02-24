@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { OFFBOARDING_TYPE_LABELS } from '@/domains/automated-offboarding';
 import { logExEmployeeAccess } from '@/domains/lgpd';
+import { OffboardingAuditLogSection } from '@/components/offboarding/OffboardingAuditLogSection';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -331,12 +332,13 @@ function ArchivedProfileDialog({ profile, onClose }: { profile: ArchivedProfile;
         </DialogHeader>
 
         <Tabs defaultValue="ficha" className="flex-1 min-h-0 flex flex-col">
-          <TabsList className="grid grid-cols-5 w-full">
+          <TabsList className="grid grid-cols-6 w-full">
             <TabsTrigger value="ficha" className="text-xs">Ficha</TabsTrigger>
             <TabsTrigger value="contratos" className="text-xs">Contratos</TabsTrigger>
             <TabsTrigger value="financeiro" className="text-xs">Financeiro</TabsTrigger>
             <TabsTrigger value="disciplinar" className="text-xs">Disciplinar</TabsTrigger>
             <TabsTrigger value="documentos" className="text-xs">Documentos</TabsTrigger>
+            <TabsTrigger value="auditoria" className="text-xs">Auditoria</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1 mt-4">
@@ -611,6 +613,21 @@ function ArchivedProfileDialog({ profile, onClose }: { profile: ArchivedProfile;
                     </div>
                   </CardContent>
                 </Card>
+              )}
+            </TabsContent>
+
+            {/* ── Auditoria ── */}
+            <TabsContent value="auditoria" className="m-0">
+              {profile.workflow_id ? (
+                <OffboardingAuditLogSection
+                  tenantId={profile.tenant_id}
+                  workflowId={profile.workflow_id}
+                  asCard={false}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nenhum workflow vinculado a este perfil.
+                </p>
               )}
             </TabsContent>
           </ScrollArea>

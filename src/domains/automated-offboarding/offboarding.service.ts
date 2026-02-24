@@ -133,7 +133,10 @@ export const offboardingService = {
     await supabase.from('offboarding_audit_log').insert({
       tenant_id: dto.tenant_id,
       workflow_id: (wf as any).id,
-      action: 'workflow_created',
+      action: 'workflow.created',
+      etapa: 'bloqueio_operacional',
+      decisao: 'automatico',
+      justificativa: `Workflow de desligamento criado — tipo: ${dto.offboarding_type}`,
       new_value: { ...dto, pendency_validation: { total: validation.pendencies.length, blocking: validation.total_blocking, can_proceed: validation.can_proceed } } as any,
     } as any);
 
@@ -156,7 +159,10 @@ export const offboardingService = {
     await supabase.from('offboarding_audit_log').insert({
       tenant_id: tenantId,
       workflow_id: id,
-      action: `status_changed_to_${status}`,
+      action: 'workflow.status_changed',
+      etapa: 'finalizacao',
+      decisao: status === 'completed' ? 'concluido' : status === 'archived' ? 'cancelado' : 'pendente',
+      justificativa: `Status alterado para: ${status}`,
       new_value: payload as any,
     } as any);
 

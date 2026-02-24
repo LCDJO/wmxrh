@@ -93,3 +93,17 @@ export type {
   ArchivedEmployeeProfile,
   ArchiveResult,
 } from './offboarding-archive.engine';
+
+// ── Auditoria Completa ──
+export {
+  offboardingAuditService,
+  recordOffboardingAudit,
+  listOffboardingAuditLog,
+  OFFBOARDING_AUDIT_ACTIONS,
+  OFFBOARDING_ETAPAS,
+  DECISAO_VARIANTS,
+} from './offboarding-audit.service';
+export type {
+  OffboardingAuditEntry,
+  RecordAuditParams,
+} from './offboarding-audit.service';
