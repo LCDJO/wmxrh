@@ -23,10 +23,7 @@ import {
   AlignLeft,
   Palette,
   Maximize,
-  QrCode,
-  Eye,
-  EyeOff,
-  Image,
+  Droplets,
 } from 'lucide-react';
 import type { PdfLayoutConfig } from '@/pages/PdfLayoutSettings';
 
@@ -50,6 +47,7 @@ const SECTIONS: SectionDef[] = [
   { id: 'header', label: 'Cabeçalho', icon: <Type className="h-4 w-4" />, color: 'bg-primary/10 border-primary/30' },
   { id: 'body', label: 'Corpo do Documento', icon: <AlignLeft className="h-4 w-4" />, color: 'bg-accent/50 border-accent' },
   { id: 'footer', label: 'Rodapé', icon: <FileText className="h-4 w-4" />, color: 'bg-secondary/50 border-secondary' },
+  { id: 'watermark', label: 'Marca d\'Água', icon: <Droplets className="h-4 w-4" />, color: 'bg-chart-4/10 border-chart-4/30' },
   { id: 'colors', label: 'Cores e Tipografia', icon: <Palette className="h-4 w-4" />, color: 'bg-destructive/10 border-destructive/30' },
   { id: 'margins', label: 'Margens e Espaçamento', icon: <Maximize className="h-4 w-4" />, color: 'bg-muted border-border' },
 ];
@@ -158,6 +156,7 @@ export function PdfSectionEditor({ editData, onUpdate }: Props) {
                 {section.id === 'header' ? (editData.show_logo ? 'Com logo' : 'Sem logo') :
                  section.id === 'footer' ? (editData.show_qr_code ? 'Com QR' : 'Sem QR') :
                  section.id === 'body' ? `${editData.body_font_size || 13}px` :
+                 section.id === 'watermark' ? (editData.watermark_enabled ? editData.watermark_type || 'text' : 'Desativada') :
                  section.id === 'colors' ? editData.primary_color || '#1a1a2e' :
                  `${editData.margin_top || 15}mm`}
               </Badge>
@@ -170,6 +169,7 @@ export function PdfSectionEditor({ editData, onUpdate }: Props) {
                 {section.id === 'header' && <HeaderSection editData={editData} onUpdate={onUpdate} />}
                 {section.id === 'body' && <BodySection editData={editData} onUpdate={onUpdate} />}
                 {section.id === 'footer' && <FooterSection editData={editData} onUpdate={onUpdate} />}
+                {section.id === 'watermark' && <WatermarkSection editData={editData} onUpdate={onUpdate} />}
                 {section.id === 'colors' && <ColorsSection editData={editData} onUpdate={onUpdate} />}
                 {section.id === 'margins' && <MarginsSection editData={editData} onUpdate={onUpdate} />}
               </div>
@@ -358,6 +358,128 @@ function MarginsSection({ editData, onUpdate }: Props) {
         <Label className="text-xs">Espaço entre seções: {editData.section_gap || 3}mm</Label>
         <Slider value={[editData.section_gap || 3]} min={0} max={15} step={1} onValueChange={([v]) => onUpdate('section_gap', v)} />
       </div>
+    </div>
+  );
+}
+
+function WatermarkSection({ editData, onUpdate }: Props) {
+  const wmType = editData.watermark_type || 'text';
+  const enabled = editData.watermark_enabled ?? false;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Switch checked={enabled} onCheckedChange={v => onUpdate('watermark_enabled', v)} />
+        <Label className="text-xs font-medium">Ativar Marca d'Água</Label>
+      </div>
+
+      {enabled && (
+        <>
+          {/* Type selector */}
+          <div>
+            <Label className="text-xs">Tipo</Label>
+            <div className="flex gap-2 mt-1">
+              {[
+                { value: 'text', label: 'Texto' },
+                { value: 'image', label: 'Imagem' },
+                { value: 'background', label: 'Fundo' },
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => onUpdate('watermark_type', opt.value)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
+                    wmType === opt.value
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-card text-muted-foreground border-border hover:border-primary/50',
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Text watermark */}
+          {wmType === 'text' && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Texto da Marca d'Água</Label>
+                <Input
+                  value={editData.watermark_text || ''}
+                  onChange={e => onUpdate('watermark_text', e.target.value)}
+                  placeholder="Ex: CONFIDENCIAL, RASCUNHO, CÓPIA"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Tamanho da fonte: {editData.watermark_font_size || 60}px</Label>
+                <Slider value={[editData.watermark_font_size || 60]} min={20} max={120} step={2} onValueChange={([v]) => onUpdate('watermark_font_size', v)} />
+              </div>
+            </div>
+          )}
+
+          {/* Image watermark */}
+          {wmType === 'image' && (
+            <div>
+              <Label className="text-xs">URL da Imagem</Label>
+              <Input
+                value={editData.watermark_image_url || ''}
+                onChange={e => onUpdate('watermark_image_url', e.target.value)}
+                placeholder="https://..."
+              />
+            </div>
+          )}
+
+          {/* Background watermark */}
+          {wmType === 'background' && (
+            <div>
+              <Label className="text-xs">Cor ou URL do Fundo</Label>
+              <Input
+                value={editData.watermark_image_url || ''}
+                onChange={e => onUpdate('watermark_image_url', e.target.value)}
+                placeholder="URL da imagem de fundo ou cor hex"
+              />
+            </div>
+          )}
+
+          {/* Common settings */}
+          <Separator />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Opacidade: {Math.round((editData.watermark_opacity || 0.08) * 100)}%</Label>
+              <Slider value={[editData.watermark_opacity || 0.08]} min={0.01} max={0.5} step={0.01} onValueChange={([v]) => onUpdate('watermark_opacity', v)} />
+            </div>
+            <div>
+              <Label className="text-xs">Rotação: {editData.watermark_rotation || -30}°</Label>
+              <Slider value={[editData.watermark_rotation ?? -30]} min={-90} max={90} step={5} onValueChange={([v]) => onUpdate('watermark_rotation', v)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Cor</Label>
+              <div className="flex gap-2 items-center mt-1">
+                <input type="color" value={editData.watermark_color || '#000000'} onChange={e => onUpdate('watermark_color', e.target.value)} className="w-8 h-8 rounded border cursor-pointer" />
+                <Input size={1} value={editData.watermark_color || '#000000'} onChange={e => onUpdate('watermark_color', e.target.value)} className="flex-1 h-8 text-xs" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Posição</Label>
+              <Select value={editData.watermark_position || 'center'} onValueChange={v => onUpdate('watermark_position', v)}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="center">Centro</SelectItem>
+                  <SelectItem value="tiled">Repetida (tiled)</SelectItem>
+                  <SelectItem value="top-left">Topo Esquerdo</SelectItem>
+                  <SelectItem value="top-right">Topo Direito</SelectItem>
+                  <SelectItem value="bottom-left">Inferior Esquerdo</SelectItem>
+                  <SelectItem value="bottom-right">Inferior Direito</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
