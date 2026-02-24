@@ -98,8 +98,7 @@ export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName 
             minHeight: '297mm',
             maxWidth: '100%',
             fontFamily: 'Georgia, serif',
-            transform: scaleFit ? `scale(${scale})` : undefined,
-            transformOrigin: 'top center',
+            zoom: scaleFit ? scale : undefined,
           }}
         >
           {/* Header */}
