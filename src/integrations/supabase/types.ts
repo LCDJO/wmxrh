@@ -8475,6 +8475,83 @@ export type Database = {
           },
         ]
       }
+      integration_health_checks: {
+        Row: {
+          alert_generation: Json
+          alerts_last_24h: number
+          api_authentication: Json
+          check_duration_ms: number | null
+          checked_at: string
+          created_at: string
+          device_sync: Json
+          devices_synced: number
+          error_summary: string | null
+          event_flow: Json
+          events_last_24h: number
+          health_score: number
+          health_status: string
+          id: string
+          last_event_received: string | null
+          queue_health: Json
+          queue_lag: number
+          server_connection: Json
+          server_response_time_ms: number | null
+          tenant_id: string
+        }
+        Insert: {
+          alert_generation?: Json
+          alerts_last_24h?: number
+          api_authentication?: Json
+          check_duration_ms?: number | null
+          checked_at?: string
+          created_at?: string
+          device_sync?: Json
+          devices_synced?: number
+          error_summary?: string | null
+          event_flow?: Json
+          events_last_24h?: number
+          health_score?: number
+          health_status?: string
+          id?: string
+          last_event_received?: string | null
+          queue_health?: Json
+          queue_lag?: number
+          server_connection?: Json
+          server_response_time_ms?: number | null
+          tenant_id: string
+        }
+        Update: {
+          alert_generation?: Json
+          alerts_last_24h?: number
+          api_authentication?: Json
+          check_duration_ms?: number | null
+          checked_at?: string
+          created_at?: string
+          device_sync?: Json
+          devices_synced?: number
+          error_summary?: string | null
+          event_flow?: Json
+          events_last_24h?: number
+          health_score?: number
+          health_status?: string
+          id?: string
+          last_event_received?: string | null
+          queue_health?: Json
+          queue_lag?: number
+          server_connection?: Json
+          server_response_time_ms?: number | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_health_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_workflow_edges: {
         Row: {
           condition_expression: string | null

@@ -43,3 +43,10 @@ export {
   reviewIncident,
 } from './compliance.service';
 export type { ComplianceIncident, ComplianceSummary } from './compliance.service';
+
+export {
+  getLatestHealthChecks,
+  getTenantHealthHistory,
+  triggerHealthCheck,
+} from './integration-health.service';
+export type { HealthCheckResult, CheckResult } from './integration-health.service';
