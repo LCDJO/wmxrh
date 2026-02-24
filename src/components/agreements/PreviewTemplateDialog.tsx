@@ -49,7 +49,7 @@ export function PreviewTemplateDialog({ open, onOpenChange, name, contentHtml, c
           <DialogTitle className="text-lg font-display">Pré-visualização: {name}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden border border-border rounded-lg min-h-0">
+        <div className="flex-1 overflow-auto border border-border rounded-lg min-h-0">
           <TemplateHtmlPreview contentHtml={contentHtml} title={name} companyName={companyName} />
         </div>
 
