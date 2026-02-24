@@ -1,12 +1,11 @@
 /**
  * traccar-proxy — Authenticated proxy to Traccar REST API.
- * Uses TRACCAR_BASE_URL and TRACCAR_API_TOKEN secrets.
+ * Reads credentials from tenant_integration_configs table.
  *
- * Endpoints (via ?action= query param):
- *   test-connection  — GET /api/server (verify connectivity)
- *   devices          — GET /api/devices
- *   positions        — GET /api/positions
- *   device-detail    — GET /api/devices?id=<deviceId>
+ * Body JSON params:
+ *   action     — test-connection | devices | positions | device-detail
+ *   deviceId   — (optional) for device-detail
+ *   tenantId   — tenant UUID to look up config
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -32,13 +31,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // User auth client
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -46,19 +48,58 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Traccar credentials ──
-    const TRACCAR_BASE_URL = Deno.env.get('TRACCAR_BASE_URL');
-    if (!TRACCAR_BASE_URL) {
-      return new Response(JSON.stringify({ error: 'TRACCAR_BASE_URL not configured' }), {
-        status: 500,
+    // ── Parse body ──
+    let body: Record<string, string> = {};
+    try {
+      body = await req.json();
+    } catch {
+      // Also support query params as fallback
+      const url = new URL(req.url);
+      body = {
+        action: url.searchParams.get('action') || 'test-connection',
+        tenantId: url.searchParams.get('tenantId') || '',
+        deviceId: url.searchParams.get('deviceId') || '',
+      };
+    }
+
+    const action = body.action || 'test-connection';
+    const tenantId = body.tenantId;
+    const deviceId = body.deviceId;
+
+    if (!tenantId) {
+      return new Response(JSON.stringify({ error: 'tenantId is required' }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const TRACCAR_API_TOKEN = Deno.env.get('TRACCAR_API_TOKEN');
-    if (!TRACCAR_API_TOKEN) {
-      return new Response(JSON.stringify({ error: 'TRACCAR_API_TOKEN not configured' }), {
-        status: 500,
+    // ── Fetch Traccar credentials from tenant_integration_configs ──
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+    const { data: configRow, error: configError } = await supabaseAdmin
+      .from('tenant_integration_configs')
+      .select('config')
+      .eq('tenant_id', tenantId)
+      .eq('integration_key', 'traccar')
+      .maybeSingle();
+
+    if (configError || !configRow?.config) {
+      return new Response(JSON.stringify({
+        error: 'Configuração do Traccar não encontrada. Salve a URL e o token na aba Configurações.',
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const cfg = configRow.config as Record<string, string>;
+    const TRACCAR_BASE_URL = cfg.api_url;
+    const TRACCAR_API_TOKEN = cfg.api_token;
+
+    if (!TRACCAR_BASE_URL || !TRACCAR_API_TOKEN) {
+      return new Response(JSON.stringify({
+        error: 'URL ou Token do Traccar não configurados.',
+      }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -68,9 +109,6 @@ Deno.serve(async (req) => {
       'Authorization': `Bearer ${TRACCAR_API_TOKEN}`,
       'Accept': 'application/json',
     };
-
-    const url = new URL(req.url);
-    const action = url.searchParams.get('action') || 'test-connection';
 
     let traccarPath = '/api/server';
 
@@ -84,11 +122,9 @@ Deno.serve(async (req) => {
       case 'positions':
         traccarPath = '/api/positions';
         break;
-      case 'device-detail': {
-        const deviceId = url.searchParams.get('deviceId');
+      case 'device-detail':
         traccarPath = deviceId ? `/api/devices?id=${deviceId}` : '/api/devices';
         break;
-      }
       default:
         return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
           status: 400,
