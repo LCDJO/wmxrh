@@ -66,48 +66,61 @@ export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName 
         <Eye className="h-3 w-3" />
         Preview ao vivo
       </div>
-      <div className="flex-1 overflow-y-auto bg-white">
-        {/* Header */}
-        <div className="px-5 pt-4 pb-2 border-b-2" style={{ borderColor: primaryColor }}>
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="text-xs font-bold" style={{ color: primaryColor, letterSpacing: '0.4px' }}>{companyName}</div>
-              <div className="text-[9px] text-gray-500 mt-0.5">Documento Oficial</div>
-            </div>
-            <div className="text-[9px] text-gray-500">{today}</div>
-          </div>
-          <div className="mt-2 text-[11px] font-semibold text-gray-700 text-center uppercase tracking-wider">
-            {title || 'Termo'}
-          </div>
-        </div>
 
-        {/* Body */}
+      {/* A4 page simulation */}
+      <div className="flex-1 overflow-y-auto bg-gray-200/60 p-6 flex justify-center">
         <div
-          className="px-5 py-4 text-[11px] leading-relaxed prose prose-sm max-w-none"
-          style={{ fontFamily: 'Georgia, serif', color: '#222' }}
-          dangerouslySetInnerHTML={{ __html: previewHtml }}
-        />
-
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-200 bg-gray-50/50">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <QRCodeSVG
-                value={`${window.location.origin}/verificar/SAMPLE`}
-                size={36}
-                level="M"
-                fgColor={primaryColor}
-                className="border border-gray-200 rounded p-0.5"
-              />
+          className="bg-white shadow-lg flex flex-col"
+          style={{
+            width: '210mm',
+            minHeight: '297mm',
+            maxWidth: '100%',
+            fontFamily: 'Georgia, serif',
+          }}
+        >
+          {/* Header */}
+          <div className="px-10 pt-8 pb-3 border-b-2" style={{ borderColor: primaryColor }}>
+            <div className="flex justify-between items-start">
               <div>
-                <div className="text-[7px] text-gray-400 uppercase tracking-wider">Código Validador</div>
-                <div className="text-[9px] font-semibold font-mono tracking-wider text-gray-700">DOC-PREVIEW</div>
+                <div className="text-sm font-bold" style={{ color: primaryColor, letterSpacing: '0.4px' }}>{companyName}</div>
+                <div className="text-[10px] text-gray-500 mt-0.5">Documento Oficial</div>
               </div>
+              <div className="text-[10px] text-gray-500">{today}</div>
             </div>
-            <div className="text-[8px] text-gray-400">Página 1 de 1</div>
+            <div className="mt-3 text-xs font-semibold text-gray-700 text-center uppercase tracking-wider">
+              {title || 'Termo'}
+            </div>
+          </div>
+
+          {/* Body — grows to fill the page */}
+          <div
+            className="px-10 py-6 text-xs leading-relaxed prose prose-sm max-w-none flex-1"
+            style={{ color: '#222' }}
+            dangerouslySetInnerHTML={{ __html: previewHtml }}
+          />
+
+          {/* Footer — always at the bottom */}
+          <div className="px-10 py-4 border-t border-gray-200 bg-gray-50/50 mt-auto">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <QRCodeSVG
+                  value={`${window.location.origin}/verificar/SAMPLE`}
+                  size={44}
+                  level="M"
+                  fgColor={primaryColor}
+                  className="border border-gray-200 rounded p-0.5"
+                />
+                <div>
+                  <div className="text-[8px] text-gray-400 uppercase tracking-wider">Código Validador</div>
+                  <div className="text-[10px] font-semibold font-mono tracking-wider text-gray-700">DOC-PREVIEW</div>
+                </div>
+              </div>
+              <div className="text-[9px] text-gray-400">Página 1 de 1</div>
+            </div>
           </div>
         </div>
       </div>
+
       <div className="text-[9px] text-muted-foreground px-3 py-1.5 border-t border-border shrink-0 flex items-center gap-2">
         <span style={{ color: '#dc2626', fontWeight: 700 }}>■</span>
         Textos em <strong style={{ color: '#dc2626' }}>vermelho e negrito</strong> são variáveis substituídas por dados fictícios.
