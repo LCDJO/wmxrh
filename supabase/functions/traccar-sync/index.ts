@@ -168,7 +168,26 @@ async function syncTenant(
 
   const baseUrl = cfg.api_url.replace(/\/+$/, '');
 
-  // ── 2. Fetch devices + positions in parallel ──
+  // ── 2. Identify token owner via /api/session ──
+  let tokenOwner: { id: number; name: string; email: string; administrator: boolean; readonly: boolean } | null = null;
+  try {
+    const sessRes = await traccarFetch(baseUrl, '/api/session', cfg.api_token);
+    if (sessRes.ok && sessRes.data && typeof sessRes.data === 'object') {
+      const s = sessRes.data as any;
+      tokenOwner = {
+        id: s.id,
+        name: s.name || '',
+        email: s.email || '',
+        administrator: !!s.administrator,
+        readonly: !!s.readonly,
+      };
+      console.log(`[traccar-sync] Token owner: ${tokenOwner.email}, admin=${tokenOwner.administrator}, readonly=${tokenOwner.readonly}`);
+    }
+  } catch (e) {
+    console.warn(`[traccar-sync] Could not identify token owner:`, e);
+  }
+
+  // ── 3. Fetch devices + positions in parallel ──
   const [devRes, posRes] = await Promise.all([
     traccarFetch(baseUrl, '/api/devices', cfg.api_token),
     traccarFetch(baseUrl, '/api/positions', cfg.api_token),
@@ -357,7 +376,11 @@ async function syncTenant(
     last_error: null,
     consecutive_failures: 0,
     is_healthy: true,
-    metadata: { events_created: newEvents.length, behavior_events: behaviorEvents.length },
+    metadata: {
+      events_created: newEvents.length,
+      behavior_events: behaviorEvents.length,
+      token_owner: tokenOwner,
+    },
   }, { onConflict: 'tenant_id,sync_type' });
 
   return {
@@ -365,5 +388,6 @@ async function syncTenant(
     positions: positions.length,
     events_created: newEvents.length,
     behavior_events: behaviorEvents.length,
+    token_owner: tokenOwner,
   };
 }

@@ -46,6 +46,17 @@ export interface HealthAlert {
   created_at: string;
 }
 
+export interface TraccarTokenOwner {
+  id: number;
+  name: string;
+  email: string;
+  administrator: boolean;
+  readonly: boolean;
+}
+
+/**
+ * Get latest health checks, one per tenant.
+ */
 export async function getLatestHealthChecks(): Promise<HealthCheckResult[]> {
   const { data, error } = await supabase
     .from('integration_health_checks')
@@ -89,9 +100,6 @@ export async function triggerHealthCheck(tenantId?: string): Promise<{
   return data as any;
 }
 
-/**
- * Get active (unresolved) health alerts.
- */
 export async function getActiveHealthAlerts(): Promise<HealthAlert[]> {
   const { data, error } = await supabase
     .from('integration_health_alerts')
@@ -104,9 +112,6 @@ export async function getActiveHealthAlerts(): Promise<HealthAlert[]> {
   return (data || []) as unknown as HealthAlert[];
 }
 
-/**
- * Get all health alerts (including resolved) for a tenant.
- */
 export async function getTenantHealthAlerts(tenantId: string, limit = 50): Promise<HealthAlert[]> {
   const { data, error } = await supabase
     .from('integration_health_alerts')
@@ -119,9 +124,6 @@ export async function getTenantHealthAlerts(tenantId: string, limit = 50): Promi
   return (data || []) as unknown as HealthAlert[];
 }
 
-/**
- * Resolve an alert manually.
- */
 export async function resolveHealthAlert(alertId: string): Promise<void> {
   const { error } = await supabase
     .from('integration_health_alerts')
@@ -129,4 +131,23 @@ export async function resolveHealthAlert(alertId: string): Promise<void> {
     .eq('id', alertId);
 
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Get token owner info per tenant from sync status metadata.
+ */
+export async function getTokenOwnersByTenant(): Promise<Record<string, TraccarTokenOwner | null>> {
+  const { data, error } = await supabase
+    .from('traccar_sync_status')
+    .select('tenant_id, metadata')
+    .eq('sync_type', 'polling');
+
+  if (error) throw new Error(error.message);
+
+  const result: Record<string, TraccarTokenOwner | null> = {};
+  for (const row of (data || [])) {
+    const meta = row.metadata as { token_owner?: TraccarTokenOwner } | null;
+    result[row.tenant_id] = meta?.token_owner ?? null;
+  }
+  return result;
 }
