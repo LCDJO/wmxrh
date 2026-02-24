@@ -222,40 +222,36 @@ export async function generateDocumentPdf(options: PdfDocumentOptions): Promise<
 
   const totalPages = Math.max(1, Math.ceil(totalBodyMM / BODY_AREA));
 
+  // ── Step 1b: Pre-render header (fixed, identical on all pages) ──
+  const headerEl = createOffscreen(buildHeaderHtml(displayName, documentTitle, date, L));
+  const headerCanvas = await captureElement(headerEl);
+  const headerDims = canvasToMM(headerCanvas, CONTENT_WIDTH);
+  const headerDataUrl = headerCanvas.toDataURL('image/png');
+  document.body.removeChild(headerEl);
+
+  // ── Step 1c: Pre-render footers (one per page for page number) ──
+  const footerCache: { dataUrl: string; dims: { widthMM: number; heightMM: number } }[] = [];
+  for (let p = 0; p < totalPages; p++) {
+    const footerEl = createOffscreen(buildFooterHtml(qrDataUrl, validatorCode, p + 1, String(totalPages), L));
+    const footerCanvas = await captureElement(footerEl);
+    const footerDims = canvasToMM(footerCanvas, CONTENT_WIDTH);
+    footerCache.push({ dataUrl: footerCanvas.toDataURL('image/png'), dims: footerDims });
+    document.body.removeChild(footerEl);
+  }
+
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-  // ── Step 2: Render pages ──
+  // ── Step 2: Render pages — header & footer fixed on every page ──
   for (let page = 0; page < totalPages; page++) {
     if (page > 0) pdf.addPage();
 
-    // -- Header --
-    const headerEl = createOffscreen(buildHeaderHtml(displayName, documentTitle, date, L));
-    const headerCanvas = await captureElement(headerEl);
-    const headerDims = canvasToMM(headerCanvas, CONTENT_WIDTH);
-    pdf.addImage(
-      headerCanvas.toDataURL('image/png'),
-      'PNG',
-      MARGIN_LEFT,
-      MARGIN_TOP,
-      headerDims.widthMM,
-      headerDims.heightMM
-    );
-    document.body.removeChild(headerEl);
+    // -- Header (fixed, same on all pages) --
+    pdf.addImage(headerDataUrl, 'PNG', MARGIN_LEFT, MARGIN_TOP, headerDims.widthMM, headerDims.heightMM);
 
-    // -- Footer --
-    const footerEl = createOffscreen(buildFooterHtml(qrDataUrl, validatorCode, page + 1, String(totalPages), L));
-    const footerCanvas = await captureElement(footerEl);
-    const footerDims = canvasToMM(footerCanvas, CONTENT_WIDTH);
-    const footerY = A4_HEIGHT_MM - MARGIN_BOTTOM - footerDims.heightMM;
-    pdf.addImage(
-      footerCanvas.toDataURL('image/png'),
-      'PNG',
-      MARGIN_LEFT,
-      footerY,
-      footerDims.widthMM,
-      footerDims.heightMM
-    );
-    document.body.removeChild(footerEl);
+    // -- Footer (fixed position, page number varies) --
+    const footer = footerCache[page];
+    const footerY = A4_HEIGHT_MM - MARGIN_BOTTOM - footer.dims.heightMM;
+    pdf.addImage(footer.dataUrl, 'PNG', MARGIN_LEFT, footerY, footer.dims.widthMM, footer.dims.heightMM);
 
     // -- Body slice --
     const bodyStartMM = page * BODY_AREA;
