@@ -8475,6 +8475,63 @@ export type Database = {
           },
         ]
       }
+      integration_health_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          details: Json | null
+          health_check_id: string | null
+          id: string
+          is_resolved: boolean
+          message: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          tenant_id: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          details?: Json | null
+          health_check_id?: string | null
+          id?: string
+          is_resolved?: boolean
+          message: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          details?: Json | null
+          health_check_id?: string | null
+          id?: string
+          is_resolved?: boolean
+          message?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_health_alerts_health_check_id_fkey"
+            columns: ["health_check_id"]
+            isOneToOne: false
+            referencedRelation: "integration_health_checks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_health_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_health_checks: {
         Row: {
           alert_generation: Json
