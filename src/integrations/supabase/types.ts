@@ -12360,6 +12360,10 @@ export type Database = {
       }
       raw_tracking_events: {
         Row: {
+          altitude: number | null
+          attributes: Json | null
+          battery_level: number | null
+          course: number | null
           device_id: string
           event_timestamp: string
           id: string
@@ -12368,11 +12372,18 @@ export type Database = {
           integrity_hash: string | null
           latitude: number
           longitude: number
+          processed: boolean | null
           raw_payload: Json | null
+          satellites: number | null
+          source: string | null
           speed: number
           tenant_id: string
         }
         Insert: {
+          altitude?: number | null
+          attributes?: Json | null
+          battery_level?: number | null
+          course?: number | null
           device_id: string
           event_timestamp: string
           id?: string
@@ -12381,11 +12392,18 @@ export type Database = {
           integrity_hash?: string | null
           latitude: number
           longitude: number
+          processed?: boolean | null
           raw_payload?: Json | null
+          satellites?: number | null
+          source?: string | null
           speed?: number
           tenant_id: string
         }
         Update: {
+          altitude?: number | null
+          attributes?: Json | null
+          battery_level?: number | null
+          course?: number | null
           device_id?: string
           event_timestamp?: string
           id?: string
@@ -12394,7 +12412,10 @@ export type Database = {
           integrity_hash?: string | null
           latitude?: number
           longitude?: number
+          processed?: boolean | null
           raw_payload?: Json | null
+          satellites?: number | null
+          source?: string | null
           speed?: number
           tenant_id?: string
         }
@@ -15725,6 +15746,163 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      traccar_device_cache: {
+        Row: {
+          address: string | null
+          altitude: number | null
+          attributes: Json | null
+          category: string | null
+          computed_status: string | null
+          course: number | null
+          created_at: string
+          disabled: boolean | null
+          employee_id: string | null
+          fleet_device_id: string | null
+          group_id: number | null
+          id: string
+          ignition: boolean | null
+          last_update: string | null
+          latitude: number | null
+          longitude: number | null
+          model: string | null
+          name: string
+          phone: string | null
+          position_id: number | null
+          position_time: string | null
+          speed: number | null
+          status: string | null
+          synced_at: string
+          tenant_id: string
+          traccar_id: number
+          unique_id: string
+          updated_at: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          altitude?: number | null
+          attributes?: Json | null
+          category?: string | null
+          computed_status?: string | null
+          course?: number | null
+          created_at?: string
+          disabled?: boolean | null
+          employee_id?: string | null
+          fleet_device_id?: string | null
+          group_id?: number | null
+          id?: string
+          ignition?: boolean | null
+          last_update?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          model?: string | null
+          name: string
+          phone?: string | null
+          position_id?: number | null
+          position_time?: string | null
+          speed?: number | null
+          status?: string | null
+          synced_at?: string
+          tenant_id: string
+          traccar_id: number
+          unique_id: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          altitude?: number | null
+          attributes?: Json | null
+          category?: string | null
+          computed_status?: string | null
+          course?: number | null
+          created_at?: string
+          disabled?: boolean | null
+          employee_id?: string | null
+          fleet_device_id?: string | null
+          group_id?: number | null
+          id?: string
+          ignition?: boolean | null
+          last_update?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          model?: string | null
+          name?: string
+          phone?: string | null
+          position_id?: number | null
+          position_time?: string | null
+          speed?: number | null
+          status?: string | null
+          synced_at?: string
+          tenant_id?: string
+          traccar_id?: number
+          unique_id?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traccar_device_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      traccar_sync_status: {
+        Row: {
+          consecutive_failures: number | null
+          created_at: string
+          id: string
+          is_healthy: boolean | null
+          last_device_count: number | null
+          last_error: string | null
+          last_position_count: number | null
+          last_sync_at: string
+          metadata: Json | null
+          sync_type: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          consecutive_failures?: number | null
+          created_at?: string
+          id?: string
+          is_healthy?: boolean | null
+          last_device_count?: number | null
+          last_error?: string | null
+          last_position_count?: number | null
+          last_sync_at?: string
+          metadata?: Json | null
+          sync_type?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          consecutive_failures?: number | null
+          created_at?: string
+          id?: string
+          is_healthy?: boolean | null
+          last_device_count?: number | null
+          last_error?: string | null
+          last_position_count?: number | null
+          last_sync_at?: string
+          metadata?: Json | null
+          sync_type?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traccar_sync_status_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       training_audit_logs: {
         Row: {
