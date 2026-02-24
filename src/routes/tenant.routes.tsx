@@ -67,6 +67,7 @@ import OffboardingDashboard from '@/pages/OffboardingDashboard';
 import TerminatedEmployees from '@/pages/TerminatedEmployees';
 import ReferenceLetters from '@/pages/ReferenceLetters';
 import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
+import LgpdCompliance from '@/pages/LgpdCompliance';
 
 const TenantOnboarding = lazy(() => import('@/pages/TenantOnboarding'));
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
@@ -88,6 +89,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/offboarding', element: pr('employees', <OffboardingDashboard />) },
       { path: '/terminated-employees', element: pr('employees', <TerminatedEmployees />) },
       { path: '/reference-letters', element: pr('employees', <ReferenceLetters />) },
+      { path: '/lgpd', element: pr('employees', <LgpdCompliance />) },
       { path: '/companies', element: pr('companies', <Companies />) },
       { path: '/groups', element: pr('groups', <CompanyGroups />) },
       { path: '/positions', element: pr('positions', <Positions />) },
