@@ -97,7 +97,9 @@ export default function TenantTraccarSettings() {
   const testConnection = async () => {
     setTestingConnection(true);
     try {
-      const { data, error } = await supabase.functions.invoke('traccar-proxy', {});
+      const { data, error } = await supabase.functions.invoke('traccar-proxy', {
+        body: { action: 'test-connection', tenantId },
+      });
       if (error) throw error;
       if (data?.success) {
         setConnectionStatus('connected');
@@ -118,7 +120,9 @@ export default function TenantTraccarSettings() {
   const syncDevices = async () => {
     setLoadingDevices(true);
     try {
-      const { data: devData, error: devError } = await supabase.functions.invoke('traccar-proxy?action=devices', {});
+      const { data: devData, error: devError } = await supabase.functions.invoke('traccar-proxy', {
+        body: { action: 'devices', tenantId },
+      });
       if (devError) throw devError;
       if (devData?.success && Array.isArray(devData.data)) {
         setDevices(devData.data);
