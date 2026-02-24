@@ -3,9 +3,9 @@
  * Replaces template variables with sample data and renders styled document preview.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Eye } from 'lucide-react';
+import { Eye, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 const SAMPLE_DATA: Record<string, string> = {
   '{{nome_colaborador}}': 'João da Silva',
@@ -48,6 +48,11 @@ interface Props {
 export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName = 'Empresa Exemplo Ltda', primaryColor = '#0f7a4d' }: Props) {
   const previewHtml = useMemo(() => replaceVariables(contentHtml, true), [contentHtml]);
   const today = new Date().toLocaleDateString('pt-BR');
+  const [zoom, setZoom] = useState(0.5);
+
+  const zoomIn = () => setZoom(z => Math.min(z + 0.1, 1.5));
+  const zoomOut = () => setZoom(z => Math.max(z - 0.1, 0.2));
+  const zoomReset = () => setZoom(0.5);
 
   if (!contentHtml.trim()) {
     return (
@@ -65,17 +70,23 @@ export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName 
       <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-3 py-1.5 border-b border-border bg-muted/30 flex items-center gap-1.5 shrink-0">
         <Eye className="h-3 w-3" />
         Preview ao vivo
+        <div className="ml-auto flex items-center gap-1">
+          <button onClick={zoomOut} className="p-0.5 rounded hover:bg-muted" title="Diminuir"><ZoomOut className="h-3.5 w-3.5" /></button>
+          <button onClick={zoomReset} className="px-1 text-[9px] font-mono hover:bg-muted rounded" title="Resetar">{Math.round(zoom * 100)}%</button>
+          <button onClick={zoomIn} className="p-0.5 rounded hover:bg-muted" title="Ampliar"><ZoomIn className="h-3.5 w-3.5" /></button>
+        </div>
       </div>
 
       {/* A4 page simulation */}
       <div className="flex-1 overflow-auto bg-gray-200/60 p-6 flex justify-center items-start">
         <div
-          className="bg-white shadow-lg flex flex-col origin-top"
+          className="bg-white shadow-lg flex flex-col origin-top-center"
           style={{
             width: '210mm',
             minHeight: '297mm',
-            maxWidth: '100%',
             fontFamily: 'Georgia, serif',
+            transform: `scale(${zoom})`,
+            transformOrigin: 'top center',
           }}
         >
           {/* Header */}
