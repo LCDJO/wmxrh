@@ -16,8 +16,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner';
 import {
   MapPin, Loader2, RefreshCw, Satellite, Shield, Activity,
-  CheckCircle2, WifiOff, Plug, ArrowDownToLine, Settings, Save, Eye, EyeOff,
+  CheckCircle2, WifiOff, Plug, ArrowDownToLine, Settings, Save, Eye, EyeOff, Bell,
 } from 'lucide-react';
+import TraccarEventsTab from './TraccarEventsTab';
+import TraccarNotificationsTab from './TraccarNotificationsTab';
 
 interface TraccarDevice {
   id: number;
@@ -297,6 +299,7 @@ export default function TenantTraccarSettings() {
           <TabsTrigger value="settings" className="gap-1.5 text-xs"><Settings className="h-3.5 w-3.5" /> Configurações</TabsTrigger>
           <TabsTrigger value="devices" className="gap-1.5 text-xs"><Satellite className="h-3.5 w-3.5" /> Dispositivos</TabsTrigger>
           <TabsTrigger value="events" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" /> Eventos</TabsTrigger>
+          <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /> Notificações</TabsTrigger>
           <TabsTrigger value="policies" className="gap-1.5 text-xs"><Shield className="h-3.5 w-3.5" /> Políticas</TabsTrigger>
         </TabsList>
 
@@ -427,54 +430,12 @@ export default function TenantTraccarSettings() {
 
         {/* Events Tab */}
         <TabsContent value="events">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-card-foreground">
-                <Activity className="h-5 w-5" /> Últimos Eventos GPS
-              </CardTitle>
-              <CardDescription>Eventos recebidos do Traccar para este tenant</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {events.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  Nenhum evento registrado ainda.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs">Device ID</TableHead>
-                        <TableHead className="text-xs">Lat/Lon</TableHead>
-                        <TableHead className="text-xs">Velocidade</TableHead>
-                        <TableHead className="text-xs">Timestamp</TableHead>
-                        <TableHead className="text-xs">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {events.map((evt: any) => (
-                        <TableRow key={evt.id}>
-                          <TableCell className="font-mono text-xs">{evt.device_id}</TableCell>
-                          <TableCell className="text-xs">{evt.latitude?.toFixed(4)}, {evt.longitude?.toFixed(4)}</TableCell>
-                          <TableCell className="text-xs">
-                            <Badge variant={evt.speed > 100 ? 'destructive' : evt.speed > 80 ? 'secondary' : 'outline'} className="text-xs">
-                              {evt.speed?.toFixed(0)} km/h
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs">{new Date(evt.event_timestamp).toLocaleString('pt-BR')}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {evt.processing_status || 'raw'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <TraccarEventsTab tenantId={tenantId} devices={devices} connectionStatus={connectionStatus} />
+        </TabsContent>
+
+        {/* Notifications Tab */}
+        <TabsContent value="notifications">
+          <TraccarNotificationsTab tenantId={tenantId} connectionStatus={connectionStatus} />
         </TabsContent>
 
         {/* Policies Tab */}

@@ -107,6 +107,12 @@ Deno.serve(async (req) => {
     const baseUrl = TRACCAR_BASE_URL.replace(/\/+$/, '');
 
     // ── Build Traccar path ──
+    // Parse optional date range for events
+    const from = body.from || '';
+    const to = body.to || '';
+    const deviceIdFilter = body.deviceId || '';
+    const eventType = body.eventType || '';
+
     let traccarPath = '/api/server';
 
     switch (action) {
@@ -120,7 +126,26 @@ Deno.serve(async (req) => {
         traccarPath = '/api/positions';
         break;
       case 'device-detail':
-        traccarPath = deviceId ? `/api/devices?id=${deviceId}` : '/api/devices';
+        traccarPath = deviceIdFilter ? `/api/devices?id=${deviceIdFilter}` : '/api/devices';
+        break;
+      case 'events': {
+        // /api/reports/events requires from, to, deviceId params
+        const params = new URLSearchParams();
+        if (from) params.set('from', from);
+        if (to) params.set('to', to);
+        if (deviceIdFilter) params.set('deviceId', deviceIdFilter);
+        if (eventType) params.set('type', eventType);
+        traccarPath = `/api/reports/events?${params.toString()}`;
+        break;
+      }
+      case 'notifications':
+        traccarPath = '/api/notifications';
+        break;
+      case 'notification-types':
+        traccarPath = '/api/notifications/types';
+        break;
+      case 'geofences':
+        traccarPath = '/api/geofences';
         break;
       default:
         return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
