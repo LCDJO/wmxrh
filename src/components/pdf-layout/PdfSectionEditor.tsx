@@ -3,7 +3,9 @@
  * Each section (header, body, footer, margins/colors) is a draggable card
  * that can be reordered and expanded inline to edit settings.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -147,6 +149,80 @@ export function PdfSectionEditor({ editData, onUpdate }: Props) {
   );
 }
 
+/* ─── Logo Uploader ─────────────────────────────────────────── */
+
+const MAX_FILE_SIZE = 512 * 1024; // 512KB
+const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
+
+function LogoUploader({ logoUrl, onUpload, onRemove }: { logoUrl: string; onUpload: (url: string) => void; onRemove: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (file: File) => {
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      toast.error('Formato não suportado. Use PNG, JPG, SVG ou WebP.');
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('Arquivo muito grande. Máximo: 512KB.');
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from('pdf-logos').upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('pdf-logos').getPublicUrl(path);
+      onUpload(publicUrl);
+      toast.success('Logo enviado com sucesso');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao enviar logo');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      {logoUrl ? (
+        <div className="relative group rounded-md border border-border overflow-hidden bg-muted/30 p-2 flex items-center gap-3">
+          <img src={logoUrl} alt="Logo" className="h-10 w-auto max-w-[120px] object-contain" />
+          <Button variant="ghost" size="sm" className="text-xs text-destructive h-7" onClick={onRemove}>
+            Remover
+          </Button>
+        </div>
+      ) : (
+        <div
+          onClick={() => inputRef.current?.click()}
+          className={cn(
+            'border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer transition-colors',
+            'hover:border-primary/50 hover:bg-primary/5',
+            uploading && 'opacity-50 pointer-events-none',
+          )}
+        >
+          <div className="text-muted-foreground text-xs space-y-1">
+            <p className="font-medium">{uploading ? 'Enviando...' : 'Clique para enviar logo'}</p>
+            <p className="text-[10px]">Tamanho ideal: 200×60px · Máx: 512KB</p>
+            <p className="text-[10px]">PNG, JPG, SVG ou WebP</p>
+          </div>
+        </div>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".png,.jpg,.jpeg,.svg,.webp"
+        className="hidden"
+        onChange={e => {
+          const file = e.target.files?.[0];
+          if (file) handleFile(file);
+          e.target.value = '';
+        }}
+      />
+    </div>
+  );
+}
+
 /* ─── Sub-section components ────────────────────────────────── */
 
 function HeaderSection({ editData, onUpdate }: Props) {
@@ -164,8 +240,12 @@ function HeaderSection({ editData, onUpdate }: Props) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label className="text-xs">URL do Logo</Label>
-          <Input size={1} value={editData.logo_url || ''} onChange={e => onUpdate('logo_url', e.target.value)} placeholder="https://..." />
+          <Label className="text-xs">Logo</Label>
+          <LogoUploader
+            logoUrl={editData.logo_url || ''}
+            onUpload={(url) => onUpdate('logo_url', url)}
+            onRemove={() => onUpdate('logo_url', null)}
+          />
         </div>
         <div>
           <Label className="text-xs">Fonte</Label>
