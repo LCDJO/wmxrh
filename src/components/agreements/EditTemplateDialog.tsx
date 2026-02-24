@@ -155,13 +155,13 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-lg font-display">Editar Termo</DialogTitle>
           <DialogDescription>Altere os campos desejados e salve.</DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden min-h-0">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4 overflow-hidden min-h-0">
           {/* Left: Form */}
           <div className="overflow-y-auto pr-1 space-y-4">
             <div className="space-y-1.5">
