@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { PdfLayoutPicker } from './PdfLayoutPicker';
+import { TemplateHtmlPreview } from './TemplateHtmlPreview';
 
 const VARIAVEIS = [
   { key: '{{nome_colaborador}}', label: 'Nome do Colaborador' },
@@ -185,113 +186,113 @@ export function CreateTemplateDialog({ open, onOpenChange, tenantId }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-lg font-display">Novo Termo / Acordo</DialogTitle>
           <DialogDescription>Preencha os campos abaixo para cadastrar um novo modelo de termo.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-2">
-          {/* Nome */}
-          <div className="space-y-1.5">
-            <Label htmlFor="tmpl-name">Nome do Termo *</Label>
-            <Input id="tmpl-name" placeholder="Ex: Termo de Confidencialidade" value={nome} onChange={e => setNome(e.target.value)} />
-          </div>
-
-          {/* Descrição */}
-          <div className="space-y-1.5">
-            <Label htmlFor="tmpl-desc">Descrição</Label>
-            <Textarea id="tmpl-desc" placeholder="Breve descrição do objetivo do termo..." rows={2} value={descricao} onChange={e => setDescricao(e.target.value)} />
-          </div>
-
-          {/* Categoria + Escopo */}
-          <div className="grid grid-cols-2 gap-3">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden min-h-0">
+          {/* Left: Form */}
+          <div className="overflow-y-auto pr-1 space-y-4">
             <div className="space-y-1.5">
-              <Label>Categoria *</Label>
-              <Select value={categoria} onValueChange={setCategoria}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIAS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="tmpl-name">Nome do Termo *</Label>
+              <Input id="tmpl-name" placeholder="Ex: Termo de Confidencialidade" value={nome} onChange={e => setNome(e.target.value)} />
             </div>
+
             <div className="space-y-1.5">
-              <Label>Escopo *</Label>
-              <Select value={escopo} onValueChange={v => { setEscopo(v); if (v !== 'cargo') setCargoId(null); }}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ESCOPOS.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="tmpl-desc">Descrição</Label>
+              <Textarea id="tmpl-desc" placeholder="Breve descrição do objetivo do termo..." rows={2} value={descricao} onChange={e => setDescricao(e.target.value)} />
             </div>
-          </div>
 
-          {/* Cargo selector (conditional) */}
-          {escopo === 'cargo' && (
-            <div className="space-y-1.5">
-              <Label>Cargo vinculado</Label>
-              <Select value={cargoId || ''} onValueChange={setCargoId}>
-                <SelectTrigger><SelectValue placeholder="Selecione o cargo..." /></SelectTrigger>
-                <SelectContent>
-                  {positions.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Switches row */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="flex items-center gap-2">
-              <Switch id="sw-obrig" checked={obrigatorio} onCheckedChange={setObrigatorio} />
-              <Label htmlFor="sw-obrig" className="text-sm">Obrigatório</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch id="sw-assin" checked={exigeAssinatura} onCheckedChange={setExigeAssinatura} />
-              <Label htmlFor="sw-assin" className="text-sm">Exige Assinatura</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch id="sw-renov" checked={renovacaoObrigatoria} onCheckedChange={setRenovacaoObrigatoria} />
-              <Label htmlFor="sw-renov" className="text-sm">Renovação</Label>
-            </div>
-          </div>
-
-          {/* Validade */}
-          <div className="space-y-1.5">
-            <Label htmlFor="tmpl-val">Validade (dias)</Label>
-            <Input id="tmpl-val" type="number" min="0" placeholder="Deixe vazio para sem expiração" value={validadeDias} onChange={e => setValidadeDias(e.target.value)} />
-          </div>
-
-          {/* Layout PDF */}
-          <PdfLayoutPicker tenantId={tenantId} value={pdfLayoutId} onChange={setPdfLayoutId} />
-
-          {/* Conteúdo HTML */}
-          <div className="space-y-1.5">
-            <Label htmlFor="tmpl-html">Conteúdo do Termo (HTML) *</Label>
-            <Textarea
-              id="tmpl-html"
-              ref={textareaRef}
-              placeholder="<p>Eu, {{nome_colaborador}}, declaro que...</p>"
-              rows={8}
-              className="font-mono text-xs"
-              value={conteudoHtml}
-              onChange={e => setConteudoHtml(e.target.value)}
-            />
-            <div className="space-y-2 pt-1">
-              <p className="text-[11px] font-medium text-muted-foreground">Clique para inserir a variável no texto:</p>
-              <div className="flex flex-wrap gap-1.5">
-                {VARIAVEIS.map(v => (
-                  <Badge
-                    key={v.key}
-                    variant="outline"
-                    className="cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors text-[11px] gap-1"
-                    onClick={() => insertVariable(v.key)}
-                  >
-                    <Copy className="h-3 w-3" />
-                    {v.label}
-                  </Badge>
-                ))}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Categoria *</Label>
+                <Select value={categoria} onValueChange={setCategoria}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIAS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Escopo *</Label>
+                <Select value={escopo} onValueChange={v => { setEscopo(v); if (v !== 'cargo') setCargoId(null); }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ESCOPOS.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+
+            {escopo === 'cargo' && (
+              <div className="space-y-1.5">
+                <Label>Cargo vinculado</Label>
+                <Select value={cargoId || ''} onValueChange={setCargoId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o cargo..." /></SelectTrigger>
+                  <SelectContent>
+                    {positions.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex items-center gap-2">
+                <Switch id="sw-obrig" checked={obrigatorio} onCheckedChange={setObrigatorio} />
+                <Label htmlFor="sw-obrig" className="text-sm">Obrigatório</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch id="sw-assin" checked={exigeAssinatura} onCheckedChange={setExigeAssinatura} />
+                <Label htmlFor="sw-assin" className="text-sm">Exige Assinatura</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch id="sw-renov" checked={renovacaoObrigatoria} onCheckedChange={setRenovacaoObrigatoria} />
+                <Label htmlFor="sw-renov" className="text-sm">Renovação</Label>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="tmpl-val">Validade (dias)</Label>
+              <Input id="tmpl-val" type="number" min="0" placeholder="Deixe vazio para sem expiração" value={validadeDias} onChange={e => setValidadeDias(e.target.value)} />
+            </div>
+
+            <PdfLayoutPicker tenantId={tenantId} value={pdfLayoutId} onChange={setPdfLayoutId} />
+
+            <div className="space-y-1.5">
+              <Label htmlFor="tmpl-html">Conteúdo do Termo (HTML) *</Label>
+              <Textarea
+                id="tmpl-html"
+                ref={textareaRef}
+                placeholder="<p>Eu, {{nome_colaborador}}, declaro que...</p>"
+                rows={10}
+                className="font-mono text-xs"
+                value={conteudoHtml}
+                onChange={e => setConteudoHtml(e.target.value)}
+              />
+              <div className="space-y-2 pt-1">
+                <p className="text-[11px] font-medium text-muted-foreground">Clique para inserir a variável no texto:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {VARIAVEIS.map(v => (
+                    <Badge
+                      key={v.key}
+                      variant="outline"
+                      className="cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors text-[11px] gap-1"
+                      onClick={() => insertVariable(v.key)}
+                    >
+                      <Copy className="h-3 w-3" />
+                      {v.label}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Live Preview */}
+          <div className="border border-border rounded-lg overflow-hidden hidden lg:flex flex-col min-h-0">
+            <TemplateHtmlPreview contentHtml={conteudoHtml} title={nome} />
           </div>
         </div>
 

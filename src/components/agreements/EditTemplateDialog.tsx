@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { PdfLayoutPicker } from './PdfLayoutPicker';
+import { TemplateHtmlPreview } from './TemplateHtmlPreview';
 
 const VARIAVEIS = [
   { key: '{{nome_colaborador}}', label: 'Nome do Colaborador' },
@@ -154,85 +155,92 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-lg font-display">Editar Termo</DialogTitle>
           <DialogDescription>Altere os campos desejados e salve.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-2">
-          <div className="space-y-1.5">
-            <Label>Nome do Termo *</Label>
-            <Input value={nome} onChange={e => setNome(e.target.value)} />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Descrição</Label>
-            <Textarea rows={2} value={descricao} onChange={e => setDescricao(e.target.value)} />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Categoria</Label>
-            <Select value={categoria} onValueChange={setCategoria}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CATEGORIAS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center gap-2">
-              <Switch checked={obrigatorio} onCheckedChange={setObrigatorio} />
-              <Label className="text-sm">Obrigatório</Label>
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden min-h-0">
+          {/* Left: Form */}
+          <div className="overflow-y-auto pr-1 space-y-4">
+            <div className="space-y-1.5">
+              <Label>Nome do Termo *</Label>
+              <Input value={nome} onChange={e => setNome(e.target.value)} />
             </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={ativo} onCheckedChange={setAtivo} />
-              <Label className="text-sm">Ativo</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={exigeAssinatura} onCheckedChange={setExigeAssinatura} />
-              <Label className="text-sm">Exige Assinatura</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={renovacaoObrigatoria} onCheckedChange={setRenovacaoObrigatoria} />
-              <Label className="text-sm">Renovação</Label>
-            </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <Label>Validade (dias)</Label>
-            <Input type="number" min="0" placeholder="Sem expiração" value={validadeDias} onChange={e => setValidadeDias(e.target.value)} />
-          </div>
+            <div className="space-y-1.5">
+              <Label>Descrição</Label>
+              <Textarea rows={2} value={descricao} onChange={e => setDescricao(e.target.value)} />
+            </div>
 
-          {/* Layout PDF */}
-          {template && <PdfLayoutPicker tenantId={template.tenant_id} value={pdfLayoutId} onChange={setPdfLayoutId} />}
+            <div className="space-y-1.5">
+              <Label>Categoria</Label>
+              <Select value={categoria} onValueChange={setCategoria}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORIAS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-1.5">
-            <Label>Conteúdo do Termo (HTML)</Label>
-            <Textarea
-              ref={textareaRef}
-              rows={8}
-              className="font-mono text-xs"
-              value={conteudoHtml}
-              onChange={e => setConteudoHtml(e.target.value)}
-            />
-            <div className="space-y-2 pt-1">
-              <p className="text-[11px] font-medium text-muted-foreground">Clique para inserir a variável no texto:</p>
-              <div className="flex flex-wrap gap-1.5">
-                {VARIAVEIS.map(v => (
-                  <Badge
-                    key={v.key}
-                    variant="outline"
-                    className="cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors text-[11px] gap-1"
-                    onClick={() => insertVariable(v.key)}
-                  >
-                    <Copy className="h-3 w-3" />
-                    {v.label}
-                  </Badge>
-                ))}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <Switch checked={obrigatorio} onCheckedChange={setObrigatorio} />
+                <Label className="text-sm">Obrigatório</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={ativo} onCheckedChange={setAtivo} />
+                <Label className="text-sm">Ativo</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={exigeAssinatura} onCheckedChange={setExigeAssinatura} />
+                <Label className="text-sm">Exige Assinatura</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={renovacaoObrigatoria} onCheckedChange={setRenovacaoObrigatoria} />
+                <Label className="text-sm">Renovação</Label>
               </div>
             </div>
+
+            <div className="space-y-1.5">
+              <Label>Validade (dias)</Label>
+              <Input type="number" min="0" placeholder="Sem expiração" value={validadeDias} onChange={e => setValidadeDias(e.target.value)} />
+            </div>
+
+            {template && <PdfLayoutPicker tenantId={template.tenant_id} value={pdfLayoutId} onChange={setPdfLayoutId} />}
+
+            <div className="space-y-1.5">
+              <Label>Conteúdo do Termo (HTML)</Label>
+              <Textarea
+                ref={textareaRef}
+                rows={10}
+                className="font-mono text-xs"
+                value={conteudoHtml}
+                onChange={e => setConteudoHtml(e.target.value)}
+              />
+              <div className="space-y-2 pt-1">
+                <p className="text-[11px] font-medium text-muted-foreground">Clique para inserir a variável no texto:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {VARIAVEIS.map(v => (
+                    <Badge
+                      key={v.key}
+                      variant="outline"
+                      className="cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors text-[11px] gap-1"
+                      onClick={() => insertVariable(v.key)}
+                    >
+                      <Copy className="h-3 w-3" />
+                      {v.label}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Live Preview */}
+          <div className="border border-border rounded-lg overflow-hidden hidden lg:flex flex-col min-h-0">
+            <TemplateHtmlPreview contentHtml={conteudoHtml} title={nome} />
           </div>
         </div>
 
