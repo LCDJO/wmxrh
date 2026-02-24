@@ -36,6 +36,15 @@ export function PdfLayoutPreview({ config }: Props) {
     qrSize: config.qr_code_size || 56,
     footerText: config.footer_text || '',
     logoUrl: config.logo_url || '',
+    wmEnabled: config.watermark_enabled ?? false,
+    wmType: config.watermark_type || 'text',
+    wmText: config.watermark_text || 'CONFIDENCIAL',
+    wmImageUrl: config.watermark_image_url || '',
+    wmOpacity: config.watermark_opacity ?? 0.08,
+    wmRotation: config.watermark_rotation ?? -30,
+    wmFontSize: config.watermark_font_size ?? 60,
+    wmColor: config.watermark_color || '#000000',
+    wmPosition: config.watermark_position || 'center',
   };
 
   // Scale: A4 = 210x297mm. Preview width ~420px → scale factor
@@ -56,7 +65,91 @@ export function PdfLayoutPreview({ config }: Props) {
             fontFamily: c.bodyFont,
           }}
         >
-          {/* Header */}
+          {/* Watermark overlay */}
+          {c.wmEnabled && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                pointerEvents: 'none',
+                zIndex: 1,
+              }}
+            >
+              {c.wmType === 'text' && c.wmPosition !== 'tiled' && (
+                <span
+                  style={{
+                    fontSize: px(c.wmFontSize / 4),
+                    fontWeight: 700,
+                    color: c.wmColor,
+                    opacity: c.wmOpacity,
+                    transform: `rotate(${c.wmRotation}deg)`,
+                    whiteSpace: 'nowrap',
+                    userSelect: 'none',
+                  }}
+                >
+                  {c.wmText}
+                </span>
+              )}
+              {c.wmType === 'text' && c.wmPosition === 'tiled' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: `-${px(40)}px`,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: `${px(15)}px`,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: `rotate(${c.wmRotation}deg)`,
+                  }}
+                >
+                  {Array.from({ length: 20 }).map((_, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        fontSize: px(c.wmFontSize / 6),
+                        fontWeight: 700,
+                        color: c.wmColor,
+                        opacity: c.wmOpacity,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {c.wmText}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {c.wmType === 'image' && c.wmImageUrl && (
+                <img
+                  src={c.wmImageUrl}
+                  alt="Watermark"
+                  style={{
+                    maxWidth: '60%',
+                    maxHeight: '60%',
+                    opacity: c.wmOpacity,
+                    transform: `rotate(${c.wmRotation}deg)`,
+                    objectFit: 'contain',
+                  }}
+                />
+              )}
+              {c.wmType === 'background' && c.wmImageUrl && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    opacity: c.wmOpacity,
+                    background: c.wmImageUrl.startsWith('#')
+                      ? c.wmImageUrl
+                      : `url(${c.wmImageUrl}) center/cover no-repeat`,
+                  }}
+                />
+              )}
+            </div>
+          )}
           <div
             style={{
               margin: `${px(c.marginTop)}px ${px(c.marginRight)}px 0 ${px(c.marginLeft)}px`,

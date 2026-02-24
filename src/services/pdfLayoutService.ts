@@ -33,6 +33,15 @@ const FALLBACK_DEFAULTS: PdfLayoutOverrides = {
   showPageNumbers: true,
   qrCodeSize: 56,
   footerText: null,
+  watermarkEnabled: false,
+  watermarkType: 'text',
+  watermarkText: null,
+  watermarkImageUrl: null,
+  watermarkOpacity: 0.08,
+  watermarkRotation: -30,
+  watermarkFontSize: 60,
+  watermarkColor: '#000000',
+  watermarkPosition: 'center',
 };
 
 export async function getActivePdfLayout(tenantId: string): Promise<PdfLayoutConfig | null> {
@@ -76,6 +85,15 @@ export function layoutToGeneratorConfig(layout: PdfLayoutConfig): PdfLayoutOverr
     showPageNumbers: layout.show_page_numbers,
     qrCodeSize: layout.qr_code_size,
     footerText: layout.footer_text,
+    watermarkEnabled: layout.watermark_enabled,
+    watermarkType: layout.watermark_type,
+    watermarkText: layout.watermark_text,
+    watermarkImageUrl: layout.watermark_image_url,
+    watermarkOpacity: Number(layout.watermark_opacity),
+    watermarkRotation: Number(layout.watermark_rotation),
+    watermarkFontSize: Number(layout.watermark_font_size),
+    watermarkColor: layout.watermark_color,
+    watermarkPosition: layout.watermark_position,
   };
 }
 

@@ -51,6 +51,15 @@ export interface PdfLayoutOverrides {
   showPageNumbers?: boolean;
   qrCodeSize?: number;
   footerText?: string | null;
+  watermarkEnabled?: boolean;
+  watermarkType?: string;
+  watermarkText?: string | null;
+  watermarkImageUrl?: string | null;
+  watermarkOpacity?: number;
+  watermarkRotation?: number;
+  watermarkFontSize?: number;
+  watermarkColor?: string;
+  watermarkPosition?: string;
 }
 
 export interface PdfDocumentOptions {
@@ -281,6 +290,73 @@ export async function generateDocumentPdf(options: PdfDocumentOptions): Promise<
         CONTENT_WIDTH,
         bodySliceMM
       );
+    }
+
+    // -- Watermark --
+    if (L.watermarkEnabled) {
+      const wmOpacity = L.watermarkOpacity ?? 0.08;
+      const wmRotation = L.watermarkRotation ?? -30;
+      const wmColor = L.watermarkColor || '#000000';
+      const wmType = L.watermarkType || 'text';
+
+      if (wmType === 'text' && L.watermarkText) {
+        const wmFontSize = L.watermarkFontSize || 60;
+        pdf.saveGraphicsState();
+        // @ts-ignore — jsPDF GState
+        pdf.setGState(new (pdf as any).GState({ opacity: wmOpacity }));
+        pdf.setFontSize(wmFontSize);
+        pdf.setTextColor(wmColor);
+
+        if (L.watermarkPosition === 'tiled') {
+          for (let y = 30; y < A4_HEIGHT_MM; y += 60) {
+            for (let x = -30; x < A4_WIDTH_MM + 30; x += 100) {
+              pdf.text(L.watermarkText, x, y, { angle: wmRotation });
+            }
+          }
+        } else {
+          const cx = A4_WIDTH_MM / 2;
+          const cy = A4_HEIGHT_MM / 2;
+          pdf.text(L.watermarkText, cx, cy, { angle: wmRotation, align: 'center' });
+        }
+        pdf.restoreGraphicsState();
+      }
+
+      if (wmType === 'image' && L.watermarkImageUrl) {
+        try {
+          pdf.saveGraphicsState();
+          // @ts-ignore
+          pdf.setGState(new (pdf as any).GState({ opacity: wmOpacity }));
+          const imgW = 80;
+          const imgH = 80;
+          const imgX = (A4_WIDTH_MM - imgW) / 2;
+          const imgY = (A4_HEIGHT_MM - imgH) / 2;
+          pdf.addImage(L.watermarkImageUrl, 'PNG', imgX, imgY, imgW, imgH);
+          pdf.restoreGraphicsState();
+        } catch { /* skip if image fails */ }
+      }
+
+      if (wmType === 'background' && L.watermarkImageUrl) {
+        try {
+          if (L.watermarkImageUrl.startsWith('#')) {
+            pdf.saveGraphicsState();
+            // @ts-ignore
+            pdf.setGState(new (pdf as any).GState({ opacity: wmOpacity }));
+            const hex = L.watermarkImageUrl;
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            pdf.setFillColor(r, g, b);
+            pdf.rect(0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, 'F');
+            pdf.restoreGraphicsState();
+          } else {
+            pdf.saveGraphicsState();
+            // @ts-ignore
+            pdf.setGState(new (pdf as any).GState({ opacity: wmOpacity }));
+            pdf.addImage(L.watermarkImageUrl, 'PNG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM);
+            pdf.restoreGraphicsState();
+          }
+        } catch { /* skip */ }
+      }
     }
   }
 

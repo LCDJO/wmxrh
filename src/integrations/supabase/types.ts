@@ -11380,6 +11380,15 @@ export type Database = {
           text_color: string | null
           updated_at: string
           version_number: number
+          watermark_color: string | null
+          watermark_enabled: boolean | null
+          watermark_font_size: number | null
+          watermark_image_url: string | null
+          watermark_opacity: number | null
+          watermark_position: string | null
+          watermark_rotation: number | null
+          watermark_text: string | null
+          watermark_type: string | null
         }
         Insert: {
           body_font_family?: string | null
@@ -11417,6 +11426,15 @@ export type Database = {
           text_color?: string | null
           updated_at?: string
           version_number?: number
+          watermark_color?: string | null
+          watermark_enabled?: boolean | null
+          watermark_font_size?: number | null
+          watermark_image_url?: string | null
+          watermark_opacity?: number | null
+          watermark_position?: string | null
+          watermark_rotation?: number | null
+          watermark_text?: string | null
+          watermark_type?: string | null
         }
         Update: {
           body_font_family?: string | null
@@ -11454,6 +11472,15 @@ export type Database = {
           text_color?: string | null
           updated_at?: string
           version_number?: number
+          watermark_color?: string | null
+          watermark_enabled?: boolean | null
+          watermark_font_size?: number | null
+          watermark_image_url?: string | null
+          watermark_opacity?: number | null
+          watermark_position?: string | null
+          watermark_rotation?: number | null
+          watermark_text?: string | null
+          watermark_type?: string | null
         }
         Relationships: [
           {

@@ -50,6 +50,15 @@ export interface PdfLayoutConfig {
   primary_color: string;
   text_color: string;
   secondary_text_color: string;
+  watermark_enabled: boolean;
+  watermark_type: string;
+  watermark_text: string | null;
+  watermark_image_url: string | null;
+  watermark_opacity: number;
+  watermark_rotation: number;
+  watermark_font_size: number;
+  watermark_color: string;
+  watermark_position: string;
   created_at: string;
   updated_at: string;
 }
@@ -85,6 +94,15 @@ const DEFAULT_LAYOUT: Omit<PdfLayoutConfig, 'id' | 'tenant_id' | 'created_at' | 
   primary_color: '#1a1a2e',
   text_color: '#222222',
   secondary_text_color: '#666666',
+  watermark_enabled: false,
+  watermark_type: 'text',
+  watermark_text: null,
+  watermark_image_url: null,
+  watermark_opacity: 0.08,
+  watermark_rotation: -30,
+  watermark_font_size: 60,
+  watermark_color: '#000000',
+  watermark_position: 'center',
 };
 
 const FONT_OPTIONS = [
