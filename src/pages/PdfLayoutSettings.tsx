@@ -10,14 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Plus, Save, Copy, Trash2, FileText, Eye, Pencil } from 'lucide-react';
 import { PdfLayoutPreview } from '@/components/pdf-layout/PdfLayoutPreview';
+import { PdfSectionEditor } from '@/components/pdf-layout/PdfSectionEditor';
 
 export interface PdfLayoutConfig {
   id: string;
@@ -307,229 +305,41 @@ export default function PdfLayoutSettings() {
           </CardContent>
         </Card>
 
-        {/* Right panel — editor + preview */}
-        <div className="lg:col-span-2 space-y-4">
+        {/* Right panel — visual editor + live preview */}
+        <div className="lg:col-span-2">
           {editData ? (
-            <Tabs defaultValue="header" className="w-full">
-              <div className="flex items-center justify-between mb-4">
-                <TabsList>
-                  <TabsTrigger value="header">Cabeçalho</TabsTrigger>
-                  <TabsTrigger value="body">Corpo</TabsTrigger>
-                  <TabsTrigger value="footer">Rodapé</TabsTrigger>
-                  <TabsTrigger value="margins">Margens</TabsTrigger>
-                  <TabsTrigger value="preview">
-                    <Eye className="mr-1 h-3 w-3" /> Preview
-                  </TabsTrigger>
-                </TabsList>
-                <Button onClick={handleSave} disabled={saveMutation.isPending}>
-                  <Save className="mr-2 h-4 w-4" /> Salvar
-                </Button>
-              </div>
-
-              {/* Name */}
-              <Card className="mb-4">
+            <div className="space-y-4">
+              {/* Top bar: name + save */}
+              <Card>
                 <CardContent className="pt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Nome do Layout</Label>
-                      <Input value={editData.name || ''} onChange={e => updateField('name', e.target.value)} />
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Nome do Layout</Label>
+                        <Input value={editData.name || ''} onChange={e => updateField('name', e.target.value)} />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Versão</Label>
+                        <Input type="number" value={editData.version_number || 1} onChange={e => updateField('version_number', Number(e.target.value))} />
+                      </div>
                     </div>
-                    <div>
-                      <Label>Versão</Label>
-                      <Input type="number" value={editData.version_number || 1} onChange={e => updateField('version_number', Number(e.target.value))} />
-                    </div>
+                    <Button onClick={handleSave} disabled={saveMutation.isPending} className="self-end">
+                      <Save className="mr-2 h-4 w-4" /> Salvar
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Header Tab */}
-              <TabsContent value="header">
-                <Card>
-                  <CardHeader><CardTitle className="text-base">Cabeçalho</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Nome da Empresa (override)</Label>
-                        <Input value={editData.company_name_override || ''} onChange={e => updateField('company_name_override', e.target.value)} placeholder="Usa o nome do tenant se vazio" />
-                      </div>
-                      <div>
-                        <Label>Subtítulo</Label>
-                        <Input value={editData.header_subtitle || ''} onChange={e => updateField('header_subtitle', e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>URL do Logo</Label>
-                        <Input value={editData.logo_url || ''} onChange={e => updateField('logo_url', e.target.value)} placeholder="https://..." />
-                      </div>
-                      <div>
-                        <Label>Cor da borda</Label>
-                        <div className="flex gap-2 items-center">
-                          <input type="color" value={editData.header_border_color || '#1a1a2e'} onChange={e => updateField('header_border_color', e.target.value)} className="w-10 h-10 rounded border cursor-pointer" />
-                          <Input value={editData.header_border_color || ''} onChange={e => updateField('header_border_color', e.target.value)} className="flex-1" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Fonte do cabeçalho</Label>
-                        <Select value={editData.header_font_family} onValueChange={v => updateField('header_font_family', v)}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {FONT_OPTIONS.map(f => <SelectItem key={f} value={f}>{f.split(',')[0]}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Tamanho da fonte: {editData.header_font_size}px</Label>
-                        <Slider value={[editData.header_font_size || 16]} min={10} max={28} step={1} onValueChange={([v]) => updateField('header_font_size', v)} />
-                      </div>
-                    </div>
-                    <Separator />
-                    <div className="flex gap-6">
-                      <div className="flex items-center gap-2">
-                        <Switch checked={editData.show_logo ?? true} onCheckedChange={v => updateField('show_logo', v)} />
-                        <Label>Exibir Logo</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch checked={editData.show_date ?? true} onCheckedChange={v => updateField('show_date', v)} />
-                        <Label>Exibir Data</Label>
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Cor primária</Label>
-                      <div className="flex gap-2 items-center">
-                        <input type="color" value={editData.primary_color || '#1a1a2e'} onChange={e => updateField('primary_color', e.target.value)} className="w-10 h-10 rounded border cursor-pointer" />
-                        <Input value={editData.primary_color || ''} onChange={e => updateField('primary_color', e.target.value)} className="flex-1" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Body Tab */}
-              <TabsContent value="body">
-                <Card>
-                  <CardHeader><CardTitle className="text-base">Corpo do Documento</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Fonte do corpo</Label>
-                        <Select value={editData.body_font_family} onValueChange={v => updateField('body_font_family', v)}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {FONT_OPTIONS.map(f => <SelectItem key={f} value={f}>{f.split(',')[0]}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Tamanho: {editData.body_font_size}px</Label>
-                        <Slider value={[editData.body_font_size || 13]} min={9} max={20} step={0.5} onValueChange={([v]) => updateField('body_font_size', v)} />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Altura da linha: {editData.body_line_height}</Label>
-                      <Slider value={[editData.body_line_height || 1.7]} min={1} max={3} step={0.1} onValueChange={([v]) => updateField('body_line_height', v)} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Cor do texto</Label>
-                        <div className="flex gap-2 items-center">
-                          <input type="color" value={editData.text_color || '#222222'} onChange={e => updateField('text_color', e.target.value)} className="w-10 h-10 rounded border cursor-pointer" />
-                          <Input value={editData.text_color || ''} onChange={e => updateField('text_color', e.target.value)} className="flex-1" />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Cor secundária</Label>
-                        <div className="flex gap-2 items-center">
-                          <input type="color" value={editData.secondary_text_color || '#666666'} onChange={e => updateField('secondary_text_color', e.target.value)} className="w-10 h-10 rounded border cursor-pointer" />
-                          <Input value={editData.secondary_text_color || ''} onChange={e => updateField('secondary_text_color', e.target.value)} className="flex-1" />
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Footer Tab */}
-              <TabsContent value="footer">
-                <Card>
-                  <CardHeader><CardTitle className="text-base">Rodapé</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex flex-wrap gap-6">
-                      <div className="flex items-center gap-2">
-                        <Switch checked={editData.show_qr_code ?? true} onCheckedChange={v => updateField('show_qr_code', v)} />
-                        <Label>QR Code</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch checked={editData.show_validator_code ?? true} onCheckedChange={v => updateField('show_validator_code', v)} />
-                        <Label>Código Validador</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch checked={editData.show_page_numbers ?? true} onCheckedChange={v => updateField('show_page_numbers', v)} />
-                        <Label>Número de Páginas</Label>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Tamanho do QR Code: {editData.qr_code_size}px</Label>
-                        <Slider value={[editData.qr_code_size || 56]} min={32} max={120} step={4} onValueChange={([v]) => updateField('qr_code_size', v)} />
-                      </div>
-                      <div>
-                        <Label>Fonte do rodapé</Label>
-                        <Select value={editData.footer_font_family} onValueChange={v => updateField('footer_font_family', v)}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {FONT_OPTIONS.map(f => <SelectItem key={f} value={f}>{f.split(',')[0]}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Texto adicional do rodapé</Label>
-                      <Input value={editData.footer_text || ''} onChange={e => updateField('footer_text', e.target.value)} placeholder="Ex: Confidencial — Uso interno" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Margins Tab */}
-              <TabsContent value="margins">
-                <Card>
-                  <CardHeader><CardTitle className="text-base">Margens e Espaçamento</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Margem superior: {editData.margin_top}mm</Label>
-                        <Slider value={[editData.margin_top || 15]} min={5} max={40} step={1} onValueChange={([v]) => updateField('margin_top', v)} />
-                      </div>
-                      <div>
-                        <Label>Margem inferior: {editData.margin_bottom}mm</Label>
-                        <Slider value={[editData.margin_bottom || 15]} min={5} max={40} step={1} onValueChange={([v]) => updateField('margin_bottom', v)} />
-                      </div>
-                      <div>
-                        <Label>Margem esquerda: {editData.margin_left}mm</Label>
-                        <Slider value={[editData.margin_left || 15]} min={5} max={40} step={1} onValueChange={([v]) => updateField('margin_left', v)} />
-                      </div>
-                      <div>
-                        <Label>Margem direita: {editData.margin_right}mm</Label>
-                        <Slider value={[editData.margin_right || 15]} min={5} max={40} step={1} onValueChange={([v]) => updateField('margin_right', v)} />
-                      </div>
-                    </div>
-                    <Separator />
-                    <div>
-                      <Label>Espaço entre seções: {editData.section_gap}mm</Label>
-                      <Slider value={[editData.section_gap || 3]} min={0} max={15} step={1} onValueChange={([v]) => updateField('section_gap', v)} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Preview Tab */}
-              <TabsContent value="preview">
-                <PdfLayoutPreview config={editData as PdfLayoutConfig} />
-              </TabsContent>
-            </Tabs>
+              {/* Two-column: drag editor + live preview */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div>
+                  <PdfSectionEditor editData={editData} onUpdate={updateField} />
+                </div>
+                <div className="sticky top-4">
+                  <PdfLayoutPreview config={editData as PdfLayoutConfig} />
+                </div>
+              </div>
+            </div>
           ) : (
             <Card className="flex items-center justify-center min-h-[400px]">
               <div className="text-center text-muted-foreground">
