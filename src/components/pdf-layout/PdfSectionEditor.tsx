@@ -43,13 +43,29 @@ interface SectionDef {
   color: string;
 }
 
-const SECTIONS: SectionDef[] = [
+interface SectionGroup {
+  title: string;
+  description: string;
+  sections: SectionDef[];
+}
+
+const DOCUMENT_SECTIONS: SectionDef[] = [
   { id: 'header', label: 'Cabeçalho', icon: <Type className="h-4 w-4" />, color: 'bg-primary/10 border-primary/30' },
   { id: 'body', label: 'Corpo do Documento', icon: <AlignLeft className="h-4 w-4" />, color: 'bg-accent/50 border-accent' },
   { id: 'footer', label: 'Rodapé', icon: <FileText className="h-4 w-4" />, color: 'bg-secondary/50 border-secondary' },
+];
+
+const CUSTOMIZATION_SECTIONS: SectionDef[] = [
   { id: 'watermark', label: 'Marca d\'Água', icon: <Droplets className="h-4 w-4" />, color: 'bg-chart-4/10 border-chart-4/30' },
   { id: 'colors', label: 'Cores e Tipografia', icon: <Palette className="h-4 w-4" />, color: 'bg-destructive/10 border-destructive/30' },
   { id: 'margins', label: 'Margens e Espaçamento', icon: <Maximize className="h-4 w-4" />, color: 'bg-muted border-border' },
+];
+
+const ALL_SECTIONS = [...DOCUMENT_SECTIONS, ...CUSTOMIZATION_SECTIONS];
+
+const SECTION_GROUPS: SectionGroup[] = [
+  { title: 'Composição do Documento', description: 'Estrutura fixa que aparece em todas as páginas', sections: DOCUMENT_SECTIONS },
+  { title: 'Personalização', description: 'Estilo visual e aparência do documento', sections: CUSTOMIZATION_SECTIONS },
 ];
 
 interface Props {
@@ -58,10 +74,7 @@ interface Props {
 }
 
 export function PdfSectionEditor({ editData, onUpdate }: Props) {
-  const [sectionOrder, setSectionOrder] = useState<string[]>(SECTIONS.map(s => s.id));
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['header']));
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   const toggleSection = useCallback((id: string) => {
     setExpandedSections(prev => {
@@ -72,111 +85,64 @@ export function PdfSectionEditor({ editData, onUpdate }: Props) {
     });
   }, []);
 
-  // Drag handlers
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    setDraggedId(id);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', id);
+  const renderSection = (section: SectionDef) => {
+    const isExpanded = expandedSections.has(section.id);
+
+    return (
+      <div
+        key={section.id}
+        className={cn(
+          'rounded-lg border-2 transition-all duration-200',
+          section.color,
+          'hover:shadow-md',
+        )}
+      >
+        <div
+          className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
+          onClick={() => toggleSection(section.id)}
+        >
+          <div className="flex items-center gap-2 flex-1">
+            {section.icon}
+            <span className="font-medium text-sm">{section.label}</span>
+          </div>
+          <Badge variant="outline" className="text-[10px]">
+            {section.id === 'header' ? (editData.show_logo ? 'Com logo' : 'Sem logo') :
+             section.id === 'footer' ? (editData.show_qr_code ? 'Com QR' : 'Sem QR') :
+             section.id === 'body' ? `${editData.body_font_size || 13}px` :
+             section.id === 'watermark' ? (editData.watermark_enabled ? editData.watermark_type || 'text' : 'Desativada') :
+             section.id === 'colors' ? editData.primary_color || '#1a1a2e' :
+             `${editData.margin_top || 15}mm`}
+          </Badge>
+          {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+        </div>
+
+        {isExpanded && (
+          <div className="px-4 pb-4 border-t border-border/50 pt-3">
+            {section.id === 'header' && <HeaderSection editData={editData} onUpdate={onUpdate} />}
+            {section.id === 'body' && <BodySection editData={editData} onUpdate={onUpdate} />}
+            {section.id === 'footer' && <FooterSection editData={editData} onUpdate={onUpdate} />}
+            {section.id === 'watermark' && <WatermarkSection editData={editData} onUpdate={onUpdate} />}
+            {section.id === 'colors' && <ColorsSection editData={editData} onUpdate={onUpdate} />}
+            {section.id === 'margins' && <MarginsSection editData={editData} onUpdate={onUpdate} />}
+          </div>
+        )}
+      </div>
+    );
   };
-
-  const handleDragOver = (e: React.DragEvent, id: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (id !== draggedId) setDragOverId(id);
-  };
-
-  const handleDragLeave = () => setDragOverId(null);
-
-  const handleDrop = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    if (!draggedId || draggedId === targetId) return;
-    setSectionOrder(prev => {
-      const fromIdx = prev.indexOf(draggedId);
-      const toIdx = prev.indexOf(targetId);
-      const next = [...prev];
-      next.splice(fromIdx, 1);
-      next.splice(toIdx, 0, draggedId);
-      return next;
-    });
-    setDraggedId(null);
-    setDragOverId(null);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedId(null);
-    setDragOverId(null);
-  };
-
-  const orderedSections = sectionOrder.map(id => SECTIONS.find(s => s.id === id)!).filter(Boolean);
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs text-muted-foreground mb-3">
-        Arraste as seções para reordenar. Clique para expandir e editar.
-      </p>
-
-      {orderedSections.map(section => {
-        const isExpanded = expandedSections.has(section.id);
-        const isDragging = draggedId === section.id;
-        const isDragOver = dragOverId === section.id;
-
-        return (
-          <div
-            key={section.id}
-            draggable
-            onDragStart={e => handleDragStart(e, section.id)}
-            onDragOver={e => handleDragOver(e, section.id)}
-            onDragLeave={handleDragLeave}
-            onDrop={e => handleDrop(e, section.id)}
-            onDragEnd={handleDragEnd}
-            className={cn(
-              'rounded-lg border-2 transition-all duration-200',
-              section.color,
-              isDragging && 'opacity-40 scale-95',
-              isDragOver && 'ring-2 ring-primary ring-offset-2',
-              !isDragging && 'hover:shadow-md',
-            )}
-          >
-            {/* Section header — always visible */}
-            <div
-              className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
-              onClick={() => toggleSection(section.id)}
-            >
-              <div
-                className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
-                onClick={e => e.stopPropagation()}
-              >
-                <GripVertical className="h-4 w-4" />
-              </div>
-              <div className="flex items-center gap-2 flex-1">
-                {section.icon}
-                <span className="font-medium text-sm">{section.label}</span>
-              </div>
-              <Badge variant="outline" className="text-[10px]">
-                {section.id === 'header' ? (editData.show_logo ? 'Com logo' : 'Sem logo') :
-                 section.id === 'footer' ? (editData.show_qr_code ? 'Com QR' : 'Sem QR') :
-                 section.id === 'body' ? `${editData.body_font_size || 13}px` :
-                 section.id === 'watermark' ? (editData.watermark_enabled ? editData.watermark_type || 'text' : 'Desativada') :
-                 section.id === 'colors' ? editData.primary_color || '#1a1a2e' :
-                 `${editData.margin_top || 15}mm`}
-              </Badge>
-              {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-            </div>
-
-            {/* Section content — expanded */}
-            {isExpanded && (
-              <div className="px-4 pb-4 border-t border-border/50 pt-3">
-                {section.id === 'header' && <HeaderSection editData={editData} onUpdate={onUpdate} />}
-                {section.id === 'body' && <BodySection editData={editData} onUpdate={onUpdate} />}
-                {section.id === 'footer' && <FooterSection editData={editData} onUpdate={onUpdate} />}
-                {section.id === 'watermark' && <WatermarkSection editData={editData} onUpdate={onUpdate} />}
-                {section.id === 'colors' && <ColorsSection editData={editData} onUpdate={onUpdate} />}
-                {section.id === 'margins' && <MarginsSection editData={editData} onUpdate={onUpdate} />}
-              </div>
-            )}
+    <div className="space-y-6">
+      {SECTION_GROUPS.map(group => (
+        <div key={group.title}>
+          <div className="mb-3">
+            <h3 className="text-sm font-semibold text-foreground">{group.title}</h3>
+            <p className="text-xs text-muted-foreground">{group.description}</p>
           </div>
-        );
-      })}
+          <div className="space-y-2">
+            {group.sections.map(renderSection)}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
