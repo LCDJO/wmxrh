@@ -74,21 +74,23 @@ export default function TenantTraccarSettings() {
     setLoading(false);
   }, [tenantId]);
 
-  // Load saved config from platform_settings
+  // Load saved config from tenant_integration_configs
   const fetchConfig = useCallback(async () => {
+    if (!tenantId) return;
     const { data } = await supabase
-      .from('platform_settings')
+      .from('tenant_integration_configs')
       .select('*')
-      .eq('key', 'traccar_config')
+      .eq('tenant_id', tenantId)
+      .eq('integration_key', 'traccar')
       .maybeSingle();
-    if (data?.value && typeof data.value === 'object') {
-      const val = data.value as Record<string, any>;
+    if (data?.config && typeof data.config === 'object') {
+      const val = data.config as Record<string, any>;
       setSavedUrl(val.api_url || '');
       setSavedToken(val.api_token || '');
       setConfigUrl(val.api_url || '');
       setConfigToken(''); // never pre-fill token for security
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => { fetchEvents(); fetchConfig(); }, [fetchEvents, fetchConfig]);
 
@@ -136,37 +138,39 @@ export default function TenantTraccarSettings() {
       toast.error('URL do servidor é obrigatória.');
       return;
     }
+    if (!tenantId) {
+      toast.error('Tenant não identificado.');
+      return;
+    }
     setSavingConfig(true);
     try {
-      const { data: existing } = await supabase
-        .from('platform_settings')
-        .select('id, value')
-        .eq('key', 'traccar_config')
-        .maybeSingle();
-
       const tokenToSave = configToken || savedToken; // keep old token if not changed
-      const value = {
-        ...(existing?.value && typeof existing.value === 'object' ? existing.value : {}),
+      const config = {
         api_url: configUrl,
         api_token: tokenToSave,
         is_active: true,
       };
 
+      const { data: existing } = await supabase
+        .from('tenant_integration_configs')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('integration_key', 'traccar')
+        .maybeSingle();
+
       if (existing) {
         const { error } = await supabase
-          .from('platform_settings')
-          .update({ value })
+          .from('tenant_integration_configs')
+          .update({ config, updated_at: new Date().toISOString() })
           .eq('id', existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from('platform_settings')
+          .from('tenant_integration_configs')
           .insert({
-            key: 'traccar_config',
-            value,
-            label: 'Traccar Integration',
-            description: 'Configuração do servidor Traccar',
-            category: 'integrations',
+            tenant_id: tenantId,
+            integration_key: 'traccar',
+            config,
           });
         if (error) throw error;
       }
