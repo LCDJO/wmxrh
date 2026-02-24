@@ -7,12 +7,13 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Filter, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, Filter, Pencil, Trash2, Rocket } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { StartHiringDialog } from '@/components/hiring/StartHiringDialog';
 
 export default function Employees() {
   const { currentTenant } = useTenant();
@@ -29,6 +30,7 @@ export default function Employees() {
   const [formCompany, setFormCompany] = useState('');
   const [formSalary, setFormSalary] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [hiringOpen, setHiringOpen] = useState(false);
 
   const { data: employees = [] } = useEmployees();
   const { data: companies = [] } = useCompaniesSimple();
@@ -86,28 +88,34 @@ export default function Employees() {
           <p className="text-muted-foreground mt-1">{employees.length} cadastrados</p>
         </div>
         {canManageEmployees && (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2"><Plus className="h-4 w-4" />Novo Funcionário</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Novo Funcionário</DialogTitle></DialogHeader>
-            <form onSubmit={e => { e.preventDefault(); handleCreate(); }} className="space-y-4">
-              <div className="space-y-2"><Label>Nome *</Label><Input value={formName} onChange={e => setFormName(e.target.value)} required /></div>
-              <div className="space-y-2"><Label>Email</Label><Input type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Telefone</Label><Input value={formPhone} onChange={e => setFormPhone(e.target.value)} /></div>
-              <div className="space-y-2">
-                <Label>Empresa *</Label>
-                <Select value={formCompany} onValueChange={setFormCompany}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2"><Label>Salário</Label><Input type="number" value={formSalary} onChange={e => setFormSalary(e.target.value)} placeholder="0.00" /></div>
-              <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? 'Salvando...' : 'Cadastrar'}</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => setHiringOpen(true)}>
+              <Rocket className="h-4 w-4" />
+              Nova Admissão
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2"><Plus className="h-4 w-4" />Novo Funcionário</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Novo Funcionário</DialogTitle></DialogHeader>
+                <form onSubmit={e => { e.preventDefault(); handleCreate(); }} className="space-y-4">
+                  <div className="space-y-2"><Label>Nome *</Label><Input value={formName} onChange={e => setFormName(e.target.value)} required /></div>
+                  <div className="space-y-2"><Label>Email</Label><Input type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Telefone</Label><Input value={formPhone} onChange={e => setFormPhone(e.target.value)} /></div>
+                  <div className="space-y-2">
+                    <Label>Empresa *</Label>
+                    <Select value={formCompany} onValueChange={setFormCompany}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>{companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2"><Label>Salário</Label><Input type="number" value={formSalary} onChange={e => setFormSalary(e.target.value)} placeholder="0.00" /></div>
+                  <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? 'Salvando...' : 'Cadastrar'}</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         )}
       </div>
 
@@ -197,6 +205,15 @@ export default function Employees() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {tenantId && (
+        <StartHiringDialog
+          open={hiringOpen}
+          onOpenChange={setHiringOpen}
+          tenantId={tenantId}
+          companies={companies}
+        />
+      )}
     </div>
   );
 }
