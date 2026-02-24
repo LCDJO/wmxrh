@@ -21,6 +21,20 @@ import {
   type RescissionResult,
 } from './rescission-calculator.engine';
 import { generateTermoRescisaoHtml, type TermoRescisaoData } from './rescission-document.generator';
+import {
+  generateAllOffboardingDocuments,
+  generateTrctHtml,
+  generateTermoQuitacaoHtml,
+  generateCartaDemissaoHtml,
+  generateReciboDevolucaoBensHtml,
+  type OffboardingDocumentContext,
+  type GenerateAllDocumentsInput,
+  type GeneratedDocument,
+  type IntegrityProof,
+  type AssetItem,
+} from './offboarding-documents.engine';
+import { generateDocumentHash } from '@/domains/employee-agreement/document-hash';
+import { executeBlockchainRegistration } from '@/domains/blockchain-registry';
 
 export const offboardingService = {
   // ── Workflows ──
@@ -304,10 +318,88 @@ export const offboardingService = {
   },
 
   /**
-   * Generate Termo de Rescisão HTML document.
+   * Generate Termo de Rescisão HTML document (legacy — prefer generateDocuments).
    */
   generateTermoRescisao(data: TermoRescisaoData): string {
     return generateTermoRescisaoHtml(data);
+  },
+
+  /**
+   * Etapa 4 — Generate all offboarding documents with integrity proof.
+   *
+   * Flow:
+   *   1. Generate HTML for each applicable document
+   *   2. Compute SHA-256 hash per document
+   *   3. Enqueue blockchain registration per document
+   *   4. Embed QR + hash + blockchain proof in final HTML
+   */
+  async generateDocuments(
+    input: GenerateAllDocumentsInput & { verificationBaseUrl?: string; signedDocumentIds?: Record<string, string> },
+  ): Promise<GeneratedDocument[]> {
+    const { context: ctx, rescission, assets, verificationBaseUrl } = input;
+    const baseUrl = verificationBaseUrl || `${window.location.origin}/verify`;
+
+    // 1. Generate initial HTML (without proofs) to compute hashes
+    const initialDocs = generateAllOffboardingDocuments({ context: ctx, rescission, assets });
+
+    // 2. Compute hashes and build proofs
+    const proofs: Partial<Record<string, IntegrityProof>> = {};
+
+    for (const doc of initialDocs) {
+      const hash = await generateDocumentHash(doc.html);
+      const token = `${ctx.workflow_id}-${doc.type}`;
+      const verificationUrl = `${baseUrl}?token=${encodeURIComponent(token)}`;
+
+      const proof: IntegrityProof = {
+        hash_sha256: hash,
+        verification_url: verificationUrl,
+        document_token: token,
+      };
+
+      // 3. Enqueue blockchain registration (fire-and-forget)
+      const signedDocId = input.signedDocumentIds?.[doc.type] || `${ctx.workflow_id}_${doc.type}`;
+      try {
+        const regResult = await executeBlockchainRegistration({
+          tenant_id: ctx.tenant_id,
+          signed_document_id: signedDocId,
+          document_content: doc.html,
+          created_by: undefined,
+        });
+        if (regResult.success && regResult.hash_sha256) {
+          proof.hash_sha256 = regResult.hash_sha256;
+          if (regResult.transaction_hash) {
+            proof.blockchain_tx = regResult.transaction_hash;
+          }
+        }
+      } catch {
+        // Blockchain registration is async — failure doesn't block document generation
+      }
+
+      proofs[doc.type] = proof;
+    }
+
+    // 4. Re-generate with proofs embedded
+    const finalDocs = generateAllOffboardingDocuments({
+      context: ctx,
+      rescission,
+      assets,
+      proofs: proofs as any,
+    });
+
+    // 5. Audit log
+    await supabase.from('offboarding_audit_log').insert({
+      tenant_id: ctx.tenant_id,
+      workflow_id: ctx.workflow_id,
+      action: 'documents_generated',
+      new_value: {
+        document_types: finalDocs.map(d => d.type),
+        hashes: Object.fromEntries(
+          finalDocs.map(d => [d.type, d.integrity?.hash_sha256 || null])
+        ),
+      } as any,
+    } as any);
+
+    return finalDocs;
   },
 
   /** Helper: calculate aviso prévio days based on tenure */
