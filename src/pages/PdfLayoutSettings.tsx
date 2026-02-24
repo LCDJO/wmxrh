@@ -172,19 +172,12 @@ export default function PdfLayoutSettings() {
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      if (is_active) {
-        // Deactivate all others first
-        await supabase
-          .from('pdf_layout_configs')
-          .update({ is_active: false })
-          .eq('tenant_id', currentTenant!.id)
-          .neq('id', id);
-      }
       const { error } = await supabase.from('pdf_layout_configs').update({ is_active }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pdf-layouts'] });
+      queryClient.invalidateQueries({ queryKey: ['pdf_layouts_picker'] });
       toast.success('Status atualizado');
     },
     onError: (err: any) => toast.error(err.message),
