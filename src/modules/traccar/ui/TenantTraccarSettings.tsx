@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import TraccarEventsTab from './TraccarEventsTab';
 import TraccarNotificationsTab from './TraccarNotificationsTab';
+import TenantHealthTab from './TenantHealthTab';
 
 interface TraccarDevice {
   id: number;
@@ -295,12 +296,13 @@ export default function TenantTraccarSettings() {
       </Card>
 
       <Tabs defaultValue="settings" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="settings" className="gap-1.5 text-xs"><Settings className="h-3.5 w-3.5" /> Configurações</TabsTrigger>
           <TabsTrigger value="devices" className="gap-1.5 text-xs"><Satellite className="h-3.5 w-3.5" /> Dispositivos</TabsTrigger>
           <TabsTrigger value="events" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" /> Eventos</TabsTrigger>
           <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /> Notificações</TabsTrigger>
           <TabsTrigger value="policies" className="gap-1.5 text-xs"><Shield className="h-3.5 w-3.5" /> Políticas</TabsTrigger>
+          <TabsTrigger value="health" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" /> Saúde</TabsTrigger>
         </TabsList>
 
         {/* Settings Tab */}
@@ -453,6 +455,11 @@ export default function TenantTraccarSettings() {
               </p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Health Tab */}
+        <TabsContent value="health">
+          <TenantHealthTab tenantId={tenantId} />
         </TabsContent>
       </Tabs>
     </div>
