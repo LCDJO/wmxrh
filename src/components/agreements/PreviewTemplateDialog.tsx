@@ -44,7 +44,7 @@ export function PreviewTemplateDialog({ open, onOpenChange, name, contentHtml, c
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[92vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-lg font-display">Pré-visualização: {name}</DialogTitle>
         </DialogHeader>
