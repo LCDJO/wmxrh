@@ -64,6 +64,7 @@ import PlatformSupportAnalytics from '@/pages/platform/PlatformSupportAnalytics'
 import PlatformLogs from '@/pages/platform/PlatformLogs';
 import DocumentSignatureIntegrations from '@/pages/DocumentSignatureIntegrations';
 import SettingsGamification from '@/pages/SettingsGamification';
+import PlatformIntegrationHealth from '@/pages/platform/PlatformIntegrationHealth';
 
 const PlatformSupportConsole = lazy(() => import('@/modules/support/ui/PlatformSupportConsole'));
 
@@ -152,6 +153,7 @@ export const platformRoutes: RouteObject[] = [
       { path: 'apps-review', element: guarded(<PlatformAppsReview />, opsAdmin) },
       { path: 'ai-operations', element: guarded(<PlatformAIOperations />, opsAdmin) },
       { path: 'document-signature', element: guarded(<DocumentSignatureIntegrations />, opsAdmin) },
+      { path: 'integration-health', element: guarded(<PlatformIntegrationHealth />, opsAdmin) },
     ],
   },
 ];
