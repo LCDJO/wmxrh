@@ -42,9 +42,10 @@ interface Props {
   contentHtml: string;
   title?: string;
   companyName?: string;
+  primaryColor?: string;
 }
 
-export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName = 'Empresa Exemplo Ltda' }: Props) {
+export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName = 'Empresa Exemplo Ltda', primaryColor = '#0f7a4d' }: Props) {
   const previewHtml = useMemo(() => replaceVariables(contentHtml, true), [contentHtml]);
   const today = new Date().toLocaleDateString('pt-BR');
 
@@ -67,10 +68,10 @@ export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName 
       </div>
       <div className="flex-1 overflow-y-auto bg-white">
         {/* Header */}
-        <div className="px-5 pt-4 pb-2 border-b-2" style={{ borderColor: '#1a1a2e' }}>
+        <div className="px-5 pt-4 pb-2 border-b-2" style={{ borderColor: primaryColor }}>
           <div className="flex justify-between items-start">
             <div>
-              <div className="text-xs font-bold" style={{ color: '#1a1a2e', letterSpacing: '0.4px' }}>{companyName}</div>
+              <div className="text-xs font-bold" style={{ color: primaryColor, letterSpacing: '0.4px' }}>{companyName}</div>
               <div className="text-[9px] text-gray-500 mt-0.5">Documento Oficial</div>
             </div>
             <div className="text-[9px] text-gray-500">{today}</div>
@@ -95,7 +96,7 @@ export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName 
                 value={`${window.location.origin}/verificar/SAMPLE`}
                 size={36}
                 level="M"
-                fgColor="#1a1a2e"
+                fgColor={primaryColor}
                 className="border border-gray-200 rounded p-0.5"
               />
               <div>
