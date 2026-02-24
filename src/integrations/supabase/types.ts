@@ -11597,6 +11597,7 @@ export type Database = {
           margin_right: number | null
           margin_top: number | null
           name: string
+          page_size: string
           primary_color: string | null
           qr_code_size: number | null
           secondary_text_color: string | null
@@ -11643,6 +11644,7 @@ export type Database = {
           margin_right?: number | null
           margin_top?: number | null
           name: string
+          page_size?: string
           primary_color?: string | null
           qr_code_size?: number | null
           secondary_text_color?: string | null
@@ -11689,6 +11691,7 @@ export type Database = {
           margin_right?: number | null
           margin_top?: number | null
           name?: string
+          page_size?: string
           primary_color?: string | null
           qr_code_size?: number | null
           secondary_text_color?: string | null

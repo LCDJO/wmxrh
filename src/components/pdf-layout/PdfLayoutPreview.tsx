@@ -1,6 +1,7 @@
 /**
  * PdfLayoutPreview — Real-time A4 preview of the PDF layout configuration.
  */
+import { PAGE_SIZES } from '@/services/pdfDocumentGenerator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { PdfLayoutConfig } from '@/pages/PdfLayoutSettings';
 
@@ -45,10 +46,12 @@ export function PdfLayoutPreview({ config }: Props) {
     wmFontSize: config.watermark_font_size ?? 60,
     wmColor: config.watermark_color || '#000000',
     wmPosition: config.watermark_position || 'center',
+    pageSize: config.page_size || 'a4',
   };
 
-  // Scale: A4 = 210x297mm. Preview width ~420px → scale factor
-  const SCALE = 420 / 210;
+  const pageDef = PAGE_SIZES[c.pageSize] || PAGE_SIZES.a4;
+  const PREVIEW_WIDTH = 420;
+  const SCALE = PREVIEW_WIDTH / pageDef.width;
   const px = (mm: number) => mm * SCALE;
 
   return (
@@ -60,8 +63,8 @@ export function PdfLayoutPreview({ config }: Props) {
         <div
           className="bg-white border border-border shadow-lg relative overflow-hidden"
           style={{
-            width: px(210),
-            height: px(297),
+            width: px(pageDef.width),
+            height: px(pageDef.height),
             fontFamily: c.bodyFont,
           }}
         >

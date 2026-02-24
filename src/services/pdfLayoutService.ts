@@ -42,6 +42,7 @@ const FALLBACK_DEFAULTS: PdfLayoutOverrides = {
   watermarkFontSize: 60,
   watermarkColor: '#000000',
   watermarkPosition: 'center',
+  pageSize: 'a4',
 };
 
 export async function getActivePdfLayout(tenantId: string): Promise<PdfLayoutConfig | null> {
@@ -94,6 +95,7 @@ export function layoutToGeneratorConfig(layout: PdfLayoutConfig): PdfLayoutOverr
     watermarkFontSize: Number(layout.watermark_font_size),
     watermarkColor: layout.watermark_color,
     watermarkPosition: layout.watermark_position,
+    pageSize: layout.page_size || 'a4',
   };
 }
 

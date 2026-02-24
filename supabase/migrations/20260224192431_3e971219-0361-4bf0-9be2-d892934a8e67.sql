@@ -1,0 +1,1 @@
+ALTER TABLE public.pdf_layout_configs ADD COLUMN page_size text NOT NULL DEFAULT 'a4';
