@@ -17,7 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import {
-  GripVertical,
   ChevronDown,
   ChevronRight,
   Type,
@@ -26,6 +25,7 @@ import {
   Palette,
   Maximize,
   Droplets,
+  Lock,
 } from 'lucide-react';
 import type { PdfLayoutConfig } from '@/pages/PdfLayoutSettings';
 
@@ -66,7 +66,7 @@ const CUSTOMIZATION_SECTIONS: SectionDef[] = [
 const ALL_SECTIONS = [...DOCUMENT_SECTIONS, ...CUSTOMIZATION_SECTIONS];
 
 const SECTION_GROUPS: SectionGroup[] = [
-  { title: 'Composição do Documento', description: 'Estrutura fixa que aparece em todas as páginas', sections: DOCUMENT_SECTIONS },
+  { title: 'Composição do Documento', description: 'Cabeçalho e rodapé são fixos em todas as páginas — não podem ser reordenados', sections: DOCUMENT_SECTIONS },
   { title: 'Personalização', description: 'Estilo visual e aparência do documento', sections: CUSTOMIZATION_SECTIONS },
 ];
 
@@ -104,8 +104,14 @@ export function PdfSectionEditor({ editData, onUpdate }: Props) {
           onClick={() => toggleSection(section.id)}
         >
           <div className="flex items-center gap-2 flex-1">
+            {(section.id === 'header' || section.id === 'footer') && (
+              <Lock className="h-3 w-3 text-muted-foreground" />
+            )}
             {section.icon}
             <span className="font-medium text-sm">{section.label}</span>
+            {(section.id === 'header' || section.id === 'footer') && (
+              <span className="text-[10px] text-muted-foreground">(fixo em todas as páginas)</span>
+            )}
           </div>
           <Badge variant="outline" className="text-[10px]">
             {section.id === 'header' ? (editData.show_logo ? 'Com logo' : 'Sem logo') :
