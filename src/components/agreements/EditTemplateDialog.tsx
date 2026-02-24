@@ -2,7 +2,7 @@
  * EditTemplateDialog — Modal for editing an existing agreement template
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -15,7 +15,28 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Copy } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+
+const VARIAVEIS = [
+  { key: '{{nome_colaborador}}', label: 'Nome do Colaborador' },
+  { key: '{{cpf}}', label: 'CPF' },
+  { key: '{{rg}}', label: 'RG' },
+  { key: '{{cargo}}', label: 'Cargo' },
+  { key: '{{departamento}}', label: 'Departamento' },
+  { key: '{{empresa}}', label: 'Empresa' },
+  { key: '{{cnpj_empresa}}', label: 'CNPJ da Empresa' },
+  { key: '{{data_admissao}}', label: 'Data de Admissão' },
+  { key: '{{data_atual}}', label: 'Data Atual' },
+  { key: '{{matricula}}', label: 'Matrícula' },
+  { key: '{{endereco}}', label: 'Endereço' },
+  { key: '{{salario}}', label: 'Salário' },
+  { key: '{{jornada}}', label: 'Jornada de Trabalho' },
+  { key: '{{gestor}}', label: 'Nome do Gestor' },
+  { key: '{{unidade}}', label: 'Unidade / Filial' },
+  { key: '{{email}}', label: 'E-mail' },
+  { key: '{{telefone}}', label: 'Telefone' },
+];
 
 interface TemplateData {
   id: string;
@@ -60,6 +81,20 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
   const [validadeDias, setValidadeDias] = useState('');
   const [renovacaoObrigatoria, setRenovacaoObrigatoria] = useState(false);
   const [conteudoHtml, setConteudoHtml] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertVariable = (varKey: string) => {
+    const ta = textareaRef.current;
+    if (!ta) { setConteudoHtml(prev => prev + varKey); return; }
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    setConteudoHtml(conteudoHtml.slice(0, start) + varKey + conteudoHtml.slice(end));
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + varKey.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  };
 
   useEffect(() => {
     if (template) {
@@ -167,11 +202,28 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
           <div className="space-y-1.5">
             <Label>Conteúdo do Termo (HTML)</Label>
             <Textarea
+              ref={textareaRef}
               rows={8}
               className="font-mono text-xs"
               value={conteudoHtml}
               onChange={e => setConteudoHtml(e.target.value)}
             />
+            <div className="space-y-2 pt-1">
+              <p className="text-[11px] font-medium text-muted-foreground">Clique para inserir a variável no texto:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {VARIAVEIS.map(v => (
+                  <Badge
+                    key={v.key}
+                    variant="outline"
+                    className="cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors text-[11px] gap-1"
+                    onClick={() => insertVariable(v.key)}
+                  >
+                    <Copy className="h-3 w-3" />
+                    {v.label}
+                  </Badge>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
