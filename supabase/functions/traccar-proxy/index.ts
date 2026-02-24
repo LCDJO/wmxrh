@@ -105,11 +105,8 @@ Deno.serve(async (req) => {
     }
 
     const baseUrl = TRACCAR_BASE_URL.replace(/\/+$/, '');
-    const traccarHeaders: Record<string, string> = {
-      'Authorization': `Bearer ${TRACCAR_API_TOKEN}`,
-      'Accept': 'application/json',
-    };
 
+    // ── Build Traccar path ──
     let traccarPath = '/api/server';
 
     switch (action) {
@@ -130,6 +127,37 @@ Deno.serve(async (req) => {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+    }
+
+    // ── First, create a session using the token (Traccar official method) ──
+    // Traccar uses session cookies for auth; Bearer token only works for /api/server
+    const sessionResp = await fetch(`${baseUrl}/api/session?token=${encodeURIComponent(TRACCAR_API_TOKEN)}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!sessionResp.ok) {
+      const errText = await sessionResp.text();
+      return new Response(JSON.stringify({
+        error: `Falha ao autenticar no Traccar (${sessionResp.status})`,
+        details: errText,
+      }), {
+        status: sessionResp.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Extract session cookie from response
+    const setCookieHeader = sessionResp.headers.get('set-cookie') || '';
+    const cookieMatch = setCookieHeader.match(/JSESSIONID=[^;]+/);
+    const sessionCookie = cookieMatch ? cookieMatch[0] : '';
+
+    // ── Now make the actual API call with the session cookie ──
+    const traccarHeaders: Record<string, string> = {
+      'Accept': 'application/json',
+    };
+    if (sessionCookie) {
+      traccarHeaders['Cookie'] = sessionCookie;
     }
 
     const traccarResp = await fetch(`${baseUrl}${traccarPath}`, {
