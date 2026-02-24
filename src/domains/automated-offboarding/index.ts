@@ -69,3 +69,16 @@ export type {
   GenerateAllDocumentsInput,
   AssetItem,
 } from './offboarding-documents.engine';
+
+// ── Etapa 5: eSocial S-2299 Integration ──
+export {
+  submitS2299Event,
+  checkESocialStatus,
+  canFinalizeOffboarding,
+  resubmitS2299Event,
+} from './offboarding-esocial.engine';
+export type {
+  ESocialOffboardingStatus,
+  ESocialSubmissionResult,
+  ESocialStatusCheckResult,
+} from './offboarding-esocial.engine';
