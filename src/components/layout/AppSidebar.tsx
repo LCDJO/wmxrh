@@ -16,7 +16,7 @@ import {
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
   Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook, Store, Bot,
-  HardHat, Activity, Stethoscope, Car, Monitor, Radio, UserMinus,
+  HardHat, Activity, Stethoscope, Car, Monitor, Radio, UserMinus, PanelBottom,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -202,6 +202,7 @@ const navSections: NavSection[] = [
       { to: '/settings/roles', icon: ShieldCheck, label: 'Cargos & Permissões', key: 'iam_roles' },
       { to: '/settings/pdf-layout', icon: FileText, label: 'Layout do PDF', key: 'iam_users' },
       { to: '/settings/webhooks', icon: Webhook, label: 'Webhooks', key: 'dashboard' },
+      { to: '/settings/footer', icon: PanelBottom, label: 'Rodapé', key: 'iam_users' },
       { to: '/announcements', icon: Megaphone, label: 'Avisos do Sistema', key: 'dashboard' },
     ],
   },

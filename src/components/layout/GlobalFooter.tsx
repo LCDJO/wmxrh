@@ -1,6 +1,6 @@
 /**
  * GlobalFooter — Enterprise SaaS footer with dynamic tenant/platform data.
- * Sections gated by PermissionScope; white-label ready via tenant context.
+ * Reads footer_configs to allow per-tenant section toggling & content editing.
  */
 import { useMemo } from 'react';
 import { Shield, Headphones, Cpu, ExternalLink } from 'lucide-react';
@@ -28,6 +28,38 @@ function usePlatformSetting(key: string) {
   });
 }
 
+interface FooterConfigData {
+  show_institutional: boolean;
+  show_compliance: boolean;
+  show_support: boolean;
+  show_technical: boolean;
+  show_bottom_text: boolean;
+  custom_bottom_text: string | null;
+  support_links: { label: string; href: string }[];
+  compliance_items: { text: string }[];
+}
+
+const DEFAULT_CONFIG: FooterConfigData = {
+  show_institutional: true,
+  show_compliance: true,
+  show_support: true,
+  show_technical: true,
+  show_bottom_text: true,
+  custom_bottom_text: null,
+  support_links: [
+    { label: 'Central de Ajuda', href: '#' },
+    { label: 'Documentação Técnica', href: '#' },
+    { label: 'Política de Privacidade', href: '#' },
+    { label: 'Termos de Uso', href: '#' },
+    { label: 'Contato', href: '#' },
+  ],
+  compliance_items: [
+    { text: 'CLT — Consolidação das Leis do Trabalho' },
+    { text: 'Normas Regulamentadoras (NR)' },
+    { text: 'eSocial — Leiautes S-2.5+' },
+  ],
+};
+
 function StatusDot({ online }: { online: boolean }) {
   return (
     <span
@@ -40,94 +72,133 @@ function StatusDot({ online }: { online: boolean }) {
 
 export function GlobalFooter() {
   const { currentTenant } = useTenant();
-  const { can, isTenantAdmin } = usePermissions();
+  const { isTenantAdmin } = usePermissions();
 
-  // Dynamic platform data
   const { data: appVersion } = usePlatformSetting('app_version');
   const { data: lastLegalUpdate } = usePlatformSetting('last_legal_update');
   const { data: govGatewayStatus } = usePlatformSetting('gov_gateway_status');
 
+  const { data: footerConfigRaw } = useQuery({
+    queryKey: ['footer_config', currentTenant?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('footer_configs')
+        .select('*')
+        .eq('tenant_id', currentTenant!.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!currentTenant?.id,
+    staleTime: 5 * 60_000,
+  });
+
+  const cfg: FooterConfigData = useMemo(() => {
+    if (!footerConfigRaw) return DEFAULT_CONFIG;
+    return {
+      show_institutional: footerConfigRaw.show_institutional,
+      show_compliance: footerConfigRaw.show_compliance,
+      show_support: footerConfigRaw.show_support,
+      show_technical: footerConfigRaw.show_technical,
+      show_bottom_text: footerConfigRaw.show_bottom_text,
+      custom_bottom_text: footerConfigRaw.custom_bottom_text,
+      support_links: Array.isArray(footerConfigRaw.support_links)
+        ? (footerConfigRaw.support_links as unknown as { label: string; href: string }[])
+        : DEFAULT_CONFIG.support_links,
+      compliance_items: Array.isArray(footerConfigRaw.compliance_items)
+        ? (footerConfigRaw.compliance_items as unknown as { text: string }[])
+        : DEFAULT_CONFIG.compliance_items,
+    };
+  }, [footerConfigRaw]);
+
   const environment = import.meta.env.MODE === 'production' ? 'Produção' : 'Homologação';
   const envColor = import.meta.env.MODE === 'production' ? 'text-primary' : 'text-amber-500';
-
   const canViewTechnical = useMemo(() => isTenantAdmin, [isTenantAdmin]);
+
+  // Count visible sections to decide grid columns
+  const visibleSections = [
+    cfg.show_institutional,
+    cfg.show_compliance,
+    cfg.show_support,
+    cfg.show_technical && canViewTechnical,
+  ].filter(Boolean).length;
+
+  const gridCols = visibleSections <= 2 ? 'sm:grid-cols-2' : visibleSections === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4';
 
   return (
     <footer className="border-t border-border bg-card text-card-foreground print:hidden">
-      <div className="mx-auto max-w-[1600px] px-8 py-8">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {/* ── 1. Institucional (white-label) ── */}
-          <div className="space-y-2.5">
-            <h4 className="text-xs font-semibold text-foreground tracking-widest uppercase">
-              Institucional
-            </h4>
-            <p className="text-sm font-medium text-foreground">
-              {currentTenant?.name ?? 'PeopleOS'}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              © {currentYear} — Todos os direitos reservados.
-            </p>
-            {currentTenant?.document && (
-              <p className="text-[11px] text-muted-foreground">
-                CNPJ: {currentTenant.document}
+      <div className="mx-auto max-w-[1600px] px-8 py-6">
+        <div className={`grid grid-cols-1 gap-6 ${gridCols}`}>
+          {/* 1. Institucional */}
+          {cfg.show_institutional && (
+            <div className="space-y-1.5">
+              <h4 className="text-xs font-semibold text-foreground tracking-widest uppercase">
+                Institucional
+              </h4>
+              <p className="text-sm font-medium text-foreground">
+                {currentTenant?.name ?? 'PeopleOS'}
               </p>
-            )}
-          </div>
+              <p className="text-[11px] text-muted-foreground">
+                © {currentYear} — Todos os direitos reservados.
+              </p>
+              {currentTenant?.document && (
+                <p className="text-[11px] text-muted-foreground">
+                  CNPJ: {currentTenant.document}
+                </p>
+              )}
+            </div>
+          )}
 
-          {/* ── 2. Compliance & Segurança ── */}
-          <div className="space-y-2.5">
-            <h4 className="flex items-center gap-1.5 text-xs font-semibold text-foreground tracking-widest uppercase">
-              <Shield className="h-3 w-3 text-primary" />
-              Compliance
-            </h4>
-            <ul className="space-y-1 text-[11px] text-muted-foreground">
-              <li>✔ CLT — Consolidação das Leis do Trabalho</li>
-              <li>✔ Normas Regulamentadoras (NR)</li>
-              <li>✔ eSocial — Leiautes S-2.5+</li>
-            </ul>
-            <p className="text-[11px] text-muted-foreground">
-              Regulatório atualizado até{' '}
-              <span className="font-medium text-foreground">
-                {lastLegalUpdate ?? '—'}
-              </span>
-            </p>
-          </div>
+          {/* 2. Compliance */}
+          {cfg.show_compliance && cfg.compliance_items.length > 0 && (
+            <div className="space-y-1.5">
+              <h4 className="flex items-center gap-1.5 text-xs font-semibold text-foreground tracking-widest uppercase">
+                <Shield className="h-3 w-3 text-primary" />
+                Compliance
+              </h4>
+              <ul className="space-y-0.5 text-[11px] text-muted-foreground">
+                {cfg.compliance_items.map((item, i) => (
+                  <li key={i}>✔ {item.text}</li>
+                ))}
+              </ul>
+              {lastLegalUpdate && (
+                <p className="text-[11px] text-muted-foreground">
+                  Atualizado até{' '}
+                  <span className="font-medium text-foreground">{lastLegalUpdate}</span>
+                </p>
+              )}
+            </div>
+          )}
 
-          {/* ── 3. Suporte ── */}
-          <div className="space-y-2.5">
-            <h4 className="flex items-center gap-1.5 text-xs font-semibold text-foreground tracking-widest uppercase">
-              <Headphones className="h-3 w-3 text-primary" />
-              Suporte
-            </h4>
-            <ul className="space-y-1 text-[11px]">
-              {[
-                { label: 'Central de Ajuda', href: '#' },
-                { label: 'Documentação Técnica', href: '#' },
-                { label: 'Política de Privacidade', href: '#' },
-                { label: 'Termos de Uso', href: '#' },
-                { label: 'Contato', href: '#' },
-              ].map(link => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {link.label}
-                    <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100" />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* 3. Suporte */}
+          {cfg.show_support && cfg.support_links.length > 0 && (
+            <div className="space-y-1.5">
+              <h4 className="flex items-center gap-1.5 text-xs font-semibold text-foreground tracking-widest uppercase">
+                <Headphones className="h-3 w-3 text-primary" />
+                Suporte
+              </h4>
+              <ul className="space-y-0.5 text-[11px]">
+                {cfg.support_links.filter(l => l.label).map((link, i) => (
+                  <li key={i}>
+                    <a
+                      href={link.href || '#'}
+                      className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-          {/* ── 4. Técnico (gated by permission) ── */}
-          {canViewTechnical && (
-            <div className="space-y-2.5">
+          {/* 4. Técnico */}
+          {cfg.show_technical && canViewTechnical && (
+            <div className="space-y-1.5">
               <h4 className="flex items-center gap-1.5 text-xs font-semibold text-foreground tracking-widest uppercase">
                 <Cpu className="h-3 w-3 text-primary" />
                 Técnico
               </h4>
-              <ul className="space-y-1 text-[11px] text-muted-foreground">
+              <ul className="space-y-0.5 text-[11px] text-muted-foreground">
                 <li>
                   Versão:{' '}
                   <span className="font-mono font-medium text-foreground">
@@ -136,16 +207,8 @@ export function GlobalFooter() {
                 </li>
                 <li>
                   Ambiente:{' '}
-                  <span
-                    className={`inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold ${envColor}`}
-                  >
+                  <span className={`inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold ${envColor}`}>
                     {environment}
-                  </span>
-                </li>
-                <li>
-                  Atualização legislativa:{' '}
-                  <span className="font-medium text-foreground">
-                    {lastLegalUpdate ?? '—'}
                   </span>
                 </li>
                 <li className="flex items-center gap-1.5">
@@ -160,11 +223,14 @@ export function GlobalFooter() {
           )}
         </div>
 
-        <Separator className="my-5" />
-
-        <p className="text-center text-[10px] text-muted-foreground">
-          Plataforma de Compliance Trabalhista e SST — Uso restrito a usuários autorizados.
-        </p>
+        {cfg.show_bottom_text && (
+          <>
+            <Separator className="my-4" />
+            <p className="text-center text-[10px] text-muted-foreground">
+              {cfg.custom_bottom_text || 'Plataforma de Compliance Trabalhista e SST — Uso restrito a usuários autorizados.'}
+            </p>
+          </>
+        )}
       </div>
     </footer>
   );
