@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -15,8 +15,9 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Copy } from 'lucide-react';
+import { Loader2, Copy, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { PdfLayoutPicker } from './PdfLayoutPicker';
 import { TemplateHtmlPreview } from './TemplateHtmlPreview';
 
@@ -86,7 +87,21 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
   const [renovacaoObrigatoria, setRenovacaoObrigatoria] = useState(false);
   const [conteudoHtml, setConteudoHtml] = useState('');
   const [pdfLayoutId, setPdfLayoutId] = useState<string | null>(null);
+  const [excludedPositions, setExcludedPositions] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const { data: allPositions = [] } = useQuery({
+    queryKey: ['positions_for_template', template?.tenant_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('positions')
+        .select('id, title')
+        .eq('tenant_id', template!.tenant_id)
+        .order('title');
+      return (data || []) as { id: string; title: string }[];
+    },
+    enabled: !!template?.tenant_id && categoria === 'position_specific',
+  });
 
   const insertVariable = (varKey: string) => {
     const ta = textareaRef.current;
@@ -113,6 +128,7 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
       setRenovacaoObrigatoria(template.renovacao_obrigatoria);
       setConteudoHtml(template.conteudo_html);
       setPdfLayoutId(template.pdf_layout_config_id ?? null);
+      setExcludedPositions([]);
     }
   }, [template]);
 
@@ -125,6 +141,10 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
 
     setSaving(true);
     try {
+      const appliesToPositions = categoria === 'position_specific'
+        ? allPositions.filter(p => !excludedPositions.includes(p.id)).map(p => p.id)
+        : null;
+
       const { error } = await supabase
         .from('agreement_templates')
         .update({
@@ -138,6 +158,7 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
           renovacao_obrigatoria: renovacaoObrigatoria,
           conteudo_html: conteudoHtml,
           pdf_layout_config_id: pdfLayoutId,
+          applies_to_positions: appliesToPositions,
         })
         .eq('id', template.id);
 
@@ -209,6 +230,44 @@ export function EditTemplateDialog({ open, onOpenChange, template }: Props) {
             </div>
 
             {template && <PdfLayoutPicker tenantId={template.tenant_id} value={pdfLayoutId} onChange={setPdfLayoutId} />}
+
+            {categoria === 'position_specific' && allPositions.length > 0 && (
+              <div className="space-y-2">
+                <Label>Cargos com acesso ao documento</Label>
+                <p className="text-[11px] text-muted-foreground">Desmarque os cargos que <strong>não</strong> devem ter acesso a este termo.</p>
+                <div className="max-h-40 overflow-y-auto border border-border rounded-md p-2 space-y-1.5">
+                  {allPositions.map(p => {
+                    const isExcluded = excludedPositions.includes(p.id);
+                    return (
+                      <label key={p.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded px-1.5 py-1">
+                        <Checkbox
+                          checked={!isExcluded}
+                          onCheckedChange={(checked) => {
+                            setExcludedPositions(prev =>
+                              checked ? prev.filter(id => id !== p.id) : [...prev, p.id]
+                            );
+                          }}
+                        />
+                        <span className={isExcluded ? 'line-through text-muted-foreground' : ''}>{p.title}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {excludedPositions.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {excludedPositions.map(id => {
+                      const pos = allPositions.find(p => p.id === id);
+                      return pos ? (
+                        <Badge key={id} variant="destructive" className="text-[10px] gap-1 cursor-pointer" onClick={() => setExcludedPositions(prev => prev.filter(x => x !== id))}>
+                          {pos.title}
+                          <X className="h-3 w-3" />
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label>Conteúdo do Termo (HTML)</Label>
