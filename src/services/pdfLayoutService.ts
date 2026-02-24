@@ -56,6 +56,20 @@ export async function getActivePdfLayout(tenantId: string): Promise<PdfLayoutCon
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as PdfLayoutConfig;
+}
+
+/** Fetch a specific layout by ID */
+export async function getPdfLayoutById(layoutId: string): Promise<PdfLayoutConfig | null> {
+  const { data, error } = await supabase
+    .from('pdf_layout_configs')
+    .select('*')
+    .eq('id', layoutId)
     .maybeSingle();
 
   if (error || !data) return null;
@@ -113,7 +127,11 @@ export function layoutToGeneratorConfig(layout: PdfLayoutConfig): PdfLayoutOverr
  * Returns the active layout for a tenant, or safe fallback defaults.
  * Use this in PDF generation flows to guarantee no null config.
  */
-export async function getLayoutOrDefaults(tenantId: string): Promise<PdfLayoutOverrides> {
+export async function getLayoutOrDefaults(tenantId: string, layoutId?: string | null): Promise<PdfLayoutOverrides> {
+  if (layoutId) {
+    const specific = await getPdfLayoutById(layoutId);
+    if (specific) return layoutToGeneratorConfig(specific);
+  }
   const layout = await getActivePdfLayout(tenantId);
   if (layout) return layoutToGeneratorConfig(layout);
   return { ...FALLBACK_DEFAULTS };

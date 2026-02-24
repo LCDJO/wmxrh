@@ -22,7 +22,7 @@ export function PdfLayoutPicker({ tenantId, value, onChange }: Props) {
         .from('pdf_layout_configs')
         .select('id, name, is_active, version_number')
         .eq('tenant_id', tenantId)
-        .order('is_active', { ascending: false })
+        .eq('is_active', true)
         .order('name');
       if (error) throw error;
       return data || [];
@@ -41,20 +41,20 @@ export function PdfLayoutPicker({ tenantId, value, onChange }: Props) {
         onValueChange={v => onChange(v === '__default__' ? null : v)}
       >
         <SelectTrigger>
-          <SelectValue placeholder={isLoading ? 'Carregando...' : 'Layout padrão do tenant'} />
+          <SelectValue placeholder={isLoading ? 'Carregando...' : 'Layout padrão'} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="__default__">
             <span className="flex items-center gap-2">
-              Layout padrão (ativo)
+              Layout padrão (automático)
             </span>
           </SelectItem>
           {layouts.map(l => (
             <SelectItem key={l.id} value={l.id}>
               <span className="flex items-center gap-2">
                 {l.name}
-                <Badge variant={l.is_active ? 'default' : 'outline'} className="text-[10px] px-1.5 py-0">
-                  {l.is_active ? 'Ativo' : `v${l.version_number}`}
+                <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                  v{l.version_number}
                 </Badge>
               </span>
             </SelectItem>
@@ -62,7 +62,9 @@ export function PdfLayoutPicker({ tenantId, value, onChange }: Props) {
         </SelectContent>
       </Select>
       <p className="text-[11px] text-muted-foreground">
-        Escolha um layout específico ou use o layout padrão ativo do tenant.
+        {layouts.length === 0
+          ? 'Nenhum layout ativo. Ative layouts na página de configurações.'
+          : `${layouts.length} layout(s) ativo(s) disponível(is) para seleção.`}
       </p>
     </div>
   );
