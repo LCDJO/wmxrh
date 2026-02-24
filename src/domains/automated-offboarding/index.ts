@@ -5,6 +5,18 @@ export * from './types';
 export { offboardingService } from './offboarding.service';
 export { getChecklistTemplatesByType } from './checklist-templates';
 
+// ── Pendency Validation Engine (Etapa 2) ──
+export {
+  validateOffboardingPendencies,
+  pendenciesToChecklistItems,
+} from './pendency-validation.engine';
+export type {
+  PendencyCategory,
+  PendencySeverity,
+  OffboardingPendency,
+  PendencyValidationResult,
+} from './pendency-validation.engine';
+
 // ── Operational Blocks Engine ──
 export {
   evaluateOffboardingRestrictions,

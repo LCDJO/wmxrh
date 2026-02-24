@@ -12,6 +12,7 @@ import type {
   ChecklistItemStatus,
 } from './types';
 import { getChecklistTemplatesByType } from './checklist-templates';
+import { validateOffboardingPendencies, pendenciesToChecklistItems } from './pendency-validation.engine';
 
 export const offboardingService = {
   // ── Workflows ──
@@ -95,12 +96,23 @@ export const offboardingService = {
       if (clErr) throw clErr;
     }
 
-    // Audit log
+    // 3. Run pendency validation and inject dynamic checklist items
+    const validation = await validateOffboardingPendencies(dto.tenant_id, dto.employee_id, (wf as any).id);
+    if (validation.pendencies.length > 0) {
+      const startOrdem = checklistRows.length + 1;
+      const pendencyItems = pendenciesToChecklistItems(validation.pendencies, dto.tenant_id, (wf as any).id, startOrdem);
+      const { error: piErr } = await supabase
+        .from('offboarding_checklist_items')
+        .insert(pendencyItems as any);
+      if (piErr) console.warn('[offboarding] Failed to insert pendency items:', piErr);
+    }
+
+    // 4. Audit log
     await supabase.from('offboarding_audit_log').insert({
       tenant_id: dto.tenant_id,
       workflow_id: (wf as any).id,
       action: 'workflow_created',
-      new_value: dto as any,
+      new_value: { ...dto, pendency_validation: { total: validation.pendencies.length, blocking: validation.total_blocking, can_proceed: validation.can_proceed } } as any,
     } as any);
 
     return wf as unknown as OffboardingWorkflow;
