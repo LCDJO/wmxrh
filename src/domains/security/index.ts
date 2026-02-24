@@ -184,3 +184,7 @@ export type { SSOProvider, SSOConfig } from './sso-ready';
 // LGPD Ready
 export { lgpdService, anonymizeName, anonymizeEmail, anonymizePhone, anonymizeCPF, DEFAULT_LEGAL_BASIS } from './lgpd-ready';
 export type { ConsentPurpose, ConsentRecord, AnonymizationRequest, DataAccessLog, LegalBasisRecord, LegalBasisType } from './lgpd-ready';
+
+// Security Guard — Immutability & Access Control
+export { securityGuard, checkPermission as checkGuardPermission, checkEmployeeDataAccess, isRecordLocked, IMMUTABILITY_RULES } from './security-guard.service';
+export type { ImmutabilityRule } from './security-guard.service';
