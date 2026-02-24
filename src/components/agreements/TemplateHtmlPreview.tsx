@@ -27,10 +27,13 @@ const SAMPLE_DATA: Record<string, string> = {
   '{{telefone}}': '(11) 99999-0000',
 };
 
-export function replaceVariables(html: string): string {
+export function replaceVariables(html: string, highlight = false): string {
   let result = html;
   for (const [key, value] of Object.entries(SAMPLE_DATA)) {
-    result = result.split(key).join(value);
+    const replacement = highlight
+      ? `<span style="color:#dc2626;font-weight:700">${value}</span>`
+      : value;
+    result = result.split(key).join(replacement);
   }
   return result;
 }
@@ -42,7 +45,7 @@ interface Props {
 }
 
 export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName = 'Empresa Exemplo Ltda' }: Props) {
-  const previewHtml = useMemo(() => replaceVariables(contentHtml), [contentHtml]);
+  const previewHtml = useMemo(() => replaceVariables(contentHtml, true), [contentHtml]);
   const today = new Date().toLocaleDateString('pt-BR');
 
   if (!contentHtml.trim()) {
@@ -104,8 +107,9 @@ export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName 
           </div>
         </div>
       </div>
-      <div className="text-[9px] text-muted-foreground px-3 py-1.5 border-t border-border shrink-0">
-        * Variáveis substituídas por dados fictícios.
+      <div className="text-[9px] text-muted-foreground px-3 py-1.5 border-t border-border shrink-0 flex items-center gap-2">
+        <span style={{ color: '#dc2626', fontWeight: 700 }}>■</span>
+        Textos em <strong style={{ color: '#dc2626' }}>vermelho e negrito</strong> são variáveis substituídas por dados fictícios.
       </div>
     </div>
   );
