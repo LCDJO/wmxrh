@@ -13,6 +13,14 @@ import type {
 } from './types';
 import { getChecklistTemplatesByType } from './checklist-templates';
 import { validateOffboardingPendencies, pendenciesToChecklistItems } from './pendency-validation.engine';
+import {
+  calculateRescission,
+  calculateAvisoPrevioDays,
+  calculateProportionalMonths,
+  type RescissionInput,
+  type RescissionResult,
+} from './rescission-calculator.engine';
+import { generateTermoRescisaoHtml, type TermoRescisaoData } from './rescission-document.generator';
 
 export const offboardingService = {
   // ── Workflows ──
@@ -253,4 +261,58 @@ export const offboardingService = {
       criteria,
     };
   },
+
+  // ── Etapa 3: Cálculo Rescisão ──
+
+  /**
+   * Run rescission calculation for a workflow.
+   * Stores the simulation snapshot on the workflow.
+   */
+  async calculateRescission(
+    workflowId: string,
+    tenantId: string,
+    input: RescissionInput,
+  ): Promise<RescissionResult> {
+    const result = calculateRescission(input);
+
+    // Persist snapshot on workflow
+    await supabase
+      .from('offboarding_workflows')
+      .update({
+        rescisao_bruta: result.total_proventos,
+        rescisao_descontos: result.total_descontos,
+        rescisao_liquida: result.valor_liquido,
+        simulation_snapshot: result as any,
+      } as any)
+      .eq('id', workflowId)
+      .eq('tenant_id', tenantId);
+
+    // Audit
+    await supabase.from('offboarding_audit_log').insert({
+      tenant_id: tenantId,
+      workflow_id: workflowId,
+      action: 'rescission_calculated',
+      new_value: {
+        total_proventos: result.total_proventos,
+        total_descontos: result.total_descontos,
+        valor_liquido: result.valor_liquido,
+        multa_fgts: result.multa_fgts,
+      } as any,
+    } as any);
+
+    return result;
+  },
+
+  /**
+   * Generate Termo de Rescisão HTML document.
+   */
+  generateTermoRescisao(data: TermoRescisaoData): string {
+    return generateTermoRescisaoHtml(data);
+  },
+
+  /** Helper: calculate aviso prévio days based on tenure */
+  calculateAvisoPrevioDays,
+
+  /** Helper: calculate proportional months for férias/13º */
+  calculateProportionalMonths,
 };

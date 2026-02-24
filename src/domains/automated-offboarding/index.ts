@@ -35,3 +35,19 @@ export type {
   OffboardingRestrictionProfile,
   OffboardingRestrictionCheckResult,
 } from './offboarding-blocks.engine';
+
+// ── Etapa 3: Rescission Calculator ──
+export {
+  calculateRescission,
+  calculateAvisoPrevioDays,
+  calculateProportionalMonths,
+} from './rescission-calculator.engine';
+export type {
+  RescissionInput,
+  RescissionLineItem,
+  RescissionResult,
+} from './rescission-calculator.engine';
+
+// ── Termo de Rescisão Document ──
+export { generateTermoRescisaoHtml } from './rescission-document.generator';
+export type { TermoRescisaoData } from './rescission-document.generator';
