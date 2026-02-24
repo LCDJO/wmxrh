@@ -48,6 +48,24 @@ export type {
   RescissionResult,
 } from './rescission-calculator.engine';
 
-// ── Termo de Rescisão Document ──
+// ── Termo de Rescisão Document (legacy) ──
 export { generateTermoRescisaoHtml } from './rescission-document.generator';
 export type { TermoRescisaoData } from './rescission-document.generator';
+
+// ── Etapa 4: Offboarding Documents Engine ──
+export {
+  generateAllOffboardingDocuments,
+  generateTrctHtml,
+  generateTermoQuitacaoHtml,
+  generateCartaDemissaoHtml,
+  generateReciboDevolucaoBensHtml,
+  DOCUMENT_TYPE_LABELS,
+} from './offboarding-documents.engine';
+export type {
+  OffboardingDocumentType,
+  IntegrityProof,
+  OffboardingDocumentContext,
+  GeneratedDocument,
+  GenerateAllDocumentsInput,
+  AssetItem,
+} from './offboarding-documents.engine';
