@@ -1,10 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useAdaptiveOnboarding } from '@/hooks/use-adaptive-onboarding';
 import { OnboardingStepper } from '@/components/onboarding/OnboardingStepper';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
@@ -30,20 +32,25 @@ export default function TenantOnboarding() {
   const TENANT_ID = currentTenant?.id ?? 'preview-tenant';
   const USER_ID = user?.id ?? 'current-user';
 
-  // ── Redirect if no tenant or onboarding not needed ──
-  useEffect(() => {
-    if (loading) return;
+  // ── Fetch tenant's active plan ──
+  const { data: tenantPlan } = useQuery({
+    queryKey: ['tenant-plan', TENANT_ID],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tenant_plans')
+        .select('*, saas_plans(name, allowed_modules)')
+        .eq('tenant_id', TENANT_ID)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentTenant?.id,
+  });
 
-    if (!currentTenant) {
-      // No tenant associated — user hasn't been invited yet
-      navigate('/auth', { replace: true });
-      return;
-    }
-
-    if (!needsOnboarding) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [currentTenant, needsOnboarding, loading, navigate]);
+  const planTier = (tenantPlan?.saas_plans as any)?.name?.toLowerCase() ?? 'starter';
+  const allowedModules: string[] = (tenantPlan?.saas_plans as any)?.allowed_modules
+    ?? ['employees', 'companies', 'departments'];
 
   // Security context
   const securityCtx: OnboardingSecurityContext = {
@@ -55,16 +62,28 @@ export default function TenantOnboarding() {
   // Adaptive onboarding engine
   const onboarding = useAdaptiveOnboarding({
     tenantId: TENANT_ID,
-    planTier: 'professional',
-    allowedModules: ['employees', 'companies', 'departments', 'compensation', 'benefits', 'compliance', 'health'],
+    planTier,
+    allowedModules,
     userRole: 'tenant_admin',
   });
+
+  // ── Redirect if no tenant or onboarding not needed ──
+  useEffect(() => {
+    if (loading) return;
+    if (!currentTenant) {
+      navigate('/auth', { replace: true });
+      return;
+    }
+    if (!needsOnboarding) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [currentTenant, needsOnboarding, loading, navigate]);
 
   // Emit onboarding started on mount
   useEffect(() => {
     if (!currentTenant?.id) return;
     emitTenantOnboardingStarted(TENANT_ID, USER_ID, {
-      plan_tier: 'professional',
+      plan_tier: planTier,
       total_steps: onboarding.flow.steps.length,
       estimated_minutes: onboarding.flow.estimated_total_minutes,
     });
@@ -115,7 +134,7 @@ export default function TenantOnboarding() {
         completed_steps: onboarding.progress.completed_steps.length,
         skipped_steps: onboarding.progress.skipped_steps.length,
         total_elapsed_ms: Date.now() - startedAt,
-        plan_tier: 'professional',
+        plan_tier: planTier,
       });
     }
   }, [onboarding, securityCtx, startedAt, persistProgress, toast]);
@@ -147,7 +166,7 @@ export default function TenantOnboarding() {
   const handleWizardFinish = (config: { selectedModules: string[]; selectedRoles: string[] }) => {
     emitRoleBootstrapCompleted(TENANT_ID, USER_ID, {
       roles_created: config.selectedRoles,
-      plan_tier: 'professional',
+      plan_tier: planTier,
     });
 
     toast({
@@ -227,7 +246,7 @@ export default function TenantOnboarding() {
       <SetupWizardModal
         open={showWizard}
         onOpenChange={setShowWizard}
-        planTier="professional"
+        planTier={planTier}
         tenantName={currentTenant.name}
         availableModules={onboarding.availableModules}
         recommendedModules={onboarding.recommendedModules}
