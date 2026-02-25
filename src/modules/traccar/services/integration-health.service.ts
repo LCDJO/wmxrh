@@ -96,7 +96,17 @@ export async function triggerHealthCheck(tenantId?: string): Promise<{
 }> {
   const body = tenantId ? { tenant_id: tenantId } : { all: true };
   const { data, error } = await supabase.functions.invoke('integration-health-check', { body });
-  if (error) throw new Error(error.message);
+  if (error) {
+    // Try to extract specific error message from response
+    let message = error.message || 'Erro desconhecido';
+    try {
+      if (error.context instanceof Response) {
+        const errorBody = await error.context.json();
+        if (errorBody?.error) message = errorBody.error;
+      }
+    } catch { /* ignore parse errors */ }
+    throw new Error(message);
+  }
   return data as any;
 }
 
