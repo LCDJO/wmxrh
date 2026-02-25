@@ -68,8 +68,8 @@ import PlatformIntegrationAutomation from '@/pages/platform/PlatformIntegrationA
 import PlatformAIOperations from '@/pages/platform/PlatformAIOperations';
 import PlatformSupportAnalytics from '@/pages/platform/PlatformSupportAnalytics';
 import PlatformLogs from '@/pages/platform/PlatformLogs';
-import DocumentSignatureIntegrations from '@/pages/DocumentSignatureIntegrations';
-import SettingsGamification from '@/pages/SettingsGamification';
+import DocumentSignatureIntegrations from '@/pages/platform/PlatformDocumentSignature';
+import SettingsGamification from '@/pages/platform/PlatformSettingsGamification';
 import PlatformIntegrationHealth from '@/pages/platform/PlatformIntegrationHealth';
 
 const PlatformSupportConsole = lazy(() => import('@/modules/support/ui/PlatformSupportConsole'));
