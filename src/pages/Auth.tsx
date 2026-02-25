@@ -12,10 +12,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { platformEvents } from '@/domains/platform/platform-events';
 import { identityIntelligence } from '@/domains/security/kernel/identity-intelligence';
 import { tenantStorage } from '@/lib/tenant-storage';
+import { formatCnpj, isValidCnpj } from '@/lib/cnpj';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Shield, Mail, Lock, ArrowRight, Loader2, KeyRound, Building2, Crown, User, Phone, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -43,7 +43,7 @@ export default function Auth() {
   const [companyName, setCompanyName] = useState('');
   const [companyDocument, setCompanyDocument] = useState('');
   const [companyPhone, setCompanyPhone] = useState('');
-  const [remember, setRemember] = useState(false);
+  const [cnpjError, setCnpjError] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [detectedIntent, setDetectedIntent] = useState<DetectedIntent | null>(null);
@@ -187,8 +187,15 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
-    if (!fullName.trim() || !companyName.trim() || !companyDocument.trim() || !companyPhone.trim()) {
+    const cleanDoc = companyDocument.replace(/\D/g, '');
+    if (!fullName.trim() || !companyName.trim() || !cleanDoc || !companyPhone.trim()) {
       toast({ title: 'Campos obrigatórios', description: 'Preencha todos os campos para continuar.', variant: 'destructive' });
+      setLoading(false);
+      return;
+    }
+
+    if (cleanDoc.length !== 14 || !isValidCnpj(cleanDoc)) {
+      toast({ title: 'CNPJ inválido', description: 'Informe um CNPJ válido com 14 dígitos.', variant: 'destructive' });
       setLoading(false);
       return;
     }
@@ -351,16 +358,6 @@ export default function Auth() {
               </div>
 
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="remember"
-                    checked={remember}
-                    onCheckedChange={(v) => setRemember(v === true)}
-                  />
-                  <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
-                    Lembrar sessão
-                  </Label>
-                </div>
                 <button
                   type="button"
                   onClick={() => setMode('forgot')}
@@ -493,10 +490,21 @@ export default function Auth() {
                           type="text"
                           placeholder="00.000.000/0000-00"
                           value={companyDocument}
-                          onChange={e => setCompanyDocument(e.target.value)}
-                          className="pl-10 h-11"
+                          onChange={e => {
+                            const masked = formatCnpj(e.target.value);
+                            setCompanyDocument(masked);
+                            const digits = masked.replace(/\D/g, '');
+                            if (digits.length === 14 && !isValidCnpj(digits)) {
+                              setCnpjError('CNPJ inválido');
+                            } else {
+                              setCnpjError('');
+                            }
+                          }}
+                          maxLength={18}
+                          className={`pl-10 h-11 ${cnpjError ? 'border-destructive' : ''}`}
                           required
                         />
+                        {cnpjError && <p className="text-xs text-destructive mt-1">{cnpjError}</p>}
                       </div>
                     </div>
 
