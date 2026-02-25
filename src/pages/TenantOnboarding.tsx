@@ -73,7 +73,7 @@ export default function TenantOnboarding() {
   useEffect(() => {
     if (loading) return;
     if (!currentTenant) {
-      navigate('/auth', { replace: true });
+      navigate('/auth/login', { replace: true });
       return;
     }
     if (!needsOnboarding) {
