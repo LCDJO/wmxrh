@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign, ShieldAlert, Scale, Lock, Building2, FileCheck, Banknote, ScrollText, Gift, Calculator, GraduationCap, HardHat, Clock } from 'lucide-react';
+import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign, ShieldAlert, Scale, Lock, Building2, FileCheck, Banknote, ScrollText, Gift, Calculator, GraduationCap, HardHat, Clock, Activity } from 'lucide-react';
 import { RemuneracaoSection } from './RemuneracaoSection';
 import { SSTSection } from './SSTSection';
 import { DisciplinarySection } from './DisciplinarySection';
@@ -27,6 +27,7 @@ import { BenefitsSection } from './BenefitsSection';
 import { HealthExamsSection } from './HealthExamsSection';
 import { RiskExposuresSection } from './RiskExposuresSection';
 import { UnifiedTimelineSection } from './UnifiedTimelineSection';
+import { BehavioralProfileSection } from './BehavioralProfileSection';
 import { EmployeeEventsSection } from './EmployeeEventsSection';
 import { DocumentosTab } from './DocumentosTab';
 import { TermosDocumentosTab } from './TermosDocumentosTab';
@@ -295,6 +296,13 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit, employee, c
             </div>
             <div className="border-t border-border pt-4">
               <CorrectiveActionsTab employeeId={employeeId} tenantId={tenantId} />
+            </div>
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Activity className="h-4 w-4 text-primary" />
+                <h4 className="text-sm font-semibold text-card-foreground">Perfil Comportamental</h4>
+              </div>
+              <BehavioralProfileSection employeeId={employeeId} tenantId={tenantId} />
             </div>
           </div>
         </TabsContent>
