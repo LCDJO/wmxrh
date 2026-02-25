@@ -21,6 +21,7 @@ import {
   Gauge, MapPin, Shield, Plus, Pencil, Trash2, Loader2, AlertTriangle,
   Camera, Navigation, ArrowUpDown
 } from 'lucide-react';
+import { ZoneMapPicker } from '@/modules/traccar/ui/ZoneMapPicker';
 
 /* ─── Types ─── */
 interface SpeedZone {
@@ -219,7 +220,7 @@ function SpeedZonesTab({ tenantId }: { tenantId: string }) {
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5" onClick={openNew}><Plus className="h-3.5 w-3.5" /> Nova Zona</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>{editing ? 'Editar' : 'Nova'} Zona de Velocidade</DialogTitle></DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2"><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Zona Urbana Centro" /></div>
@@ -236,12 +237,19 @@ function SpeedZonesTab({ tenantId }: { tenantId: string }) {
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2"><Label>Tolerância (km/h)</Label><Input type="number" value={form.tolerance_kmh} onChange={e => setForm(f => ({ ...f, tolerance_kmh: parseInt(e.target.value) || 0 }))} /></div>
-                  <div className="space-y-2"><Label>Latitude</Label><Input value={form.latitude} onChange={e => setForm(f => ({ ...f, latitude: e.target.value }))} placeholder="-23.55" /></div>
-                  <div className="space-y-2"><Label>Longitude</Label><Input value={form.longitude} onChange={e => setForm(f => ({ ...f, longitude: e.target.value }))} placeholder="-46.63" /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2"><Label>Raio (metros)</Label><Input type="number" value={form.radius_meters} onChange={e => setForm(f => ({ ...f, radius_meters: parseInt(e.target.value) || 500 }))} /></div>
                   <div className="space-y-2 flex items-end gap-2"><Label>Ativa</Label><Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} /></div>
+                </div>
+                {/* Map Picker */}
+                <ZoneMapPicker
+                  latitude={form.latitude ? parseFloat(form.latitude) : null}
+                  longitude={form.longitude ? parseFloat(form.longitude) : null}
+                  radiusMeters={form.radius_meters}
+                  onLocationChange={(lat, lng) => setForm(f => ({ ...f, latitude: lat.toFixed(6), longitude: lng.toFixed(6) }))}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Latitude</Label><Input value={form.latitude} onChange={e => setForm(f => ({ ...f, latitude: e.target.value }))} placeholder="-23.55" readOnly className="bg-muted/50 font-mono text-xs" /></div>
+                  <div className="space-y-2"><Label>Longitude</Label><Input value={form.longitude} onChange={e => setForm(f => ({ ...f, longitude: e.target.value }))} placeholder="-46.63" readOnly className="bg-muted/50 font-mono text-xs" /></div>
                 </div>
               </div>
               <DialogFooter>
