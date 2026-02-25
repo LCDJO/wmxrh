@@ -1,0 +1,1 @@
+ALTER TABLE public.fleet_warnings ALTER COLUMN incident_id DROP NOT NULL;
