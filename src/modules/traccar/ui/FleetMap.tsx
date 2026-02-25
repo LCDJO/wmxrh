@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGoogleMapsKey } from './useGoogleMapsKey';
 import { loadGoogleMaps } from './loadGoogleMaps';
+import { useDefaultMapCenter } from './useDefaultMapCenter';
 import type { TraccarVehicle } from '@/hooks/useTraccarFleet';
 
 interface FleetMapProps {
@@ -29,6 +30,7 @@ export function FleetMap({ vehicles, onVehicleClick, heatmapMode = false, tenant
   const markersRef = useRef<google.maps.Marker[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [ready, setReady] = useState(false);
+  const defaultCenter = useDefaultMapCenter();
 
   // Load Google Maps script
   useEffect(() => {
@@ -41,7 +43,7 @@ export function FleetMap({ vehicles, onVehicleClick, heatmapMode = false, tenant
     if (!ready || !mapContainer.current || mapRef.current) return;
 
     const map = new google.maps.Map(mapContainer.current, {
-      center: { lat: -23.5505, lng: -46.6333 },
+      center: defaultCenter,
       zoom: 10,
       mapTypeControl: false,
       streetViewControl: false,

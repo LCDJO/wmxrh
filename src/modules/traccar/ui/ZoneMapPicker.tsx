@@ -5,6 +5,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useGoogleMapsKey } from './useGoogleMapsKey';
 import { loadGoogleMaps } from './loadGoogleMaps';
+import { useDefaultMapCenter } from './useDefaultMapCenter';
 
 interface ZoneMapPickerProps {
   latitude: number | null;
@@ -22,6 +23,7 @@ export function ZoneMapPicker({ latitude, longitude, radiusMeters, onLocationCha
   const markerRef = useRef<google.maps.Marker | null>(null);
   const circleRef = useRef<google.maps.Circle | null>(null);
   const [ready, setReady] = useState(false);
+  const defaultCenter = useDefaultMapCenter();
 
   useEffect(() => {
     if (!key) return;
@@ -70,7 +72,7 @@ export function ZoneMapPicker({ latitude, longitude, radiusMeters, onLocationCha
   useEffect(() => {
     if (!ready || !containerRef.current || mapRef.current) return;
 
-    const center = latitude && longitude ? { lat: latitude, lng: longitude } : { lat: -23.5505, lng: -46.6333 };
+    const center = latitude && longitude ? { lat: latitude, lng: longitude } : defaultCenter;
 
     const map = new google.maps.Map(containerRef.current, {
       center,
