@@ -103,6 +103,28 @@ export default function TenantAppsIntegrations() {
     onError: () => toast.error('Erro ao instalar app.'),
   });
 
+  // Revoke subscription mutation
+  const revokeMutation = useMutation({
+    mutationFn: async (subscriptionId: string) => {
+      const { error } = await supabase
+        .from('developer_api_subscriptions')
+        .update({ status: 'revoked', cancelled_at: new Date().toISOString(), granted_scopes: [] })
+        .eq('id', subscriptionId)
+        .eq('tenant_id', tenantId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-api-subscriptions'] });
+      toast.success('Acesso revogado com sucesso.');
+    },
+    onError: () => toast.error('Erro ao revogar acesso.'),
+  });
+
+  const handleRevoke = (subscriptionId: string, appName: string) => {
+    if (!confirm(`Tem certeza que deseja revogar todos os scopes de "${appName}"? Esta ação remove imediatamente o acesso do app aos seus dados.`)) return;
+    revokeMutation.mutate(subscriptionId);
+  };
+
   const installedAppIds = new Set(installations.map((i: any) => i.app_id));
 
   return (
@@ -254,8 +276,14 @@ export default function TenantAppsIntegrations() {
                           </td>
                           <td className="py-2.5"><Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">{sub.status}</Badge></td>
                           <td className="py-2.5">
-                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive text-xs">
-                              Revogar
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive text-xs"
+                              disabled={revokeMutation.isPending || sub.status === 'revoked'}
+                              onClick={() => handleRevoke(sub.id, sub.developer_apps?.name || 'App')}
+                            >
+                              {sub.status === 'revoked' ? 'Revogado' : 'Revogar'}
                             </Button>
                           </td>
                         </tr>
