@@ -268,31 +268,46 @@ export async function generateDocumentPdf(options: PdfDocumentOptions): Promise<
   });
 
   // ── Step 1: Capture body to determine total pages ──
-  const bodyContainer = createOffscreen(buildBodyHtml(contentHtml, L));
-  const bodyCanvas = await captureElement(bodyContainer);
-  const { heightMM: totalBodyMM } = canvasToMM(bodyCanvas, CONTENT_WIDTH);
-  document.body.removeChild(bodyContainer);
+  const offscreenElements: HTMLDivElement[] = [];
+  try {
+    const bodyContainer = createOffscreen(buildBodyHtml(contentHtml, L));
+    offscreenElements.push(bodyContainer);
+    var bodyCanvas = await captureElement(bodyContainer);
+    var { heightMM: totalBodyMM } = canvasToMM(bodyCanvas, CONTENT_WIDTH);
+    document.body.removeChild(bodyContainer);
+    offscreenElements.length = 0;
 
-  const totalPages = Math.max(1, Math.ceil(totalBodyMM / BODY_AREA));
+    var totalPages = Math.max(1, Math.ceil(totalBodyMM / BODY_AREA));
 
-  // ── Step 1b: Pre-render headers (one per page for pagination) ──
-  const headerCache: { dataUrl: string; dims: { widthMM: number; heightMM: number } }[] = [];
-  for (let p = 0; p < totalPages; p++) {
-    const headerEl = createOffscreen(buildHeaderHtml(displayName, documentTitle, date, p + 1, String(totalPages), L));
-    const headerCanvas = await captureElement(headerEl);
-    const headerDims = canvasToMM(headerCanvas, CONTENT_WIDTH);
-    headerCache.push({ dataUrl: headerCanvas.toDataURL('image/png'), dims: headerDims });
-    document.body.removeChild(headerEl);
-  }
+    // ── Step 1b: Pre-render headers (one per page for pagination) ──
+    var headerCache: { dataUrl: string; dims: { widthMM: number; heightMM: number } }[] = [];
+    for (let p = 0; p < totalPages; p++) {
+      const headerEl = createOffscreen(buildHeaderHtml(displayName, documentTitle, date, p + 1, String(totalPages), L));
+      offscreenElements.push(headerEl);
+      const headerCanvas = await captureElement(headerEl);
+      const headerDims = canvasToMM(headerCanvas, CONTENT_WIDTH);
+      headerCache.push({ dataUrl: headerCanvas.toDataURL('image/png'), dims: headerDims });
+      document.body.removeChild(headerEl);
+      offscreenElements.pop();
+    }
 
-  // ── Step 1c: Pre-render footers (one per page for page number) ──
-  const footerCache: { dataUrl: string; dims: { widthMM: number; heightMM: number } }[] = [];
-  for (let p = 0; p < totalPages; p++) {
-    const footerEl = createOffscreen(buildFooterHtml(qrDataUrl, validatorCode, p + 1, String(totalPages), documentTitle, verifyUrl, L));
-    const footerCanvas = await captureElement(footerEl);
-    const footerDims = canvasToMM(footerCanvas, CONTENT_WIDTH);
-    footerCache.push({ dataUrl: footerCanvas.toDataURL('image/png'), dims: footerDims });
-    document.body.removeChild(footerEl);
+    // ── Step 1c: Pre-render footers (one per page for page number) ──
+    var footerCache: { dataUrl: string; dims: { widthMM: number; heightMM: number } }[] = [];
+    for (let p = 0; p < totalPages; p++) {
+      const footerEl = createOffscreen(buildFooterHtml(qrDataUrl, validatorCode, p + 1, String(totalPages), documentTitle, verifyUrl, L));
+      offscreenElements.push(footerEl);
+      const footerCanvas = await captureElement(footerEl);
+      const footerDims = canvasToMM(footerCanvas, CONTENT_WIDTH);
+      footerCache.push({ dataUrl: footerCanvas.toDataURL('image/png'), dims: footerDims });
+      document.body.removeChild(footerEl);
+      offscreenElements.pop();
+    }
+  } catch (err) {
+    // Cleanup any leftover offscreen elements on error
+    offscreenElements.forEach(el => {
+      try { document.body.removeChild(el); } catch { /* already removed */ }
+    });
+    throw err;
   }
 
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAGE_WIDTH_MM, PAGE_HEIGHT_MM] });
