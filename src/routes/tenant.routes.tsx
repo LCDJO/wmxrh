@@ -140,15 +140,15 @@ export const tenantRoutes: RouteObject[] = [
       // ── Agreements / Communication ──
       { path: '/agreements', element: pr('employees', <AgreementManagement />) },
       { path: '/document-validation', element: pr('audit', <DocumentValidationDashboard />) },
-      { path: '/communication-center', element: <TenantCommunicationCenter /> },
-      { path: '/announcements', element: <TenantAnnouncements /> },
+      { path: '/communication-center', element: pr('dashboard', <TenantCommunicationCenter />) },
+      { path: '/announcements', element: pr('dashboard', <TenantAnnouncements />) },
       // ── Apps / Plans / Notifications ──
-      { path: '/apps', element: <TenantAppsIntegrations /> },
+      { path: '/apps', element: pr('iam_users', <TenantAppsIntegrations />) },
       { path: '/integrations/telegram', element: pr('integrations', <TelegramIntegration />) },
       { path: '/integrations/traccar', element: pr('integrations', <TenantTraccarSettings />) },
       { path: '/fleet-policies', element: pr('fleet', <FleetPolicies />) },
-      { path: '/plans', element: <TenantPlansPage /> },
-      { path: '/notifications', element: <Notifications /> },
+      { path: '/plans', element: pr('iam_users', <TenantPlansPage />) },
+      { path: '/notifications', element: pr('dashboard', <Notifications />) },
       { path: '/audit', element: pr('audit', <Audit />) },
       // ── Settings ──
       { path: '/settings/pdf-layout', element: pr('iam_users', <PdfLayoutSettings />) },
