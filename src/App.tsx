@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -38,36 +38,33 @@ function FullScreenLoader({ label }: { label: string }) {
   );
 }
 
+/** Static public routes — no auth needed */
+const publicRoutes: RouteObject[] = [
+  { path: '/tv', element: <LiveDisplayTV /> },
+  { path: '/display', element: <LiveDisplayTV /> },
+  { path: '/live-display/pair', element: <LiveDisplayPair /> },
+  { path: '/public/validate/:token', element: <PublicDocumentValidation /> },
+];
+
 function AppRoutes() {
   const { user, loading: authLoading } = useAuth();
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { isPlatformUser, loading: platformLoading } = useAdaptiveUserType();
 
-  // ── Public TV routes (no auth needed) ──
-  const publicRoutes: RouteObject[] = [
-    { path: '/tv', element: <LiveDisplayTV /> },
-    { path: '/display', element: <LiveDisplayTV /> },
-    { path: '/live-display/pair', element: <LiveDisplayPair /> },
-    { path: '/public/validate/:token', element: <PublicDocumentValidation /> },
-  ];
+  const routes = useMemo<RouteObject[]>(() => {
+    if (authLoading || (user && tenantLoading) || (user && platformLoading)) {
+      return [
+        ...publicRoutes,
+        { path: '*', element: <FullScreenLoader label="Carregando..." /> },
+      ];
+    }
 
-  // ── Compute routes unconditionally to avoid conditional hook calls ──
-  let routes: RouteObject[];
+    if (!user) {
+      return [...authRoutes, ...publicRoutes];
+    }
 
-  if (authLoading || (user && tenantLoading) || (user && platformLoading)) {
-    // Loading state — show loader for all routes
-    routes = [
-      ...publicRoutes,
-      { path: '*', element: <FullScreenLoader label="Carregando..." /> },
-    ];
-  } else if (!user) {
-    // Unauthenticated
-    routes = [...authRoutes, ...publicRoutes];
-  } else {
-    // ── Check sessionStorage on EVERY render to prevent wildcard redirects during login ──
     const hasPendingRedirect = !!sessionStorage.getItem('redirectAfterLogin');
 
-    // ── Build authenticated route set ──
     const sharedRoutes: RouteObject[] = [
       ...platformRoutes,
       ...publicRoutes,
@@ -78,24 +75,23 @@ function AppRoutes() {
 
     if (!currentTenant) {
       if (isPlatformUser) {
-        routes = [
+        return [
           ...sharedRoutes,
           { path: '*', element: hasPendingRedirect ? <FullScreenLoader label="Redirecionando..." /> : <Navigate to="/platform/dashboard" replace /> },
         ];
-      } else {
-        routes = [
-          ...sharedRoutes,
-          { path: '*', element: <FullScreenLoader label="Carregando tenant..." /> },
-        ];
       }
-    } else {
-      routes = [
+      return [
         ...sharedRoutes,
-        ...tenantRoutes,
-        { path: '*', element: <NotFound /> },
+        { path: '*', element: <FullScreenLoader label="Carregando tenant..." /> },
       ];
     }
-  }
+
+    return [
+      ...sharedRoutes,
+      ...tenantRoutes,
+      { path: '*', element: <NotFound /> },
+    ];
+  }, [user, authLoading, tenantLoading, platformLoading, currentTenant, isPlatformUser]);
 
   return useRoutes(routes);
 }
