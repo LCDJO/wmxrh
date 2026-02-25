@@ -3,7 +3,7 @@
  * Covers: Speed Zones, Enforcement Zones, Disciplinary Escalation Rules
  */
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTenant } from '@/contexts/TenantContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -20,7 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import {
   Gauge, MapPin, Shield, Plus, Pencil, Trash2, Loader2, AlertTriangle,
-  Camera, Navigation, ArrowUpDown
+  Camera, Navigation, ArrowUpDown, ArrowLeft
 } from 'lucide-react';
 import { ZoneMapPicker } from '@/modules/traccar/ui/ZoneMapPicker';
 import { EnforcementMapPicker } from '@/modules/traccar/ui/EnforcementMapPicker';
@@ -94,15 +94,21 @@ export default function FleetPolicies() {
   const { currentTenant } = useTenant();
   const tenantId = currentTenant?.id ?? null;
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const initialTab = searchParams.get('tab') || 'speed_zones';
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Políticas de Frota</h1>
-        <p className="text-sm text-muted-foreground">
-          Configure limites de velocidade, zonas de fiscalização e regras de escalonamento disciplinar
-        </p>
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0 h-9 w-9">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Políticas de Frota</h1>
+          <p className="text-sm text-muted-foreground">
+            Configure limites de velocidade, zonas de fiscalização e regras de escalonamento disciplinar
+          </p>
+        </div>
       </div>
 
       <Tabs defaultValue={initialTab} onValueChange={(v) => setSearchParams({ tab: v })} className="space-y-6">
