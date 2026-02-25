@@ -1,8 +1,7 @@
 /**
  * TenantTraccarSettings — Tenant-level Traccar integration page
  * 
- * Dashboard-style config matching the reference design:
- * URL, API Token, Webhook Secret, Protocol, Sync Interval, Auto-sync, Integration Active
+ * Redesigned with grouped cards and refined visual hierarchy.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
@@ -21,6 +20,7 @@ import { toast } from 'sonner';
 import {
   MapPin, Loader2, RefreshCw, Satellite, Shield, Activity,
   CheckCircle2, WifiOff, ArrowDownToLine, Settings, Save, Eye, EyeOff, Bell, Key,
+  Server, Link, Timer, Zap,
 } from 'lucide-react';
 import TraccarEventsTab from './TraccarEventsTab';
 import TraccarNotificationsTab from './TraccarNotificationsTab';
@@ -90,7 +90,6 @@ export default function TenantTraccarSettings() {
   const [loadingDevices, setLoadingDevices] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
 
-  // Config state
   const [config, setConfig] = useState<TraccarConfig>({ ...DEFAULT_CONFIG });
   const [savedConfig, setSavedConfig] = useState<TraccarConfig>({ ...DEFAULT_CONFIG });
   const [showToken, setShowToken] = useState(false);
@@ -100,7 +99,6 @@ export default function TenantTraccarSettings() {
   const [webhookSecretInput, setWebhookSecretInput] = useState('');
   const [googleMapsKeyInput, setGoogleMapsKeyInput] = useState('');
 
-  // Auto-sync timer
   const syncTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const updateConfig = (partial: Partial<TraccarConfig>) => {
@@ -129,7 +127,7 @@ export default function TenantTraccarSettings() {
         is_active: val.is_active !== false,
         google_maps_api_key: val.google_maps_api_key || '',
       };
-      setConfig({ ...loaded, api_token: loaded.api_token, webhook_secret: loaded.webhook_secret });
+      setConfig({ ...loaded });
       setSavedConfig(loaded);
     }
     setLoading(false);
@@ -198,15 +196,11 @@ export default function TenantTraccarSettings() {
       clearInterval(syncTimerRef.current);
       syncTimerRef.current = null;
     }
-
     if (savedConfig.auto_sync && savedConfig.is_active && savedConfig.api_url) {
-      // Initial sync
       syncDevices();
-      // Then periodic
       const ms = Math.max(savedConfig.sync_interval_min, 1) * 60_000;
       syncTimerRef.current = setInterval(syncDevices, ms);
     }
-
     return () => {
       if (syncTimerRef.current) clearInterval(syncTimerRef.current);
     };
@@ -236,14 +230,8 @@ export default function TenantTraccarSettings() {
   };
 
   const handleSaveConfig = async () => {
-    if (!config.api_url) {
-      toast.error('URL do servidor é obrigatória.');
-      return;
-    }
-    if (!tenantId) {
-      toast.error('Tenant não identificado.');
-      return;
-    }
+    if (!config.api_url) { toast.error('URL do servidor é obrigatória.'); return; }
+    if (!tenantId) { toast.error('Tenant não identificado.'); return; }
     setSavingConfig(true);
     try {
       const configToSave: TraccarConfig = {
@@ -269,11 +257,7 @@ export default function TenantTraccarSettings() {
       } else {
         const { error } = await supabase
           .from('tenant_integration_configs')
-          .insert({
-            tenant_id: tenantId,
-            integration_key: 'traccar',
-            config: configToSave as any,
-          });
+          .insert({ tenant_id: tenantId, integration_key: 'traccar', config: configToSave as any });
         if (error) throw error;
       }
 
@@ -305,160 +289,135 @@ export default function TenantTraccarSettings() {
     );
   }
 
+  const SecretField = ({ label, value, onChange, placeholder, show, onToggleShow, savedValue, hint }: {
+    label: string; value: string; onChange: (v: string) => void; placeholder: string;
+    show: boolean; onToggleShow: () => void; savedValue: string; hint?: React.ReactNode;
+  }) => (
+    <div className="space-y-1.5">
+      <Label className="text-sm font-medium text-foreground">{label}</Label>
+      <div className="relative">
+        <Input
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="pr-10"
+        />
+        <Button
+          type="button" variant="ghost" size="sm"
+          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+          onClick={onToggleShow}
+        >
+          {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+        </Button>
+      </div>
+      {savedValue && !value && (
+        <p className="text-xs text-muted-foreground">
+          Valor salvo: <span className="font-mono">{maskSecret(savedValue)}</span>
+        </p>
+      )}
+      {hint}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
-      {/* ── Header Card (matches reference) ── */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <MapPin className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Traccar GPS Integration</CardTitle>
-                <CardDescription>Integração com servidor Traccar para rastreamento GPS e compliance de frota</CardDescription>
-              </div>
-            </div>
-            <Badge
-              variant={connectionStatus === 'connected' ? 'default' : 'outline'}
-              className={`text-xs ${
-                connectionStatus === 'connected'
-                  ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
-                  : connectionStatus === 'error'
-                  ? 'text-destructive border-destructive/30'
-                  : 'text-muted-foreground'
-              }`}
-            >
-              <span className={`inline-block h-2 w-2 rounded-full mr-1.5 ${
-                connectionStatus === 'connected' ? 'bg-emerald-500'
-                : connectionStatus === 'error' ? 'bg-destructive'
-                : 'bg-muted-foreground'
-              }`} />
-              {connectionStatus === 'connected' ? 'Conectado' : connectionStatus === 'error' ? 'Desconectado' : 'Desconectado'}
-            </Badge>
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center">
+            <MapPin className="h-5 w-5 text-primary" />
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Separator />
+          <div>
+            <h1 className="text-xl font-bold text-foreground tracking-tight">Traccar GPS</h1>
+            <p className="text-sm text-muted-foreground">Rastreamento GPS e compliance de frota</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge
+            variant="outline"
+            className={`text-xs px-3 py-1 ${
+              connectionStatus === 'connected'
+                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                : connectionStatus === 'error'
+                ? 'bg-destructive/10 text-destructive border-destructive/30'
+                : 'text-muted-foreground'
+            }`}
+          >
+            <span className={`inline-block h-2 w-2 rounded-full mr-1.5 ${
+              connectionStatus === 'connected' ? 'bg-emerald-500'
+              : connectionStatus === 'error' ? 'bg-destructive'
+              : 'bg-muted-foreground'
+            }`} />
+            {connectionStatus === 'connected' ? 'Conectado' : 'Desconectado'}
+          </Badge>
+          {connectionStatus === 'connected' && serverInfo && (
+            <Badge variant="outline" className="text-xs">v{serverInfo.version}</Badge>
+          )}
+        </div>
+      </div>
 
-          {/* URL do Servidor */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-primary">URL do Servidor Traccar</Label>
-            <Input
-              value={config.api_url}
-              onChange={e => updateConfig({ api_url: e.target.value })}
-              placeholder="https://traccar.suaempresa.com"
+      {/* ── Configuration Cards Grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Card 1: Conexão */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Server className="h-4 w-4 text-muted-foreground" />
+              Conexão com Servidor
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-foreground">URL do Servidor</Label>
+              <Input
+                value={config.api_url}
+                onChange={e => updateConfig({ api_url: e.target.value })}
+                placeholder="https://traccar.suaempresa.com"
+              />
+            </div>
+
+            <SecretField
+              label="API Token"
+              value={tokenInput}
+              onChange={setTokenInput}
+              placeholder="Token de acesso à API"
+              show={showToken}
+              onToggleShow={() => setShowToken(!showToken)}
+              savedValue={savedConfig.api_token}
             />
-          </div>
 
-          {/* API Token */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-primary">API Token</Label>
-            <div className="relative">
-              <Input
-                type={showToken ? 'text' : 'password'}
-                value={tokenInput}
-                onChange={e => setTokenInput(e.target.value)}
-                placeholder={savedConfig.api_token ? 'Token de acesso à API do Traccar' : 'Token de acesso à API do Traccar'}
-                className="pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                onClick={() => setShowToken(!showToken)}
-              >
-                {showToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            <SecretField
+              label="Webhook Secret"
+              value={webhookSecretInput}
+              onChange={setWebhookSecretInput}
+              placeholder="Secret para webhooks (opcional)"
+              show={showWebhookSecret}
+              onToggleShow={() => setShowWebhookSecret(!showWebhookSecret)}
+              savedValue={savedConfig.webhook_secret}
+            />
+
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={testConnection} disabled={testingConnection || !config.api_url} className="gap-1.5">
+                {testingConnection ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
+                Testar Conexão
               </Button>
             </div>
-            {savedConfig.api_token && !tokenInput && (
-              <p className="text-xs text-muted-foreground">
-                Token salvo: <span className="font-mono">{maskSecret(savedConfig.api_token)}</span>
-              </p>
-            )}
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Webhook Secret */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-primary">
-              Webhook Secret <span className="text-muted-foreground font-normal">(opcional)</span>
-            </Label>
-            <div className="relative">
-              <Input
-                type={showWebhookSecret ? 'text' : 'password'}
-                value={webhookSecretInput}
-                onChange={e => setWebhookSecretInput(e.target.value)}
-                placeholder="Secret para validação de webhooks"
-                className="pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-              >
-                {showWebhookSecret ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              </Button>
-            </div>
-            {savedConfig.webhook_secret && !webhookSecretInput && (
-              <p className="text-xs text-muted-foreground">
-                Secret salvo: <span className="font-mono">{maskSecret(savedConfig.webhook_secret)}</span>
-              </p>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* ── Chaves de API Externas ── */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Key className="h-4 w-4 text-primary" />
-              <Label className="text-sm font-semibold text-foreground">Chaves de API Externas</Label>
-            </div>
-            <p className="text-xs text-muted-foreground">Configure chaves de serviços externos utilizados nas funcionalidades de mapa e geolocalização.</p>
-
-            {/* Google Maps API Key */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-primary">Google Maps API Key</Label>
-              <div className="relative">
-                <Input
-                  type={showGoogleMapsKey ? 'text' : 'password'}
-                  value={googleMapsKeyInput}
-                  onChange={e => setGoogleMapsKeyInput(e.target.value)}
-                  placeholder="AIzaSy..."
-                  className="pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => setShowGoogleMapsKey(!showGoogleMapsKey)}
-                >
-                  {showGoogleMapsKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                </Button>
-              </div>
-              {savedConfig.google_maps_api_key && !googleMapsKeyInput && (
-                <p className="text-xs text-muted-foreground">
-                  Chave salva: <span className="font-mono">{maskSecret(savedConfig.google_maps_api_key)}</span>
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Utilizada para exibição de mapas nas zonas de fiscalização. Obtenha em{' '}
-                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                  Google Cloud Console
-                </a>.
-              </p>
-            </div>
-          </div>
-
-          {/* Protocol / Sync Interval / Auto-sync row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-primary">Protocolo</Label>
+        {/* Card 2: Sincronização */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Timer className="h-4 w-4 text-muted-foreground" />
+              Sincronização & Protocolo
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-foreground">Protocolo</Label>
               <Select value={config.protocol} onValueChange={v => updateConfig({ protocol: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -468,94 +427,121 @@ export default function TenantTraccarSettings() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-primary">Intervalo de Sync (min)</Label>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-foreground">Intervalo de Sync (minutos)</Label>
               <Input
-                type="number"
-                min={1}
-                max={1440}
+                type="number" min={1} max={1440}
                 value={config.sync_interval_min}
                 onChange={e => updateConfig({ sync_interval_min: Math.max(1, parseInt(e.target.value) || 5) })}
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-primary">Auto-sync dispositivos</Label>
-              <div className="pt-1">
-                <Switch
-                  checked={config.auto_sync}
-                  onCheckedChange={v => updateConfig({ auto_sync: v })}
-                />
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">Auto-sync dispositivos</p>
+                <p className="text-xs text-muted-foreground">Sincronização automática periódica</p>
               </div>
+              <Switch checked={config.auto_sync} onCheckedChange={v => updateConfig({ auto_sync: v })} />
             </div>
-          </div>
 
-          {/* Integration Active toggle */}
-          <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/30">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Integração Ativa</p>
-              <p className="text-xs text-muted-foreground">Habilita o recebimento de eventos GPS do Traccar</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">Integração Ativa</p>
+                <p className="text-xs text-muted-foreground">Receber eventos GPS do Traccar</p>
+              </div>
+              <Switch checked={config.is_active} onCheckedChange={v => updateConfig({ is_active: v })} />
             </div>
-            <Switch
-              checked={config.is_active}
-              onCheckedChange={v => updateConfig({ is_active: v })}
-            />
-          </div>
+          </CardContent>
+        </Card>
 
-          <Separator />
+        {/* Card 3: Chaves de API */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Key className="h-4 w-4 text-muted-foreground" />
+              Chaves de API Externas
+            </CardTitle>
+            <CardDescription>Serviços externos para mapas e geolocalização</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="max-w-lg">
+              <SecretField
+                label="Google Maps API Key"
+                value={googleMapsKeyInput}
+                onChange={setGoogleMapsKeyInput}
+                placeholder="AIzaSy..."
+                show={showGoogleMapsKey}
+                onToggleShow={() => setShowGoogleMapsKey(!showGoogleMapsKey)}
+                savedValue={savedConfig.google_maps_api_key}
+                hint={
+                  <p className="text-xs text-muted-foreground">
+                    Usada nos mapas de fiscalização.{' '}
+                    <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      Obter chave →
+                    </a>
+                  </p>
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-3">
-            <Button onClick={handleSaveConfig} disabled={savingConfig} className="gap-2">
-              {savingConfig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Salvar Configuração
-            </Button>
-            <Button variant="outline" onClick={testConnection} disabled={testingConnection || !config.api_url} className="gap-2">
-              {testingConnection ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
-              Testar Conexão
-            </Button>
-            {connectionStatus === 'connected' && serverInfo && (
-              <span className="text-sm text-muted-foreground ml-auto">
-                Servidor Traccar <Badge variant="outline" className="ml-1">v{serverInfo.version}</Badge>
-              </span>
-            )}
-            {connectionStatus === 'error' && (
-              <span className="text-sm text-destructive ml-auto">
-                Falha na conexão. Verifique as credenciais.
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* ── Save Button ── */}
+      <div className="flex items-center gap-3">
+        <Button onClick={handleSaveConfig} disabled={savingConfig} className="gap-2">
+          {savingConfig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Salvar Configuração
+        </Button>
+        {connectionStatus === 'error' && (
+          <span className="text-sm text-destructive">Falha na conexão. Verifique as credenciais.</span>
+        )}
+      </div>
 
-      {/* ── Tabs for remaining sections ── */}
-      <Tabs defaultValue="devices" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="devices" className="gap-1.5 text-xs"><Satellite className="h-3.5 w-3.5" /> Dispositivos</TabsTrigger>
-          <TabsTrigger value="events" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" /> Eventos</TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /> Notificações</TabsTrigger>
-          <TabsTrigger value="policies" className="gap-1.5 text-xs"><Shield className="h-3.5 w-3.5" /> Políticas</TabsTrigger>
-          <TabsTrigger value="health" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" /> Saúde</TabsTrigger>
+      <Separator />
+
+      {/* ── Tabs ── */}
+      <Tabs defaultValue="devices" className="space-y-4">
+        <TabsList className="inline-flex h-10 gap-1 bg-muted/50 p-1 rounded-lg">
+          <TabsTrigger value="devices" className="gap-1.5 text-xs rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm px-4">
+            <Satellite className="h-3.5 w-3.5" /> Dispositivos
+          </TabsTrigger>
+          <TabsTrigger value="events" className="gap-1.5 text-xs rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm px-4">
+            <Activity className="h-3.5 w-3.5" /> Eventos
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="gap-1.5 text-xs rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm px-4">
+            <Bell className="h-3.5 w-3.5" /> Notificações
+          </TabsTrigger>
+          <TabsTrigger value="policies" className="gap-1.5 text-xs rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm px-4">
+            <Shield className="h-3.5 w-3.5" /> Políticas
+          </TabsTrigger>
+          <TabsTrigger value="health" className="gap-1.5 text-xs rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm px-4">
+            <Activity className="h-3.5 w-3.5" /> Saúde
+          </TabsTrigger>
         </TabsList>
 
         {/* Devices Tab */}
         <TabsContent value="devices">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2 text-card-foreground">
-                    <Satellite className="h-5 w-5" /> Dispositivos do Traccar
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Satellite className="h-4 w-4 text-muted-foreground" /> Dispositivos do Traccar
                   </CardTitle>
-                  <CardDescription>
-                    Dispositivos registrados no servidor Traccar
+                  <CardDescription className="mt-1">
+                    Dispositivos registrados no servidor
                     {savedConfig.auto_sync && savedConfig.is_active && (
                       <Badge variant="outline" className="ml-2 text-[10px]">
-                        Auto-sync a cada {savedConfig.sync_interval_min} min
+                        Sync a cada {savedConfig.sync_interval_min} min
                       </Badge>
                     )}
                   </CardDescription>
                 </div>
-                <Button onClick={handleManualSync} disabled={loadingDevices || !savedConfig.api_url} size="sm" className="gap-1.5">
+                <Button onClick={handleManualSync} disabled={loadingDevices || !savedConfig.api_url} size="sm" variant="outline" className="gap-1.5">
                   {loadingDevices ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowDownToLine className="h-3.5 w-3.5" />}
                   Sincronizar
                 </Button>
@@ -563,13 +549,16 @@ export default function TenantTraccarSettings() {
             </CardHeader>
             <CardContent>
               {devices.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  {savedConfig.api_url
-                    ? savedConfig.auto_sync
-                      ? 'Aguardando auto-sincronização...'
-                      : 'Clique em "Sincronizar" para buscar os dispositivos.'
-                    : 'Configure a URL e o token acima primeiro.'}
-                </p>
+                <div className="text-center py-12 space-y-2">
+                  <Satellite className="h-8 w-8 mx-auto text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">
+                    {savedConfig.api_url
+                      ? savedConfig.auto_sync
+                        ? 'Aguardando auto-sincronização...'
+                        : 'Clique em "Sincronizar" para buscar dispositivos.'
+                      : 'Configure a URL e o token acima primeiro.'}
+                  </p>
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
@@ -586,17 +575,17 @@ export default function TenantTraccarSettings() {
                       {devices.map((device) => (
                         <TableRow key={device.id}>
                           <TableCell className="text-sm font-medium">{device.name}</TableCell>
-                          <TableCell className="font-mono text-xs">{device.uniqueId}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">{device.uniqueId}</TableCell>
                           <TableCell className="text-xs">{device.category || '—'}</TableCell>
                           <TableCell>
                             <Badge
-                              variant={device.status === 'online' ? 'default' : device.status === 'offline' ? 'secondary' : 'outline'}
-                              className="text-xs"
+                              variant={device.status === 'online' ? 'default' : 'secondary'}
+                              className={`text-xs ${device.status === 'online' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : ''}`}
                             >
-                              {device.status === 'online' ? '🟢 Online' : device.status === 'offline' ? '🔴 Offline' : device.status}
+                              {device.status === 'online' ? '● Online' : device.status === 'offline' ? '● Offline' : device.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-xs">
+                          <TableCell className="text-xs text-muted-foreground">
                             {device.lastUpdate ? new Date(device.lastUpdate).toLocaleString('pt-BR') : '—'}
                           </TableCell>
                         </TableRow>
@@ -609,29 +598,26 @@ export default function TenantTraccarSettings() {
           </Card>
         </TabsContent>
 
-        {/* Events Tab */}
         <TabsContent value="events">
           <TraccarEventsTab tenantId={tenantId} devices={devices} connectionStatus={connectionStatus} />
         </TabsContent>
 
-        {/* Notifications Tab */}
         <TabsContent value="notifications">
           <TraccarNotificationsTab tenantId={tenantId} connectionStatus={connectionStatus} />
         </TabsContent>
 
-        {/* Policies Tab */}
         <TabsContent value="policies">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2 text-card-foreground">
-                    <Shield className="h-5 w-5" /> Políticas de Compliance
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-muted-foreground" /> Políticas de Compliance
                   </CardTitle>
-                  <CardDescription>Limites de velocidade, zonas de fiscalização e escalonamento disciplinar</CardDescription>
+                  <CardDescription className="mt-1">Limites de velocidade, zonas de fiscalização e escalonamento disciplinar</CardDescription>
                 </div>
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.location.href = '/fleet-policies'}>
-                  <Settings className="h-3.5 w-3.5" /> Gerenciar Políticas
+                  <Settings className="h-3.5 w-3.5" /> Gerenciar
                 </Button>
               </div>
             </CardHeader>
@@ -641,7 +627,6 @@ export default function TenantTraccarSettings() {
           </Card>
         </TabsContent>
 
-        {/* Health Tab */}
         <TabsContent value="health">
           <TenantHealthTab tenantId={tenantId} />
         </TabsContent>
