@@ -11,6 +11,7 @@ interface EnforcementMapPickerProps {
   longitude: number | null;
   radiusMeters: number;
   onLocationChange: (lat: number, lng: number) => void;
+  tenantId: string | null;
   className?: string;
 }
 
@@ -34,8 +35,8 @@ function loadGoogleMaps(apiKey: string): Promise<void> {
   return googleMapsLoadPromise;
 }
 
-export function EnforcementMapPicker({ latitude, longitude, radiusMeters, onLocationChange, className = '' }: EnforcementMapPickerProps) {
-  const { key, loading: keyLoading } = useGoogleMapsKey();
+export function EnforcementMapPicker({ latitude, longitude, radiusMeters, onLocationChange, tenantId, className = '' }: EnforcementMapPickerProps) {
+  const { key, loading: keyLoading } = useGoogleMapsKey(tenantId);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | google.maps.Marker | null>(null);
