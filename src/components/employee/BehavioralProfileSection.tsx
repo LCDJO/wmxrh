@@ -111,7 +111,7 @@ export function BehavioralProfileSection({ employeeId, tenantId }: Props) {
   const criticalCount = behaviorEvents.filter((e: any) => e.severity === 'critical' || e.severity === 'high').length;
 
   return (
-    <div className="space-y-4">
+    <div id="behavioral-profile-section" className="space-y-4">
       {/* Score Summary */}
       {scoreResult && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
