@@ -21,7 +21,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface CheckResult {
@@ -48,7 +48,11 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Auth: require platform admin or service role
+    const body = await req.json().catch(() => ({}));
+    const singleTenantId = body.tenant_id as string | undefined;
+    const checkAll = body.all === true;
+
+    // Auth: require authenticated user (platform admin OR tenant user)
     const authHeader = req.headers.get('Authorization');
     if (authHeader?.startsWith('Bearer ') && !authHeader.includes(serviceKey)) {
       const anonClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
@@ -58,17 +62,16 @@ Deno.serve(async (req) => {
       if (!user) return json({ error: 'Unauthorized' }, 401);
       const { data: pu } = await supabase
         .from('platform_users')
-        .select('role')
+        .select('role, tenant_id')
         .eq('user_id', user.id)
         .maybeSingle();
-      if (!pu || !['platform_super_admin', 'platform_operations'].includes(pu.role)) {
-        return json({ error: 'Forbidden: platform admin required' }, 403);
+      if (!pu) return json({ error: 'Forbidden: user not found' }, 403);
+      const isPlatformAdmin = ['platform_super_admin', 'platform_operations'].includes(pu.role);
+      if (!isPlatformAdmin && singleTenantId && pu.tenant_id !== singleTenantId) {
+        return json({ error: 'Forbidden: cannot check another tenant' }, 403);
       }
     }
 
-    const body = await req.json().catch(() => ({}));
-    const checkAll = body.all === true;
-    const singleTenantId = body.tenant_id as string | undefined;
 
     let tenantIds: string[] = [];
     if (singleTenantId) {
@@ -269,7 +272,7 @@ async function runHealthChecks(
     .maybeSingle();
 
   const traccarConfig = (config?.config || {}) as Record<string, unknown>;
-  const serverUrl = String(traccarConfig.server_url || '');
+  const serverUrl = String(traccarConfig.api_url || traccarConfig.server_url || '');
   const apiToken = String(traccarConfig.api_token || '');
 
   const checks = {
