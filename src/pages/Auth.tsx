@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { platformEvents } from '@/domains/platform/platform-events';
 import { identityIntelligence } from '@/domains/security/kernel/identity-intelligence';
+import { tenantStorage } from '@/lib/tenant-storage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -109,7 +110,7 @@ export default function Auth() {
       sessionStorage.removeItem('redirectAfterLogin');
       // Still set tenant context if needed
       if (intent.intent === 'tenant' && intent.tenants.length === 1) {
-        localStorage.setItem('currentTenantId', intent.tenants[0].id);
+        tenantStorage.set(intent.tenants[0].id);
       }
       
       navigate(pendingRedirect, { replace: true });
@@ -124,9 +125,9 @@ export default function Auth() {
       case 'tenant': {
         const lastCtx = identityIntelligence.contextMemory.getLastValidContext();
         if (lastCtx && intent.tenants.length === 1 && lastCtx.tenantId === intent.tenants[0]?.id) {
-          localStorage.setItem('currentTenantId', lastCtx.tenantId);
+          tenantStorage.set(lastCtx.tenantId);
         } else if (intent.tenants.length === 1) {
-          localStorage.setItem('currentTenantId', intent.tenants[0].id);
+          tenantStorage.set(intent.tenants[0].id);
         }
         navigate('/', { replace: true });
         break;
@@ -145,7 +146,7 @@ export default function Auth() {
     const pendingRedirect = sessionStorage.getItem('redirectAfterLogin');
     if (pendingRedirect) {
       sessionStorage.removeItem('redirectAfterLogin');
-      if (tenantId) localStorage.setItem('currentTenantId', tenantId);
+      if (tenantId) tenantStorage.set(tenantId);
       navigate(pendingRedirect, { replace: true });
       return;
     }
@@ -155,7 +156,7 @@ export default function Auth() {
       navigate('/platform/dashboard', { replace: true });
     } else {
       if (tenantId) {
-        localStorage.setItem('currentTenantId', tenantId);
+        tenantStorage.set(tenantId);
       }
       navigate('/', { replace: true });
     }

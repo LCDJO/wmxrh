@@ -34,6 +34,7 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
+import { tenantStorage } from '@/lib/tenant-storage';
 import type { Tables } from '@/integrations/supabase/types';
 
 /** Tipo da tabela `tenants` gerado automaticamente pelo Supabase */
@@ -125,7 +126,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         const tenantList = memberships.map((m: any) => m.tenants).filter(Boolean) as Tenant[];
         setTenants(tenantList);
 
-        const saved = localStorage.getItem('currentTenantId');
+        const saved = tenantStorage.get();
         const found = tenantList.find(t => t.id === saved) || tenantList[0];
         setCurrentTenant(found);
 
@@ -160,7 +161,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
               const tenantList = newMemberships.map((m: any) => m.tenants).filter(Boolean) as Tenant[];
               setTenants(tenantList);
               setCurrentTenant(tenantList[0]);
-              localStorage.setItem('currentTenantId', tenantList[0].id);
+              tenantStorage.set(tenantList[0].id);
               setMembership(newMemberships[0] || null);
               setNeedsOnboarding(true);
               return;
@@ -196,7 +197,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
    */
   const handleSetTenant = (tenant: Tenant) => {
     setCurrentTenant(tenant);
-    localStorage.setItem('currentTenantId', tenant.id);
+    tenantStorage.set(tenant.id);
   };
 
   return (
