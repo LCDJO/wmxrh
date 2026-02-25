@@ -75,29 +75,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     logger.debug('AuthProvider montado - inicializando autenticação');
     
-    // Listener reativo: captura login, logout, token_refreshed, etc.
-    // Este listener é a fonte primária de verdade para o estado de auth.
+    let initialized = false;
+
+    // Listener reativo: fonte ÚNICA de verdade para o estado de auth.
+    // Captura login, logout, token_refreshed, etc.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       logger.info('Auth state changed', { event, userId: session?.user?.id });
+      initialized = true;
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Restauração de sessão existente (ex: após refresh da página).
-    // Necessário porque `onAuthStateChange` pode não disparar imediatamente
-    // se o token ainda está válido e não houve mudança de estado.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        logger.info('Sessão existente recuperada', { userId: session.user.id });
+    // Fallback: se o listener não disparar em 500ms (sessão existente sem mudança),
+    // força a restauração via getSession(). Evita duplo setState.
+    const fallbackTimer = setTimeout(() => {
+      if (!initialized) {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!initialized) {
+            if (session) {
+              logger.info('Sessão restaurada via fallback', { userId: session.user.id });
+            }
+            setSession(session);
+            setUser(session?.user ?? null);
+            setLoading(false);
+          }
+        });
       }
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    }, 500);
 
     return () => {
       logger.debug('AuthProvider desmontado');
+      clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
   }, []);
