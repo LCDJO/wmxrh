@@ -1,10 +1,16 @@
 /**
  * Platform Routes — RouteObject[] for /platform/* paths.
+ *
+ * Routes are grouped under nested parent routes (security/, billing/, growth/, etc.)
+ * so that each group shares a single PlatformGuard at the parent level.
+ * This avoids repeating the same guard on every child and enables future
+ * shared layouts per section via Outlet.
  */
 import { lazy, Suspense } from 'react';
 import type { RouteObject } from 'react-router-dom';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { PlatformGuard } from '@/domains/platform/PlatformGuard';
+import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import PlatformLayout from '@/components/platform/PlatformLayout';
 import PlatformDashboard from '@/pages/platform/PlatformDashboard';
 import PlatformTenants from '@/pages/platform/PlatformTenants';
@@ -70,17 +76,25 @@ const PlatformSupportConsole = lazy(() => import('@/modules/support/ui/PlatformS
 
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
 
-/** Helper to wrap element with role-restricted PlatformGuard */
-function guarded(element: React.ReactNode, roles: Parameters<typeof PlatformGuard>[0]['allowedRoles']) {
-  return <PlatformGuard allowedRoles={roles}>{element}</PlatformGuard>;
-}
+// ── Role groups ──────────────────────────────────────────────────────────────
+const opsAdmin: PlatformRoleType[] = ['platform_super_admin', 'platform_operations'];
+const securityAdmin: PlatformRoleType[] = ['platform_super_admin', 'platform_operations', 'platform_support_manager'];
+const financeAdmin: PlatformRoleType[] = ['platform_super_admin', 'platform_operations', 'platform_finance', 'platform_fiscal'];
+const marketingRoles: PlatformRoleType[] = ['platform_super_admin', 'platform_operations', 'platform_marketing', 'platform_marketing_director', 'platform_marketing_team'];
+const supportRoles: PlatformRoleType[] = ['platform_super_admin', 'platform_operations', 'platform_support', 'platform_support_agent', 'platform_support_manager', 'platform_support_coordinator'];
+const marketplaceAdmin: PlatformRoleType[] = ['platform_super_admin', 'platform_operations', 'platform_marketplace_admin'];
 
-const opsAdmin: Parameters<typeof PlatformGuard>[0]['allowedRoles'] = ['platform_super_admin', 'platform_operations'];
-const securityAdmin: Parameters<typeof PlatformGuard>[0]['allowedRoles'] = ['platform_super_admin', 'platform_operations', 'platform_support_manager'];
-const financeAdmin: Parameters<typeof PlatformGuard>[0]['allowedRoles'] = ['platform_super_admin', 'platform_operations', 'platform_finance', 'platform_fiscal'];
-const marketingRoles: Parameters<typeof PlatformGuard>[0]['allowedRoles'] = ['platform_super_admin', 'platform_operations', 'platform_marketing', 'platform_marketing_director', 'platform_marketing_team'];
-const supportRoles: Parameters<typeof PlatformGuard>[0]['allowedRoles'] = ['platform_super_admin', 'platform_operations', 'platform_support', 'platform_support_agent', 'platform_support_manager', 'platform_support_coordinator'];
-const marketplaceAdmin: Parameters<typeof PlatformGuard>[0]['allowedRoles'] = ['platform_super_admin', 'platform_operations', 'platform_marketplace_admin'];
+/**
+ * Creates a parent route that applies a shared PlatformGuard for all children.
+ * Children render inside an <Outlet /> so a section-level layout can be added later.
+ */
+function sectionGuard(path: string, roles: PlatformRoleType[], children: RouteObject[]): RouteObject {
+  return {
+    path,
+    element: <PlatformGuard allowedRoles={roles}><Outlet /></PlatformGuard>,
+    children,
+  };
+}
 
 export const platformRoutes: RouteObject[] = [
   {
@@ -92,72 +106,112 @@ export const platformRoutes: RouteObject[] = [
     ),
     children: [
       { index: true, element: <Navigate to="/platform/dashboard" replace /> },
+      // Dashboard — accessible to any platform user
       { path: 'dashboard', element: <PlatformDashboard /> },
-      { path: 'tenants', element: guarded(<PlatformTenants />, opsAdmin) },
-      { path: 'modules', element: guarded(<PlatformModules />, opsAdmin) },
-      { path: 'users', element: guarded(<PlatformUsers />, securityAdmin) },
-      { path: 'users/dashboard', element: guarded(<PlatformUsersDashboard />, securityAdmin) },
-      { path: 'security', element: guarded(<PlatformSecurity />, securityAdmin) },
-      { path: 'security/dashboard', element: guarded(<PlatformSecurityDashboard />, securityAdmin) },
-      { path: 'security/roles', element: guarded(<PlatformSecurityRoles />, securityAdmin) },
-      { path: 'security/permissions', element: guarded(<PlatformSecurityPermissions />, securityAdmin) },
-      { path: 'security/access-graph', element: guarded(<PlatformSecurityAccessGraph />, securityAdmin) },
-      { path: 'security/unified-graph', element: guarded(<PlatformUnifiedGraph />, securityAdmin) },
-      { path: 'security/governance', element: guarded(<PlatformGovernance />, opsAdmin) },
-      { path: 'security/governance-ai', element: guarded(<PlatformGovernanceAI />, opsAdmin) },
-      { path: 'governance', element: guarded(<PlatformGovernanceDashboard />, opsAdmin) },
-      { path: 'automation', element: guarded(<PlatformAutomation />, opsAdmin) },
-      { path: 'integration-automation/*', element: guarded(<PlatformIntegrationAutomation />, opsAdmin) },
-      { path: 'observability', element: guarded(<PlatformObservability />, opsAdmin) },
-      { path: 'monitoring/*', element: guarded(<PlatformMonitoring />, opsAdmin) },
-      { path: 'control-plane', element: guarded(<PlatformControlPlane />, opsAdmin) },
-      { path: 'plans', element: guarded(<PlatformPlans />, financeAdmin) },
-      { path: 'audit', element: guarded(<PlatformAudit />, opsAdmin) },
-      { path: 'logs', element: guarded(<PlatformLogs />, ['platform_super_admin']) },
-      { path: 'communications', element: guarded(<PlatformCommunications />, opsAdmin) },
-      { path: 'billing', element: guarded(<PlatformBilling />, financeAdmin) },
-      { path: 'billing/coupons', element: guarded(<PlatformCoupons />, financeAdmin) },
-      { path: 'billing/control-center', element: guarded(<BillingControlCenter />, financeAdmin) },
-      { path: 'revenue', element: guarded(<PlatformRevenue />, financeAdmin) },
-      { path: 'revenue/intelligence', element: guarded(<PlatformRevenueIntelligence />, financeAdmin) },
-      { path: 'referrals', element: guarded(<PlatformReferrals />, marketingRoles) },
-      { path: 'settings/gamification', element: guarded(<SettingsGamification />, opsAdmin) },
-      { path: 'iam', element: guarded(<PlatformIAM />, securityAdmin) },
-      { path: 'structure/events', element: guarded(<PlatformEvents />, opsAdmin) },
-      { path: 'structure/menus', element: guarded(<PlatformMenuStructure />, opsAdmin) },
-      { path: 'structure/modules', element: guarded(<PlatformModulesCatalog />, opsAdmin) },
-      { path: 'settings/versioning', element: guarded(<PlatformVersioning />, opsAdmin) },
-      { path: 'settings/saas', element: guarded(<PlatformSaasSettings />, opsAdmin) },
-      // ── Growth / Website ──
-      { path: 'growth', element: guarded(<PlatformGrowthAI />, marketingRoles) },
-      { path: 'growth/insights', element: guarded(<GrowthInsights />, marketingRoles) },
-      { path: 'growth/landing-pages', element: guarded(<GrowthLandingPages />, marketingRoles) },
-      { path: 'growth/conversions', element: guarded(<GrowthConversions />, marketingRoles) },
-      { path: 'growth/fab-builder', element: guarded(<GrowthFABBuilder />, marketingRoles) },
-      { path: 'growth/template-engine', element: guarded(<GrowthTemplateEngine />, marketingRoles) },
-      { path: 'growth/version-publish', element: guarded(<GrowthVersionPublish />, marketingRoles) },
-      { path: 'growth/submissions', element: guarded(<GrowthSubmissions />, marketingRoles) },
-      { path: 'growth/approvals', element: guarded(<GrowthApprovals />, marketingRoles) },
-      { path: 'website', element: guarded(<GrowthWebsiteDashboard />, marketingRoles) },
-      { path: 'website/ai-designer', element: guarded(<GrowthAIDesigner />, marketingRoles) },
-      { path: 'website/templates', element: <Navigate to="/platform/growth/template-engine" replace /> },
-      { path: 'website/versions', element: <Navigate to="/platform/growth/version-publish" replace /> },
-      // ── Marketing / Landing ──
-      { path: 'marketing/analytics', element: guarded(<MarketingAnalytics />, marketingRoles) },
-      { path: 'landing/drafts', element: guarded(<LandingDrafts />, marketingRoles) },
-      { path: 'landing/review', element: guarded(<LandingReview />, marketingRoles) },
-      { path: 'landing/published', element: guarded(<LandingPublished />, marketingRoles) },
-      // ── Support ──
-      { path: 'support/console', element: guarded(<Suspense fallback={SuspenseFallback}><PlatformSupportConsole /></Suspense>, supportRoles) },
-      { path: 'support/analytics', element: guarded(<PlatformSupportAnalytics />, supportRoles) },
+
+      // ── Security section ── (shared securityAdmin guard)
+      sectionGuard('security', securityAdmin, [
+        { index: true, element: <PlatformSecurity /> },
+        { path: 'dashboard', element: <PlatformSecurityDashboard /> },
+        { path: 'roles', element: <PlatformSecurityRoles /> },
+        { path: 'permissions', element: <PlatformSecurityPermissions /> },
+        { path: 'access-graph', element: <PlatformSecurityAccessGraph /> },
+        { path: 'unified-graph', element: <PlatformUnifiedGraph /> },
+        // Governance sub-routes require opsAdmin — nested guard
+        { path: 'governance', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformGovernance /></PlatformGuard> },
+        { path: 'governance-ai', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformGovernanceAI /></PlatformGuard> },
+      ]),
+
+      // ── Users section ── (shared securityAdmin guard)
+      sectionGuard('users', securityAdmin, [
+        { index: true, element: <PlatformUsers /> },
+        { path: 'dashboard', element: <PlatformUsersDashboard /> },
+      ]),
+
+      // ── Billing / Revenue section ── (shared financeAdmin guard)
+      sectionGuard('billing', financeAdmin, [
+        { index: true, element: <PlatformBilling /> },
+        { path: 'coupons', element: <PlatformCoupons /> },
+        { path: 'control-center', element: <BillingControlCenter /> },
+      ]),
+      sectionGuard('revenue', financeAdmin, [
+        { index: true, element: <PlatformRevenue /> },
+        { path: 'intelligence', element: <PlatformRevenueIntelligence /> },
+      ]),
+
+      // ── Growth / Website ── (shared marketingRoles guard)
+      sectionGuard('growth', marketingRoles, [
+        { index: true, element: <PlatformGrowthAI /> },
+        { path: 'insights', element: <GrowthInsights /> },
+        { path: 'landing-pages', element: <GrowthLandingPages /> },
+        { path: 'conversions', element: <GrowthConversions /> },
+        { path: 'fab-builder', element: <GrowthFABBuilder /> },
+        { path: 'template-engine', element: <GrowthTemplateEngine /> },
+        { path: 'version-publish', element: <GrowthVersionPublish /> },
+        { path: 'submissions', element: <GrowthSubmissions /> },
+        { path: 'approvals', element: <GrowthApprovals /> },
+      ]),
+      sectionGuard('website', marketingRoles, [
+        { index: true, element: <GrowthWebsiteDashboard /> },
+        { path: 'ai-designer', element: <GrowthAIDesigner /> },
+        // Aliases — redirect to canonical growth/* paths
+        { path: 'templates', element: <Navigate to="/platform/growth/template-engine" replace /> },
+        { path: 'versions', element: <Navigate to="/platform/growth/version-publish" replace /> },
+      ]),
+
+      // ── Marketing / Landing ── (shared marketingRoles guard)
+      sectionGuard('marketing', marketingRoles, [
+        { path: 'analytics', element: <MarketingAnalytics /> },
+      ]),
+      sectionGuard('landing', marketingRoles, [
+        { path: 'drafts', element: <LandingDrafts /> },
+        { path: 'review', element: <LandingReview /> },
+        { path: 'published', element: <LandingPublished /> },
+      ]),
+
+      // ── Support ── (shared supportRoles guard)
+      sectionGuard('support', supportRoles, [
+        { path: 'console', element: <Suspense fallback={SuspenseFallback}><PlatformSupportConsole /></Suspense> },
+        { path: 'analytics', element: <PlatformSupportAnalytics /> },
+      ]),
+
+      // ── Structure ── (shared opsAdmin guard)
+      sectionGuard('structure', opsAdmin, [
+        { path: 'events', element: <PlatformEvents /> },
+        { path: 'menus', element: <PlatformMenuStructure /> },
+        { path: 'modules', element: <PlatformModulesCatalog /> },
+      ]),
+
+      // ── Settings ── (shared opsAdmin guard)
+      sectionGuard('settings', opsAdmin, [
+        { path: 'versioning', element: <PlatformVersioning /> },
+        { path: 'saas', element: <PlatformSaasSettings /> },
+        { path: 'gamification', element: <SettingsGamification /> },
+      ]),
+
+      // ── Standalone guarded routes ──
+      { path: 'tenants', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformTenants /></PlatformGuard> },
+      { path: 'modules', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformModules /></PlatformGuard> },
+      { path: 'plans', element: <PlatformGuard allowedRoles={financeAdmin}><PlatformPlans /></PlatformGuard> },
+      { path: 'audit', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformAudit /></PlatformGuard> },
+      { path: 'logs', element: <PlatformGuard allowedRoles={['platform_super_admin']}><PlatformLogs /></PlatformGuard> },
+      { path: 'communications', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformCommunications /></PlatformGuard> },
+      { path: 'governance', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformGovernanceDashboard /></PlatformGuard> },
+      { path: 'automation', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformAutomation /></PlatformGuard> },
+      { path: 'integration-automation/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformIntegrationAutomation /></PlatformGuard> },
+      { path: 'observability', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformObservability /></PlatformGuard> },
+      { path: 'monitoring/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformMonitoring /></PlatformGuard> },
+      { path: 'control-plane', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformControlPlane /></PlatformGuard> },
+      { path: 'iam', element: <PlatformGuard allowedRoles={securityAdmin}><PlatformIAM /></PlatformGuard> },
+      { path: 'referrals', element: <PlatformGuard allowedRoles={marketingRoles}><PlatformReferrals /></PlatformGuard> },
       // ── APIs / Developers / Marketplace ──
-      { path: 'apis/*', element: guarded(<PlatformApiManagement />, opsAdmin) },
-      { path: 'developers', element: guarded(<PlatformDevelopers />, marketplaceAdmin) },
-      { path: 'marketplace', element: guarded(<PlatformMarketplace />, marketplaceAdmin) },
-      { path: 'apps-review', element: guarded(<PlatformAppsReview />, opsAdmin) },
-      { path: 'ai-operations', element: guarded(<PlatformAIOperations />, opsAdmin) },
-      { path: 'document-signature', element: guarded(<DocumentSignatureIntegrations />, opsAdmin) },
-      { path: 'integration-health', element: guarded(<PlatformIntegrationHealth />, opsAdmin) },
+      { path: 'apis/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformApiManagement /></PlatformGuard> },
+      { path: 'developers', element: <PlatformGuard allowedRoles={marketplaceAdmin}><PlatformDevelopers /></PlatformGuard> },
+      { path: 'marketplace', element: <PlatformGuard allowedRoles={marketplaceAdmin}><PlatformMarketplace /></PlatformGuard> },
+      { path: 'apps-review', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformAppsReview /></PlatformGuard> },
+      { path: 'ai-operations', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformAIOperations /></PlatformGuard> },
+      { path: 'document-signature', element: <PlatformGuard allowedRoles={opsAdmin}><DocumentSignatureIntegrations /></PlatformGuard> },
+      { path: 'integration-health', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformIntegrationHealth /></PlatformGuard> },
     ],
   },
 ];
