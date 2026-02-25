@@ -211,12 +211,12 @@ export function BehavioralProfileSection({ employeeId, tenantId }: Props) {
 
       {/* Link to full profile */}
       <Button
-        variant="outline"
-        size="sm"
-        className="w-full gap-2 text-xs"
-        onClick={() => navigate('/fleet-behavior-profile')}
+        variant="default"
+        size="default"
+        className="w-full gap-2 mt-2"
+        onClick={() => navigate(`/fleet-behavior-profile?employee=${employeeId}`)}
       >
-        <ExternalLink className="h-3.5 w-3.5" />
+        <ExternalLink className="h-4 w-4" />
         Ver Perfil Comportamental Completo
       </Button>
     </div>
