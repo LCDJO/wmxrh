@@ -7349,6 +7349,96 @@ export type Database = {
           },
         ]
       }
+      fleet_driver_scores: {
+        Row: {
+          active_warnings: number
+          avg_speed_kmh: number | null
+          braking_score: number
+          compliance_score: number
+          computed_at: string
+          created_at: string
+          device_id: number | null
+          employee_id: string
+          grade: string
+          id: string
+          idle_score: number
+          max_speed_recorded_kmh: number | null
+          overall_score: number
+          pending_agreements: number
+          period_end: string
+          period_start: string
+          speed_score: number
+          tenant_id: string
+          total_distance_km: number
+          total_duration_hours: number
+          total_trips: number
+          total_violations: number
+        }
+        Insert: {
+          active_warnings?: number
+          avg_speed_kmh?: number | null
+          braking_score?: number
+          compliance_score?: number
+          computed_at?: string
+          created_at?: string
+          device_id?: number | null
+          employee_id: string
+          grade?: string
+          id?: string
+          idle_score?: number
+          max_speed_recorded_kmh?: number | null
+          overall_score?: number
+          pending_agreements?: number
+          period_end: string
+          period_start: string
+          speed_score?: number
+          tenant_id: string
+          total_distance_km?: number
+          total_duration_hours?: number
+          total_trips?: number
+          total_violations?: number
+        }
+        Update: {
+          active_warnings?: number
+          avg_speed_kmh?: number | null
+          braking_score?: number
+          compliance_score?: number
+          computed_at?: string
+          created_at?: string
+          device_id?: number | null
+          employee_id?: string
+          grade?: string
+          id?: string
+          idle_score?: number
+          max_speed_recorded_kmh?: number | null
+          overall_score?: number
+          pending_agreements?: number
+          period_end?: string
+          period_start?: string
+          speed_score?: number
+          tenant_id?: string
+          total_distance_km?: number
+          total_duration_hours?: number
+          total_trips?: number
+          total_violations?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_driver_scores_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_driver_scores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_driving_rules: {
         Row: {
           allowed_hours_end: string
@@ -7589,6 +7679,84 @@ export type Database = {
           },
         ]
       }
+      fleet_position_history: {
+        Row: {
+          address: string | null
+          altitude: number | null
+          attributes: Json | null
+          course: number | null
+          created_at: string
+          device_id: number
+          device_name: string | null
+          employee_id: string | null
+          fix_time: string
+          id: string
+          ignition: boolean | null
+          latitude: number
+          longitude: number
+          server_time: string | null
+          speed_kmh: number | null
+          speed_knots: number
+          tenant_id: string
+          traccar_position_id: number | null
+        }
+        Insert: {
+          address?: string | null
+          altitude?: number | null
+          attributes?: Json | null
+          course?: number | null
+          created_at?: string
+          device_id: number
+          device_name?: string | null
+          employee_id?: string | null
+          fix_time: string
+          id?: string
+          ignition?: boolean | null
+          latitude: number
+          longitude: number
+          server_time?: string | null
+          speed_kmh?: number | null
+          speed_knots?: number
+          tenant_id: string
+          traccar_position_id?: number | null
+        }
+        Update: {
+          address?: string | null
+          altitude?: number | null
+          attributes?: Json | null
+          course?: number | null
+          created_at?: string
+          device_id?: number
+          device_name?: string | null
+          employee_id?: string | null
+          fix_time?: string
+          id?: string
+          ignition?: boolean | null
+          latitude?: number
+          longitude?: number
+          server_time?: string | null
+          speed_kmh?: number | null
+          speed_knots?: number
+          tenant_id?: string
+          traccar_position_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_position_history_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_position_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_provider_configs: {
         Row: {
           api_token: string
@@ -7626,6 +7794,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "fleet_provider_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fleet_radar_points: {
+        Row: {
+          created_at: string
+          description: string | null
+          detection_radius_meters: number
+          direction: string | null
+          id: string
+          is_active: boolean
+          latitude: number
+          longitude: number
+          name: string
+          radar_type: string
+          road_name: string | null
+          speed_limit_kmh: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          detection_radius_meters?: number
+          direction?: string | null
+          id?: string
+          is_active?: boolean
+          latitude: number
+          longitude: number
+          name: string
+          radar_type?: string
+          road_name?: string | null
+          speed_limit_kmh: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          detection_radius_meters?: number
+          direction?: string | null
+          id?: string
+          is_active?: boolean
+          latitude?: number
+          longitude?: number
+          name?: string
+          radar_type?: string
+          road_name?: string | null
+          speed_limit_kmh?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_radar_points_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -7691,6 +7918,107 @@ export type Database = {
           },
         ]
       }
+      fleet_speed_violations: {
+        Row: {
+          created_at: string
+          detected_at: string
+          device_id: number
+          device_name: string | null
+          employee_id: string | null
+          excess_kmh: number | null
+          id: string
+          latitude: number
+          longitude: number
+          position_id: string | null
+          radar_point_id: string | null
+          recorded_speed_kmh: number
+          severity: string
+          source_id: string | null
+          source_name: string | null
+          source_type: string
+          speed_limit_kmh: number
+          tenant_id: string
+          trip_id: string | null
+          violation_type: string
+          zone_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          detected_at: string
+          device_id: number
+          device_name?: string | null
+          employee_id?: string | null
+          excess_kmh?: number | null
+          id?: string
+          latitude: number
+          longitude: number
+          position_id?: string | null
+          radar_point_id?: string | null
+          recorded_speed_kmh: number
+          severity?: string
+          source_id?: string | null
+          source_name?: string | null
+          source_type?: string
+          speed_limit_kmh: number
+          tenant_id: string
+          trip_id?: string | null
+          violation_type?: string
+          zone_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          detected_at?: string
+          device_id?: number
+          device_name?: string | null
+          employee_id?: string | null
+          excess_kmh?: number | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          position_id?: string | null
+          radar_point_id?: string | null
+          recorded_speed_kmh?: number
+          severity?: string
+          source_id?: string | null
+          source_name?: string | null
+          source_type?: string
+          speed_limit_kmh?: number
+          tenant_id?: string
+          trip_id?: string | null
+          violation_type?: string
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_speed_violations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_speed_violations_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_position_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_speed_violations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_speed_violations_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_speed_zones: {
         Row: {
           created_at: string
@@ -7743,6 +8071,149 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "fleet_speed_zones_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fleet_sync_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          devices_synced: number | null
+          error_message: string | null
+          id: string
+          job_type: string
+          metadata: Json | null
+          positions_synced: number | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+          trips_built: number | null
+          violations_detected: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          devices_synced?: number | null
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          metadata?: Json | null
+          positions_synced?: number | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+          trips_built?: number | null
+          violations_detected?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          devices_synced?: number | null
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          metadata?: Json | null
+          positions_synced?: number | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+          trips_built?: number | null
+          violations_detected?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_sync_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fleet_trips: {
+        Row: {
+          avg_speed_kmh: number
+          created_at: string
+          device_id: number
+          device_name: string | null
+          distance_km: number
+          duration_seconds: number | null
+          employee_id: string | null
+          end_address: string | null
+          end_lat: number
+          end_lng: number
+          end_time: string
+          id: string
+          max_speed_kmh: number
+          position_count: number
+          route_geojson: Json | null
+          start_address: string | null
+          start_lat: number
+          start_lng: number
+          start_time: string
+          tenant_id: string
+          violation_count: number
+        }
+        Insert: {
+          avg_speed_kmh?: number
+          created_at?: string
+          device_id: number
+          device_name?: string | null
+          distance_km?: number
+          duration_seconds?: number | null
+          employee_id?: string | null
+          end_address?: string | null
+          end_lat: number
+          end_lng: number
+          end_time: string
+          id?: string
+          max_speed_kmh?: number
+          position_count?: number
+          route_geojson?: Json | null
+          start_address?: string | null
+          start_lat: number
+          start_lng: number
+          start_time: string
+          tenant_id: string
+          violation_count?: number
+        }
+        Update: {
+          avg_speed_kmh?: number
+          created_at?: string
+          device_id?: number
+          device_name?: string | null
+          distance_km?: number
+          duration_seconds?: number | null
+          employee_id?: string | null
+          end_address?: string | null
+          end_lat?: number
+          end_lng?: number
+          end_time?: string
+          id?: string
+          max_speed_kmh?: number
+          position_count?: number
+          route_geojson?: Json | null
+          start_address?: string | null
+          start_lat?: number
+          start_lng?: number
+          start_time?: string
+          tenant_id?: string
+          violation_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_trips_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_trips_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

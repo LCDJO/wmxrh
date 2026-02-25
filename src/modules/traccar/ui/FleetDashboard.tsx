@@ -23,6 +23,7 @@ import {
 import { FleetMap } from './FleetMap';
 import { InfractionsList } from './InfractionsList';
 import { DeviceProfile } from './DeviceProfile';
+import { BtieIntelligenceDashboard } from './BtieIntelligenceDashboard';
 
 export default function FleetDashboard() {
   const { currentTenant } = useTenant();
@@ -221,6 +222,9 @@ export default function FleetDashboard() {
           )}
         </div>
       </div>
+
+      {/* BTIE Intelligence */}
+      <BtieIntelligenceDashboard tenantId={tenantId} />
     </div>
   );
 }
