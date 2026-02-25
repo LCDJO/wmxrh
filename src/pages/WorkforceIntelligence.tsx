@@ -525,7 +525,10 @@ function GroupView({ insights, companies, employees }: { insights: WorkforceInsi
 function CompanyView({ insights, employees, totalPayroll }: { insights: WorkforceInsight[]; employees: SimpleEmployee[]; totalPayroll: number }) {
   const legalAlerts = insights.filter((i) => i.insight_type === 'LEGAL_RISK' || i.insight_type === 'COMPLIANCE_WARNING');
 
-  const salaryTrend = useMemo(() => {
+  // Salary average by hire cohort (month of admission)
+  // NOTE: This is NOT a temporal salary trend — it's the average current salary
+  // grouped by the employee's hire month. A true trend would require a salary_history table.
+  const salaryCohort = useMemo(() => {
     const months: Record<string, { total: number; count: number }> = {};
     for (const e of employees) {
       if (!e.hire_date || !e.current_salary) continue;
@@ -544,7 +547,7 @@ function CompanyView({ insights, employees, totalPayroll }: { insights: Workforc
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold font-display text-foreground">Inteligência Trabalhista — Empresa</h1>
-        <p className="text-muted-foreground mt-1">Alertas legais e tendência salarial</p>
+        <p className="text-muted-foreground mt-1">Alertas legais e análise salarial por coorte</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -585,11 +588,11 @@ function CompanyView({ insights, employees, totalPayroll }: { insights: Workforc
         <div className="bg-card rounded-xl shadow-card p-6 animate-fade-in">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold font-display text-card-foreground">Tendência Salarial</h2>
+            <h2 className="text-lg font-semibold font-display text-card-foreground">Salário Médio por Coorte de Admissão</h2>
           </div>
-          {salaryTrend.length > 2 ? (
+          {salaryCohort.length > 2 ? (
             <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={salaryTrend}>
+              <LineChart data={salaryCohort}>
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.gridStroke} />
                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: CHART_COLORS.tickText }} />
                 <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: CHART_COLORS.tickText }} />
