@@ -152,6 +152,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/audit', element: pr('audit', <Audit />) },
       // ── Settings ──
       { path: '/settings/pdf-layout', element: pr('iam_users', <PdfLayoutSettings />) },
+      // Legacy redirect — /iam is referenced by notification-event-listener, onboarding-experience-bridge, and experience-orchestrator
       { path: '/iam', element: <Navigate to="/settings/users" replace /> },
       { path: '/settings/users', element: pr('iam_users', <SettingsUsers />) },
       { path: '/settings/roles', element: pr('iam_roles', <SettingsRoles />) },
