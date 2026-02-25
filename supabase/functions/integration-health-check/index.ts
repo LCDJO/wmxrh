@@ -55,11 +55,12 @@ Deno.serve(async (req) => {
     // Auth: require authenticated user (platform admin OR tenant user)
     const authHeader = req.headers.get('Authorization');
     if (authHeader?.startsWith('Bearer ') && !authHeader.includes(serviceKey)) {
+      const token = authHeader.replace('Bearer ', '');
       const anonClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
         global: { headers: { Authorization: authHeader } },
       });
-      const { data: { user } } = await anonClient.auth.getUser();
-      if (!user) return json({ error: 'Unauthorized' }, 401);
+      const { data: { user }, error: authError } = await anonClient.auth.getUser(token);
+      if (authError || !user) return json({ error: 'Unauthorized' }, 401);
 
       // Check platform_users first
       const { data: pu } = await supabase
