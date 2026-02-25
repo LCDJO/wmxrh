@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.display-ws-gateway]
 verify_jwt = false
+
+[functions.integration-health-check]
+verify_jwt = false
