@@ -96,84 +96,93 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Step 1: Claim memberships convidadas por email (apenas na primeira execução).
-    // O RPC `claim_invited_memberships` converte memberships com status 'invited'
-    // (criadas pelo admin do tenant usando o email) em memberships ativas.
-    if (!claimAttempted.current && user.email) {
-      claimAttempted.current = true;
-      await supabase.rpc('claim_invited_memberships', {
-        p_user_id: user.id,
-        p_email: user.email,
-      });
-    }
-
-    // Step 2: Buscar todas as memberships ativas do usuário, com dados do tenant
-    const { data: memberships } = await supabase
-      .from('tenant_memberships')
-      .select('*, tenants(*)')
-      .eq('user_id', user.id);
-
-    if (memberships && memberships.length > 0) {
-      // Extrair lista de tenants das memberships (join inline)
-      const tenantList = memberships.map((m: any) => m.tenants).filter(Boolean) as Tenant[];
-      setTenants(tenantList);
-
-      // Restaurar tenant previamente selecionado (localStorage) ou usar o primeiro
-      const saved = localStorage.getItem('currentTenantId');
-      const found = tenantList.find(t => t.id === saved) || tenantList[0];
-      setCurrentTenant(found);
-
-      // Encontrar a membership correspondente ao tenant selecionado
-      const currentMembership = memberships.find((m: any) => m.tenant_id === found.id);
-      setMembership(currentMembership || null);
-
-      // Step 3: Verificar se o tenant precisa de onboarding (sem empresas cadastradas)
-      const { data: needsOb } = await supabase
-        .rpc('check_tenant_needs_onboarding', { p_tenant_id: found.id });
-      setNeedsOnboarding(needsOb === true);
-    } else {
-      // Nenhuma membership encontrada — tentar self-registration
-
-      // Step 3b: Se o usuário forneceu metadata de empresa no cadastro,
-      // criar automaticamente o tenant, a empresa e a membership.
-      const meta = user.user_metadata;
-      if (meta?.company_name && meta?.full_name) {
-        const { data: result } = await supabase.rpc('self_register_tenant', {
+    try {
+      // Step 1: Claim memberships convidadas por email (apenas na primeira execução).
+      if (!claimAttempted.current && user.email) {
+        claimAttempted.current = true;
+        await supabase.rpc('claim_invited_memberships', {
           p_user_id: user.id,
-          p_user_email: user.email ?? '',
-          p_user_name: meta.full_name,
-          p_company_name: meta.company_name,
-          p_company_document: meta.company_document ?? null,
-          p_company_phone: meta.company_phone ?? null,
+          p_email: user.email,
         });
-
-        if (result && !(result as any).already_registered) {
-          // Tenant criado com sucesso — re-buscar memberships para hidratar o estado
-          const { data: newMemberships } = await supabase
-            .from('tenant_memberships')
-            .select('*, tenants(*)')
-            .eq('user_id', user.id);
-
-          if (newMemberships && newMemberships.length > 0) {
-            const tenantList = newMemberships.map((m: any) => m.tenants).filter(Boolean) as Tenant[];
-            setTenants(tenantList);
-            setCurrentTenant(tenantList[0]);
-            localStorage.setItem('currentTenantId', tenantList[0].id);
-            setMembership(newMemberships[0] || null);
-            setNeedsOnboarding(true); // Tenant recém-criado sempre precisa de onboarding
-            setLoading(false);
-            return;
-          }
-        }
       }
 
-      // Nenhum tenant disponível — estado limpo
+      // Step 2: Buscar todas as memberships ativas do usuário, com dados do tenant
+      const { data: memberships, error: membershipsError } = await supabase
+        .from('tenant_memberships')
+        .select('*, tenants(*)')
+        .eq('user_id', user.id);
+
+      if (membershipsError) {
+        console.error('[TenantContext] Erro ao buscar memberships:', membershipsError.message);
+        setTenants([]);
+        setCurrentTenant(null);
+        setMembership(null);
+        setNeedsOnboarding(false);
+        return;
+      }
+
+      if (memberships && memberships.length > 0) {
+        const tenantList = memberships.map((m: any) => m.tenants).filter(Boolean) as Tenant[];
+        setTenants(tenantList);
+
+        const saved = localStorage.getItem('currentTenantId');
+        const found = tenantList.find(t => t.id === saved) || tenantList[0];
+        setCurrentTenant(found);
+
+        const currentMembership = memberships.find((m: any) => m.tenant_id === found.id);
+        setMembership(currentMembership || null);
+
+        const { data: needsOb } = await supabase
+          .rpc('check_tenant_needs_onboarding', { p_tenant_id: found.id });
+        setNeedsOnboarding(needsOb === true);
+      } else {
+        // Nenhuma membership — tentar self-registration
+        const meta = user.user_metadata;
+        if (meta?.company_name && meta?.full_name) {
+          const { data: result, error: regError } = await supabase.rpc('self_register_tenant', {
+            p_user_id: user.id,
+            p_user_email: user.email ?? '',
+            p_user_name: meta.full_name,
+            p_company_name: meta.company_name,
+            p_company_document: meta.company_document ?? null,
+            p_company_phone: meta.company_phone ?? null,
+          });
+
+          if (regError) {
+            console.error('[TenantContext] Erro no self-register:', regError.message);
+          } else if (result && !(result as any).already_registered) {
+            const { data: newMemberships } = await supabase
+              .from('tenant_memberships')
+              .select('*, tenants(*)')
+              .eq('user_id', user.id);
+
+            if (newMemberships && newMemberships.length > 0) {
+              const tenantList = newMemberships.map((m: any) => m.tenants).filter(Boolean) as Tenant[];
+              setTenants(tenantList);
+              setCurrentTenant(tenantList[0]);
+              localStorage.setItem('currentTenantId', tenantList[0].id);
+              setMembership(newMemberships[0] || null);
+              setNeedsOnboarding(true);
+              return;
+            }
+          }
+        }
+
+        // Nenhum tenant disponível
+        setTenants([]);
+        setCurrentTenant(null);
+        setMembership(null);
+        setNeedsOnboarding(false);
+      }
+    } catch (err) {
+      console.error('[TenantContext] Erro inesperado em refreshTenants:', err);
       setTenants([]);
       setCurrentTenant(null);
       setMembership(null);
       setNeedsOnboarding(false);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Disparar resolução sempre que o usuário mudar (login, logout, refresh)
