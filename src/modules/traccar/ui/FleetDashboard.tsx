@@ -140,6 +140,7 @@ export default function FleetDashboard() {
             vehicles={vehicles}
             onVehicleClick={setSelectedVehicle}
             heatmapMode={heatmapMode}
+            tenantId={tenantId}
             className="h-[500px]"
           />
         </div>
