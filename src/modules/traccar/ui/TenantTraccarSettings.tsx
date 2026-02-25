@@ -614,11 +614,8 @@ export default function TenantTraccarSettings() {
                   <CardTitle className="text-base flex items-center gap-2">
                     <Shield className="h-4 w-4 text-muted-foreground" /> Políticas de Compliance
                   </CardTitle>
-                  <CardDescription className="mt-1">Limites de velocidade, zonas de fiscalização e escalonamento disciplinar</CardDescription>
+                  <CardDescription className="mt-1">Clique em qualquer card abaixo para gerenciar diretamente</CardDescription>
                 </div>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.location.href = '/fleet-policies'}>
-                  <Settings className="h-3.5 w-3.5" /> Gerenciar
-                </Button>
               </div>
             </CardHeader>
             <CardContent>
