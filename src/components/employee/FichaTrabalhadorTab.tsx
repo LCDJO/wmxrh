@@ -34,6 +34,7 @@ import { TermosDocumentosTab } from './TermosDocumentosTab';
 import { TreinamentosNrTab } from './TreinamentosNrTab';
 import { CorrectiveActionsTab } from './CorrectiveActionsTab';
 import { EpisTab } from './EpisTab';
+import { CareerPositionSection } from './CareerPositionSection';
 import { SimulacaoTrabalhistaTab } from './SimulacaoTrabalhistaTab';
 import { AddEpiDeliveryDialog } from './AddEpiDeliveryDialog';
 import { AddNrTrainingDialog } from './AddNrTrainingDialog';
@@ -216,6 +217,12 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit, employee, c
                 tenantId={tenantId}
                 canEdit={canEdit}
               />
+            </div>
+            <div className="border-t border-border pt-4">
+              <h4 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-primary" /> Cargo PCCS — Requisitos e Faixas
+              </h4>
+              <CareerPositionSection positionId={employee?.position_id} tenantId={tenantId} />
             </div>
             <div className="border-t border-border pt-4">
               <EmployeeEventsSection employeeId={employeeId} />
