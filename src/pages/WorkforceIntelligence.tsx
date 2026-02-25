@@ -60,7 +60,18 @@ interface SimpleCompany {
   company_group_id: string | null;
 }
 
-/** Safely cast dados_origem_json to InsightOriginData */
+// ── Centralized chart color tokens (theme-aware via CSS variables) ──
+const CHART_COLORS = {
+  success: 'hsl(var(--chart-2))',
+  primary: 'hsl(var(--primary))',
+  warning: 'hsl(var(--chart-4))',
+  accent: 'hsl(var(--chart-5))',
+  destructive: 'hsl(var(--destructive))',
+  muted: 'hsl(var(--muted))',
+  tickText: 'hsl(var(--muted-foreground))',
+  gridStroke: 'hsl(var(--border))',
+};
+
 function parseOriginData(json: Json | null): InsightOriginData {
   if (json && typeof json === 'object' && !Array.isArray(json)) {
     return json as unknown as InsightOriginData;
@@ -197,8 +208,8 @@ function TenantView({ insights, employees, companies, totalPayroll, tenantName }
   }, [employees]);
 
   const PIE_COLORS = [
-    'hsl(160, 84%, 29%)', 'hsl(210, 100%, 52%)', 'hsl(38, 92%, 50%)',
-    'hsl(280, 60%, 50%)', 'hsl(0, 72%, 51%)',
+    CHART_COLORS.success, CHART_COLORS.primary, CHART_COLORS.warning,
+    CHART_COLORS.accent, CHART_COLORS.destructive,
   ];
 
   // Legal risk insights
@@ -336,7 +347,7 @@ function TenantView({ insights, employees, companies, totalPayroll, tenantName }
                       cx="50%" cy="80%" innerRadius="65%" outerRadius="95%" barSize={12}
                       data={[{
                         name: 'Score', value: latestHealthScore,
-                        fill: latestHealthScore >= 70 ? 'hsl(160, 84%, 29%)' : latestHealthScore >= 50 ? 'hsl(38, 92%, 50%)' : 'hsl(0, 72%, 51%)',
+                        fill: latestHealthScore >= 70 ? CHART_COLORS.success : latestHealthScore >= 50 ? CHART_COLORS.warning : CHART_COLORS.destructive,
                       }]}
                       startAngle={180} endAngle={0}
                     >
@@ -475,10 +486,10 @@ function GroupView({ insights, companies, employees }: { insights: WorkforceInsi
           {costByCompany.length > 0 ? (
             <ResponsiveContainer width="100%" height={costByCompany.length * 50 + 30}>
               <BarChart data={costByCompany} layout="vertical" margin={{ left: 10 }}>
-                <XAxis type="number" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: 'hsl(215, 15%, 50%)' }} />
-                <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11, fill: 'hsl(215, 15%, 50%)' }} />
+                <XAxis type="number" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: CHART_COLORS.tickText }} />
+                <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11, fill: CHART_COLORS.tickText }} />
                 <Tooltip formatter={(v: number) => [`R$ ${v.toLocaleString('pt-BR')}`, 'Custo']} />
-                <Bar dataKey="custo" fill="hsl(160, 84%, 29%)" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="custo" fill={CHART_COLORS.success} radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -494,11 +505,11 @@ function GroupView({ insights, companies, employees }: { insights: WorkforceInsi
           {risksByCompany.length > 0 ? (
             <ResponsiveContainer width="100%" height={risksByCompany.length * 50 + 30}>
               <BarChart data={risksByCompany} layout="vertical" margin={{ left: 10 }}>
-                <XAxis type="number" tick={{ fontSize: 11, fill: 'hsl(215, 15%, 50%)' }} />
-                <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11, fill: 'hsl(215, 15%, 50%)' }} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: CHART_COLORS.tickText }} />
+                <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11, fill: CHART_COLORS.tickText }} />
                 <Tooltip />
-                <Bar dataKey="critical" stackId="a" fill="hsl(0, 72%, 51%)" name="Crítico" />
-                <Bar dataKey="warning" stackId="a" fill="hsl(38, 92%, 50%)" name="Alerta" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="critical" stackId="a" fill={CHART_COLORS.destructive} name="Crítico" />
+                <Bar dataKey="warning" stackId="a" fill={CHART_COLORS.warning} name="Alerta" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -579,11 +590,11 @@ function CompanyView({ insights, employees, totalPayroll }: { insights: Workforc
           {salaryTrend.length > 2 ? (
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={salaryTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 90%)" />
-                <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'hsl(215, 15%, 50%)' }} />
-                <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: 'hsl(215, 15%, 50%)' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.gridStroke} />
+                <XAxis dataKey="month" tick={{ fontSize: 10, fill: CHART_COLORS.tickText }} />
+                <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: CHART_COLORS.tickText }} />
                 <Tooltip formatter={(v: number) => [`R$ ${v.toLocaleString('pt-BR')}`, 'Média']} />
-                <Line type="monotone" dataKey="media" stroke="hsl(160, 84%, 29%)" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="media" stroke={CHART_COLORS.success} strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
