@@ -1,25 +1,22 @@
 /**
  * NewItemsTracker — Tracks newly discovered items and marks them as "NOVO" for 3 days.
- * Persists to localStorage per category (menus, events, modules).
+ * Uses in-memory state (session-scoped) to avoid information disclosure via localStorage.
  *
  * How it works:
  *  - First scan: stores all current IDs as "known". No NOVO badges.
  *  - Subsequent scans: any ID not in knownIds is marked as "new" with a 3-day TTL.
  *  - After 3 days, the NOVO badge disappears automatically.
- *
- * IMPORTANT: The scan compares the CURRENT system state against previously
- * known IDs. When new menus/events/modules are added to the codebase,
- * the next "Atualizar" click will detect them as new.
+ *  - State is kept in sessionStorage (scoped to the tab) to avoid
+ *    leaking platform navigation data to third-party scripts.
  */
 
 const STORAGE_PREFIX = 'platform_new_items_';
 const NEW_DURATION_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
-// Bump this version when the data sources change to force re-scan
-const TRACKER_VERSION = 2;
+const TRACKER_VERSION = 3;
 
 interface TrackedItem {
   id: string;
-  discoveredAt: number; // timestamp ms
+  discoveredAt: number;
 }
 
 interface TrackerState {
@@ -31,10 +28,9 @@ interface TrackerState {
 
 function getState(category: string): TrackerState {
   try {
-    const raw = localStorage.getItem(`${STORAGE_PREFIX}${category}`);
+    const raw = sessionStorage.getItem(`${STORAGE_PREFIX}${category}`);
     if (raw) {
       const state = JSON.parse(raw) as TrackerState;
-      // If version mismatch, treat as first scan so new items are detected
       if ((state.version ?? 1) < TRACKER_VERSION) {
         return { version: TRACKER_VERSION, knownIds: state.knownIds, newItems: state.newItems, lastScanAt: state.lastScanAt };
       }
@@ -45,8 +41,18 @@ function getState(category: string): TrackerState {
 }
 
 function setState(category: string, state: TrackerState) {
-  localStorage.setItem(`${STORAGE_PREFIX}${category}`, JSON.stringify({ ...state, version: TRACKER_VERSION }));
+  sessionStorage.setItem(`${STORAGE_PREFIX}${category}`, JSON.stringify({ ...state, version: TRACKER_VERSION }));
 }
+
+// ── Migrate: remove any leftover localStorage keys from previous versions ──
+try {
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(STORAGE_PREFIX)) keysToRemove.push(key);
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+} catch { /* ignore */ }
 
 /**
  * Scan a list of current item IDs against known IDs.
@@ -56,12 +62,10 @@ export function scanForNewItems(category: string, currentIds: string[]): string[
   const state = getState(category);
   const now = Date.now();
 
-  // Clean expired "new" items (older than 3 days)
   const activeNewItems = state.newItems.filter(
     item => now - item.discoveredAt < NEW_DURATION_MS
   );
 
-  // If first scan ever, mark all as known (no "NOVO" on first load)
   if (state.knownIds.length === 0 && state.lastScanAt === null) {
     setState(category, {
       knownIds: currentIds,
@@ -71,11 +75,9 @@ export function scanForNewItems(category: string, currentIds: string[]): string[
     return [];
   }
 
-  // Find truly new items (not in known list)
   const knownSet = new Set(state.knownIds);
   const newlyDiscovered = currentIds.filter(id => !knownSet.has(id));
 
-  // Add newly discovered to newItems list
   const newTracked: TrackedItem[] = [
     ...activeNewItems,
     ...newlyDiscovered
@@ -83,7 +85,6 @@ export function scanForNewItems(category: string, currentIds: string[]): string[
       .map(id => ({ id, discoveredAt: now })),
   ];
 
-  // Update known IDs to include everything
   const allKnown = Array.from(new Set([...state.knownIds, ...currentIds]));
 
   setState(category, {
@@ -96,11 +97,10 @@ export function scanForNewItems(category: string, currentIds: string[]): string[
 }
 
 /**
- * Reset the tracker for a category. Forces a fresh baseline on next scan.
- * Useful when deploying new system features.
+ * Reset the tracker for a category.
  */
 export function resetTracker(category: string): void {
-  localStorage.removeItem(`${STORAGE_PREFIX}${category}`);
+  sessionStorage.removeItem(`${STORAGE_PREFIX}${category}`);
 }
 
 /**
