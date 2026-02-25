@@ -172,22 +172,11 @@ export default function Auth() {
       return;
     }
 
-    // Step 1: Try JWT-level detection
-    const { data: { session } } = await supabase.auth.getSession();
-    const jwtDetection = identityIntelligence.detectUserTypeFromJwt(session?.access_token);
-
-    // Step 2: If JWT didn't resolve, do DB lookup
+    // Detect user intent via DB lookup (platform_users + tenant_memberships)
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      if (jwtDetection.detectedType !== 'unknown') {
-        // JWT resolved — but still check for dual identity
-        const intent = await detectLoginIntent(user.id, user.email);
-        routeByIntent(intent);
-      } else {
-        // Fallback: DB lookup
-        const intent = await detectLoginIntent(user.id, user.email);
-        routeByIntent(intent);
-      }
+      const intent = await detectLoginIntent(user.id, user.email);
+      routeByIntent(intent);
     }
 
     setLoading(false);
