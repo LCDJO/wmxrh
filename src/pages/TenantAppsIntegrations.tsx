@@ -7,12 +7,28 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
+import type { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Store, Download, ShieldCheck, Trash2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
+
+// ── Derived types from Supabase select projections ──
+
+type Installation = Tables<'developer_app_installations'> & {
+  developer_apps: Pick<Tables<'developer_apps'>, 'name' | 'slug' | 'icon_url' | 'description' | 'version'> | null;
+};
+
+type MarketplaceApp = Pick<
+  Tables<'developer_apps'>,
+  'id' | 'name' | 'slug' | 'description' | 'icon_url' | 'install_count' | 'rating_avg' | 'rating_count' | 'version'
+>;
+
+type Subscription = Tables<'developer_api_subscriptions'> & {
+  developer_apps: Pick<Tables<'developer_apps'>, 'name' | 'slug'> | null;
+};
 
 export default function TenantAppsIntegrations() {
   const { currentTenant } = useTenant();
@@ -31,7 +47,7 @@ export default function TenantAppsIntegrations() {
         .neq('status', 'uninstalled')
         .order('installed_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return (data ?? []) as Installation[];
     },
     enabled: !!tenantId,
   });
@@ -47,7 +63,7 @@ export default function TenantAppsIntegrations() {
         .eq('status', 'active')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return (data ?? []) as Subscription[];
     },
     enabled: !!tenantId,
   });
@@ -62,7 +78,7 @@ export default function TenantAppsIntegrations() {
         .eq('app_status', 'published')
         .order('install_count', { ascending: false });
       if (error) throw error;
-      return data;
+      return (data ?? []) as MarketplaceApp[];
     },
   });
 
@@ -125,7 +141,7 @@ export default function TenantAppsIntegrations() {
     revokeMutation.mutate(subscriptionId);
   };
 
-  const installedAppIds = new Set(installations.map((i: any) => i.app_id));
+  const installedAppIds = new Set(installations.map((i) => i.app_id));
 
   return (
     <div className="space-y-6">
@@ -154,7 +170,7 @@ export default function TenantAppsIntegrations() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {installations.map((inst: any) => {
+              {installations.map((inst) => {
                 const app = inst.developer_apps;
                 return (
                   <Card key={inst.id}>
@@ -196,7 +212,7 @@ export default function TenantAppsIntegrations() {
             <p className="text-sm text-muted-foreground p-4">Carregando...</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {marketplace.map((app: any) => {
+              {marketplace.map((app) => {
                 const alreadyInstalled = installedAppIds.has(app.id);
                 return (
                   <Card key={app.id} className="hover:shadow-md transition-shadow">
@@ -258,7 +274,7 @@ export default function TenantAppsIntegrations() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {subscriptions.map((sub: any) => (
+                      {subscriptions.map((sub) => (
                         <tr key={sub.id} className="hover:bg-muted/50">
                           <td className="py-2.5 font-medium text-foreground">{sub.developer_apps?.name || '—'}</td>
                           <td className="py-2.5"><Badge variant="outline">{sub.plan_tier}</Badge></td>
