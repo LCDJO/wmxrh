@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Mail, Phone, Calendar, Building2, FileText, Pencil } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Calendar, Building2, FileText, Pencil, Activity } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { FichaTrabalhadorTab } from '@/components/employee/FichaTrabalhadorTab';
 
@@ -125,6 +125,18 @@ export default function EmployeeDetail() {
               <span className="text-muted-foreground">Salário Atual</span>
               <span className="font-bold text-primary">R$ {(employee.current_salary || 0).toLocaleString('pt-BR')}</span>
             </div>
+          </div>
+
+          {/* Behavioral Profile Button */}
+          <div className="mt-5 border-t border-border pt-5">
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => navigate(`/fleet-behavior-profile?employee=${id}`)}
+            >
+              <Activity className="h-4 w-4" />
+              Ver Perfil Comportamental
+            </Button>
           </div>
         </div>
 
