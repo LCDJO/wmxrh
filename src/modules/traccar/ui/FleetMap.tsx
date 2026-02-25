@@ -30,7 +30,7 @@ export function FleetMap({ vehicles, onVehicleClick, heatmapMode = false, tenant
   const markersRef = useRef<google.maps.Marker[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [ready, setReady] = useState(false);
-  const defaultCenter = useDefaultMapCenter();
+  const defaultCenter = useDefaultMapCenter(tenantId);
 
   // Load Google Maps script
   useEffect(() => {
