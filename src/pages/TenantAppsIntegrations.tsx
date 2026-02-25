@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { toast } from 'sonner';
 
 export default function TenantAppsIntegrations() {
   const { currentTenant } = useTenant();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const tenantId = currentTenant?.id;
 
@@ -78,6 +80,27 @@ export default function TenantAppsIntegrations() {
       toast.success('App desinstalado com sucesso.');
     },
     onError: () => toast.error('Erro ao desinstalar app.'),
+  });
+
+  // Install mutation
+  const installMutation = useMutation({
+    mutationFn: async (appId: string) => {
+      const { error } = await supabase
+        .from('developer_app_installations')
+        .insert({
+          app_id: appId,
+          tenant_id: tenantId!,
+          installed_by: user?.id ?? '',
+          status: 'active',
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-installations'] });
+      queryClient.invalidateQueries({ queryKey: ['marketplace-available'] });
+      toast.success('App instalado com sucesso.');
+    },
+    onError: () => toast.error('Erro ao instalar app.'),
   });
 
   const installedAppIds = new Set(installations.map((i: any) => i.app_id));
@@ -173,8 +196,15 @@ export default function TenantAppsIntegrations() {
                         {alreadyInstalled ? (
                           <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Instalado</Badge>
                         ) : (
-                          <Button size="sm" variant="outline" className="text-xs">
-                            <ExternalLink className="h-3 w-3 mr-1" /> Instalar
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            disabled={installMutation.isPending}
+                            onClick={() => installMutation.mutate(app.id)}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            {installMutation.isPending ? 'Instalando…' : 'Instalar'}
                           </Button>
                         )}
                       </div>
