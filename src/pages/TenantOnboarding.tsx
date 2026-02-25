@@ -6,6 +6,7 @@ import { Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useScope } from '@/contexts/ScopeContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdaptiveOnboarding } from '@/hooks/use-adaptive-onboarding';
 import { OnboardingStepper } from '@/components/onboarding/OnboardingStepper';
@@ -25,6 +26,7 @@ export default function TenantOnboarding() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { currentTenant, needsOnboarding, loading } = useTenant();
+  const { effectiveRoles } = useScope();
   const [showWizard, setShowWizard] = useState(true); // auto-open wizard on first load
   const [startedAt] = useState(Date.now());
   const { toast } = useToast();
@@ -52,12 +54,12 @@ export default function TenantOnboarding() {
   const allowedModules: string[] = (tenantPlan?.saas_plans as any)?.allowed_modules
     ?? ['employees', 'companies', 'departments'];
 
-  // Security context
-  const securityCtx: OnboardingSecurityContext = {
+  // Security context — memoized with real roles from ScopeContext
+  const securityCtx = useMemo<OnboardingSecurityContext>(() => ({
     user_id: USER_ID,
     tenant_id: TENANT_ID,
-    effective_roles: ['tenant_admin'],
-  };
+    effective_roles: effectiveRoles,
+  }), [USER_ID, TENANT_ID, effectiveRoles]);
 
   // Adaptive onboarding engine
   const onboarding = useAdaptiveOnboarding({
