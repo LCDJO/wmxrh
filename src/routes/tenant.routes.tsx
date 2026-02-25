@@ -91,7 +91,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/offboarding', element: pr('employees', <OffboardingDashboard />) },
       { path: '/terminated-employees', element: pr('employees', <TerminatedEmployees />) },
       { path: '/reference-letters', element: pr('employees', <ReferenceLetters />) },
-      { path: '/lgpd', element: pr('employees', <LgpdCompliance />) },
+      { path: '/lgpd', element: pr('compliance', <LgpdCompliance />) },
       { path: '/companies', element: pr('companies', <Companies />) },
       { path: '/groups', element: pr('groups', <CompanyGroups />) },
       { path: '/positions', element: pr('positions', <Positions />) },
