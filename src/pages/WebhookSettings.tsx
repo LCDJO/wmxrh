@@ -3,7 +3,7 @@
  * including secrets, URLs, retry policies, and provider settings.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { useToast } from '@/hooks/use-toast';
@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Webhook, Plus, Pencil, Trash2, Eye, EyeOff, Copy, RefreshCw, Shield } from 'lucide-react';
+import { Webhook, Plus, Pencil, Trash2, Copy, RefreshCw, Shield } from 'lucide-react';
 
 interface WebhookConfig {
   id: string;
@@ -51,7 +51,7 @@ export default function WebhookSettings() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [visibleSecrets, setVisibleSecrets] = useState<Record<string, boolean>>({});
+  
 
   // Form state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export default function WebhookSettings() {
   const [formActive, setFormActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const fetchConfigs = async () => {
+  const fetchConfigs = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     const { data, error } = await supabase
@@ -94,9 +94,9 @@ export default function WebhookSettings() {
       setConfigs(mapped);
     }
     setLoading(false);
-  };
+  }, [tenantId, toast]);
 
-  useEffect(() => { fetchConfigs(); }, [tenantId]);
+  useEffect(() => { fetchConfigs(); }, [fetchConfigs]);
 
   const openCreate = (template?: typeof WEBHOOK_TEMPLATES[0]) => {
     setEditingId(null);
@@ -212,14 +212,6 @@ export default function WebhookSettings() {
     toast({ title: 'Copiado!' });
   };
 
-  const toggleSecretVisibility = (id: string) => {
-    setVisibleSecrets(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const maskSecret = (secret: string) => {
-    if (secret.length <= 8) return '•'.repeat(secret.length);
-    return secret.slice(0, 4) + '•'.repeat(secret.length - 8) + secret.slice(-4);
-  };
 
   // Find templates not yet configured
   const unconfiguredTemplates = WEBHOOK_TEMPLATES.filter(
@@ -282,7 +274,7 @@ export default function WebhookSettings() {
         <div className="space-y-4">
           {configs.map(cfg => {
             const template = WEBHOOK_TEMPLATES.find(t => t.name === cfg.webhook_name);
-            const isSecretVisible = visibleSecrets[cfg.id];
+            
 
             return (
               <Card key={cfg.id} className={!cfg.is_active ? 'opacity-60' : ''}>
