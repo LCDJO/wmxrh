@@ -257,7 +257,34 @@ export const PERMISSION_MATRIX: PermissionMatrix = {
 // NAV ACCESS (derived from permission matrix)
 // ========================
 
-export type NavKey = 'dashboard' | 'employees' | 'companies' | 'groups' | 'positions' | 'compensation' | 'departments' | 'audit' | 'compliance' | 'benefits' | 'health' | 'labor_dashboard' | 'labor_compliance' | 'labor_rules' | 'legal_dashboard' | 'esocial' | 'iam_users' | 'iam_roles' | 'support';
+export type NavKey =
+  | 'dashboard'
+  | 'employees'
+  | 'companies'
+  | 'groups'
+  | 'positions'
+  | 'compensation'
+  | 'departments'
+  | 'audit'
+  | 'compliance'
+  | 'benefits'
+  | 'health'
+  | 'labor_dashboard'
+  | 'labor_compliance'
+  | 'labor_rules'
+  | 'legal_dashboard'
+  | 'esocial'
+  | 'iam_users'
+  | 'iam_roles'
+  | 'support'
+  // ── Added to fix catch-all 'dashboard' misuse ──
+  | 'payroll'
+  | 'intelligence'
+  | 'fleet'
+  | 'live_display'
+  | 'operations'
+  | 'referral'
+  | 'integrations';
 
 const NAV_ENTITY_MAP: Record<NavKey, PermissionEntity> = {
   dashboard: 'tenants',
@@ -279,6 +306,14 @@ const NAV_ENTITY_MAP: Record<NavKey, PermissionEntity> = {
   iam_users: 'audit_logs',
   iam_roles: 'audit_logs',
   support: 'tenants',
+  // ── New mappings ──
+  payroll: 'compensation',
+  intelligence: 'employees',       // workforce/strategic intelligence requires employee-level access
+  fleet: 'employees',              // fleet management tied to employee data
+  live_display: 'tenants',         // tenant-level feature
+  operations: 'employees',         // operational command center requires employee-level access
+  referral: 'tenants',             // tenant-level feature
+  integrations: 'tenants',         // tenant-level integrations
 };
 
 /**

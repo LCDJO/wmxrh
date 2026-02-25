@@ -114,9 +114,9 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/esocial', element: pr('esocial', <ESocialDashboard />) },
       { path: '/esocial-governance', element: pr('esocial', <EsocialGovernanceDashboard />) },
       // ── Payroll / Intelligence ──
-      { path: '/payroll-simulation', element: pr('compensation', <PayrollSimulation />) },
-      { path: '/workforce-intelligence', element: pr('dashboard', <WorkforceIntelligence />) },
-      { path: '/strategic-intelligence', element: pr('dashboard', <StrategicIntelligence />) },
+      { path: '/payroll-simulation', element: pr('payroll', <PayrollSimulation />) },
+      { path: '/workforce-intelligence', element: pr('intelligence', <WorkforceIntelligence />) },
+      { path: '/strategic-intelligence', element: pr('intelligence', <StrategicIntelligence />) },
       // ── Occupational Safety ──
       { path: '/occupational-compliance', element: pr('health', <OccupationalCompliance />) },
       { path: '/nr-compliance', element: pr('health', <NrComplianceDashboard />) },
@@ -130,13 +130,13 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/pccs-dashboard', element: pr('positions', <PccsDashboard />) },
       { path: '/pccs-wizard', element: pr('positions', <PccsWizard />) },
       // ── Fleet ──
-      { path: '/fleet-dashboard', element: pr('dashboard', <FleetDashboard />) },
-      { path: '/fleet-live', element: pr('dashboard', <FleetLiveView />) },
-      { path: '/fleet-analytics', element: pr('dashboard', <FleetAnalyticsView />) },
-      { path: '/fleet-behavior-profile', element: pr('dashboard', <FleetEmployeeBehaviorProfile />) },
+      { path: '/fleet-dashboard', element: pr('fleet', <FleetDashboard />) },
+      { path: '/fleet-live', element: pr('fleet', <FleetLiveView />) },
+      { path: '/fleet-analytics', element: pr('fleet', <FleetAnalyticsView />) },
+      { path: '/fleet-behavior-profile', element: pr('fleet', <FleetEmployeeBehaviorProfile />) },
       // ── Live Display ──
-      { path: '/live-display', element: pr('dashboard', <LiveDisplayAdmin />) },
-      { path: '/command-center', element: pr('dashboard', <OperationalCommandCenter />) },
+      { path: '/live-display', element: pr('live_display', <LiveDisplayAdmin />) },
+      { path: '/command-center', element: pr('operations', <OperationalCommandCenter />) },
       // ── Agreements / Communication ──
       { path: '/agreements', element: pr('employees', <AgreementManagement />) },
       { path: '/document-validation', element: pr('audit', <DocumentValidationDashboard />) },
@@ -144,9 +144,9 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/announcements', element: <TenantAnnouncements /> },
       // ── Apps / Plans / Notifications ──
       { path: '/apps', element: <TenantAppsIntegrations /> },
-      { path: '/integrations/telegram', element: pr('dashboard', <TelegramIntegration />) },
-      { path: '/integrations/traccar', element: pr('dashboard', <TenantTraccarSettings />) },
-      { path: '/fleet-policies', element: pr('dashboard', <FleetPolicies />) },
+      { path: '/integrations/telegram', element: pr('integrations', <TelegramIntegration />) },
+      { path: '/integrations/traccar', element: pr('integrations', <TenantTraccarSettings />) },
+      { path: '/fleet-policies', element: pr('fleet', <FleetPolicies />) },
       { path: '/plans', element: <TenantPlansPage /> },
       { path: '/notifications', element: <Notifications /> },
       { path: '/audit', element: pr('audit', <Audit />) },
@@ -158,7 +158,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/settings/webhooks', element: pr('iam_users', <WebhookSettings />) },
       { path: '/settings/footer', element: pr('iam_users', <FooterSettings />) },
       // ── Referral ──
-      { path: '/referral', element: pr('dashboard', <ReferralPage />) },
+      { path: '/referral', element: pr('referral', <ReferralPage />) },
       // ── Support ──
       { path: '/support/chat', element: pr('support', <SupportLiveChat />) },
       { path: '/support/new', element: pr('support', <SupportNewTicket />) },
