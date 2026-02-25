@@ -566,7 +566,7 @@ export function useCompensationTimeline(employeeId: string) {
 // AUDIT LOG HOOKS
 // ========================
 
-export function useAuditLogs(opts?: { limit?: number; entity_type?: string; action?: string }) {
+export function useAuditLogs(opts?: { limit?: number; offset?: number; entity_type?: string; action?: string; search?: string }) {
   const qs = useQueryScope();
   const filterKey = JSON.stringify(opts || {});
   return useQuery({
