@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
+import { useScope } from '@/contexts/ScopeContext';
 import { useHealthPrograms, useHealthExams, useCreateHealthProgram, useUpdateHealthProgram, useDeleteHealthProgram } from '@/domains/hooks';
 import { usePermissions } from '@/domains/security';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +32,7 @@ const PROGRAM_TYPES = [
 
 export default function Health() {
   const { currentTenant } = useTenant();
+  const { scope } = useScope();
   const tenantId = currentTenant?.id;
   const { toast } = useToast();
   const { data: programs = [], isLoading: loadingPrograms } = useHealthPrograms();
@@ -55,8 +57,12 @@ export default function Health() {
 
   const handleCreate = () => {
     if (!tenantId || !formName || !formValidFrom || !formValidUntil) return;
+    if (!scope.companyId) {
+      toast({ title: 'Selecione uma empresa no seletor de escopo antes de criar o programa.', variant: 'destructive' });
+      return;
+    }
     createProgram.mutate({
-      tenant_id: tenantId, company_id: tenantId, name: formName, program_type: formType as any,
+      tenant_id: tenantId, company_id: scope.companyId, name: formName, program_type: formType as any,
       valid_from: formValidFrom, valid_until: formValidUntil,
       responsible_name: formResponsible || null,
     }, {
