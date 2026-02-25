@@ -412,6 +412,7 @@ function EnforcementZonesTab({ tenantId }: { tenantId: string }) {
                   latitude={form.latitude ? parseFloat(form.latitude) : null}
                   longitude={form.longitude ? parseFloat(form.longitude) : null}
                   radiusMeters={form.radius_meters}
+                  tenantId={tenantId}
                   onLocationChange={(lat, lng) => setForm(f => ({ ...f, latitude: lat.toFixed(6), longitude: lng.toFixed(6) }))}
                 />
                 <div className="grid grid-cols-2 gap-4">

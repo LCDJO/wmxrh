@@ -20,7 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner';
 import {
   MapPin, Loader2, RefreshCw, Satellite, Shield, Activity,
-  CheckCircle2, WifiOff, ArrowDownToLine, Settings, Save, Eye, EyeOff, Bell,
+  CheckCircle2, WifiOff, ArrowDownToLine, Settings, Save, Eye, EyeOff, Bell, Key,
 } from 'lucide-react';
 import TraccarEventsTab from './TraccarEventsTab';
 import TraccarNotificationsTab from './TraccarNotificationsTab';
@@ -52,6 +52,7 @@ interface TraccarConfig {
   sync_interval_min: number;
   auto_sync: boolean;
   is_active: boolean;
+  google_maps_api_key: string;
 }
 
 const DEFAULT_CONFIG: TraccarConfig = {
@@ -62,6 +63,7 @@ const DEFAULT_CONFIG: TraccarConfig = {
   sync_interval_min: 5,
   auto_sync: true,
   is_active: true,
+  google_maps_api_key: '',
 };
 
 const PROTOCOLS = [
@@ -93,8 +95,10 @@ export default function TenantTraccarSettings() {
   const [savedConfig, setSavedConfig] = useState<TraccarConfig>({ ...DEFAULT_CONFIG });
   const [showToken, setShowToken] = useState(false);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
+  const [showGoogleMapsKey, setShowGoogleMapsKey] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [webhookSecretInput, setWebhookSecretInput] = useState('');
+  const [googleMapsKeyInput, setGoogleMapsKeyInput] = useState('');
 
   // Auto-sync timer
   const syncTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -123,6 +127,7 @@ export default function TenantTraccarSettings() {
         sync_interval_min: val.sync_interval_min ?? 5,
         auto_sync: val.auto_sync !== false,
         is_active: val.is_active !== false,
+        google_maps_api_key: val.google_maps_api_key || '',
       };
       setConfig({ ...loaded, api_token: loaded.api_token, webhook_secret: loaded.webhook_secret });
       setSavedConfig(loaded);
@@ -245,6 +250,7 @@ export default function TenantTraccarSettings() {
         ...config,
         api_token: tokenInput || savedConfig.api_token,
         webhook_secret: webhookSecretInput || savedConfig.webhook_secret,
+        google_maps_api_key: googleMapsKeyInput || savedConfig.google_maps_api_key,
       };
 
       const { data: existing } = await supabase
@@ -272,9 +278,10 @@ export default function TenantTraccarSettings() {
       }
 
       setSavedConfig(configToSave);
-      setConfig(prev => ({ ...prev, api_token: configToSave.api_token, webhook_secret: configToSave.webhook_secret }));
+      setConfig(prev => ({ ...prev, api_token: configToSave.api_token, webhook_secret: configToSave.webhook_secret, google_maps_api_key: configToSave.google_maps_api_key }));
       setTokenInput('');
       setWebhookSecretInput('');
+      setGoogleMapsKeyInput('');
       setConnectionStatus('unknown');
       toast.success('Configuração salva com sucesso!');
     } catch (err: any) {
@@ -401,6 +408,51 @@ export default function TenantTraccarSettings() {
                 Secret salvo: <span className="font-mono">{maskSecret(savedConfig.webhook_secret)}</span>
               </p>
             )}
+          </div>
+
+          <Separator />
+
+          {/* ── Chaves de API Externas ── */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Key className="h-4 w-4 text-primary" />
+              <Label className="text-sm font-semibold text-foreground">Chaves de API Externas</Label>
+            </div>
+            <p className="text-xs text-muted-foreground">Configure chaves de serviços externos utilizados nas funcionalidades de mapa e geolocalização.</p>
+
+            {/* Google Maps API Key */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-primary">Google Maps API Key</Label>
+              <div className="relative">
+                <Input
+                  type={showGoogleMapsKey ? 'text' : 'password'}
+                  value={googleMapsKeyInput}
+                  onChange={e => setGoogleMapsKeyInput(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                  onClick={() => setShowGoogleMapsKey(!showGoogleMapsKey)}
+                >
+                  {showGoogleMapsKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+              {savedConfig.google_maps_api_key && !googleMapsKeyInput && (
+                <p className="text-xs text-muted-foreground">
+                  Chave salva: <span className="font-mono">{maskSecret(savedConfig.google_maps_api_key)}</span>
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Utilizada para exibição de mapas nas zonas de fiscalização. Obtenha em{' '}
+                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                  Google Cloud Console
+                </a>.
+              </p>
+            </div>
           </div>
 
           {/* Protocol / Sync Interval / Auto-sync row */}
