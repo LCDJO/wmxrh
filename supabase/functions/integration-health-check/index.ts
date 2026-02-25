@@ -60,14 +60,37 @@ Deno.serve(async (req) => {
       });
       const { data: { user } } = await anonClient.auth.getUser();
       if (!user) return json({ error: 'Unauthorized' }, 401);
+
+      // Check platform_users first
       const { data: pu } = await supabase
         .from('platform_users')
         .select('role, tenant_id')
         .eq('user_id', user.id)
         .maybeSingle();
-      if (!pu) return json({ error: 'Forbidden: user not found' }, 403);
-      const isPlatformAdmin = ['platform_super_admin', 'platform_operations'].includes(pu.role);
-      if (!isPlatformAdmin && singleTenantId && pu.tenant_id !== singleTenantId) {
+
+      // Fallback: check tenant_memberships
+      let userTenantId: string | null = pu?.tenant_id ?? null;
+      let isPlatformAdmin = false;
+
+      if (pu) {
+        isPlatformAdmin = ['platform_super_admin', 'platform_operations'].includes(pu.role);
+      } else {
+        const { data: membership } = await supabase
+          .from('tenant_memberships')
+          .select('tenant_id, role')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .maybeSingle();
+        if (!membership) return json({ error: 'Forbidden: user not found in any tenant' }, 403);
+        userTenantId = membership.tenant_id;
+        // Only tenant admins/owners can trigger health checks
+        const tenantAdminRoles = ['owner', 'admin'];
+        if (!tenantAdminRoles.includes(membership.role)) {
+          return json({ error: 'Forbidden: insufficient permissions' }, 403);
+        }
+      }
+
+      if (!isPlatformAdmin && singleTenantId && userTenantId !== singleTenantId) {
         return json({ error: 'Forbidden: cannot check another tenant' }, 403);
       }
     }
