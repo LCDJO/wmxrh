@@ -711,9 +711,11 @@ export default function TelegramIntegration() {
                 )}
                 <div className="p-3 rounded bg-muted/50">
                   <p className="text-xs text-muted-foreground mb-1">Preview:</p>
-                  <div className="text-xs whitespace-pre-wrap" dangerouslySetInnerHTML={{
-                    __html: editTemplateText.replace(/\{\{(\w+)\}\}/g, '<code class="bg-primary/20 px-0.5 rounded">$1</code>')
-                  }} />
+                  <div className="text-xs whitespace-pre-wrap">
+                    {editTemplateText.split(/\{\{(\w+)\}\}/).map((part, i) =>
+                      i % 2 === 0 ? part : <code key={i} className="bg-primary/20 px-0.5 rounded">{part}</code>
+                    )}
+                  </div>
                 </div>
               </div>
               <DialogFooter>
