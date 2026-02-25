@@ -328,11 +328,12 @@ function NotificationsTab({
 
 function RestrictionsTab({
   announcements,
+  restrictedFeatures,
 }: {
   announcements: TenantAnnouncement[];
+  restrictedFeatures: ReturnType<typeof getRestrictedFeatures>;
 }) {
   const restricted = announcements.filter(a => a.blocking_level === 'restricted_access');
-  const restrictedFeatures = getRestrictedFeatures(announcements);
 
   if (restricted.length === 0) {
     return (
@@ -467,7 +468,7 @@ export default function TenantCommunicationCenter() {
         </TabsContent>
 
         <TabsContent value="restrictions">
-          <RestrictionsTab announcements={announcements} />
+          <RestrictionsTab announcements={announcements} restrictedFeatures={restrictedFeatures} />
         </TabsContent>
       </Tabs>
     </div>
