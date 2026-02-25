@@ -8229,7 +8229,7 @@ export type Database = {
           document_url: string | null
           employee_id: string
           id: string
-          incident_id: string
+          incident_id: string | null
           issued_at: string
           issued_by: string | null
           signature_request_id: string | null
@@ -8246,7 +8246,7 @@ export type Database = {
           document_url?: string | null
           employee_id: string
           id?: string
-          incident_id: string
+          incident_id?: string | null
           issued_at?: string
           issued_by?: string | null
           signature_request_id?: string | null
@@ -8263,7 +8263,7 @@ export type Database = {
           document_url?: string | null
           employee_id?: string
           id?: string
-          incident_id?: string
+          incident_id?: string | null
           issued_at?: string
           issued_by?: string | null
           signature_request_id?: string | null
