@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_pdf_layout_active_per_tenant;
