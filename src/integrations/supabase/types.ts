@@ -17980,6 +17980,8 @@ export type Database = {
         | "salary_adjusted"
         | "additional_added"
         | "job_changed"
+        | "EmployeeOperationBlockedByEPI"
+        | "EmployeeOperationUnblockedByEPI"
       employee_record_status:
         | "pre_admissao"
         | "ativo"
@@ -18400,6 +18402,8 @@ export const Constants = {
         "salary_adjusted",
         "additional_added",
         "job_changed",
+        "EmployeeOperationBlockedByEPI",
+        "EmployeeOperationUnblockedByEPI",
       ],
       employee_record_status: [
         "pre_admissao",
