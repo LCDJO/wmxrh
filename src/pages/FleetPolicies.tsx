@@ -3,6 +3,7 @@
  * Covers: Speed Zones, Enforcement Zones, Disciplinary Escalation Rules
  */
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTenant } from '@/contexts/TenantContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -92,6 +93,8 @@ const SEVERITY_COLORS: Record<string, string> = {
 export default function FleetPolicies() {
   const { currentTenant } = useTenant();
   const tenantId = currentTenant?.id ?? null;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'speed_zones';
 
   return (
     <div className="space-y-6">
@@ -102,7 +105,7 @@ export default function FleetPolicies() {
         </p>
       </div>
 
-      <Tabs defaultValue="speed_zones" className="space-y-6">
+      <Tabs defaultValue={initialTab} onValueChange={(v) => setSearchParams({ tab: v })} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="speed_zones" className="gap-1.5 text-xs">
             <Gauge className="h-3.5 w-3.5" /> Limites de Velocidade
