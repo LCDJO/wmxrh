@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useGoogleMapsKey } from './useGoogleMapsKey';
+import { loadGoogleMaps } from './loadGoogleMaps';
 
 interface EnforcementMapPickerProps {
   latitude: number | null;
@@ -13,26 +14,6 @@ interface EnforcementMapPickerProps {
   onLocationChange: (lat: number, lng: number) => void;
   tenantId: string | null;
   className?: string;
-}
-
-let googleMapsLoaded = false;
-let googleMapsLoadPromise: Promise<void> | null = null;
-
-function loadGoogleMaps(apiKey: string): Promise<void> {
-  if (googleMapsLoaded) return Promise.resolve();
-  if (googleMapsLoadPromise) return googleMapsLoadPromise;
-
-  googleMapsLoadPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => { googleMapsLoaded = true; resolve(); };
-    script.onerror = () => reject(new Error('Failed to load Google Maps'));
-    document.head.appendChild(script);
-  });
-
-  return googleMapsLoadPromise;
 }
 
 export function EnforcementMapPicker({ latitude, longitude, radiusMeters, onLocationChange, tenantId, className = '' }: EnforcementMapPickerProps) {

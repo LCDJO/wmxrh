@@ -11,4 +11,4 @@ export const TraccarModuleUI = {
 export { FleetMap } from './FleetMap';
 export { InfractionsList } from './InfractionsList';
 export { DeviceProfile } from './DeviceProfile';
-export { useMapboxToken } from './useMapboxToken';
+export { useGoogleMapsKey } from './useGoogleMapsKey';
