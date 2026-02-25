@@ -7296,6 +7296,59 @@ export type Database = {
           },
         ]
       }
+      fleet_disciplinary_rules: {
+        Row: {
+          auto_generate_task: boolean
+          created_at: string
+          description: string | null
+          escalation_steps: Json
+          id: string
+          infraction_type: string
+          is_active: boolean
+          name: string
+          points_per_infraction: number
+          severity: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_generate_task?: boolean
+          created_at?: string
+          description?: string | null
+          escalation_steps?: Json
+          id?: string
+          infraction_type?: string
+          is_active?: boolean
+          name: string
+          points_per_infraction?: number
+          severity?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_generate_task?: boolean
+          created_at?: string
+          description?: string | null
+          escalation_steps?: Json
+          id?: string
+          infraction_type?: string
+          is_active?: boolean
+          name?: string
+          points_per_infraction?: number
+          severity?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_disciplinary_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_driving_rules: {
         Row: {
           allowed_hours_end: string
@@ -7474,6 +7527,68 @@ export type Database = {
           },
         ]
       }
+      fleet_enforcement_zones: {
+        Row: {
+          alert_distance_meters: number | null
+          created_at: string
+          description: string | null
+          direction: string | null
+          enforcement_type: string
+          id: string
+          is_active: boolean
+          latitude: number
+          longitude: number
+          name: string
+          radius_meters: number
+          road_name: string | null
+          speed_limit_kmh: number | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          alert_distance_meters?: number | null
+          created_at?: string
+          description?: string | null
+          direction?: string | null
+          enforcement_type?: string
+          id?: string
+          is_active?: boolean
+          latitude: number
+          longitude: number
+          name: string
+          radius_meters?: number
+          road_name?: string | null
+          speed_limit_kmh?: number | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          alert_distance_meters?: number | null
+          created_at?: string
+          description?: string | null
+          direction?: string | null
+          enforcement_type?: string
+          id?: string
+          is_active?: boolean
+          latitude?: number
+          longitude?: number
+          name?: string
+          radius_meters?: number
+          road_name?: string | null
+          speed_limit_kmh?: number | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_enforcement_zones_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_provider_configs: {
         Row: {
           api_token: string
@@ -7569,6 +7684,65 @@ export type Database = {
           },
           {
             foreignKeyName: "fleet_required_agreements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fleet_speed_zones: {
+        Row: {
+          created_at: string
+          description: string | null
+          geojson: Json | null
+          id: string
+          is_active: boolean
+          latitude: number | null
+          longitude: number | null
+          name: string
+          radius_meters: number | null
+          speed_limit_kmh: number
+          tenant_id: string
+          tolerance_kmh: number
+          updated_at: string
+          zone_type: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          geojson?: Json | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          radius_meters?: number | null
+          speed_limit_kmh?: number
+          tenant_id: string
+          tolerance_kmh?: number
+          updated_at?: string
+          zone_type?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          geojson?: Json | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          radius_meters?: number | null
+          speed_limit_kmh?: number
+          tenant_id?: string
+          tolerance_kmh?: number
+          updated_at?: string
+          zone_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_speed_zones_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

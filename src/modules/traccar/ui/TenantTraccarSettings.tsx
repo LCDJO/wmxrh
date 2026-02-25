@@ -25,6 +25,7 @@ import {
 import TraccarEventsTab from './TraccarEventsTab';
 import TraccarNotificationsTab from './TraccarNotificationsTab';
 import TenantHealthTab from './TenantHealthTab';
+import FleetPoliciesSummary from './FleetPoliciesSummary';
 
 interface TraccarDevice {
   id: number;
@@ -570,15 +571,20 @@ export default function TenantTraccarSettings() {
         <TabsContent value="policies">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-card-foreground">
-                <Shield className="h-5 w-5" /> Políticas de Compliance
-              </CardTitle>
-              <CardDescription>Limites de velocidade, zonas de fiscalização e escalonamento disciplinar</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-card-foreground">
+                    <Shield className="h-5 w-5" /> Políticas de Compliance
+                  </CardTitle>
+                  <CardDescription>Limites de velocidade, zonas de fiscalização e escalonamento disciplinar</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.location.href = '/fleet-policies'}>
+                  <Settings className="h-3.5 w-3.5" /> Gerenciar Políticas
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Configure limites de velocidade por zona, pontos de fiscalização eletrônica e políticas disciplinares.
-              </p>
+              <FleetPoliciesSummary tenantId={tenantId} />
             </CardContent>
           </Card>
         </TabsContent>
