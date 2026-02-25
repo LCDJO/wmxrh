@@ -269,7 +269,7 @@ export function FichaTrabalhadorTab({ employeeId, tenantId, canEdit, employee, c
           <div className="space-y-6">
             <SSTSection employeeId={employeeId} tenantId={tenantId} />
             <div className="border-t border-border pt-4">
-              <HealthExamsSection employeeId={employeeId} />
+              <HealthExamsSection employeeId={employeeId} tenantId={tenantId} />
             </div>
             <div className="border-t border-border pt-4">
               <div className="flex items-center justify-between mb-3">

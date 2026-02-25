@@ -26,7 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import {
-  ChevronLeft, ChevronRight, Check, Briefcase, Hash,
+  ChevronLeft, ChevronRight, Check, Briefcase, Hash, Plus,
   Lightbulb, ShieldCheck, AlertTriangle, DollarSign,
   Stethoscope, HardHat, GraduationCap, FileCheck, ScrollText,
 } from 'lucide-react';
@@ -565,9 +565,31 @@ export default function PccsWizard() {
 
               {/* Legal requirements */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Requisitos Legais Sugeridos
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Requisitos Legais Sugeridos
+                  </h3>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1 text-xs"
+                    onClick={() => {
+                      setSuggestions(prev => [...prev, {
+                        tipo: 'exame_medico',
+                        codigo_referencia: '',
+                        descricao: '',
+                        obrigatorio: false,
+                        periodicidade_meses: 12,
+                        base_legal: '',
+                        risco_nao_conformidade: 'medio',
+                        selected: true,
+                        _editing: true,
+                      } as any]);
+                    }}
+                  >
+                    <Plus className="h-3 w-3" /> Adicionar Requisito
+                  </Button>
+                </div>
                 {suggestions.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhuma sugestão gerada.</p>
                 ) : (
@@ -583,23 +605,84 @@ export default function PccsWizard() {
                           className="mt-0.5"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            {suggestionIcon(s.tipo)}
-                            <span className="text-sm font-medium text-foreground">{s.descricao}</span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            {s.base_legal && (
-                              <Badge variant="secondary" className="text-[10px]">{s.base_legal}</Badge>
-                            )}
-                            {s.obrigatorio && (
-                              <Badge variant="destructive" className="text-[10px]">Obrigatório</Badge>
-                            )}
-                            {s.periodicidade_meses && (
-                              <span className="text-[10px] text-muted-foreground">
-                                A cada {s.periodicidade_meses} meses
-                              </span>
-                            )}
-                          </div>
+                          {(s as any)._editing ? (
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <Select
+                                  value={s.tipo}
+                                  onValueChange={v => {
+                                    setSuggestions(prev => prev.map((item, i) => i === idx ? { ...item, tipo: v } : item));
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="exame_medico">Exame Médico</SelectItem>
+                                    <SelectItem value="nr_training">Treinamento NR</SelectItem>
+                                    <SelectItem value="epi">EPI</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input
+                                  className="h-8 text-xs"
+                                  placeholder="Periodicidade (meses)"
+                                  type="number"
+                                  value={s.periodicidade_meses ?? ''}
+                                  onChange={e => {
+                                    const val = e.target.value ? parseInt(e.target.value) : null;
+                                    setSuggestions(prev => prev.map((item, i) => i === idx ? { ...item, periodicidade_meses: val } : item));
+                                  }}
+                                />
+                              </div>
+                              <Input
+                                className="h-8 text-xs"
+                                placeholder="Descrição do requisito *"
+                                value={s.descricao}
+                                onChange={e => {
+                                  setSuggestions(prev => prev.map((item, i) => i === idx ? { ...item, descricao: e.target.value } : item));
+                                }}
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <Input
+                                  className="h-8 text-xs"
+                                  placeholder="Base legal (ex: NR-7)"
+                                  value={s.base_legal ?? ''}
+                                  onChange={e => {
+                                    setSuggestions(prev => prev.map((item, i) => i === idx ? { ...item, base_legal: e.target.value } : item));
+                                  }}
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-8 text-xs"
+                                  disabled={!s.descricao}
+                                  onClick={() => {
+                                    setSuggestions(prev => prev.map((item, i) => i === idx ? { ...item, _editing: undefined } : item));
+                                  }}
+                                >
+                                  Confirmar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-2">
+                                {suggestionIcon(s.tipo)}
+                                <span className="text-sm font-medium text-foreground">{s.descricao}</span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                {s.base_legal && (
+                                  <Badge variant="secondary" className="text-[10px]">{s.base_legal}</Badge>
+                                )}
+                                {s.obrigatorio && (
+                                  <Badge variant="destructive" className="text-[10px]">Obrigatório</Badge>
+                                )}
+                                {s.periodicidade_meses && (
+                                  <span className="text-[10px] text-muted-foreground">
+                                    A cada {s.periodicidade_meses} meses
+                                  </span>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     ))}

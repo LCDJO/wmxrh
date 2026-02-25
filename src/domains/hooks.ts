@@ -685,8 +685,11 @@ export function useCreateHealthExam() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (dto: CreateHealthExamDTO) => healthProgramService.createExam(dto, qs!),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: queryKeys.healthExams(qs?.tenantId) });
+      if (variables.employee_id) {
+        qc.invalidateQueries({ queryKey: queryKeys.employeeHealthExams(variables.employee_id) });
+      }
     },
   });
 }
