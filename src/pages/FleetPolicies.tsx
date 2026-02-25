@@ -22,6 +22,7 @@ import {
   Camera, Navigation, ArrowUpDown
 } from 'lucide-react';
 import { ZoneMapPicker } from '@/modules/traccar/ui/ZoneMapPicker';
+import { EnforcementMapPicker } from '@/modules/traccar/ui/EnforcementMapPicker';
 
 /* ─── Types ─── */
 interface SpeedZone {
@@ -393,7 +394,7 @@ function EnforcementZonesTab({ tenantId }: { tenantId: string }) {
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5" onClick={openNew}><Plus className="h-3.5 w-3.5" /> Novo Ponto</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>{editing ? 'Editar' : 'Novo'} Ponto de Fiscalização</DialogTitle></DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2"><Label>Nome</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Radar Av. Paulista km 2" /></div>
@@ -407,6 +408,12 @@ function EnforcementZonesTab({ tenantId }: { tenantId: string }) {
                   </div>
                   <div className="space-y-2"><Label>Limite (km/h)</Label><Input type="number" value={form.speed_limit_kmh} onChange={e => setForm(f => ({ ...f, speed_limit_kmh: e.target.value }))} placeholder="60" /></div>
                 </div>
+                <EnforcementMapPicker
+                  latitude={form.latitude ? parseFloat(form.latitude) : null}
+                  longitude={form.longitude ? parseFloat(form.longitude) : null}
+                  radiusMeters={form.radius_meters}
+                  onLocationChange={(lat, lng) => setForm(f => ({ ...f, latitude: lat.toFixed(6), longitude: lng.toFixed(6) }))}
+                />
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2"><Label>Latitude *</Label><Input value={form.latitude} onChange={e => setForm(f => ({ ...f, latitude: e.target.value }))} placeholder="-23.5611" /></div>
                   <div className="space-y-2"><Label>Longitude *</Label><Input value={form.longitude} onChange={e => setForm(f => ({ ...f, longitude: e.target.value }))} placeholder="-46.6560" /></div>
