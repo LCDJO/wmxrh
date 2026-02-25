@@ -132,7 +132,12 @@ export default function EmployeeDetail() {
             <Button
               variant="outline"
               className="w-full gap-2"
-              onClick={() => navigate(`/fleet-behavior-profile?employee=${id}`)}
+              onClick={() => {
+                const section = document.getElementById('behavioral-profile-section');
+                if (section) {
+                  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
             >
               <Activity className="h-4 w-4" />
               Ver Perfil Comportamental
