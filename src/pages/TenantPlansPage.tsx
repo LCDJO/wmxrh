@@ -91,12 +91,12 @@ export default function TenantPlansPage() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
+    <div className="relative space-y-8 animate-fade-in max-w-6xl mx-auto">
       {/* Header */}
       <div className="text-center space-y-3">
         <button
           onClick={() => navigate(-1)}
-          className="absolute left-6 top-6 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="absolute left-6 top-6 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors z-10"
         >
           <ArrowLeft className="h-4 w-4" /> Voltar
         </button>
