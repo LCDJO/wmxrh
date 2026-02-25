@@ -19,6 +19,8 @@ import { ViolationsTab } from './btie/ViolationsTab';
 import { DriverScoresTab } from './btie/DriverScoresTab';
 import { RadarPointsTab } from './btie/RadarPointsTab';
 import { SyncStatusPanel } from './btie/SyncStatusPanel';
+import { BehavioralRankingTab } from './btie/BehavioralRankingTab';
+import { ViolationsHeatmapTab } from './btie/ViolationsHeatmapTab';
 
 interface BtieProps {
   tenantId: string;
@@ -162,18 +164,24 @@ export function BtieIntelligenceDashboard({ tenantId }: BtieProps) {
 
       {/* Main tabs */}
       <Tabs defaultValue="trips" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="flex w-full overflow-x-auto">
           <TabsTrigger value="trips" className="gap-1.5 text-xs">
             <Car className="h-3.5 w-3.5" /> Viagens
           </TabsTrigger>
           <TabsTrigger value="violations" className="gap-1.5 text-xs">
             <AlertTriangle className="h-3.5 w-3.5" /> Infrações
           </TabsTrigger>
-          <TabsTrigger value="scores" className="gap-1.5 text-xs">
-            <Trophy className="h-3.5 w-3.5" /> Scores
+          <TabsTrigger value="ranking" className="gap-1.5 text-xs">
+            <Trophy className="h-3.5 w-3.5" /> Ranking
+          </TabsTrigger>
+          <TabsTrigger value="heatmap" className="gap-1.5 text-xs">
+            <MapPin className="h-3.5 w-3.5" /> Heatmap
           </TabsTrigger>
           <TabsTrigger value="radars" className="gap-1.5 text-xs">
             <Gauge className="h-3.5 w-3.5" /> Radares
+          </TabsTrigger>
+          <TabsTrigger value="scores" className="gap-1.5 text-xs">
+            <Shield className="h-3.5 w-3.5" /> Scores
           </TabsTrigger>
           <TabsTrigger value="sync" className="gap-1.5 text-xs">
             <Activity className="h-3.5 w-3.5" /> Sync
@@ -186,11 +194,17 @@ export function BtieIntelligenceDashboard({ tenantId }: BtieProps) {
         <TabsContent value="violations">
           <ViolationsTab tenantId={tenantId} />
         </TabsContent>
-        <TabsContent value="scores">
-          <DriverScoresTab tenantId={tenantId} />
+        <TabsContent value="ranking">
+          <BehavioralRankingTab tenantId={tenantId} />
+        </TabsContent>
+        <TabsContent value="heatmap">
+          <ViolationsHeatmapTab tenantId={tenantId} />
         </TabsContent>
         <TabsContent value="radars">
           <RadarPointsTab tenantId={tenantId} />
+        </TabsContent>
+        <TabsContent value="scores">
+          <DriverScoresTab tenantId={tenantId} />
         </TabsContent>
         <TabsContent value="sync">
           <SyncStatusPanel tenantId={tenantId} />

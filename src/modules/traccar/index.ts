@@ -35,6 +35,32 @@ export {
   reviewIncident,
 } from './services';
 
+// BTIE Engines (pure logic)
+export {
+  buildTrips,
+  attachViolationsToTrips,
+  detectRadarViolations,
+  analyzeBehavior,
+  radarViolationsToBehavior,
+  computeDriverRiskScore,
+  computeBatchDriverScores,
+  analyzeHotspots,
+} from './engines';
+
+export type {
+  PositionPoint,
+  TripSummary,
+  RadarPoint,
+  RadarViolationEvent,
+  BehaviorEvent as BtieEvent,
+  BehaviorEventKind,
+  DriverRiskScore,
+  TrafficHotspot,
+  HotspotGrid,
+  ScoreInput,
+  BehaviorConfig,
+} from './engines';
+
 export type {
   TraccarDevice,
   TraccarPosition,
