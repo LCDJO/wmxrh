@@ -183,7 +183,7 @@ const DEFAULT_ENGINES: PlatformEngineConfig[] = [
 ];
 
 // In-memory registry (Platform state)
-let engineRegistry = [...DEFAULT_ENGINES];
+let engineRegistry = [...DEFAULT_ENGINES.map(e => ({ ...e }))];
 
 export function getEngineRegistry(): ReadonlyArray<PlatformEngineConfig> {
   return engineRegistry;
@@ -295,7 +295,7 @@ const DEFAULT_FLAGS: PlatformFeatureFlag[] = [
   { key: 'pcmso_automation', name: 'PCMSO Automation', enabled: true, rollout_pct: 100, plan_tiers: null, tenant_allowlist: null, description: 'Automação de cronograma PCMSO', updated_at: new Date().toISOString() },
 ];
 
-let featureFlags = [...DEFAULT_FLAGS];
+let featureFlags = [...DEFAULT_FLAGS.map(f => ({ ...f }))];
 
 export function getPlatformFlags(): ReadonlyArray<PlatformFeatureFlag> {
   return featureFlags;
@@ -307,7 +307,6 @@ export function isPlatformFlagEnabled(key: string, tenantId?: string, planTier?:
   if (flag.plan_tiers && planTier && !flag.plan_tiers.includes(planTier)) return false;
   if (flag.tenant_allowlist && tenantId && !flag.tenant_allowlist.includes(tenantId)) return false;
   if (flag.rollout_pct < 100 && tenantId) {
-    // Deterministic rollout based on tenant ID hash
     let hash = 0;
     for (let i = 0; i < tenantId.length; i++) {
       hash = ((hash << 5) - hash + tenantId.charCodeAt(i)) | 0;
@@ -321,4 +320,14 @@ export function setPlatformFlag(key: string, patch: Partial<Pick<PlatformFeature
   featureFlags = featureFlags.map(f =>
     f.key === key ? { ...f, ...patch, updated_at: new Date().toISOString() } : f
   );
+}
+
+/**
+ * Reset all in-memory state to defaults.
+ * Use in tests to avoid state leaking between test runs.
+ */
+export function resetPlatformParametrization(): void {
+  engineRegistry = [...DEFAULT_ENGINES.map(e => ({ ...e, updated_at: new Date().toISOString() }))];
+  legislativeConfig = { ...DEFAULT_LEGISLATIVE_CONFIG };
+  featureFlags = [...DEFAULT_FLAGS.map(f => ({ ...f, updated_at: new Date().toISOString() }))];
 }
