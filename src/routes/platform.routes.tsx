@@ -140,8 +140,8 @@ export const platformRoutes: RouteObject[] = [
       { path: 'growth/approvals', element: guarded(<GrowthApprovals />, marketingRoles) },
       { path: 'website', element: guarded(<GrowthWebsiteDashboard />, marketingRoles) },
       { path: 'website/ai-designer', element: guarded(<GrowthAIDesigner />, marketingRoles) },
-      { path: 'website/templates', element: guarded(<GrowthTemplateEngine />, marketingRoles) },
-      { path: 'website/versions', element: guarded(<GrowthVersionPublish />, marketingRoles) },
+      { path: 'website/templates', element: <Navigate to="/platform/growth/template-engine" replace /> },
+      { path: 'website/versions', element: <Navigate to="/platform/growth/version-publish" replace /> },
       // ── Marketing / Landing ──
       { path: 'marketing/analytics', element: guarded(<MarketingAnalytics />, marketingRoles) },
       { path: 'landing/drafts', element: guarded(<LandingDrafts />, marketingRoles) },
