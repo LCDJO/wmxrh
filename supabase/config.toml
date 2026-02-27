@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.oauth2-token]
 verify_jwt = false
+
+[functions.oidc-token-issuer]
+verify_jwt = false

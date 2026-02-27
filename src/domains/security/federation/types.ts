@@ -262,6 +262,32 @@ export interface OIDCProviderAPI {
   validateIdToken(idToken: string, idpConfig: IdentityProviderConfig): Promise<OIDCUserInfo>;
   /** Fetch user info from userinfo endpoint */
   fetchUserInfo(accessToken: string, idpConfig: IdentityProviderConfig): Promise<OIDCUserInfo>;
+  /** Issue platform OIDC tokens with custom claims (sub, tenant_id, roles, scopes, plan) */
+  issueTokens(userId: string, tenantId: string, clientId: string, scopes?: string[], nonce?: string, sessionId?: string): Promise<OIDCTokenSet>;
+  /** Refresh OIDC tokens using a refresh token */
+  refreshTokens(refreshToken: string, clientId: string): Promise<OIDCTokenSet>;
+  /** Validate an access token and return claims */
+  validateAccessToken(accessToken: string): Promise<OIDCPlatformClaims | null>;
+  /** Get platform OIDC discovery document */
+  getPlatformDiscovery(): Promise<OIDCDiscoveryDocument>;
+}
+
+/** Platform-level claims embedded in ID/Access tokens */
+export interface OIDCPlatformClaims {
+  sub: string;
+  tenant_id: string;
+  roles: string[];
+  scopes: string[];
+  plan: string;
+  client_id?: string;
+  token_type: 'id_token' | 'access_token';
+  exp: number;
+  iat: number;
+  iss: string;
+  aud: string;
+  nonce?: string;
+  sid?: string;
+  tenant_slug?: string;
 }
 
 export interface OAuth2DeviceAuthorizationResponse {
