@@ -14,6 +14,14 @@ export const OBSERVABILITY_KERNEL_EVENTS = {
   LatencyThresholdExceeded: 'observability:latency_threshold_exceeded',
   /** Fired when error rate spikes above normal */
   ErrorRateSpike: 'observability:error_rate_spike',
+  /** SCIM: User provisioned via SCIM */
+  SCIMUserCreated: 'observability:scim_user_created',
+  /** SCIM: User attributes updated via SCIM */
+  SCIMUserUpdated: 'observability:scim_user_updated',
+  /** SCIM: User deactivated via SCIM */
+  SCIMUserDeactivated: 'observability:scim_user_deactivated',
+  /** SCIM: Group synced to internal roles */
+  SCIMGroupSynced: 'observability:scim_group_synced',
 } as const;
 
 export type ObservabilityKernelEvent = typeof OBSERVABILITY_KERNEL_EVENTS[keyof typeof OBSERVABILITY_KERNEL_EVENTS];
@@ -54,6 +62,36 @@ export interface ErrorRateSpikePayload {
   total_errors_1h: number;
 }
 
+export interface SCIMUserCreatedPayload {
+  tenant_id: string;
+  external_id: string;
+  email: string;
+  role: string;
+  scim_client_id: string;
+}
+
+export interface SCIMUserUpdatedPayload {
+  tenant_id: string;
+  external_id: string;
+  changed_fields: string[];
+  scim_client_id: string;
+}
+
+export interface SCIMUserDeactivatedPayload {
+  tenant_id: string;
+  external_id: string;
+  user_id?: string;
+  scim_client_id: string;
+}
+
+export interface SCIMGroupSyncedPayload {
+  tenant_id: string;
+  group_name: string;
+  mapped_role: string;
+  members_affected: number;
+  scim_client_id: string;
+}
+
 export const __DOMAIN_CATALOG = {
   domain: 'Observability',
   color: 'hsl(35 90% 55%)',
@@ -62,5 +100,9 @@ export const __DOMAIN_CATALOG = {
     { name: 'ApplicationErrorDetected', description: 'Erro de aplicação capturado' },
     { name: 'LatencyThresholdExceeded', description: 'Latência p95 acima do threshold' },
     { name: 'ErrorRateSpike', description: 'Pico na taxa de erros' },
+    { name: 'SCIMUserCreated', description: 'Usuário provisionado via SCIM' },
+    { name: 'SCIMUserUpdated', description: 'Usuário atualizado via SCIM' },
+    { name: 'SCIMUserDeactivated', description: 'Usuário desativado via SCIM' },
+    { name: 'SCIMGroupSynced', description: 'Grupo SCIM sincronizado com roles' },
   ],
 };
