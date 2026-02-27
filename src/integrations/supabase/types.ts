@@ -15980,6 +15980,59 @@ export type Database = {
           },
         ]
       }
+      scim_configs: {
+        Row: {
+          auto_create_users: boolean
+          auto_deactivate_users: boolean
+          base_url: string | null
+          created_at: string
+          default_attribute_mapping: Json
+          default_role: string
+          id: string
+          is_enabled: boolean
+          role_mapping_rules: Json
+          sync_groups_to_roles: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_create_users?: boolean
+          auto_deactivate_users?: boolean
+          base_url?: string | null
+          created_at?: string
+          default_attribute_mapping?: Json
+          default_role?: string
+          id?: string
+          is_enabled?: boolean
+          role_mapping_rules?: Json
+          sync_groups_to_roles?: boolean
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_create_users?: boolean
+          auto_deactivate_users?: boolean
+          base_url?: string | null
+          created_at?: string
+          default_attribute_mapping?: Json
+          default_role?: string
+          id?: string
+          is_enabled?: boolean
+          role_mapping_rules?: Json
+          sync_groups_to_roles?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scim_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scim_provisioned_groups: {
         Row: {
           created_at: string

@@ -6,12 +6,13 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield } from 'lucide-react';
 import { ScimClientsTab } from '@/components/scim/ScimClientsTab';
+import { ScimConfigTab } from '@/components/scim/ScimConfigTab';
 import { ScimProvisionedUsersTab } from '@/components/scim/ScimProvisionedUsersTab';
 import { ScimProvisionedGroupsTab } from '@/components/scim/ScimProvisionedGroupsTab';
 import { ScimLogsTab } from '@/components/scim/ScimLogsTab';
 
 export default function ScimSettings() {
-  const [tab, setTab] = useState('clients');
+  const [tab, setTab] = useState('config');
 
   return (
     <div className="space-y-6">
@@ -27,12 +28,14 @@ export default function ScimSettings() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
+          <TabsTrigger value="config">Configuração</TabsTrigger>
           <TabsTrigger value="clients">Clientes SCIM</TabsTrigger>
-          <TabsTrigger value="users">Usuários Provisionados</TabsTrigger>
-          <TabsTrigger value="groups">Grupos Provisionados</TabsTrigger>
-          <TabsTrigger value="logs">Logs de Provisioning</TabsTrigger>
+          <TabsTrigger value="users">Usuários</TabsTrigger>
+          <TabsTrigger value="groups">Grupos</TabsTrigger>
+          <TabsTrigger value="logs">Logs</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="config"><ScimConfigTab /></TabsContent>
         <TabsContent value="clients"><ScimClientsTab /></TabsContent>
         <TabsContent value="users"><ScimProvisionedUsersTab /></TabsContent>
         <TabsContent value="groups"><ScimProvisionedGroupsTab /></TabsContent>
