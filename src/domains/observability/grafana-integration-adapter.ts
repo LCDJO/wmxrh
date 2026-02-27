@@ -309,6 +309,20 @@ export function exportPrometheus(): PrometheusExportResult {
     // Support metrics unavailable — skip
   }
 
+  // ── Federation / Identity metrics ─────────────────────────
+  try {
+    const { getFederationMetricsSnapshot } = require('./federation-metrics-collector') as {
+      getFederationMetricsSnapshot: () => import('./federation-metrics-collector').FederationMetricsSnapshot;
+    };
+    const fed = getFederationMetricsSnapshot();
+    collector.gauge('saml_login_total', fed.saml_login_total);
+    collector.gauge('oidc_login_total', fed.oidc_login_total);
+    collector.gauge('oauth_token_issued_total', fed.oauth_token_issued_total);
+    collector.gauge('token_validation_failures', fed.token_validation_failures);
+  } catch {
+    // Federation metrics unavailable — skip
+  }
+
   const metrics = collector.toPrometheus();
   const text = collector.toPrometheusText();
 

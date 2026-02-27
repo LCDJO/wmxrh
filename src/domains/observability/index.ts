@@ -38,3 +38,5 @@ export {
 export type { GrowthMetricsSnapshot } from './growth-metrics-collector';
 export { OBSERVABILITY_KERNEL_EVENTS } from './observability-events';
 export type * from './observability-events';
+export { collectFederationMetrics, getFederationMetricsSnapshot } from './federation-metrics-collector';
+export type { FederationMetricsSnapshot } from './federation-metrics-collector';
