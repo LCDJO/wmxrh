@@ -78,6 +78,16 @@ const createDefaultTree = (): MenuTreeNode[] => [
       mn('sec-govai', 'Governance AI', '/platform/security/governance-ai'),
     ],
   }),
+  mn('federation', 'Federation', '/platform/security/federation', {
+    icon: 'Globe', role_permissions: ['platform_super_admin', 'platform_operations'],
+    children: [
+      mn('fed-idps', 'Identity Providers', '/platform/security/federation/identity-providers'),
+      mn('fed-saml', 'SAML Config', '/platform/security/federation/saml-config'),
+      mn('fed-oauth', 'OAuth Clients', '/platform/security/federation/oauth-clients'),
+      mn('fed-tokens', 'Token Settings', '/platform/security/federation/token-settings'),
+      mn('fed-audit', 'Audit Logs', '/platform/security/federation/audit-logs'),
+    ],
+  }),
   mn('iam', 'IAM', '/platform/iam', { icon: 'KeyRound', role_permissions: ['platform_super_admin'] }),
   mn('audit', 'Auditoria', '/platform/audit', { icon: 'ScrollText', role_permissions: ['platform_super_admin'] }),
   mn('gov-dashboard', 'Governance Dashboard', '/platform/governance-dashboard', { icon: 'BarChart3', role_permissions: ['platform_super_admin'] }),

@@ -71,6 +71,12 @@ import PlatformLogs from '@/pages/platform/PlatformLogs';
 import DocumentSignatureIntegrations from '@/pages/platform/PlatformDocumentSignature';
 import SettingsGamification from '@/pages/platform/PlatformSettingsGamification';
 import PlatformIntegrationHealth from '@/pages/platform/PlatformIntegrationHealth';
+import PlatformFederation from '@/pages/platform/federation/PlatformFederation';
+import FederationIdentityProviders from '@/pages/platform/federation/FederationIdentityProviders';
+import FederationSAMLConfig from '@/pages/platform/federation/FederationSAMLConfig';
+import FederationOAuthClients from '@/pages/platform/federation/FederationOAuthClients';
+import FederationTokenSettings from '@/pages/platform/federation/FederationTokenSettings';
+import FederationAuditLogs from '@/pages/platform/federation/FederationAuditLogs';
 
 const PlatformSupportConsole = lazy(() => import('@/modules/support/ui/PlatformSupportConsole'));
 
@@ -120,6 +126,13 @@ export const platformRoutes: RouteObject[] = [
         // Governance sub-routes require opsAdmin — nested guard
         { path: 'governance', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformGovernance /></PlatformGuard> },
         { path: 'governance-ai', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformGovernanceAI /></PlatformGuard> },
+        // Federation sub-routes
+        { path: 'federation', element: <PlatformFederation /> },
+        { path: 'federation/identity-providers', element: <FederationIdentityProviders /> },
+        { path: 'federation/saml-config', element: <FederationSAMLConfig /> },
+        { path: 'federation/oauth-clients', element: <FederationOAuthClients /> },
+        { path: 'federation/token-settings', element: <FederationTokenSettings /> },
+        { path: 'federation/audit-logs', element: <FederationAuditLogs /> },
       ]),
 
       // ── Users section ── (shared securityAdmin guard)
