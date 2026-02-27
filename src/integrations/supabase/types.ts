@@ -15860,6 +15860,315 @@ export type Database = {
           },
         ]
       }
+      scim_attribute_mappings: {
+        Row: {
+          created_at: string
+          id: string
+          internal_field: string
+          is_active: boolean
+          is_required: boolean
+          resource_type: string
+          scim_attribute: string
+          scim_client_id: string
+          tenant_id: string
+          transform_expression: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          internal_field: string
+          is_active?: boolean
+          is_required?: boolean
+          resource_type?: string
+          scim_attribute: string
+          scim_client_id: string
+          tenant_id: string
+          transform_expression?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          internal_field?: string
+          is_active?: boolean
+          is_required?: boolean
+          resource_type?: string
+          scim_attribute?: string
+          scim_client_id?: string
+          tenant_id?: string
+          transform_expression?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scim_attribute_mappings_scim_client_id_fkey"
+            columns: ["scim_client_id"]
+            isOneToOne: false
+            referencedRelation: "scim_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scim_attribute_mappings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scim_clients: {
+        Row: {
+          base_url: string | null
+          bearer_token_hash: string
+          created_at: string
+          description: string | null
+          id: string
+          identity_provider_id: string | null
+          is_active: boolean
+          last_sync_at: string | null
+          name: string
+          supported_resources: string[]
+          sync_direction: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          base_url?: string | null
+          bearer_token_hash: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          identity_provider_id?: string | null
+          is_active?: boolean
+          last_sync_at?: string | null
+          name: string
+          supported_resources?: string[]
+          sync_direction?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          base_url?: string | null
+          bearer_token_hash?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          identity_provider_id?: string | null
+          is_active?: boolean
+          last_sync_at?: string | null
+          name?: string
+          supported_resources?: string[]
+          sync_direction?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scim_clients_identity_provider_id_fkey"
+            columns: ["identity_provider_id"]
+            isOneToOne: false
+            referencedRelation: "identity_provider_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scim_clients_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scim_provisioned_groups: {
+        Row: {
+          created_at: string
+          display_name: string
+          external_id: string
+          id: string
+          last_synced_at: string
+          mapped_role: string | null
+          members: Json
+          scim_client_id: string
+          scim_data: Json
+          scim_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          external_id: string
+          id?: string
+          last_synced_at?: string
+          mapped_role?: string | null
+          members?: Json
+          scim_client_id: string
+          scim_data?: Json
+          scim_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          external_id?: string
+          id?: string
+          last_synced_at?: string
+          mapped_role?: string | null
+          members?: Json
+          scim_client_id?: string
+          scim_data?: Json
+          scim_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scim_provisioned_groups_scim_client_id_fkey"
+            columns: ["scim_client_id"]
+            isOneToOne: false
+            referencedRelation: "scim_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scim_provisioned_groups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scim_provisioned_users: {
+        Row: {
+          active: boolean
+          created_at: string
+          display_name: string | null
+          email: string | null
+          external_id: string
+          id: string
+          last_synced_at: string
+          scim_client_id: string
+          scim_data: Json
+          scim_id: string
+          tenant_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          external_id: string
+          id?: string
+          last_synced_at?: string
+          scim_client_id: string
+          scim_data?: Json
+          scim_id: string
+          tenant_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          external_id?: string
+          id?: string
+          last_synced_at?: string
+          scim_client_id?: string
+          scim_data?: Json
+          scim_id?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scim_provisioned_users_scim_client_id_fkey"
+            columns: ["scim_client_id"]
+            isOneToOne: false
+            referencedRelation: "scim_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scim_provisioned_users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scim_provisioning_logs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          external_id: string | null
+          id: string
+          ip_address: string | null
+          operation: string
+          request_payload: Json | null
+          resource_id: string | null
+          resource_type: string
+          response_payload: Json | null
+          response_status: number
+          scim_client_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          ip_address?: string | null
+          operation: string
+          request_payload?: Json | null
+          resource_id?: string | null
+          resource_type: string
+          response_payload?: Json | null
+          response_status: number
+          scim_client_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          ip_address?: string | null
+          operation?: string
+          request_payload?: Json | null
+          resource_id?: string | null
+          resource_type?: string
+          response_payload?: Json | null
+          response_status?: number
+          scim_client_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scim_provisioning_logs_scim_client_id_fkey"
+            columns: ["scim_client_id"]
+            isOneToOne: false
+            referencedRelation: "scim_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scim_provisioning_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_logs: {
         Row: {
           action: string
