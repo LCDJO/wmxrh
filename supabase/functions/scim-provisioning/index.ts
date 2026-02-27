@@ -274,6 +274,8 @@ async function handleUsers(
     const externalId = body.externalId || body.userName;
     const email = body.emails?.[0]?.value || body.userName;
     const scimId = crypto.randomUUID();
+
+    // Insert provisioned user record immediately (for SCIM response)
     const { data, error } = await db
       .from("scim_provisioned_users")
       .insert({
@@ -292,20 +294,45 @@ async function handleUsers(
       await logOperation(client, "CREATE", "User", null, externalId, body, 409, null, error.message, ip, startTime);
       return scimError(409, "uniqueness", error.message);
     }
+
+    // Queue async provisioning (tenant IAM sync, role assignment, etc.)
+    await db.from("scim_provisioning_queue").insert({
+      tenant_id: tenantId,
+      scim_client_id: clientId,
+      operation: "CREATE",
+      resource_type: "User",
+      external_id: externalId,
+      scim_payload: body,
+    });
+
     const user = toScimUser(data);
     await logOperation(client, "CREATE", "User", scimId, externalId, body, 201, user, null, ip, startTime);
     return scimResponse(user, 201);
   }
 
   if ((method === "PUT" || method === "PATCH") && resourceId) {
+    // Determine operation type based on active status
+    const isDeactivation = body.active === false;
+    const isReactivation = body.active === true;
+    const now = new Date().toISOString();
+
     const updates: any = {
       display_name: body.displayName,
       email: body.emails?.[0]?.value,
       active: body.active,
       scim_data: body,
-      last_synced_at: new Date().toISOString(),
+      last_synced_at: now,
     };
-    // Remove undefined
+
+    // Soft-delete tracking: set deactivated_at when active=false
+    if (isDeactivation) {
+      updates.deactivated_at = now;
+      updates.deactivated_reason = "SCIM provisioning: active=false";
+    } else if (isReactivation) {
+      updates.deactivated_at = null;
+      updates.deactivated_reason = null;
+    }
+
     Object.keys(updates).forEach((k) => updates[k] === undefined && delete updates[k]);
 
     const { data, error } = await db
@@ -316,25 +343,59 @@ async function handleUsers(
       .select()
       .single();
     if (error || !data) {
-      await logOperation(client, method === "PUT" ? "UPDATE" : "PATCH", "User", resourceId, null, body, 404, null, error?.message || "Not found", ip, startTime);
+      const op = isDeactivation ? "DEACTIVATE" : method === "PUT" ? "UPDATE" : "PATCH";
+      await logOperation(client, op, "User", resourceId, null, body, 404, null, error?.message || "Not found", ip, startTime);
       return scimError(404, "notFound", "User not found");
     }
+
+    // Queue async processing for IAM sync
+    const queueOp = isDeactivation ? "DEACTIVATE" : isReactivation ? "REACTIVATE" : "UPDATE";
+    await db.from("scim_provisioning_queue").insert({
+      tenant_id: tenantId,
+      scim_client_id: clientId,
+      operation: queueOp,
+      resource_type: "User",
+      external_id: data.external_id,
+      scim_payload: body,
+    });
+
     const user = toScimUser(data);
-    await logOperation(client, method === "PUT" ? "UPDATE" : "PATCH", "User", resourceId, data.external_id, body, 200, user, null, ip, startTime);
+    await logOperation(client, queueOp, "User", resourceId, data.external_id, body, 200, user, null, ip, startTime);
     return scimResponse(user);
   }
 
   if (method === "DELETE" && resourceId) {
-    const { error } = await db
+    // SCIM DELETE → soft-delete (deactivate), never hard delete
+    const now = new Date().toISOString();
+    const { data, error } = await db
       .from("scim_provisioned_users")
-      .delete()
+      .update({
+        active: false,
+        deactivated_at: now,
+        deactivated_reason: "SCIM DELETE request — soft-deactivated",
+        last_synced_at: now,
+      })
       .eq("scim_client_id", clientId)
-      .eq("scim_id", resourceId);
-    if (error) {
-      await logOperation(client, "DELETE", "User", resourceId, null, null, 500, null, error.message, ip, startTime);
-      return scimError(500, "serverError", error.message);
+      .eq("scim_id", resourceId)
+      .select()
+      .single();
+
+    if (error || !data) {
+      await logOperation(client, "DELETE", "User", resourceId, null, null, 404, null, error?.message || "Not found", ip, startTime);
+      return scimError(404, "notFound", "User not found");
     }
-    await logOperation(client, "DELETE", "User", resourceId, null, null, 204, null, null, ip, startTime);
+
+    // Queue deactivation in tenant IAM
+    await db.from("scim_provisioning_queue").insert({
+      tenant_id: tenantId,
+      scim_client_id: clientId,
+      operation: "DEACTIVATE",
+      resource_type: "User",
+      external_id: data.external_id,
+      scim_payload: { active: false, reason: "SCIM DELETE" },
+    });
+
+    await logOperation(client, "DEACTIVATE", "User", resourceId, data.external_id, null, 204, null, null, ip, startTime);
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
