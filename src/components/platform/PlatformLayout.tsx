@@ -330,6 +330,7 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/settings/saas', label: 'Parametrizações' },
           { to: '/platform/settings/gamification', label: 'Gamificação' },
           { to: '/platform/settings/versioning', label: 'Versionamento' },
+          { to: '/platform/settings/footer', label: 'Rodapé (Footer)' },
           { to: '---separator-estrutura---', label: '---' },
           {
             to: '/platform/structure',

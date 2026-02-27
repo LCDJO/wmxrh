@@ -60,6 +60,7 @@ import LandingReview from '@/pages/platform/landing/LandingReview';
 import LandingPublished from '@/pages/platform/landing/LandingPublished';
 import PlatformVersioning from '@/pages/platform/PlatformVersioning';
 import PlatformSaasSettings from '@/pages/platform/PlatformSaasSettings';
+import PlatformFooterDefaults from '@/pages/platform/PlatformFooterDefaults';
 import PlatformApiManagement from '@/pages/platform/PlatformApiManagement';
 import PlatformDevelopers from '@/pages/platform/PlatformDevelopers';
 import PlatformMarketplace from '@/pages/platform/PlatformMarketplace';
@@ -200,6 +201,7 @@ export const platformRoutes: RouteObject[] = [
         { path: 'versioning', element: <PlatformVersioning /> },
         { path: 'saas', element: <PlatformSaasSettings /> },
         { path: 'gamification', element: <SettingsGamification /> },
+        { path: 'footer', element: <PlatformGuard allowedRoles={['platform_super_admin']}><PlatformFooterDefaults /></PlatformGuard> },
       ]),
 
       // ── Standalone guarded routes ──
