@@ -108,9 +108,29 @@ export interface ChaosAuditEntry {
 
 // ── API Interfaces ───────────────────────────────────
 
+export interface FaultInjectionParams {
+  fault_type: FaultType;
+  target_module: string;
+  duration_minutes: number;
+  parameters: Record<string, any>; // e.g. { latency_ms: 2000 }
+  blast_radius: BlastRadius;
+}
+
+export interface ActiveFault {
+  experiment_id: string;
+  fault_type: FaultType;
+  target_module: string;
+  started_at: string;
+  expires_at: string;
+  parameters: Record<string, any>;
+  status: 'active' | 'expired' | 'stopped';
+}
+
 export interface FaultInjectionControllerAPI {
-  injectFault(experiment: ChaosExperiment): Promise<void>;
+  injectFault(experiment: ChaosExperiment): Promise<ActiveFault>;
   stopFault(experimentId: string): Promise<void>;
+  getActiveFaults(): Promise<ActiveFault[]>;
+  isFaultActive(module: string): Promise<boolean>;
 }
 
 export interface ChaosScenarioManagerAPI {
