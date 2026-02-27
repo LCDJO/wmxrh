@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.federation-jwks]
 verify_jwt = false
+
+[functions.api-gateway-validate]
+verify_jwt = false

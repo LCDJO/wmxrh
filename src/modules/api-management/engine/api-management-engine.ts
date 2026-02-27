@@ -96,15 +96,97 @@ export interface UsageSummary {
 export const ApiGatewayController = {
   /**
    * Validate an incoming API request against keys, scopes, rate limits, and version.
+   * Delegates to the api-gateway-validate edge function for real validation.
    */
   async validateRequest(request: ApiGatewayRequest): Promise<ApiGatewayResponse> {
-    // This is the client-side model — actual validation happens in the edge function.
-    // This controller is used for dry-run/sandbox testing.
-    return {
-      allowed: true,
-      reason: 'client-side-dry-run',
-      resolvedVersion: request.version || 'v1',
-    };
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('api-gateway-validate', {
+        body: {
+          api_key: request.apiKeyHash ? undefined : undefined,
+          required_scopes: request.scopes,
+          endpoint: request.endpoint,
+          method: request.method,
+        },
+        headers: request.apiKeyHash
+          ? { 'X-API-Key': request.apiKeyPrefix + request.apiKeyHash }
+          : undefined,
+      });
+
+      if (error) {
+        return {
+          allowed: false,
+          reason: `Gateway validation error: ${error.message}`,
+        };
+      }
+
+      return {
+        allowed: data?.valid ?? false,
+        reason: data?.error,
+        clientId: data?.client_id,
+        tenantId: data?.tenant_id,
+        resolvedVersion: request.version || 'v1',
+        environment: data?.environment ?? (request.environment || 'production'),
+      };
+    } catch (err) {
+      // Fallback: dry-run for offline/dev
+      return {
+        allowed: true,
+        reason: 'client-side-dry-run (gateway unreachable)',
+        resolvedVersion: request.version || 'v1',
+      };
+    }
+  },
+
+  /**
+   * Validate a JWT access token and check required scopes.
+   * Convenience method for direct token validation.
+   */
+  async validateAccessToken(
+    accessToken: string,
+    requiredScopes: string[] = [],
+  ): Promise<{ valid: boolean; userId?: string; tenantId?: string; grantedScopes?: string[]; missingScopes?: string[]; error?: string }> {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('api-gateway-validate', {
+        body: {
+          access_token: accessToken,
+          required_scopes: requiredScopes,
+        },
+      });
+
+      if (error) {
+        return { valid: false, error: error.message };
+      }
+
+      return {
+        valid: data?.valid ?? false,
+        userId: data?.user_id,
+        tenantId: data?.tenant_id,
+        grantedScopes: data?.granted_scopes,
+        missingScopes: data?.missing_scopes,
+        error: data?.error,
+      };
+    } catch {
+      return { valid: false, error: 'Gateway unreachable' };
+    }
+  },
+
+  /**
+   * Introspect a token (RFC 7662).
+   */
+  async introspectToken(token: string): Promise<Record<string, unknown>> {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('api-gateway-validate/introspect', {
+        body: { access_token: token },
+      });
+
+      if (error) return { active: false };
+      return data ?? { active: false };
+    } catch {
+      return { active: false };
+    }
   },
 };
 
