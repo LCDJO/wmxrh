@@ -176,8 +176,28 @@ export interface ImpactAnalyzerAPI {
   analyze(experimentId: string): Promise<ImpactAnalysisResult>;
 }
 
+export interface SLAValidationResult {
+  sla_response: {
+    met: boolean;
+    target_ms: number;
+    actual_ms: number;
+    delta_ms: number;
+    degradation_pct: number;
+  };
+  sla_resolution: {
+    met: boolean;
+    target_minutes: number;
+    actual_minutes: number;
+    delta_minutes: number;
+  };
+  overall_met: boolean;
+  uptime_pct: number;
+  target_uptime_pct: number;
+  breaches: string[];
+}
+
 export interface SLAValidatorAPI {
-  validate(experimentId: string): Promise<{ sla_met: boolean; actual_pct: number; target_pct: number }>;
+  validate(experimentId: string): Promise<SLAValidationResult>;
 }
 
 export interface RTOValidatorAPI {
