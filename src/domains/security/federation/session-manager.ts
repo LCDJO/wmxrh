@@ -133,7 +133,7 @@ export function createSessionManager(): SessionManagerAPI {
     },
 
     async authenticate(sessionId, userId, attributes) {
-      const expiresAt = new Date(Date.now() + 8 * 3600 * 1000).toISOString(); // 8h
+      const expiresAt = new Date(Date.now() + 900 * 1000).toISOString(); // 15min (hardened — short-lived)
 
       const { data, error } = await supabase
         .from('federation_sessions')
@@ -273,12 +273,25 @@ export async function touchSession(sessionId: string): Promise<void> {
 }
 
 /**
- * Extend session expiry.
+ * Extend session expiry (capped at 8h max from creation).
  */
-export async function extendSession(sessionId: string, additionalHours = 8): Promise<void> {
-  const newExpiry = new Date(Date.now() + additionalHours * 3600 * 1000).toISOString();
+export async function extendSession(sessionId: string, additionalHours = 1): Promise<void> {
+  const maxDuration = 8 * 3600 * 1000; // 8h cap
+  const { data: session } = await supabase
+    .from('federation_sessions')
+    .select('started_at, created_at')
+    .eq('id', sessionId)
+    .maybeSingle();
+
+  if (!session) return;
+
+  const created = new Date(session.started_at || session.created_at).getTime();
+  const requestedExpiry = Date.now() + additionalHours * 3600 * 1000;
+  const maxExpiry = created + maxDuration;
+  const effectiveExpiry = new Date(Math.min(requestedExpiry, maxExpiry)).toISOString();
+
   await supabase
     .from('federation_sessions')
-    .update({ expires_at: newExpiry })
+    .update({ expires_at: effectiveExpiry })
     .eq('id', sessionId);
 }

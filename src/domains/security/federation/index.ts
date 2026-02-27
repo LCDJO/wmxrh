@@ -31,6 +31,28 @@ export type {
   TenantDomainRecord,
 } from './multi-tenant-resolver';
 
+// ── Security Hardening ──
+export {
+  SECURITY_POLICY,
+  PKCEEnforcer,
+  TokenExpirationPolicy,
+  RefreshTokenRotation,
+  SessionRevocation,
+  MFAPolicy,
+} from './security-hardening';
+export type {
+  PKCEMethod,
+  PKCEParams,
+  PKCEVerification,
+  MFAStatus,
+  MFAMethod,
+  MFAChallenge,
+  MFAEnrollment,
+  SecurityValidationResult,
+  RefreshTokenRotationResult,
+  SessionSecurityContext,
+} from './security-hardening';
+
 // ── UGE Provider ──
 export { federationGraphProvider } from './federation-graph-provider';
 

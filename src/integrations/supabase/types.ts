@@ -7113,14 +7113,20 @@ export type Database = {
           idp_source: string | null
           ip_address: string | null
           last_activity_at: string | null
+          mfa_method: string | null
+          mfa_verified: boolean
+          mfa_verified_at: string | null
           name_id: string | null
           protocol: Database["public"]["Enums"]["federation_protocol"]
+          refresh_token_family_id: string | null
           refresh_token_hash: string | null
           revoked_at: string | null
           scopes: string[] | null
           session_index: string | null
           started_at: string
           status: Database["public"]["Enums"]["federation_session_status"]
+          step_up_authenticated: boolean
+          step_up_expires_at: string | null
           tenant_id: string
           user_agent: string | null
           user_id: string | null
@@ -7137,14 +7143,20 @@ export type Database = {
           idp_source?: string | null
           ip_address?: string | null
           last_activity_at?: string | null
+          mfa_method?: string | null
+          mfa_verified?: boolean
+          mfa_verified_at?: string | null
           name_id?: string | null
           protocol: Database["public"]["Enums"]["federation_protocol"]
+          refresh_token_family_id?: string | null
           refresh_token_hash?: string | null
           revoked_at?: string | null
           scopes?: string[] | null
           session_index?: string | null
           started_at?: string
           status?: Database["public"]["Enums"]["federation_session_status"]
+          step_up_authenticated?: boolean
+          step_up_expires_at?: string | null
           tenant_id: string
           user_agent?: string | null
           user_id?: string | null
@@ -7161,14 +7173,20 @@ export type Database = {
           idp_source?: string | null
           ip_address?: string | null
           last_activity_at?: string | null
+          mfa_method?: string | null
+          mfa_verified?: boolean
+          mfa_verified_at?: string | null
           name_id?: string | null
           protocol?: Database["public"]["Enums"]["federation_protocol"]
+          refresh_token_family_id?: string | null
           refresh_token_hash?: string | null
           revoked_at?: string | null
           scopes?: string[] | null
           session_index?: string | null
           started_at?: string
           status?: Database["public"]["Enums"]["federation_session_status"]
+          step_up_authenticated?: boolean
+          step_up_expires_at?: string | null
           tenant_id?: string
           user_agent?: string | null
           user_id?: string | null
@@ -11521,6 +11539,65 @@ export type Database = {
           },
         ]
       }
+      mfa_enrollments: {
+        Row: {
+          created_at: string
+          enrolled_at: string | null
+          failed_attempts: number
+          id: string
+          last_verified_at: string | null
+          locked_until: string | null
+          method: string
+          recovery_codes_hash: string[] | null
+          recovery_codes_remaining: number
+          secret_encrypted: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enrolled_at?: string | null
+          failed_attempts?: number
+          id?: string
+          last_verified_at?: string | null
+          locked_until?: string | null
+          method: string
+          recovery_codes_hash?: string[] | null
+          recovery_codes_remaining?: number
+          secret_encrypted?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enrolled_at?: string | null
+          failed_attempts?: number
+          id?: string
+          last_verified_at?: string | null
+          locked_until?: string | null
+          method?: string
+          recovery_codes_hash?: string[] | null
+          recovery_codes_remaining?: number
+          secret_encrypted?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mfa_enrollments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_versions: {
         Row: {
           breaking_changes: boolean
@@ -13976,6 +14053,59 @@ export type Database = {
           {
             foreignKeyName: "referral_tracking_referred_tenant_id_fkey"
             columns: ["referred_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      refresh_token_families: {
+        Row: {
+          client_id: string
+          created_at: string
+          expires_at: string
+          family_id: string
+          generation: number
+          id: string
+          is_active: boolean
+          reuse_detected_at: string | null
+          revoked_at: string | null
+          tenant_id: string
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          expires_at: string
+          family_id: string
+          generation?: number
+          id?: string
+          is_active?: boolean
+          reuse_detected_at?: string | null
+          revoked_at?: string | null
+          tenant_id: string
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          expires_at?: string
+          family_id?: string
+          generation?: number
+          id?: string
+          is_active?: boolean
+          reuse_detected_at?: string | null
+          revoked_at?: string | null
+          tenant_id?: string
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refresh_token_families_tenant_id_fkey"
+            columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
