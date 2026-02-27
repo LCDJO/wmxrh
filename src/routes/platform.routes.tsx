@@ -34,6 +34,7 @@ import PlatformGovernanceDashboard from '@/pages/platform/PlatformGovernanceDash
 import PlatformObservability from '@/pages/platform/PlatformObservability';
 import PlatformMonitoring from '@/pages/platform/PlatformMonitoring';
 import PlatformControlPlane from '@/pages/platform/PlatformControlPlane';
+import PlatformDRTests from '@/pages/platform/PlatformDRTests';
 import PlatformBilling from '@/pages/platform/PlatformBilling';
 import PlatformRevenue from '@/pages/platform/PlatformRevenue';
 import PlatformCoupons from '@/pages/platform/PlatformCoupons';
@@ -222,6 +223,7 @@ export const platformRoutes: RouteObject[] = [
       { path: 'observability', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformObservability /></PlatformGuard> },
       { path: 'monitoring/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformMonitoring /></PlatformGuard> },
       { path: 'control-plane', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformControlPlane /></PlatformGuard> },
+      { path: 'control-plane/dr-tests', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformDRTests /></PlatformGuard> },
       { path: 'iam', element: <PlatformGuard allowedRoles={securityAdmin}><PlatformIAM /></PlatformGuard> },
       { path: 'referrals', element: <PlatformGuard allowedRoles={marketingRoles}><PlatformReferrals /></PlatformGuard> },
       // ── APIs / Developers / Marketplace ──
