@@ -52,14 +52,87 @@ export function createChaosEngine(): ChaosEngineeringAPI {
   };
 
   // ── Fault Injection Controller ───────────────────
+  const activeFaults = new Map<string, import('./types').ActiveFault>();
+
   const faultInjection: ChaosEngineeringAPI['faultInjection'] = {
     async injectFault(experiment) {
-      console.warn(`[CHAOS] 💥 Injecting fault: ${experiment.fault_type} → ${experiment.target_module ?? 'system'} (${experiment.blast_radius})`);
-      await auditLog(experiment.id, 'fault_injected', { fault_type: experiment.fault_type, target: experiment.target_module, blast_radius: experiment.blast_radius }, 'warning');
+      const target = experiment.target_module ?? 'system';
+      const durationMin = experiment.max_duration_minutes ?? 5;
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + durationMin * 60_000);
+
+      const fault: import('./types').ActiveFault = {
+        experiment_id: experiment.id,
+        fault_type: experiment.fault_type,
+        target_module: target,
+        started_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        parameters: experiment.parameters ?? {},
+        status: 'active',
+      };
+
+      activeFaults.set(experiment.id, fault);
+
+      console.warn(
+        `[CHAOS] 💥 Fault injected: ${experiment.fault_type} → ${target}` +
+        ` | Duration: ${durationMin}min | Params: ${JSON.stringify(experiment.parameters)}` +
+        ` | Expires: ${expiresAt.toISOString()}`
+      );
+
+      await auditLog(experiment.id, 'fault_injected', {
+        fault_type: experiment.fault_type,
+        target_module: target,
+        blast_radius: experiment.blast_radius,
+        duration_minutes: durationMin,
+        parameters: experiment.parameters,
+        expires_at: expiresAt.toISOString(),
+      }, 'warning');
+
+      // Auto-expire after duration
+      setTimeout(async () => {
+        const f = activeFaults.get(experiment.id);
+        if (f && f.status === 'active') {
+          f.status = 'expired';
+          activeFaults.delete(experiment.id);
+          console.info(`[CHAOS] ⏱️ Fault auto-expired: ${experiment.fault_type} → ${target}`);
+          await auditLog(experiment.id, 'fault_auto_expired', { target_module: target });
+        }
+      }, durationMin * 60_000);
+
+      return fault;
     },
+
     async stopFault(experimentId) {
-      console.info(`[CHAOS] 🛑 Stopping fault injection for experiment ${experimentId}`);
-      await auditLog(experimentId, 'fault_stopped', {});
+      const fault = activeFaults.get(experimentId);
+      if (fault) {
+        fault.status = 'stopped';
+        activeFaults.delete(experimentId);
+        console.info(`[CHAOS] 🛑 Fault stopped manually: ${fault.fault_type} → ${fault.target_module}`);
+      }
+      await auditLog(experimentId, 'fault_stopped', { had_active: !!fault });
+    },
+
+    async getActiveFaults() {
+      const now = Date.now();
+      const faults: import('./types').ActiveFault[] = [];
+      for (const [id, f] of activeFaults) {
+        if (new Date(f.expires_at).getTime() <= now) {
+          f.status = 'expired';
+          activeFaults.delete(id);
+        } else {
+          faults.push(f);
+        }
+      }
+      return faults;
+    },
+
+    async isFaultActive(module: string) {
+      for (const f of activeFaults.values()) {
+        if (f.target_module === module && f.status === 'active' && new Date(f.expires_at).getTime() > Date.now()) {
+          return true;
+        }
+      }
+      return false;
     },
   };
 
