@@ -179,13 +179,15 @@ export interface OAuth2AuthorizationRequest {
 }
 
 export interface OAuth2TokenRequest {
-  grant_type: 'authorization_code' | 'refresh_token' | 'client_credentials';
+  grant_type: 'authorization_code' | 'refresh_token' | 'client_credentials' | 'urn:ietf:params:oauth:grant-type:device_code';
   code?: string;
   redirect_uri?: string;
   refresh_token?: string;
   client_id: string;
   client_secret?: string;
   code_verifier?: string;
+  device_code?: string;
+  scope?: string;
 }
 
 export interface OAuth2TokenResponse {
@@ -262,15 +264,30 @@ export interface OIDCProviderAPI {
   fetchUserInfo(accessToken: string, idpConfig: IdentityProviderConfig): Promise<OIDCUserInfo>;
 }
 
+export interface OAuth2DeviceAuthorizationResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete: string;
+  expires_in: number;
+  interval: number;
+}
+
 export interface OAuthAuthorizationServerAPI {
-  /** Generate authorization code */
+  /** Generate authorization code (stores server-side via edge fn) */
   createAuthorizationCode(request: OAuth2AuthorizationRequest, userId: string, tenantId: string): Promise<string>;
-  /** Exchange code for tokens */
+  /** Exchange code/credentials/refresh for tokens (delegates to edge fn) */
   exchangeToken(request: OAuth2TokenRequest): Promise<OAuth2TokenResponse>;
-  /** Revoke a token */
+  /** Revoke a token (RFC 7009) */
   revokeToken(token: string, tokenType: 'access_token' | 'refresh_token'): Promise<void>;
-  /** Introspect a token */
-  introspectToken(token: string): Promise<{ active: boolean; sub?: string; scope?: string; exp?: number }>;
+  /** Introspect a token (RFC 7662) */
+  introspectToken(token: string): Promise<{ active: boolean; sub?: string; scope?: string; client_id?: string; exp?: number }>;
+  /** Device Authorization Request (RFC 8628) */
+  requestDeviceAuthorization(clientId: string, scope: string, tenantId: string): Promise<OAuth2DeviceAuthorizationResponse>;
+  /** Approve a device code by user_code */
+  approveDeviceCode(userCode: string, userId: string): Promise<void>;
+  /** Deny a device code */
+  denyDeviceCode(userCode: string): Promise<void>;
 }
 
 export interface TokenServiceAPI {

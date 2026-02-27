@@ -11870,6 +11870,80 @@ export type Database = {
           },
         ]
       }
+      oauth2_grants: {
+        Row: {
+          client_id: string
+          code_challenge: string | null
+          code_challenge_method: string | null
+          code_hash: string | null
+          created_at: string
+          device_code_hash: string | null
+          device_status: string | null
+          expires_at: string
+          grant_type: string
+          id: string
+          is_used: boolean
+          redirect_uri: string | null
+          revoked_at: string | null
+          scope: string
+          tenant_id: string
+          token_hash: string | null
+          user_code: string | null
+          user_id: string | null
+          verification_uri: string | null
+        }
+        Insert: {
+          client_id: string
+          code_challenge?: string | null
+          code_challenge_method?: string | null
+          code_hash?: string | null
+          created_at?: string
+          device_code_hash?: string | null
+          device_status?: string | null
+          expires_at: string
+          grant_type: string
+          id?: string
+          is_used?: boolean
+          redirect_uri?: string | null
+          revoked_at?: string | null
+          scope?: string
+          tenant_id: string
+          token_hash?: string | null
+          user_code?: string | null
+          user_id?: string | null
+          verification_uri?: string | null
+        }
+        Update: {
+          client_id?: string
+          code_challenge?: string | null
+          code_challenge_method?: string | null
+          code_hash?: string | null
+          created_at?: string
+          device_code_hash?: string | null
+          device_status?: string | null
+          expires_at?: string
+          grant_type?: string
+          id?: string
+          is_used?: boolean
+          redirect_uri?: string | null
+          revoked_at?: string | null
+          scope?: string
+          tenant_id?: string
+          token_hash?: string | null
+          user_code?: string | null
+          user_id?: string | null
+          verification_uri?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oauth2_grants_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       occupational_risk_factors: {
         Row: {
           category: Database["public"]["Enums"]["risk_category"]
