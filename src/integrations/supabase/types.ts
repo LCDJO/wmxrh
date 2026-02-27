@@ -1018,6 +1018,392 @@ export type Database = {
           },
         ]
       }
+      bcdr_audit_log: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          event_type: string
+          id: string
+          severity: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          event_type: string
+          id?: string
+          severity?: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          event_type?: string
+          id?: string
+          severity?: string
+        }
+        Relationships: []
+      }
+      bcdr_backups: {
+        Row: {
+          backup_type: string
+          checksum: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          expires_at: string | null
+          id: string
+          policy_id: string | null
+          size_bytes: number | null
+          started_at: string
+          status: string
+          storage_location: string | null
+          verified: boolean
+          verified_at: string | null
+        }
+        Insert: {
+          backup_type?: string
+          checksum?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string | null
+          id?: string
+          policy_id?: string | null
+          size_bytes?: number | null
+          started_at?: string
+          status?: string
+          storage_location?: string | null
+          verified?: boolean
+          verified_at?: string | null
+        }
+        Update: {
+          backup_type?: string
+          checksum?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string | null
+          id?: string
+          policy_id?: string | null
+          size_bytes?: number | null
+          started_at?: string
+          status?: string
+          storage_location?: string | null
+          verified?: boolean
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcdr_backups_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "bcdr_recovery_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcdr_dr_tests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          executed_by: string | null
+          findings: Json | null
+          id: string
+          modules_tested: string[] | null
+          recommendations: Json | null
+          rpo_actual_minutes: number | null
+          rpo_met: boolean | null
+          rpo_target_minutes: number | null
+          rto_actual_minutes: number | null
+          rto_met: boolean | null
+          rto_target_minutes: number | null
+          scenario_description: string | null
+          scheduled_at: string | null
+          started_at: string | null
+          status: string
+          test_name: string
+          test_type: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          executed_by?: string | null
+          findings?: Json | null
+          id?: string
+          modules_tested?: string[] | null
+          recommendations?: Json | null
+          rpo_actual_minutes?: number | null
+          rpo_met?: boolean | null
+          rpo_target_minutes?: number | null
+          rto_actual_minutes?: number | null
+          rto_met?: boolean | null
+          rto_target_minutes?: number | null
+          scenario_description?: string | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          test_name: string
+          test_type?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          executed_by?: string | null
+          findings?: Json | null
+          id?: string
+          modules_tested?: string[] | null
+          recommendations?: Json | null
+          rpo_actual_minutes?: number | null
+          rpo_met?: boolean | null
+          rpo_target_minutes?: number | null
+          rto_actual_minutes?: number | null
+          rto_met?: boolean | null
+          rto_target_minutes?: number | null
+          scenario_description?: string | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          test_name?: string
+          test_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bcdr_failover_records: {
+        Row: {
+          affected_tenants: string[] | null
+          completed_at: string | null
+          created_at: string
+          error_details: string | null
+          id: string
+          incident_id: string | null
+          initiated_by: string | null
+          policy_id: string | null
+          rpo_actual_minutes: number | null
+          rpo_met: boolean | null
+          rto_actual_minutes: number | null
+          rto_met: boolean | null
+          source_region: string
+          started_at: string
+          status: string
+          target_region: string
+          trigger_reason: string | null
+          trigger_type: string
+        }
+        Insert: {
+          affected_tenants?: string[] | null
+          completed_at?: string | null
+          created_at?: string
+          error_details?: string | null
+          id?: string
+          incident_id?: string | null
+          initiated_by?: string | null
+          policy_id?: string | null
+          rpo_actual_minutes?: number | null
+          rpo_met?: boolean | null
+          rto_actual_minutes?: number | null
+          rto_met?: boolean | null
+          source_region: string
+          started_at?: string
+          status?: string
+          target_region: string
+          trigger_reason?: string | null
+          trigger_type?: string
+        }
+        Update: {
+          affected_tenants?: string[] | null
+          completed_at?: string | null
+          created_at?: string
+          error_details?: string | null
+          id?: string
+          incident_id?: string | null
+          initiated_by?: string | null
+          policy_id?: string | null
+          rpo_actual_minutes?: number | null
+          rpo_met?: boolean | null
+          rto_actual_minutes?: number | null
+          rto_met?: boolean | null
+          source_region?: string
+          started_at?: string
+          status?: string
+          target_region?: string
+          trigger_reason?: string | null
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcdr_failover_records_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "bcdr_recovery_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcdr_recovery_policies: {
+        Row: {
+          backup_frequency_minutes: number
+          created_at: string
+          created_by: string | null
+          failover_mode: string
+          id: string
+          is_active: boolean
+          module_name: string
+          priority: string
+          replication_strategy: string
+          retention_days: number
+          rpo_minutes: number
+          rto_minutes: number
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          backup_frequency_minutes?: number
+          created_at?: string
+          created_by?: string | null
+          failover_mode?: string
+          id?: string
+          is_active?: boolean
+          module_name: string
+          priority?: string
+          replication_strategy?: string
+          retention_days?: number
+          rpo_minutes?: number
+          rto_minutes?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          backup_frequency_minutes?: number
+          created_at?: string
+          created_by?: string | null
+          failover_mode?: string
+          id?: string
+          is_active?: boolean
+          module_name?: string
+          priority?: string
+          replication_strategy?: string
+          retention_days?: number
+          rpo_minutes?: number
+          rto_minutes?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcdr_recovery_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcdr_region_health: {
+        Row: {
+          active_connections: number | null
+          cpu_usage_pct: number | null
+          created_at: string
+          disk_usage_pct: number | null
+          id: string
+          is_primary: boolean
+          last_health_check_at: string
+          latency_ms: number | null
+          memory_usage_pct: number | null
+          metadata: Json | null
+          region_name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          active_connections?: number | null
+          cpu_usage_pct?: number | null
+          created_at?: string
+          disk_usage_pct?: number | null
+          id?: string
+          is_primary?: boolean
+          last_health_check_at?: string
+          latency_ms?: number | null
+          memory_usage_pct?: number | null
+          metadata?: Json | null
+          region_name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          active_connections?: number | null
+          cpu_usage_pct?: number | null
+          created_at?: string
+          disk_usage_pct?: number | null
+          id?: string
+          is_primary?: boolean
+          last_health_check_at?: string
+          latency_ms?: number | null
+          memory_usage_pct?: number | null
+          metadata?: Json | null
+          region_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bcdr_replication_status: {
+        Row: {
+          bytes_replicated: number | null
+          created_at: string
+          id: string
+          lag_seconds: number
+          last_synced_at: string | null
+          policy_id: string | null
+          source_region: string
+          status: string
+          target_region: string
+          updated_at: string
+        }
+        Insert: {
+          bytes_replicated?: number | null
+          created_at?: string
+          id?: string
+          lag_seconds?: number
+          last_synced_at?: string | null
+          policy_id?: string | null
+          source_region?: string
+          status?: string
+          target_region?: string
+          updated_at?: string
+        }
+        Update: {
+          bytes_replicated?: number | null
+          created_at?: string
+          id?: string
+          lag_seconds?: number
+          last_synced_at?: string | null
+          policy_id?: string | null
+          source_region?: string
+          status?: string
+          target_region?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcdr_replication_status_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "bcdr_recovery_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       benefit_plans: {
         Row: {
           base_value: number
