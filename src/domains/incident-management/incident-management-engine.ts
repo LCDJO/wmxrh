@@ -140,30 +140,41 @@ function createIncidentDetector(classifier: SeverityClassifierAPI): IncidentDete
 // SLA ENGINE
 // ══════════════════════════════════
 
-function createSLAEngine(): SLAEngineAPI {
+/**
+ * SLA targets by severity (defaults):
+ *   Sev1 → response 5min,  resolution 1h
+ *   Sev2 → response 15min, resolution 4h
+ *   Sev3 → response 30min, resolution 8h
+ *   Sev4 → response 60min, resolution 24h
+ */
+const SLA_DEFAULTS: Record<IncidentSeverity, { response: number; resolution: number }> = {
+  sev1: { response: 5, resolution: 60 },
+  sev2: { response: 15, resolution: 240 },
+  sev3: { response: 30, resolution: 480 },
+  sev4: { response: 60, resolution: 1440 },
+};
+
+function createSLAEngine(notifyBreach: (incident: Incident, type: 'response' | 'resolution') => Promise<void>): SLAEngineAPI {
   return {
     async getConfig(severity, tenantId) {
       // Try tenant-specific first, then global
-      let query = supabase.from('incident_sla_configs' as any)
-        .select('*').eq('severity', severity).eq('is_active', true);
-
       if (tenantId) {
-        const { data: tenantConfig } = await (query.eq('tenant_id', tenantId).single() as any);
+        const { data: tenantConfig } = await (supabase.from('incident_sla_configs' as any)
+          .select('*').eq('severity', severity).eq('is_active', true)
+          .eq('tenant_id', tenantId).single() as any);
         if (tenantConfig) return tenantConfig as SLAConfig;
       }
 
       const { data: globalConfig } = await (supabase.from('incident_sla_configs' as any)
-        .select('*')
-        .eq('severity', severity)
-        .eq('is_active', true)
-        .is('tenant_id', null)
-        .single() as any);
+        .select('*').eq('severity', severity).eq('is_active', true)
+        .is('tenant_id', null).single() as any);
 
+      const defaults = SLA_DEFAULTS[severity] ?? SLA_DEFAULTS.sev3;
       return (globalConfig as SLAConfig) ?? {
-        response_time_minutes: 30,
-        acknowledgement_time_minutes: 60,
-        resolution_time_minutes: 480,
-        escalation_after_minutes: 120,
+        response_time_minutes: defaults.response,
+        acknowledgement_time_minutes: defaults.response,
+        resolution_time_minutes: defaults.resolution,
+        escalation_after_minutes: Math.round(defaults.resolution / 4),
         notification_interval_minutes: 30,
       };
     },
@@ -183,16 +194,41 @@ function createSLAEngine(): SLAEngineAPI {
     },
 
     async checkBreaches() {
-      const now = new Date().toISOString();
+      const now = new Date();
+      const nowISO = now.toISOString();
+
       const { data } = await (supabase.from('incidents' as any)
         .select('*').eq('sla_breached', false)
         .in('status', ['open', 'investigating', 'mitigated'])
-        .or(`sla_response_deadline.lt.${now},sla_ack_deadline.lt.${now},sla_resolution_deadline.lt.${now}`) as any);
+        .or(`sla_response_deadline.lt.${nowISO},sla_resolution_deadline.lt.${nowISO}`) as any);
 
       const breached = (data ?? []) as Incident[];
 
       for (const incident of breached) {
+        // Determine which target was breached
+        const responseDeadline = incident.sla_response_deadline ? new Date(incident.sla_response_deadline) : null;
+        const resolutionDeadline = incident.sla_resolution_deadline ? new Date(incident.sla_resolution_deadline) : null;
+
+        const breachType: 'response' | 'resolution' =
+          (responseDeadline && now > responseDeadline && incident.status === 'open')
+            ? 'response'
+            : 'resolution';
+
+        // Mark breached
         await (supabase.from('incidents' as any).update({ sla_breached: true } as any).eq('id', incident.id) as any);
+
+        // Log breach update
+        const elapsed = Math.round((now.getTime() - new Date(incident.created_at).getTime()) / 60_000);
+        await (supabase.from('incident_updates' as any).insert({
+          incident_id: incident.id,
+          update_type: 'sla_breach',
+          message: `⚠️ SLA ${breachType === 'response' ? 'response_time_target' : 'resolution_time_target'} breached after ${elapsed} minutes`,
+          is_public: false,
+          metadata: { breach_type: breachType, elapsed_minutes: elapsed },
+        } as any) as any);
+
+        // Fire alert notification
+        await notifyBreach(incident, breachType);
       }
 
       return breached;
@@ -469,9 +505,12 @@ function createAvailabilityReporter(): AvailabilityReporterAPI {
 export function createIncidentManagementEngine(): IncidentManagementEngineAPI {
   const classifier = createSeverityClassifier();
   const detector = createIncidentDetector(classifier);
-  const sla = createSLAEngine();
-  const escalation = createEscalationManager(sla);
   const notifications = createClientNotificationService();
+  const sla = createSLAEngine(async (incident, breachType) => {
+    await notifications.notifySLABreach(incident);
+    console.warn(`[SLA] ${breachType}_target breached for incident ${incident.id} [${incident.severity}]`);
+  });
+  const escalation = createEscalationManager(sla);
   const statusPage = createStatusPageService();
   const postmortem = createPostmortemManager();
   const availability = createAvailabilityReporter();
