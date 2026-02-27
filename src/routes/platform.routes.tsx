@@ -36,6 +36,10 @@ import PlatformMonitoring from '@/pages/platform/PlatformMonitoring';
 import PlatformControlPlane from '@/pages/platform/PlatformControlPlane';
 import PlatformDRTests from '@/pages/platform/PlatformDRTests';
 import PlatformChaosEngineering from '@/pages/platform/PlatformChaosEngineering';
+import ChaosLayout from '@/pages/platform/chaos/ChaosLayout';
+import ChaosScenarios from '@/pages/platform/chaos/ChaosScenarios';
+import ChaosExecutionLogs from '@/pages/platform/chaos/ChaosExecutionLogs';
+import ChaosReports from '@/pages/platform/chaos/ChaosReports';
 import PlatformBilling from '@/pages/platform/PlatformBilling';
 import PlatformRevenue from '@/pages/platform/PlatformRevenue';
 import PlatformCoupons from '@/pages/platform/PlatformCoupons';
@@ -226,6 +230,15 @@ export const platformRoutes: RouteObject[] = [
       { path: 'control-plane', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformControlPlane /></PlatformGuard> },
       { path: 'control-plane/dr-tests', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformDRTests /></PlatformGuard> },
       { path: 'chaos-engineering', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformChaosEngineering /></PlatformGuard> },
+      {
+        path: 'control-plane/chaos',
+        element: <PlatformGuard allowedRoles={opsAdmin}><ChaosLayout /></PlatformGuard>,
+        children: [
+          { index: true, element: <ChaosScenarios /> },
+          { path: 'executions', element: <ChaosExecutionLogs /> },
+          { path: 'reports', element: <ChaosReports /> },
+        ],
+      },
       { path: 'iam', element: <PlatformGuard allowedRoles={securityAdmin}><PlatformIAM /></PlatformGuard> },
       { path: 'referrals', element: <PlatformGuard allowedRoles={marketingRoles}><PlatformReferrals /></PlatformGuard> },
       // ── APIs / Developers / Marketplace ──
