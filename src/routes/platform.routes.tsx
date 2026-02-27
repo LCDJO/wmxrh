@@ -78,6 +78,7 @@ import FederationSAMLConfig from '@/pages/platform/federation/FederationSAMLConf
 import FederationOAuthClients from '@/pages/platform/federation/FederationOAuthClients';
 import FederationTokenSettings from '@/pages/platform/federation/FederationTokenSettings';
 import FederationAuditLogs from '@/pages/platform/federation/FederationAuditLogs';
+import PlatformScim from '@/pages/platform/security/PlatformScim';
 
 const PlatformSupportConsole = lazy(() => import('@/modules/support/ui/PlatformSupportConsole'));
 
@@ -134,6 +135,8 @@ export const platformRoutes: RouteObject[] = [
         { path: 'federation/oauth-clients', element: <FederationOAuthClients /> },
         { path: 'federation/token-settings', element: <FederationTokenSettings /> },
         { path: 'federation/audit-logs', element: <FederationAuditLogs /> },
+        // SCIM sub-routes
+        { path: 'scim', element: <PlatformScim /> },
       ]),
 
       // ── Users section ── (shared securityAdmin guard)

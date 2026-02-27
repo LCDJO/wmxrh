@@ -152,6 +152,17 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/security/federation/audit-logs', label: 'Audit Logs' },
         ],
       },
+      {
+        to: '/platform/security/scim',
+        label: 'SCIM Provisioning',
+        icon: Shield,
+        requiredPermission: 'security.view',
+        children: [
+          { to: '/platform/security/scim', label: 'Configurations' },
+          { to: '/platform/security/scim?tab=logs', label: 'Provisioning Logs' },
+          { to: '/platform/security/scim?tab=role-mapping', label: 'Role Mapping' },
+        ],
+      },
       { to: '/platform/logs', label: 'Logs do Sistema', icon: FileText, requiredRole: 'platform_super_admin' },
     ],
   },
