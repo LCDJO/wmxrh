@@ -20,6 +20,7 @@ import { createOAuthAuthorizationServer } from './oauth-authorization-server';
 import { createTokenService } from './token-service';
 import { createSessionManager } from './session-manager';
 import { createFederationAuditLogger } from './federation-audit-logger';
+import { createFederationRoleMapper } from './federation-role-mapper';
 import type {
   FederationEngineAPI,
   FederationHealthReport,
@@ -37,6 +38,7 @@ export function createIdentityFederationEngine(): FederationEngineAPI {
   const tokens = createTokenService();
   const sessions = createSessionManager();
   const audit = createFederationAuditLogger();
+  const roleMapper = createFederationRoleMapper();
 
   const engine: FederationEngineAPI = {
     registry,
@@ -46,6 +48,7 @@ export function createIdentityFederationEngine(): FederationEngineAPI {
     tokens,
     sessions,
     audit,
+    roleMapper,
 
     async initialize(tenantId) {
       currentTenantId = tenantId;
