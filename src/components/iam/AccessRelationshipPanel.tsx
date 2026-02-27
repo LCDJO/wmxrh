@@ -34,6 +34,7 @@ const DOMAIN_BADGE: Record<GraphDomain, string> = {
   permission: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
   module_access: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
   identity: 'bg-red-500/15 text-red-400 border-red-500/30',
+  federation: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
 };
 
 // ════════════════════════════════════

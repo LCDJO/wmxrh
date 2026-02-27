@@ -29,7 +29,8 @@ export type GraphDomain =
   | 'tenant_access'
   | 'permission'
   | 'module_access'
-  | 'identity';
+  | 'identity'
+  | 'federation';
 
 // ════════════════════════════════════
 // UNIFIED NODE
@@ -47,7 +48,11 @@ export type UnifiedNodeType =
   | 'scope'
   | 'company_group'
   | 'company'
-  | 'resource';
+  | 'resource'
+  // Federation
+  | 'federation_hub'
+  | 'federation_protocol'
+  | 'federation_idp';
 
 export interface UnifiedNode {
   /** Globally unique within UGE: `${domain}:${originalId}` */
@@ -84,7 +89,12 @@ export type UnifiedEdgeRelation =
   | 'BELONGS_TO_COMPANY'
   | 'HAS_MODULE_ACCESS'
   | 'MODULE_REQUIRES'
-  | 'IDENTITY_LINK';
+  | 'IDENTITY_LINK'
+  // Federation
+  | 'FEDERATION_LINK'
+  | 'FEDERATED_IDENTITY'
+  | 'SUPPORTS_PROTOCOL'
+  | 'HAS_IDP';
 
 export interface UnifiedEdge {
   from: string; // uid

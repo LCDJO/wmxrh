@@ -6957,6 +6957,151 @@ export type Database = {
           },
         ]
       }
+      federation_audit_logs: {
+        Row: {
+          created_at: string
+          details: Json
+          error_message: string | null
+          event_type: string
+          id: string
+          idp_config_id: string | null
+          ip_address: string | null
+          protocol: Database["public"]["Enums"]["federation_protocol"] | null
+          session_id: string | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          error_message?: string | null
+          event_type: string
+          id?: string
+          idp_config_id?: string | null
+          ip_address?: string | null
+          protocol?: Database["public"]["Enums"]["federation_protocol"] | null
+          session_id?: string | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          idp_config_id?: string | null
+          ip_address?: string | null
+          protocol?: Database["public"]["Enums"]["federation_protocol"] | null
+          session_id?: string | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "federation_audit_logs_idp_config_id_fkey"
+            columns: ["idp_config_id"]
+            isOneToOne: false
+            referencedRelation: "identity_provider_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federation_audit_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "federation_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federation_audit_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      federation_sessions: {
+        Row: {
+          attributes: Json
+          authenticated_at: string | null
+          created_at: string
+          expires_at: string | null
+          external_subject: string | null
+          id: string
+          idp_config_id: string
+          ip_address: string | null
+          name_id: string | null
+          protocol: Database["public"]["Enums"]["federation_protocol"]
+          revoked_at: string | null
+          session_index: string | null
+          started_at: string
+          status: Database["public"]["Enums"]["federation_session_status"]
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          attributes?: Json
+          authenticated_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          external_subject?: string | null
+          id?: string
+          idp_config_id: string
+          ip_address?: string | null
+          name_id?: string | null
+          protocol: Database["public"]["Enums"]["federation_protocol"]
+          revoked_at?: string | null
+          session_index?: string | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["federation_session_status"]
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          attributes?: Json
+          authenticated_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          external_subject?: string | null
+          id?: string
+          idp_config_id?: string
+          ip_address?: string | null
+          name_id?: string | null
+          protocol?: Database["public"]["Enums"]["federation_protocol"]
+          revoked_at?: string | null
+          session_index?: string | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["federation_session_status"]
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "federation_sessions_idp_config_id_fkey"
+            columns: ["idp_config_id"]
+            isOneToOne: false
+            referencedRelation: "identity_provider_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federation_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_audit_log: {
         Row: {
           action: string
@@ -8880,6 +9025,110 @@ export type Database = {
           },
           {
             foreignKeyName: "hiring_processes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      identity_provider_configs: {
+        Row: {
+          allowed_domains: string[]
+          attribute_mapping: Json
+          authorization_endpoint: string | null
+          auto_provision_users: boolean
+          certificate: string | null
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          default_role: string | null
+          display_name: string | null
+          display_order: number
+          entity_id: string | null
+          icon_url: string | null
+          id: string
+          is_primary: boolean
+          issuer_url: string | null
+          jwks_uri: string | null
+          metadata: Json
+          metadata_url: string | null
+          name: string
+          protocol: Database["public"]["Enums"]["federation_protocol"]
+          scopes: string[]
+          slo_url: string | null
+          sso_url: string | null
+          status: Database["public"]["Enums"]["idp_status"]
+          tenant_id: string
+          token_endpoint: string | null
+          updated_at: string
+          userinfo_endpoint: string | null
+        }
+        Insert: {
+          allowed_domains?: string[]
+          attribute_mapping?: Json
+          authorization_endpoint?: string | null
+          auto_provision_users?: boolean
+          certificate?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_role?: string | null
+          display_name?: string | null
+          display_order?: number
+          entity_id?: string | null
+          icon_url?: string | null
+          id?: string
+          is_primary?: boolean
+          issuer_url?: string | null
+          jwks_uri?: string | null
+          metadata?: Json
+          metadata_url?: string | null
+          name: string
+          protocol: Database["public"]["Enums"]["federation_protocol"]
+          scopes?: string[]
+          slo_url?: string | null
+          sso_url?: string | null
+          status?: Database["public"]["Enums"]["idp_status"]
+          tenant_id: string
+          token_endpoint?: string | null
+          updated_at?: string
+          userinfo_endpoint?: string | null
+        }
+        Update: {
+          allowed_domains?: string[]
+          attribute_mapping?: Json
+          authorization_endpoint?: string | null
+          auto_provision_users?: boolean
+          certificate?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_role?: string | null
+          display_name?: string | null
+          display_order?: number
+          entity_id?: string | null
+          icon_url?: string | null
+          id?: string
+          is_primary?: boolean
+          issuer_url?: string | null
+          jwks_uri?: string | null
+          metadata?: Json
+          metadata_url?: string | null
+          name?: string
+          protocol?: Database["public"]["Enums"]["federation_protocol"]
+          scopes?: string[]
+          slo_url?: string | null
+          sso_url?: string | null
+          status?: Database["public"]["Enums"]["idp_status"]
+          tenant_id?: string
+          token_endpoint?: string | null
+          updated_at?: string
+          userinfo_endpoint?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "identity_provider_configs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -18047,9 +18296,16 @@ export type Database = {
         | "demissional"
         | "mudanca_funcao"
         | "retorno_trabalho"
+      federation_protocol: "saml" | "oidc" | "oauth2"
+      federation_session_status:
+        | "pending"
+        | "authenticated"
+        | "expired"
+        | "revoked"
       fgts_regime: "optante" | "nao_optante" | "retroativo"
       forma_pagamento: "deposito_bancario" | "pix" | "cheque" | "dinheiro"
       health_program_type: "pcmso" | "pgr" | "ltcat" | "ppra"
+      idp_status: "draft" | "active" | "suspended" | "archived"
       jornada_tipo: "integral" | "parcial" | "escala" | "12x36" | "flexivel"
       labor_rule_calc_type:
         | "percentage"
@@ -18475,9 +18731,17 @@ export const Constants = {
         "mudanca_funcao",
         "retorno_trabalho",
       ],
+      federation_protocol: ["saml", "oidc", "oauth2"],
+      federation_session_status: [
+        "pending",
+        "authenticated",
+        "expired",
+        "revoked",
+      ],
       fgts_regime: ["optante", "nao_optante", "retroativo"],
       forma_pagamento: ["deposito_bancario", "pix", "cheque", "dinheiro"],
       health_program_type: ["pcmso", "pgr", "ltcat", "ppra"],
+      idp_status: ["draft", "active", "suspended", "archived"],
       jornada_tipo: ["integral", "parcial", "escala", "12x36", "flexivel"],
       labor_rule_calc_type: [
         "percentage",

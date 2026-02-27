@@ -20,6 +20,7 @@ const DOMAIN_COLORS: Record<GraphDomain, string> = {
   permission: 'hsl(38 92% 50%)',
   module_access: 'hsl(150 60% 45%)',
   identity: 'hsl(0 72% 51%)',
+  federation: 'hsl(190 80% 50%)',
 };
 
 const TYPE_SIZES: Record<UnifiedNodeType, number> = {
@@ -34,6 +35,9 @@ const TYPE_SIZES: Record<UnifiedNodeType, number> = {
   company_group: 22,
   company: 18,
   resource: 10,
+  federation_hub: 26,
+  federation_protocol: 14,
+  federation_idp: 18,
 };
 
 export function toVisualizationData(
@@ -54,6 +58,7 @@ export function toVisualizationData(
     permission: { nodes: 0, edges: 0 },
     module_access: { nodes: 0, edges: 0 },
     identity: { nodes: 0, edges: 0 },
+    federation: { nodes: 0, edges: 0 },
   };
 
   for (const node of snapshot.nodes.values()) {
