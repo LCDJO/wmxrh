@@ -88,7 +88,7 @@ export async function collectIncidentMetrics(): Promise<IncidentMetricsSnapshot>
     uptime_30d: uptime30,
   };
 
-  // Push to Prometheus
+  // Push to Prometheus — canonical names
   collector.gauge('incident_open_total', snapshot.open_total);
   for (const [sev, count] of Object.entries(bySeverity)) {
     collector.gauge('incident_open_by_severity', count, { severity: sev });
@@ -98,6 +98,14 @@ export async function collectIncidentMetrics(): Promise<IncidentMetricsSnapshot>
   collector.gauge('incident_created_total', snapshot.created_total);
   collector.gauge('incident_resolved_total', snapshot.resolved_total);
   collector.gauge('platform_uptime_30d', snapshot.uptime_30d);
+
+  // Grafana-friendly aliases (user-facing metric names)
+  collector.gauge('incidents_total', snapshot.created_total);
+  for (const [sev, count] of Object.entries(bySeverity)) {
+    collector.gauge('incident_severity_count', count, { severity: sev });
+  }
+  collector.gauge('sla_breach_total', snapshot.sla_breach_total);
+  collector.gauge('uptime_percentage', snapshot.uptime_30d);
 
   _cached = snapshot;
   _lastFetch = now;
