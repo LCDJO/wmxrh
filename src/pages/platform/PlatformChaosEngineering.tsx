@@ -22,12 +22,18 @@ import {
 import type { ChaosExperiment, ChaosScenario } from '@/domains/chaos-engineering/types';
 
 const faultTypeLabels: Record<string, string> = {
+  service_latency: 'Latência de Serviço',
   latency_injection: 'Injeção de Latência',
+  module_shutdown: 'Shutdown de Módulo',
   service_shutdown: 'Shutdown de Serviço',
-  cpu_stress: 'Stress de CPU',
-  memory_stress: 'Stress de Memória',
-  disk_stress: 'Stress de Disco',
+  database_unavailable: 'Banco Indisponível',
+  api_rate_spike: 'Spike de Taxa de API',
   network_partition: 'Partição de Rede',
+  memory_exhaustion: 'Exaustão de Memória',
+  memory_stress: 'Stress de Memória',
+  cache_failure: 'Falha de Cache',
+  cpu_stress: 'Stress de CPU',
+  disk_stress: 'Stress de Disco',
   dns_failure: 'Falha de DNS',
   dependency_failure: 'Falha de Dependência',
   data_corruption: 'Corrupção de Dados',
