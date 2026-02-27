@@ -244,22 +244,31 @@ const ESCALATION_ORDER: EscalationLevel[] = ['l1', 'l2', 'l3', 'management', 'ex
 
 function createEscalationManager(slaEngine: SLAEngineAPI): EscalationManagerAPI {
   return {
+    /**
+     * Escalation rules:
+     *   - SLA response_time_target breached → escalate to L2 (N2)
+     *   - SLA resolution_time_target breached → escalate to management (Diretor Técnico)
+     */
     async evaluate(incident) {
-      const config = await slaEngine.getConfig(incident.severity, incident.tenant_id);
-      const createdAt = new Date(incident.created_at).getTime();
-      const elapsed = (Date.now() - createdAt) / 60_000;
+      if (incident.status === 'resolved') return null;
 
-      if (elapsed < config.escalation_after_minutes) return null;
+      const now = Date.now();
+      const responseDeadline = incident.sla_response_deadline ? new Date(incident.sla_response_deadline).getTime() : null;
+      const resolutionDeadline = incident.sla_resolution_deadline ? new Date(incident.sla_resolution_deadline).getTime() : null;
 
-      const currentIdx = ESCALATION_ORDER.indexOf(incident.escalation_level);
-      if (currentIdx >= ESCALATION_ORDER.length - 1) return null;
+      // Rule 1: response target breached → escalate to L2
+      if (responseDeadline && now > responseDeadline && incident.escalation_level === 'l1') {
+        return 'l2';
+      }
 
-      // Calculate how many levels to skip based on time
-      const levelsPassed = Math.floor(elapsed / config.escalation_after_minutes);
-      const targetIdx = Math.min(currentIdx + levelsPassed, ESCALATION_ORDER.length - 1);
+      // Rule 2: resolution target breached → escalate to management (Diretor Técnico)
+      if (resolutionDeadline && now > resolutionDeadline) {
+        const currentIdx = ESCALATION_ORDER.indexOf(incident.escalation_level);
+        const mgmtIdx = ESCALATION_ORDER.indexOf('management');
+        if (currentIdx < mgmtIdx) return 'management';
+      }
 
-      if (targetIdx <= currentIdx) return null;
-      return ESCALATION_ORDER[targetIdx];
+      return null;
     },
 
     async escalate(incidentId, toLevel, reason, autoEscalated = false) {
