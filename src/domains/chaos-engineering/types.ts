@@ -5,12 +5,18 @@
 // ── Enums ────────────────────────────────────────────
 
 export type FaultType =
+  | 'service_latency'
   | 'latency_injection'
+  | 'module_shutdown'
   | 'service_shutdown'
-  | 'cpu_stress'
-  | 'memory_stress'
-  | 'disk_stress'
+  | 'database_unavailable'
+  | 'api_rate_spike'
   | 'network_partition'
+  | 'memory_exhaustion'
+  | 'memory_stress'
+  | 'cache_failure'
+  | 'cpu_stress'
+  | 'disk_stress'
   | 'dns_failure'
   | 'dependency_failure'
   | 'data_corruption'
