@@ -955,6 +955,69 @@ export type Database = {
           },
         ]
       }
+      availability_records: {
+        Row: {
+          component_id: string | null
+          created_at: string
+          downtime_minutes: number
+          id: string
+          incident_count: number
+          period_end: string
+          period_start: string
+          period_type: string
+          sla_met: boolean
+          sla_target_percentage: number
+          tenant_id: string | null
+          total_minutes: number
+          uptime_percentage: number
+        }
+        Insert: {
+          component_id?: string | null
+          created_at?: string
+          downtime_minutes?: number
+          id?: string
+          incident_count?: number
+          period_end: string
+          period_start: string
+          period_type?: string
+          sla_met?: boolean
+          sla_target_percentage?: number
+          tenant_id?: string | null
+          total_minutes?: number
+          uptime_percentage?: number
+        }
+        Update: {
+          component_id?: string | null
+          created_at?: string
+          downtime_minutes?: number
+          id?: string
+          incident_count?: number
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          sla_met?: boolean
+          sla_target_percentage?: number
+          tenant_id?: string | null
+          total_minutes?: number
+          uptime_percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_records_component_id_fkey"
+            columns: ["component_id"]
+            isOneToOne: false
+            referencedRelation: "status_page_components"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       benefit_plans: {
         Row: {
           base_value: number
@@ -9334,6 +9397,393 @@ export type Database = {
           },
         ]
       }
+      incident_escalations: {
+        Row: {
+          auto_escalated: boolean
+          created_at: string
+          escalated_by: string | null
+          from_level: Database["public"]["Enums"]["escalation_level"]
+          id: string
+          incident_id: string
+          notified_users: string[] | null
+          reason: string
+          to_level: Database["public"]["Enums"]["escalation_level"]
+        }
+        Insert: {
+          auto_escalated?: boolean
+          created_at?: string
+          escalated_by?: string | null
+          from_level: Database["public"]["Enums"]["escalation_level"]
+          id?: string
+          incident_id: string
+          notified_users?: string[] | null
+          reason: string
+          to_level: Database["public"]["Enums"]["escalation_level"]
+        }
+        Update: {
+          auto_escalated?: boolean
+          created_at?: string
+          escalated_by?: string | null
+          from_level?: Database["public"]["Enums"]["escalation_level"]
+          id?: string
+          incident_id?: string
+          notified_users?: string[] | null
+          reason?: string
+          to_level?: Database["public"]["Enums"]["escalation_level"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_escalations_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incident_notifications: {
+        Row: {
+          body: string
+          channel: string
+          created_at: string
+          error_message: string | null
+          id: string
+          incident_id: string
+          recipient: string
+          sent_at: string | null
+          status: string
+          subject: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          body: string
+          channel?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          incident_id: string
+          recipient: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          body?: string
+          channel?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          incident_id?: string
+          recipient?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_notifications_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incident_postmortems: {
+        Row: {
+          action_items: Json | null
+          affected_users_count: number | null
+          contributing_factors: string[] | null
+          created_at: string
+          created_by: string | null
+          id: string
+          impact_duration_minutes: number | null
+          incident_id: string
+          lessons_learned: string | null
+          published_at: string | null
+          revenue_impact_estimate: number | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          root_cause_analysis: string | null
+          status: string
+          summary: string
+          tenant_id: string | null
+          timeline_events: Json | null
+          updated_at: string
+        }
+        Insert: {
+          action_items?: Json | null
+          affected_users_count?: number | null
+          contributing_factors?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          impact_duration_minutes?: number | null
+          incident_id: string
+          lessons_learned?: string | null
+          published_at?: string | null
+          revenue_impact_estimate?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          root_cause_analysis?: string | null
+          status?: string
+          summary: string
+          tenant_id?: string | null
+          timeline_events?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          action_items?: Json | null
+          affected_users_count?: number | null
+          contributing_factors?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          impact_duration_minutes?: number | null
+          incident_id?: string
+          lessons_learned?: string | null
+          published_at?: string | null
+          revenue_impact_estimate?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          root_cause_analysis?: string | null
+          status?: string
+          summary?: string
+          tenant_id?: string | null
+          timeline_events?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_postmortems_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: true
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_postmortems_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incident_sla_configs: {
+        Row: {
+          acknowledgement_time_minutes: number
+          created_at: string
+          escalation_after_minutes: number
+          id: string
+          is_active: boolean
+          notification_interval_minutes: number
+          resolution_time_minutes: number
+          response_time_minutes: number
+          severity: Database["public"]["Enums"]["incident_severity"]
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          acknowledgement_time_minutes?: number
+          created_at?: string
+          escalation_after_minutes?: number
+          id?: string
+          is_active?: boolean
+          notification_interval_minutes?: number
+          resolution_time_minutes?: number
+          response_time_minutes?: number
+          severity: Database["public"]["Enums"]["incident_severity"]
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          acknowledgement_time_minutes?: number
+          created_at?: string
+          escalation_after_minutes?: number
+          id?: string
+          is_active?: boolean
+          notification_interval_minutes?: number
+          resolution_time_minutes?: number
+          response_time_minutes?: number
+          severity?: Database["public"]["Enums"]["incident_severity"]
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_sla_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incident_updates: {
+        Row: {
+          author_id: string | null
+          created_at: string
+          id: string
+          incident_id: string
+          is_public: boolean
+          message: string
+          metadata: Json | null
+          new_status: Database["public"]["Enums"]["incident_status"] | null
+          previous_status: Database["public"]["Enums"]["incident_status"] | null
+          update_type: string
+        }
+        Insert: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          incident_id: string
+          is_public?: boolean
+          message: string
+          metadata?: Json | null
+          new_status?: Database["public"]["Enums"]["incident_status"] | null
+          previous_status?:
+            | Database["public"]["Enums"]["incident_status"]
+            | null
+          update_type?: string
+        }
+        Update: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          incident_id?: string
+          is_public?: boolean
+          message?: string
+          metadata?: Json | null
+          new_status?: Database["public"]["Enums"]["incident_status"] | null
+          previous_status?:
+            | Database["public"]["Enums"]["incident_status"]
+            | null
+          update_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_updates_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          affected_modules: string[] | null
+          affected_services: string[] | null
+          assigned_to: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          description: string | null
+          escalation_level: Database["public"]["Enums"]["escalation_level"]
+          id: string
+          impact_description: string | null
+          is_public: boolean
+          metadata: Json | null
+          resolution_summary: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          root_cause: string | null
+          severity: Database["public"]["Enums"]["incident_severity"]
+          sla_ack_deadline: string | null
+          sla_breached: boolean
+          sla_resolution_deadline: string | null
+          sla_response_deadline: string | null
+          source: string
+          source_ref: string | null
+          status: Database["public"]["Enums"]["incident_status"]
+          tenant_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          affected_modules?: string[] | null
+          affected_services?: string[] | null
+          assigned_to?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          description?: string | null
+          escalation_level?: Database["public"]["Enums"]["escalation_level"]
+          id?: string
+          impact_description?: string | null
+          is_public?: boolean
+          metadata?: Json | null
+          resolution_summary?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          root_cause?: string | null
+          severity?: Database["public"]["Enums"]["incident_severity"]
+          sla_ack_deadline?: string | null
+          sla_breached?: boolean
+          sla_resolution_deadline?: string | null
+          sla_response_deadline?: string | null
+          source?: string
+          source_ref?: string | null
+          status?: Database["public"]["Enums"]["incident_status"]
+          tenant_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          affected_modules?: string[] | null
+          affected_services?: string[] | null
+          assigned_to?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          description?: string | null
+          escalation_level?: Database["public"]["Enums"]["escalation_level"]
+          id?: string
+          impact_description?: string | null
+          is_public?: boolean
+          metadata?: Json | null
+          resolution_summary?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          root_cause?: string | null
+          severity?: Database["public"]["Enums"]["incident_severity"]
+          sla_ack_deadline?: string | null
+          sla_breached?: boolean
+          sla_resolution_deadline?: string | null
+          sla_response_deadline?: string | null
+          source?: string
+          source_ref?: string | null
+          status?: Database["public"]["Enums"]["incident_status"]
+          tenant_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_connector_configs: {
         Row: {
           connector_id: string
@@ -15480,6 +15930,104 @@ export type Database = {
           },
         ]
       }
+      status_page_components: {
+        Row: {
+          component_group: string | null
+          created_at: string
+          current_status: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          component_group?: string | null
+          created_at?: string
+          current_status?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          component_group?: string | null
+          created_at?: string
+          current_status?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_page_components_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      status_page_incidents: {
+        Row: {
+          affected_components: string[] | null
+          created_at: string
+          id: string
+          impact: string
+          incident_id: string
+          status: string
+          tenant_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          affected_components?: string[] | null
+          created_at?: string
+          id?: string
+          impact?: string
+          incident_id: string
+          status?: string
+          tenant_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          affected_components?: string[] | null
+          created_at?: string
+          id?: string
+          impact?: string
+          incident_id?: string
+          status?: string
+          tenant_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_page_incidents_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "status_page_incidents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_events: {
         Row: {
           created_at: string
@@ -18619,6 +19167,7 @@ export type Database = {
         | "desligado"
       employee_sexo: "masculino" | "feminino" | "intersexo" | "nao_informado"
       employee_status: "active" | "inactive" | "on_leave"
+      escalation_level: "l1" | "l2" | "l3" | "management" | "executive"
       esocial_category:
         | "101"
         | "102"
@@ -18687,6 +19236,15 @@ export type Database = {
       forma_pagamento: "deposito_bancario" | "pix" | "cheque" | "dinheiro"
       health_program_type: "pcmso" | "pgr" | "ltcat" | "ppra"
       idp_status: "draft" | "active" | "suspended" | "archived"
+      incident_severity: "critical" | "high" | "medium" | "low" | "info"
+      incident_status:
+        | "detected"
+        | "investigating"
+        | "identified"
+        | "monitoring"
+        | "resolved"
+        | "postmortem"
+        | "closed"
       jornada_tipo: "integral" | "parcial" | "escala" | "12x36" | "flexivel"
       labor_rule_calc_type:
         | "percentage"
@@ -19050,6 +19608,7 @@ export const Constants = {
       ],
       employee_sexo: ["masculino", "feminino", "intersexo", "nao_informado"],
       employee_status: ["active", "inactive", "on_leave"],
+      escalation_level: ["l1", "l2", "l3", "management", "executive"],
       esocial_category: [
         "101",
         "102",
@@ -19123,6 +19682,16 @@ export const Constants = {
       forma_pagamento: ["deposito_bancario", "pix", "cheque", "dinheiro"],
       health_program_type: ["pcmso", "pgr", "ltcat", "ppra"],
       idp_status: ["draft", "active", "suspended", "archived"],
+      incident_severity: ["critical", "high", "medium", "low", "info"],
+      incident_status: [
+        "detected",
+        "investigating",
+        "identified",
+        "monitoring",
+        "resolved",
+        "postmortem",
+        "closed",
+      ],
       jornada_tipo: ["integral", "parcial", "escala", "12x36", "flexivel"],
       labor_rule_calc_type: [
         "percentage",
