@@ -28,6 +28,7 @@ const DOMAIN_CONFIG: Record<GraphDomain, { label: string; color: string; bgClass
   permission: { label: 'Permissões', color: 'hsl(38 92% 50%)', bgClass: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
   module_access: { label: 'Módulos', color: 'hsl(150 60% 45%)', bgClass: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
   identity: { label: 'Identidade', color: 'hsl(0 72% 51%)', bgClass: 'bg-red-500/15 text-red-400 border-red-500/30' },
+  federation: { label: 'Federação', color: 'hsl(190 80% 50%)', bgClass: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30' },
 };
 
 const INHERITANCE_RELATIONS = new Set<UnifiedEdgeRelation>([
