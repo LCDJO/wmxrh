@@ -402,6 +402,21 @@ async function handleUsers(
   return scimError(405, "invalidMethod", "Method not allowed");
 }
 
+// ── Resolve group → role mapping from scim_configs ──
+async function resolveGroupRole(db: ReturnType<typeof supabaseAdmin>, tenantId: string, displayName: string): Promise<string | null> {
+  const { data: scimConfig } = await db
+    .from("scim_configs")
+    .select("role_mapping_rules")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (!scimConfig) return null;
+  const rules = Array.isArray(scimConfig.role_mapping_rules) ? scimConfig.role_mapping_rules : [];
+  const matched = rules.find(
+    (r: any) => r.scim_group?.toLowerCase() === displayName?.toLowerCase()
+  );
+  return matched?.internal_role || null;
+}
+
 // ── Group CRUD ──
 async function handleGroups(
   method: string,
@@ -447,6 +462,10 @@ async function handleGroups(
   if (method === "POST") {
     const externalId = body.externalId || body.displayName;
     const scimId = crypto.randomUUID();
+
+    // Resolve mapped_role from scim_config role_mapping_rules
+    const mappedRole = await resolveGroupRole(db, tenantId, body.displayName);
+
     const { data, error } = await db
       .from("scim_provisioned_groups")
       .insert({
@@ -456,6 +475,7 @@ async function handleGroups(
         scim_id: scimId,
         display_name: body.displayName,
         members: body.members || [],
+        mapped_role: mappedRole,
         scim_data: body,
       })
       .select()
@@ -464,15 +484,31 @@ async function handleGroups(
       await logOperation(client, "CREATE", "Group", null, externalId, body, 409, null, error.message, ip, startTime);
       return scimError(409, "uniqueness", error.message);
     }
+
+    // Queue role sync for all members
+    await db.from("scim_provisioning_queue").insert({
+      tenant_id: tenantId,
+      scim_client_id: clientId,
+      operation: "CREATE",
+      resource_type: "Group",
+      external_id: externalId,
+      scim_payload: { displayName: body.displayName, members: body.members || [], mappedRole },
+    });
+
     const group = toScimGroup(data);
     await logOperation(client, "CREATE", "Group", scimId, externalId, body, 201, group, null, ip, startTime);
     return scimResponse(group, 201);
   }
 
   if ((method === "PUT" || method === "PATCH") && resourceId) {
+    const mappedRole = body.displayName
+      ? await resolveGroupRole(db, tenantId, body.displayName)
+      : undefined;
+
     const updates: any = {
       display_name: body.displayName,
       members: body.members,
+      mapped_role: mappedRole,
       scim_data: body,
       last_synced_at: new Date().toISOString(),
     };
@@ -489,19 +525,53 @@ async function handleGroups(
       await logOperation(client, method === "PUT" ? "UPDATE" : "PATCH", "Group", resourceId, null, body, 404, null, error?.message || "Not found", ip, startTime);
       return scimError(404, "notFound", "Group not found");
     }
+
+    // Queue role re-sync for members
+    await db.from("scim_provisioning_queue").insert({
+      tenant_id: tenantId,
+      scim_client_id: clientId,
+      operation: "UPDATE",
+      resource_type: "Group",
+      external_id: data.external_id,
+      scim_payload: { displayName: data.display_name, members: data.members, mappedRole: data.mapped_role },
+    });
+
     const group = toScimGroup(data);
     await logOperation(client, method === "PUT" ? "UPDATE" : "PATCH", "Group", resourceId, data.external_id, body, 200, group, null, ip, startTime);
     return scimResponse(group);
   }
 
   if (method === "DELETE" && resourceId) {
-    const { error } = await db
+    // Soft-delete: mark as inactive, never hard-delete historical data
+    const now = new Date().toISOString();
+    const { data, error } = await db
       .from("scim_provisioned_groups")
-      .delete()
+      .update({
+        members: [],
+        mapped_role: null,
+        last_synced_at: now,
+      })
       .eq("scim_client_id", clientId)
-      .eq("scim_id", resourceId);
-    if (error) return scimError(500, "serverError", error.message);
-    await logOperation(client, "DELETE", "Group", resourceId, null, null, 204, null, null, ip, startTime);
+      .eq("scim_id", resourceId)
+      .select()
+      .single();
+
+    if (error || !data) {
+      await logOperation(client, "DELETE", "Group", resourceId, null, null, 404, null, error?.message || "Not found", ip, startTime);
+      return scimError(404, "notFound", "Group not found");
+    }
+
+    // Queue removal of role assignments for former members
+    await db.from("scim_provisioning_queue").insert({
+      tenant_id: tenantId,
+      scim_client_id: clientId,
+      operation: "DEACTIVATE",
+      resource_type: "Group",
+      external_id: data.external_id,
+      scim_payload: { displayName: data.display_name, members: [], reason: "SCIM DELETE" },
+    });
+
+    await logOperation(client, "DEACTIVATE", "Group", resourceId, data.external_id, null, 204, null, null, ip, startTime);
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 

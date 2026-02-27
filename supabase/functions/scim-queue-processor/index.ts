@@ -205,36 +205,86 @@ async function processGroupJob(
 ) {
   if (!scimConfig.sync_groups_to_roles) return;
 
-  // When a group is updated, re-map members to roles
   const rules = Array.isArray(scimConfig.role_mapping_rules)
     ? scimConfig.role_mapping_rules
     : [];
 
   const groupName = payload.displayName;
-  const matchedRule = rules.find(
-    (r: any) => r.scim_group?.toLowerCase() === groupName?.toLowerCase()
-  );
 
-  if (!matchedRule || !payload.members) return;
-
-  for (const member of payload.members) {
-    // Find provisioned user by SCIM ID
-    const { data: provUser } = await db
-      .from("scim_provisioned_users")
-      .select("user_id")
-      .eq("scim_id", member.value)
-      .eq("tenant_id", tenantId)
-      .maybeSingle();
-
-    if (provUser?.user_id) {
-      await db.from("user_roles").upsert(
-        {
-          user_id: provUser.user_id,
-          tenant_id: tenantId,
-          role: matchedRule.internal_role,
-        },
-        { onConflict: "user_id,tenant_id,role" }
+  switch (job.operation) {
+    case "CREATE":
+    case "UPDATE": {
+      // Map group to internal role
+      const matchedRule = rules.find(
+        (r: any) => r.scim_group?.toLowerCase() === groupName?.toLowerCase()
       );
+      if (!matchedRule || !payload.members) return;
+
+      for (const member of payload.members) {
+        const memberId = member.value || member;
+        // Find provisioned user by SCIM ID
+        const { data: provUser } = await db
+          .from("scim_provisioned_users")
+          .select("user_id")
+          .eq("scim_id", memberId)
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+
+        if (provUser?.user_id) {
+          // Upsert tenant role
+          await db.from("user_roles").upsert(
+            {
+              user_id: provUser.user_id,
+              tenant_id: tenantId,
+              role: matchedRule.internal_role,
+            },
+            { onConflict: "user_id,tenant_id,role" }
+          );
+
+          // Optional: also map to platform roles if configured
+          if (matchedRule.platform_role) {
+            await db.from("user_roles").upsert(
+              {
+                user_id: provUser.user_id,
+                role: matchedRule.platform_role,
+              },
+              { onConflict: "user_id,role" }
+            );
+          }
+        }
+      }
+      break;
+    }
+
+    case "DEACTIVATE": {
+      // Group deleted/deactivated — remove role assignments that came from this group
+      const matchedRule = rules.find(
+        (r: any) => r.scim_group?.toLowerCase() === groupName?.toLowerCase()
+      );
+      if (!matchedRule) return;
+
+      // Find all provisioned users in this tenant and remove the mapped role
+      // We look at the group's former members from the job payload
+      const formerMembers = payload.members || [];
+      for (const member of formerMembers) {
+        const memberId = member.value || member;
+        const { data: provUser } = await db
+          .from("scim_provisioned_users")
+          .select("user_id")
+          .eq("scim_id", memberId)
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+
+        if (provUser?.user_id) {
+          await db
+            .from("user_roles")
+            .delete()
+            .eq("user_id", provUser.user_id)
+            .eq("tenant_id", tenantId)
+            .eq("role", matchedRule.internal_role);
+        }
+      }
+      break;
     }
   }
 }
