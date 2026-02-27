@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.oidc-token-issuer]
 verify_jwt = false
+
+[functions.federation-jwks]
+verify_jwt = false

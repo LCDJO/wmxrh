@@ -7102,6 +7102,42 @@ export type Database = {
           },
         ]
       }
+      federation_signing_keys: {
+        Row: {
+          algorithm: string
+          created_at: string
+          expires_at: string
+          id: string
+          kid: string
+          private_key_jwk: Json
+          public_key_jwk: Json
+          rotated_at: string | null
+          status: string
+        }
+        Insert: {
+          algorithm?: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          kid: string
+          private_key_jwk: Json
+          public_key_jwk: Json
+          rotated_at?: string | null
+          status?: string
+        }
+        Update: {
+          algorithm?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          kid?: string
+          private_key_jwk?: Json
+          public_key_jwk?: Json
+          rotated_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       fleet_audit_log: {
         Row: {
           action: string

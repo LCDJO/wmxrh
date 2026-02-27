@@ -4,107 +4,59 @@
  * Issues, validates, and manages platform-level tokens
  * for federated identity sessions.
  *
- * In production, signing uses a server-side edge function with HMAC/RSA.
- * This module provides the orchestration and local token structure.
+ * Delegates to federation-jwks edge function for RS256 signed JWTs
+ * with rotating key pairs and JWK endpoint.
  */
 
+import { supabase } from '@/integrations/supabase/client';
 import type { TokenServiceAPI } from './types';
 
-interface PlatformToken {
-  userId: string;
-  tenantId: string;
-  scopes: string[];
-  sessionId: string;
-  issuedAt: number;
-  expiresAt: number;
-}
-
-/** In-memory token store (production: DB-backed via edge fn) */
-const tokenStore = new Map<string, PlatformToken>();
-const refreshTokenMap = new Map<string, string>(); // refreshToken → accessToken
-
-function generateTokenString(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return 'uife_' + Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+async function invokeJWKS(action: string, body: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke('federation-jwks', {
+    body,
+    headers: { 'x-action': action },
+  });
+  if (error) throw new Error(`[UIFE:Token] ${action} failed: ${error.message}`);
+  if (data?.error) throw new Error(`[UIFE:Token] ${data.error}: ${data.error_description || ''}`);
+  return data;
 }
 
 export function createTokenService(): TokenServiceAPI {
   return {
     async issueToken(userId, tenantId, scopes, sessionId) {
-      const token = generateTokenString();
-      const now = Date.now();
-
-      tokenStore.set(token, {
-        userId,
-        tenantId,
+      const data = await invokeJWKS('issue', {
+        user_id: userId,
+        tenant_id: tenantId,
         scopes,
-        sessionId,
-        issuedAt: now,
-        expiresAt: now + 3600 * 1000, // 1 hour
+        session_id: sessionId,
       });
-
-      // Issue refresh token
-      const refreshToken = generateTokenString();
-      refreshTokenMap.set(refreshToken, token);
-
-      return token;
+      return data.access_token;
     },
 
     async validateToken(token) {
-      const stored = tokenStore.get(token);
-      if (!stored) return { valid: false };
-      if (stored.expiresAt < Date.now()) {
-        tokenStore.delete(token);
-        return { valid: false };
-      }
+      const data = await invokeJWKS('validate', { token });
+      if (!data.active) return { valid: false };
       return {
         valid: true,
-        userId: stored.userId,
-        tenantId: stored.tenantId,
-        scopes: stored.scopes,
+        userId: data.sub,
+        tenantId: data.tenant_id,
+        scopes: data.scopes,
       };
     },
 
     async refreshToken(oldRefreshToken) {
-      const accessToken = refreshTokenMap.get(oldRefreshToken);
-      if (!accessToken) throw new Error('[UIFE:Token] Invalid refresh token');
-
-      const stored = tokenStore.get(accessToken);
-      if (!stored) throw new Error('[UIFE:Token] Associated access token not found');
-
-      // Revoke old tokens
-      tokenStore.delete(accessToken);
-      refreshTokenMap.delete(oldRefreshToken);
-
-      // Issue new pair
-      const newAccessToken = generateTokenString();
-      const newRefreshToken = generateTokenString();
-      const now = Date.now();
-
-      tokenStore.set(newAccessToken, {
-        ...stored,
-        issuedAt: now,
-        expiresAt: now + 3600 * 1000,
+      const data = await invokeJWKS('refresh', {
+        refresh_token: oldRefreshToken,
+        client_id: 'platform',
       });
-      refreshTokenMap.set(newRefreshToken, newAccessToken);
-
-      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+      };
     },
 
     async revokeSessionTokens(sessionId) {
-      let revoked = 0;
-      for (const [token, data] of tokenStore) {
-        if (data.sessionId === sessionId) {
-          tokenStore.delete(token);
-          revoked++;
-        }
-      }
-      // Clean refresh tokens
-      for (const [rt, at] of refreshTokenMap) {
-        if (!tokenStore.has(at)) refreshTokenMap.delete(rt);
-      }
-      console.log(`[UIFE:Token] Revoked ${revoked} tokens for session ${sessionId}`);
+      await invokeJWKS('revoke_session', { session_id: sessionId });
     },
   };
 }
