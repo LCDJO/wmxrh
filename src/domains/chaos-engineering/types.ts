@@ -200,8 +200,37 @@ export interface SLAValidatorAPI {
   validate(experimentId: string): Promise<SLAValidationResult>;
 }
 
+export interface RTOValidationResult {
+  rto: {
+    met: boolean;
+    target_minutes: number;
+    actual_minutes: number;
+    delta_minutes: number;
+    policy_source: string;
+    severity: 'ok' | 'warning' | 'critical';
+  };
+  rpo: {
+    met: boolean;
+    target_minutes: number;
+    actual_minutes: number;
+    delta_minutes: number;
+    severity: 'ok' | 'warning' | 'critical';
+  };
+  recovery_timeline: {
+    fault_injected_at: string | null;
+    detection_at: string | null;
+    recovery_started_at: string | null;
+    recovery_completed_at: string | null;
+    total_downtime_minutes: number;
+    detection_time_minutes: number;
+    recovery_time_minutes: number;
+  };
+  overall_met: boolean;
+  breaches: string[];
+}
+
 export interface RTOValidatorAPI {
-  validate(experimentId: string): Promise<{ rto_met: boolean; actual_minutes: number; target_minutes: number; rpo_met: boolean; rpo_actual: number; rpo_target: number }>;
+  validate(experimentId: string): Promise<RTOValidationResult>;
 }
 
 export interface ChaosReportGeneratorAPI {

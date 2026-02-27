@@ -310,19 +310,98 @@ export function createChaosEngine(): ChaosEngineeringAPI {
   // ── RTO Validator ────────────────────────────────
   const rto: ChaosEngineeringAPI['rto'] = {
     async validate(experimentId) {
-      const { data: exp } = await (supabase as any).from('chaos_experiments').select('rto_target_minutes, rto_actual_minutes, rpo_target_minutes, rpo_actual_minutes').eq('id', experimentId).single();
-      const rtoTarget = exp?.rto_target_minutes ?? 60;
-      const rtoActual = exp?.rto_actual_minutes ?? 0;
-      const rpoTarget = exp?.rpo_target_minutes ?? 15;
-      const rpoActual = exp?.rpo_actual_minutes ?? 0;
+      const { data: exp } = await (supabase as any).from('chaos_experiments').select('*').eq('id', experimentId).single();
+      if (!exp) throw new Error('Experiment not found');
+
+      const breaches: string[] = [];
+
+      // ── Lookup BCDR policy for target module ──
+      let policySource = 'default';
+      let rtoTarget = exp.rto_target_minutes ?? 60;
+      let rpoTarget = exp.rpo_target_minutes ?? 15;
+
+      if (exp.target_module) {
+        const { data: policy } = await (supabase as any)
+          .from('bcdr_recovery_policies')
+          .select('rto_minutes, rpo_minutes, module_name, priority')
+          .eq('module_name', exp.target_module)
+          .eq('is_active', true)
+          .order('priority', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (policy) {
+          rtoTarget = policy.rto_minutes;
+          rpoTarget = policy.rpo_minutes;
+          policySource = `bcdr_policy:${policy.module_name}`;
+        }
+      }
+
+      // ── Calculate real recovery time from timestamps ──
+      const faultAt = exp.started_at ? new Date(exp.started_at) : null;
+      const completedAt = exp.completed_at ? new Date(exp.completed_at) : null;
+      const totalDowntimeMs = faultAt && completedAt ? completedAt.getTime() - faultAt.getTime() : 0;
+      const totalDowntimeMin = Math.round(totalDowntimeMs / 60_000 * 10) / 10;
+
+      // Estimate phases: ~20% detection, ~80% recovery
+      const detectionMin = Math.round(totalDowntimeMin * 0.2 * 10) / 10;
+      const recoveryMin = Math.round(totalDowntimeMin * 0.8 * 10) / 10;
+
+      const rtoActual = exp.rto_actual_minutes ?? totalDowntimeMin;
+      const rpoActual = exp.rpo_actual_minutes ?? Math.round(totalDowntimeMin * 0.5 * 10) / 10;
+
+      // ── RTO evaluation ──
+      const rtoDelta = rtoActual - rtoTarget;
       const rtoMet = rtoActual <= rtoTarget;
+      const rtoSeverity = rtoMet ? 'ok' as const : (rtoDelta > rtoTarget * 0.5 ? 'critical' as const : 'warning' as const);
+      if (!rtoMet) breaches.push(`RTO violado: ${rtoActual}min vs política ${rtoTarget}min (${policySource})`);
+
+      // ── RPO evaluation ──
+      const rpoDelta = rpoActual - rpoTarget;
       const rpoMet = rpoActual <= rpoTarget;
+      const rpoSeverity = rpoMet ? 'ok' as const : (rpoDelta > rpoTarget * 0.5 ? 'critical' as const : 'warning' as const);
+      if (!rpoMet) breaches.push(`RPO violado: ${rpoActual}min vs política ${rpoTarget}min`);
 
-      await (supabase as any).from('chaos_experiments').update({ rto_met: rtoMet, rpo_met: rpoMet }).eq('id', experimentId);
-      if (!rtoMet) await auditLog(experimentId, 'rto_breached', { target: rtoTarget, actual: rtoActual }, 'critical');
-      if (!rpoMet) await auditLog(experimentId, 'rpo_breached', { target: rpoTarget, actual: rpoActual }, 'critical');
+      const overallMet = rtoMet && rpoMet;
 
-      return { rto_met: rtoMet, actual_minutes: rtoActual, target_minutes: rtoTarget, rpo_met: rpoMet, rpo_actual: rpoActual, rpo_target: rpoTarget };
+      await (supabase as any).from('chaos_experiments').update({
+        rto_met: rtoMet,
+        rpo_met: rpoMet,
+        rto_actual_minutes: rtoActual,
+        rpo_actual_minutes: rpoActual,
+      }).eq('id', experimentId);
+
+      if (!rtoMet) await auditLog(experimentId, 'rto_breached', { target: rtoTarget, actual: rtoActual, policy: policySource, severity: rtoSeverity }, 'critical');
+      if (!rpoMet) await auditLog(experimentId, 'rpo_breached', { target: rpoTarget, actual: rpoActual, severity: rpoSeverity }, 'critical');
+
+      return {
+        rto: {
+          met: rtoMet,
+          target_minutes: rtoTarget,
+          actual_minutes: rtoActual,
+          delta_minutes: rtoDelta,
+          policy_source: policySource,
+          severity: rtoSeverity,
+        },
+        rpo: {
+          met: rpoMet,
+          target_minutes: rpoTarget,
+          actual_minutes: rpoActual,
+          delta_minutes: rpoDelta,
+          severity: rpoSeverity,
+        },
+        recovery_timeline: {
+          fault_injected_at: exp.started_at ?? null,
+          detection_at: faultAt ? new Date(faultAt.getTime() + detectionMin * 60_000).toISOString() : null,
+          recovery_started_at: faultAt ? new Date(faultAt.getTime() + detectionMin * 60_000).toISOString() : null,
+          recovery_completed_at: exp.completed_at ?? null,
+          total_downtime_minutes: totalDowntimeMin,
+          detection_time_minutes: detectionMin,
+          recovery_time_minutes: recoveryMin,
+        },
+        overall_met: overallMet,
+        breaches,
+      };
     },
   };
 
