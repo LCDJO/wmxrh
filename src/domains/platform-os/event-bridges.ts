@@ -27,6 +27,7 @@ import { onPlatformEvent } from '@/domains/platform/platform-events';
 import { onWorkforceEvent } from '@/domains/workforce-intelligence/workforce-intelligence.events';
 import { occupationalEvents } from '@/domains/occupational-intelligence/occupational-compliance.events';
 import { onAgreementEvent } from '@/domains/employee-agreement/events';
+import { installSelfHealingIncidentBridge } from '@/domains/incident-management/self-healing-incident-bridge';
 
 // ── Security Kernel Event Buses ───────────────────────────────
 import {
@@ -140,6 +141,11 @@ export function installEventBridges(events: GlobalEventKernelAPI): () => void {
     onKernelSecurityEvent((evt) => {
       events.emit(`kernel:${evt.type}`, 'KernelSecurityBridge', evt, { priority: 'high' });
     }),
+  );
+
+  // ── 11. Self-Healing ↔ Incident Management Bridge ────────────
+  disposers.push(
+    installSelfHealingIncidentBridge(events),
   );
 
   // ── Teardown ──────────────────────────────────────────────
