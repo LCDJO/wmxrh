@@ -108,6 +108,55 @@ async function logOperation(
   });
 }
 
+// ── Audit: write to audit_logs for compliance ──
+async function auditScimEvent(
+  tenantId: string,
+  action: string,
+  resourceType: string,
+  resourceId: string | null,
+  metadata: Record<string, any>,
+  ipAddress: string | null
+) {
+  const db = supabaseAdmin();
+  await db.from("audit_logs").insert({
+    tenant_id: tenantId,
+    action: `SCIM_${action}`,
+    entity_type: resourceType,
+    entity_id: resourceId,
+    metadata: { ...metadata, ip_address: ipAddress, source: "scim_provisioning" } as any,
+  });
+}
+
+// ── Rate Limiting per tenant (sliding window: 120 req/min) ──
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 120;
+
+async function checkRateLimit(tenantId: string): Promise<boolean> {
+  const db = supabaseAdmin();
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+  const { count } = await db
+    .from("scim_provisioning_logs")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+    .gte("created_at", windowStart);
+  return (count ?? 0) < RATE_LIMIT_MAX_REQUESTS;
+}
+
+// ── Mass Deletion Protection (max 50 deactivations/hour) ──
+const MAX_DELETIONS_PER_HOUR = 50;
+
+async function checkMassDeletionThreshold(tenantId: string): Promise<boolean> {
+  const db = supabaseAdmin();
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count } = await db
+    .from("scim_provisioning_logs")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+    .in("operation", ["DELETE", "DEACTIVATE"])
+    .gte("created_at", oneHourAgo);
+  return (count ?? 0) < MAX_DELETIONS_PER_HOUR;
+}
+
 // ── ServiceProviderConfig ──
 function getServiceProviderConfig() {
   return {
@@ -356,6 +405,7 @@ async function handleUsers(
 
     const user = toScimUser(data);
     await logOperation(client, "CREATE", "User", scimId, externalId, body, 201, user, null, ip, startTime);
+    await auditScimEvent(tenantId, "USER_CREATE", "User", scimId, { external_id: externalId, email }, ip);
     return scimResponse(user, 201);
   }
 
@@ -413,6 +463,7 @@ async function handleUsers(
 
     const user = toScimUser(data);
     await logOperation(client, queueOp, "User", resourceId, data.external_id, body, 200, user, null, ip, startTime);
+    await auditScimEvent(tenantId, `USER_${queueOp}`, "User", resourceId, { external_id: data.external_id }, ip);
     return scimResponse(user);
   }
 
@@ -448,6 +499,7 @@ async function handleUsers(
     });
 
     await logOperation(client, "DEACTIVATE", "User", resourceId, data.external_id, null, 204, null, null, ip, startTime);
+    await auditScimEvent(tenantId, "USER_DELETE", "User", resourceId, { external_id: data.external_id, soft_delete: true }, ip);
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
@@ -658,11 +710,28 @@ Deno.serve(async (req) => {
 
     // Authenticate
     const client = await authenticateClient(req);
-    if (!client) return scimError(401, "unauthorized", "Invalid or missing bearer token");
+    if (!client) {
+      await auditScimEvent("unknown", "AUTH_FAILURE", resource, null, { path: url.pathname }, ip);
+      return scimError(401, "unauthorized", "Invalid or missing bearer token");
+    }
+
+    // Rate limit
+    if (!(await checkRateLimit(client.tenant_id))) {
+      await auditScimEvent(client.tenant_id, "RATE_LIMITED", resource, null, {}, ip);
+      return scimError(429, "tooMany", "Rate limit exceeded. Max 120 requests per minute.");
+    }
 
     let body = null;
     if (["POST", "PUT", "PATCH"].includes(req.method)) {
       try { body = await req.json(); } catch { body = {}; }
+    }
+
+    // Mass deletion protection
+    if (req.method === "DELETE" || (body?.active === false)) {
+      if (!(await checkMassDeletionThreshold(client.tenant_id))) {
+        await auditScimEvent(client.tenant_id, "MASS_DELETE_BLOCKED", resource, resourceId, {}, ip);
+        return scimError(429, "tooMany", "Mass deletion threshold exceeded (50/hour). Contact support.");
+      }
     }
 
     switch (resource) {
@@ -698,11 +767,28 @@ Deno.serve(async (req) => {
 
   // Auth required for User/Group operations
   const client = await authenticateClient(req);
-  if (!client) return scimError(401, "unauthorized", "Invalid or missing bearer token");
+  if (!client) {
+    await auditScimEvent("unknown", "AUTH_FAILURE", resource || "unknown", null, { path: url.pathname }, ip);
+    return scimError(401, "unauthorized", "Invalid or missing bearer token");
+  }
+
+  // Rate limit
+  if (!(await checkRateLimit(client.tenant_id))) {
+    await auditScimEvent(client.tenant_id, "RATE_LIMITED", resource || "unknown", null, {}, ip);
+    return scimError(429, "tooMany", "Rate limit exceeded. Max 120 requests per minute.");
+  }
 
   let body = null;
   if (["POST", "PUT", "PATCH"].includes(req.method)) {
     try { body = await req.json(); } catch { body = {}; }
+  }
+
+  // Mass deletion protection
+  if (req.method === "DELETE" || (body?.active === false)) {
+    if (!(await checkMassDeletionThreshold(client.tenant_id))) {
+      await auditScimEvent(client.tenant_id, "MASS_DELETE_BLOCKED", resource || "unknown", resourceId, {}, ip);
+      return scimError(429, "tooMany", "Mass deletion threshold exceeded (50/hour). Contact support.");
+    }
   }
 
   switch (resource) {
