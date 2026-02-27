@@ -9686,6 +9686,7 @@ export type Database = {
           acknowledged_by: string | null
           affected_modules: string[] | null
           affected_services: string[] | null
+          affected_tenants: string[] | null
           assigned_to: string | null
           closed_at: string | null
           closed_by: string | null
@@ -9696,6 +9697,7 @@ export type Database = {
           impact_description: string | null
           is_public: boolean
           metadata: Json | null
+          module_id: string | null
           resolution_summary: string | null
           resolved_at: string | null
           resolved_by: string | null
@@ -9717,6 +9719,7 @@ export type Database = {
           acknowledged_by?: string | null
           affected_modules?: string[] | null
           affected_services?: string[] | null
+          affected_tenants?: string[] | null
           assigned_to?: string | null
           closed_at?: string | null
           closed_by?: string | null
@@ -9727,6 +9730,7 @@ export type Database = {
           impact_description?: string | null
           is_public?: boolean
           metadata?: Json | null
+          module_id?: string | null
           resolution_summary?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -9748,6 +9752,7 @@ export type Database = {
           acknowledged_by?: string | null
           affected_modules?: string[] | null
           affected_services?: string[] | null
+          affected_tenants?: string[] | null
           assigned_to?: string | null
           closed_at?: string | null
           closed_by?: string | null
@@ -9758,6 +9763,7 @@ export type Database = {
           impact_description?: string | null
           is_public?: boolean
           metadata?: Json | null
+          module_id?: string | null
           resolution_summary?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -19236,15 +19242,8 @@ export type Database = {
       forma_pagamento: "deposito_bancario" | "pix" | "cheque" | "dinheiro"
       health_program_type: "pcmso" | "pgr" | "ltcat" | "ppra"
       idp_status: "draft" | "active" | "suspended" | "archived"
-      incident_severity: "critical" | "high" | "medium" | "low" | "info"
-      incident_status:
-        | "detected"
-        | "investigating"
-        | "identified"
-        | "monitoring"
-        | "resolved"
-        | "postmortem"
-        | "closed"
+      incident_severity: "sev1" | "sev2" | "sev3" | "sev4"
+      incident_status: "open" | "investigating" | "mitigated" | "resolved"
       jornada_tipo: "integral" | "parcial" | "escala" | "12x36" | "flexivel"
       labor_rule_calc_type:
         | "percentage"
@@ -19682,16 +19681,8 @@ export const Constants = {
       forma_pagamento: ["deposito_bancario", "pix", "cheque", "dinheiro"],
       health_program_type: ["pcmso", "pgr", "ltcat", "ppra"],
       idp_status: ["draft", "active", "suspended", "archived"],
-      incident_severity: ["critical", "high", "medium", "low", "info"],
-      incident_status: [
-        "detected",
-        "investigating",
-        "identified",
-        "monitoring",
-        "resolved",
-        "postmortem",
-        "closed",
-      ],
+      incident_severity: ["sev1", "sev2", "sev3", "sev4"],
+      incident_status: ["open", "investigating", "mitigated", "resolved"],
       jornada_tipo: ["integral", "parcial", "escala", "12x36", "flexivel"],
       labor_rule_calc_type: [
         "percentage",

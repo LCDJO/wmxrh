@@ -11,17 +11,17 @@ import { AlertTriangle, CheckCircle2, XCircle, Loader2, ShieldAlert, Clock } fro
 import type { Incident, HealingAuditEntry } from '@/domains/self-healing/types';
 
 const severityConfig = {
-  minor:    { label: 'Minor',    variant: 'secondary'   as const, className: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
-  major:    { label: 'Major',    variant: 'default'     as const, className: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
-  critical: { label: 'Crítico',  variant: 'destructive' as const, className: 'bg-destructive/10 text-destructive border-destructive/20' },
+  minor:    { label: 'SEV4',    variant: 'secondary'   as const, className: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
+  major:    { label: 'SEV2',    variant: 'default'     as const, className: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
+  critical: { label: 'SEV1',    variant: 'destructive' as const, className: 'bg-destructive/10 text-destructive border-destructive/20' },
 };
 
 const statusConfig: Record<string, { label: string; icon: typeof CheckCircle2; className: string }> = {
-  detected:   { label: 'Detectado',   icon: AlertTriangle, className: 'text-amber-500' },
-  recovering: { label: 'Recuperando', icon: Loader2,       className: 'text-blue-500 animate-spin' },
-  recovered:  { label: 'Recuperado',  icon: CheckCircle2,  className: 'text-emerald-500' },
-  failed:     { label: 'Falhou',      icon: XCircle,       className: 'text-destructive' },
-  escalated:  { label: 'Escalado',    icon: ShieldAlert,   className: 'text-amber-600' },
+  open:        { label: 'Aberto',      icon: AlertTriangle, className: 'text-amber-500' },
+  investigating: { label: 'Investigando', icon: Loader2,    className: 'text-blue-500 animate-spin' },
+  mitigated:   { label: 'Mitigado',    icon: CheckCircle2,  className: 'text-emerald-500' },
+  resolved:    { label: 'Resolvido',   icon: CheckCircle2,  className: 'text-emerald-500' },
+  escalated:   { label: 'Escalado',    icon: ShieldAlert,   className: 'text-amber-600' },
 };
 
 export default function IncidentsPanel() {

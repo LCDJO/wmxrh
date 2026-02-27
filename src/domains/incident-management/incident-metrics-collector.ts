@@ -36,9 +36,9 @@ export async function collectIncidentMetrics(): Promise<IncidentMetricsSnapshot>
   // Open incidents by severity
   const { data: open } = await (supabase.from('incidents' as any)
     .select('severity')
-    .in('status', ['detected', 'investigating', 'identified', 'monitoring']) as any);
+    .in('status', ['open', 'investigating', 'mitigated']) as any);
 
-  const bySeverity: Record<string, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+  const bySeverity: Record<string, number> = { sev1: 0, sev2: 0, sev3: 0, sev4: 0 };
   for (const i of (open ?? [])) bySeverity[i.severity] = (bySeverity[i.severity] ?? 0) + 1;
 
   const openTotal = (open ?? []).length;

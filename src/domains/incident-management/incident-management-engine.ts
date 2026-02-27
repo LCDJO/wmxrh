@@ -57,17 +57,17 @@ function createSeverityClassifier(): SeverityClassifierAPI {
     classify(signal) {
       if (signal.severity_hint) return signal.severity_hint;
       const weight = SEVERITY_WEIGHTS[signal.type] ?? 2;
-      if (weight >= 5) return 'critical';
-      if (weight >= 4) return 'high';
-      if (weight >= 3) return 'medium';
-      return 'low';
+      if (weight >= 5) return 'sev1';
+      if (weight >= 4) return 'sev2';
+      if (weight >= 3) return 'sev3';
+      return 'sev4';
     },
 
     reclassify(incident, newEvidence) {
       const affectedCount = incident.affected_modules.length + incident.affected_services.length;
-      if (affectedCount >= 5 || newEvidence.user_impact === 'total') return 'critical';
-      if (affectedCount >= 3 || newEvidence.user_impact === 'major') return 'high';
-      if (affectedCount >= 1) return 'medium';
+      if (affectedCount >= 5 || newEvidence.user_impact === 'total') return 'sev1';
+      if (affectedCount >= 3 || newEvidence.user_impact === 'major') return 'sev2';
+      if (affectedCount >= 1) return 'sev3';
       return incident.severity;
     },
   };
@@ -118,7 +118,7 @@ function createIncidentDetector(classifier: SeverityClassifierAPI): IncidentDete
       const since = new Date(Date.now() - DEDUP_WINDOW_MS).toISOString();
       const { data } = await (supabase.from('incidents' as any)
         .select('*')
-        .in('status', ['detected', 'investigating', 'identified'])
+        .in('status', ['open', 'investigating', 'mitigated'])
         .contains('affected_modules', [signal.source_module])
         .gte('created_at', since)
         .limit(1)
@@ -138,9 +138,7 @@ function createSLAEngine(): SLAEngineAPI {
     async getConfig(severity, tenantId) {
       // Try tenant-specific first, then global
       let query = supabase.from('incident_sla_configs' as any)
-        .select('*')
-        .eq('severity', severity)
-        .eq('is_active', true);
+        .select('*').eq('severity', severity).eq('is_active', true);
 
       if (tenantId) {
         const { data: tenantConfig } = await (query.eq('tenant_id', tenantId).single() as any);
@@ -180,9 +178,8 @@ function createSLAEngine(): SLAEngineAPI {
     async checkBreaches() {
       const now = new Date().toISOString();
       const { data } = await (supabase.from('incidents' as any)
-        .select('*')
-        .eq('sla_breached', false)
-        .in('status', ['detected', 'investigating', 'identified', 'monitoring'])
+        .select('*').eq('sla_breached', false)
+        .in('status', ['open', 'investigating', 'mitigated'])
         .or(`sla_response_deadline.lt.${now},sla_ack_deadline.lt.${now},sla_resolution_deadline.lt.${now}`) as any);
 
       const breached = (data ?? []) as Incident[];
@@ -318,7 +315,7 @@ function createStatusPageService(): StatusPageServiceAPI {
         incident_id: incident.id,
         tenant_id: incident.tenant_id,
         title: incident.title,
-        impact: incident.severity === 'critical' ? 'major_outage' : incident.severity === 'high' ? 'partial_outage' : 'degraded_performance',
+        impact: incident.severity === 'sev1' ? 'major_outage' : incident.severity === 'sev2' ? 'partial_outage' : 'degraded_performance',
         status: 'investigating',
         affected_components: [],
       } as any).select().single() as any);
@@ -507,7 +504,7 @@ export function createIncidentManagementEngine(): IncidentManagementEngineAPI {
       await (supabase.from('incident_updates' as any).insert({
         incident_id: incident.id,
         update_type: 'created',
-        new_status: 'detected',
+        new_status: 'open',
         message: `Incident created: ${incident.title} [${incident.severity}]`,
         is_public: incident.is_public,
       } as any) as any);
@@ -534,7 +531,7 @@ export function createIncidentManagementEngine(): IncidentManagementEngineAPI {
         incident_id: incidentId,
         author_id: userId,
         update_type: 'status_change',
-        previous_status: 'detected',
+        previous_status: 'open',
         new_status: 'investigating',
         message: 'Incident acknowledged and under investigation.',
         is_public: true,
@@ -640,13 +637,13 @@ export function createIncidentManagementEngine(): IncidentManagementEngineAPI {
     async getDashboardStats() {
       const { data: open } = await (supabase.from('incidents' as any)
         .select('severity, status')
-        .in('status', ['detected', 'investigating', 'identified', 'monitoring']) as any);
+        .in('status', ['open', 'investigating', 'mitigated']) as any);
 
       const incidents = (open ?? []) as Array<{ severity: IncidentSeverity; status: IncidentStatus }>;
 
-      const by_severity: Record<IncidentSeverity, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+      const by_severity: Record<IncidentSeverity, number> = { sev1: 0, sev2: 0, sev3: 0, sev4: 0 };
       const by_status: Record<IncidentStatus, number> = {
-        detected: 0, investigating: 0, identified: 0, monitoring: 0, resolved: 0, postmortem: 0, closed: 0,
+        open: 0, investigating: 0, mitigated: 0, resolved: 0,
       };
 
       for (const i of incidents) {
