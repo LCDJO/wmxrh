@@ -226,6 +226,50 @@ function toScimGroup(row: any) {
   };
 }
 
+// ── SCIM Attribute Mapping Engine ──
+function resolveScimPath(obj: any, path: string): any {
+  // Handle paths like "emails[0].value", "name.givenName", "userName"
+  const parts = path.replace(/\[(\d+)\]/g, ".$1").split(".");
+  let current = obj;
+  for (const part of parts) {
+    if (current == null) return undefined;
+    current = current[part];
+  }
+  return current;
+}
+
+function applyAttributeMapping(scimBody: any, mapping: Record<string, string>): Record<string, any> {
+  const result: Record<string, any> = {};
+  for (const [scimPath, internalField] of Object.entries(mapping)) {
+    const value = resolveScimPath(scimBody, scimPath);
+    if (value !== undefined) {
+      result[internalField] = value;
+    }
+  }
+  return result;
+}
+
+async function loadAttributeMapping(db: ReturnType<typeof supabaseAdmin>, tenantId: string): Promise<Record<string, string>> {
+  const { data } = await db
+    .from("scim_configs")
+    .select("default_attribute_mapping")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (data?.default_attribute_mapping && typeof data.default_attribute_mapping === "object") {
+    return data.default_attribute_mapping as Record<string, string>;
+  }
+  // Fallback defaults
+  return {
+    "userName": "email",
+    "displayName": "display_name",
+    "emails[0].value": "email",
+    "name.givenName": "first_name",
+    "name.familyName": "last_name",
+    "active": "active",
+    "externalId": "external_id",
+  };
+}
+
 // ── User CRUD ──
 async function handleUsers(
   method: string,
@@ -271,8 +315,13 @@ async function handleUsers(
   }
 
   if (method === "POST") {
-    const externalId = body.externalId || body.userName;
-    const email = body.emails?.[0]?.value || body.userName;
+    // Apply tenant's attribute mapping
+    const attrMapping = await loadAttributeMapping(db, tenantId);
+    const mapped = applyAttributeMapping(body, attrMapping);
+
+    const externalId = mapped.external_id || body.externalId || body.userName;
+    const email = mapped.email || body.emails?.[0]?.value || body.userName;
+    const displayName = mapped.display_name || body.displayName || body.userName;
     const scimId = crypto.randomUUID();
 
     // Insert provisioned user record immediately (for SCIM response)
@@ -283,9 +332,9 @@ async function handleUsers(
         scim_client_id: clientId,
         external_id: externalId,
         scim_id: scimId,
-        display_name: body.displayName || body.userName,
+        display_name: displayName,
         email,
-        active: body.active !== false,
+        active: mapped.active !== false && body.active !== false,
         scim_data: body,
       })
       .select()
@@ -311,15 +360,18 @@ async function handleUsers(
   }
 
   if ((method === "PUT" || method === "PATCH") && resourceId) {
-    // Determine operation type based on active status
-    const isDeactivation = body.active === false;
-    const isReactivation = body.active === true;
+    // Apply tenant's attribute mapping
+    const attrMapping = await loadAttributeMapping(db, tenantId);
+    const mapped = applyAttributeMapping(body, attrMapping);
+
+    const isDeactivation = (mapped.active === false) || (body.active === false);
+    const isReactivation = (mapped.active === true) || (body.active === true);
     const now = new Date().toISOString();
 
     const updates: any = {
-      display_name: body.displayName,
-      email: body.emails?.[0]?.value,
-      active: body.active,
+      display_name: mapped.display_name || body.displayName,
+      email: mapped.email || body.emails?.[0]?.value,
+      active: mapped.active ?? body.active,
       scim_data: body,
       last_synced_at: now,
     };
