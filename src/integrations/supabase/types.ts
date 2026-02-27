@@ -7027,6 +7027,79 @@ export type Database = {
           },
         ]
       }
+      federation_role_mappings: {
+        Row: {
+          auto_deprovision: boolean
+          auto_provision: boolean
+          created_at: string
+          id: string
+          idp_config_id: string
+          idp_group_id: string | null
+          idp_group_name: string
+          is_active: boolean
+          platform_role_id: string | null
+          priority: number
+          target_scope: string
+          tenant_id: string
+          tenant_role: string | null
+          updated_at: string
+        }
+        Insert: {
+          auto_deprovision?: boolean
+          auto_provision?: boolean
+          created_at?: string
+          id?: string
+          idp_config_id: string
+          idp_group_id?: string | null
+          idp_group_name: string
+          is_active?: boolean
+          platform_role_id?: string | null
+          priority?: number
+          target_scope: string
+          tenant_id: string
+          tenant_role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auto_deprovision?: boolean
+          auto_provision?: boolean
+          created_at?: string
+          id?: string
+          idp_config_id?: string
+          idp_group_id?: string | null
+          idp_group_name?: string
+          is_active?: boolean
+          platform_role_id?: string | null
+          priority?: number
+          target_scope?: string
+          tenant_id?: string
+          tenant_role?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "federation_role_mappings_idp_config_id_fkey"
+            columns: ["idp_config_id"]
+            isOneToOne: false
+            referencedRelation: "identity_provider_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federation_role_mappings_platform_role_id_fkey"
+            columns: ["platform_role_id"]
+            isOneToOne: false
+            referencedRelation: "platform_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federation_role_mappings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       federation_sessions: {
         Row: {
           attributes: Json

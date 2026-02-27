@@ -21,6 +21,7 @@ export { createOAuthAuthorizationServer } from './oauth-authorization-server';
 export { createTokenService } from './token-service';
 export { createSessionManager } from './session-manager';
 export { createFederationAuditLogger } from './federation-audit-logger';
+export { createFederationRoleMapper } from './federation-role-mapper';
 
 // ── UGE Provider ──
 export { federationGraphProvider } from './federation-graph-provider';
@@ -52,6 +53,7 @@ export type {
   TokenServiceAPI,
   SessionManagerAPI,
   FederationAuditLoggerAPI,
+  FederationRoleMappingAPI,
   CreateSessionParams,
   FederationAuditEvent,
   FederationEventType,
@@ -59,4 +61,7 @@ export type {
   AuditQueryFilters,
   ValidationResult,
   FederationHealthReport,
+  ResolvedRoles,
+  RoleMappingRule,
+  RoleMappingInput,
 } from './types';

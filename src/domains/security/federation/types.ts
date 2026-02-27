@@ -217,6 +217,8 @@ export interface FederationEngineAPI {
   sessions: SessionManagerAPI;
   /** Audit */
   audit: FederationAuditLoggerAPI;
+  /** Role mapping (IdP groups → Platform/Tenant roles) */
+  roleMapper: FederationRoleMappingAPI;
 
   /** Initialize the engine for a tenant */
   initialize(tenantId: string): Promise<void>;
@@ -432,4 +434,61 @@ export interface FederationHealthReport {
     oidc: boolean;
     oauth2: boolean;
   };
+}
+
+// ════════════════════════════════════
+// ROLE MAPPING
+// ════════════════════════════════════
+
+export interface ResolvedRoles {
+  platformRoles: Array<{ roleId: string; roleName?: string }>;
+  tenantRoles: string[];
+  unmappedGroups: string[];
+}
+
+export interface RoleMappingRule {
+  id: string;
+  idpConfigId: string;
+  tenantId: string;
+  idpGroupName: string;
+  idpGroupId?: string | null;
+  targetScope: 'platform' | 'tenant';
+  platformRoleId?: string | null;
+  platformRoleName?: string | null;
+  tenantRole?: string | null;
+  isActive: boolean;
+  priority: number;
+  autoProvision: boolean;
+  autoDeprovision: boolean;
+}
+
+export interface RoleMappingInput {
+  tenantId: string;
+  idpConfigId: string;
+  idpGroupName: string;
+  idpGroupId?: string;
+  targetScope: 'platform' | 'tenant';
+  platformRoleId?: string;
+  tenantRole?: string;
+  isActive?: boolean;
+  priority?: number;
+  autoProvision?: boolean;
+  autoDeprovision?: boolean;
+}
+
+export interface FederationRoleMappingAPI {
+  /** Resolve IdP groups to platform and tenant roles */
+  resolveRoles(idpConfigId: string, idpGroups: string[]): Promise<ResolvedRoles>;
+  /** Provision resolved roles for a user */
+  provisionRoles(userId: string, tenantId: string, resolved: ResolvedRoles): Promise<string[]>;
+  /** Deprovision roles for a user */
+  deprovisionRoles(userId: string, tenantId: string, resolved: ResolvedRoles): Promise<string[]>;
+  /** Get all mappings for an IdP */
+  getMappings(idpConfigId: string): Promise<RoleMappingRule[]>;
+  /** Create a new mapping rule */
+  createMapping(mapping: RoleMappingInput): Promise<RoleMappingRule>;
+  /** Update a mapping rule */
+  updateMapping(id: string, patch: Partial<RoleMappingInput>): Promise<void>;
+  /** Delete a mapping rule */
+  deleteMapping(id: string): Promise<void>;
 }
