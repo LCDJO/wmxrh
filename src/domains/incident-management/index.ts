@@ -62,4 +62,6 @@ export type {
   AvailabilityReporterAPI,
   IncidentManagementEngineAPI,
   IncidentDashboardStats,
+  RemediationSuggestion,
+  RemediationAction,
 } from './types';
