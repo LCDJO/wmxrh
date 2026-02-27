@@ -9,8 +9,8 @@
 // ENUMS
 // ══════════════════════════════════
 
-export type IncidentSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
-export type IncidentStatus = 'detected' | 'investigating' | 'identified' | 'monitoring' | 'resolved' | 'postmortem' | 'closed';
+export type IncidentSeverity = 'sev1' | 'sev2' | 'sev3' | 'sev4';
+export type IncidentStatus = 'open' | 'investigating' | 'mitigated' | 'resolved';
 export type EscalationLevel = 'l1' | 'l2' | 'l3' | 'management' | 'executive';
 export type NotificationChannel = 'email' | 'sms' | 'webhook' | 'in_app' | 'telegram';
 export type ComponentStatus = 'operational' | 'degraded_performance' | 'partial_outage' | 'major_outage' | 'under_maintenance';
@@ -22,6 +22,8 @@ export type ComponentStatus = 'operational' | 'degraded_performance' | 'partial_
 export interface Incident {
   id: string;
   tenant_id: string | null;
+  module_id: string | null;
+  affected_tenants: string[];
   title: string;
   description: string | null;
   severity: IncidentSeverity;
@@ -40,6 +42,7 @@ export interface Incident {
   resolved_at: string | null;
   closed_by: string | null;
   closed_at: string | null;
+  detected_at: string;
   escalation_level: EscalationLevel;
   sla_response_deadline: string | null;
   sla_ack_deadline: string | null;
