@@ -14,14 +14,16 @@ import { FileText, Search, RefreshCw, Filter } from 'lucide-react';
 interface AuditRow {
   id: string;
   event_type: string;
-  protocol: string;
+  protocol: string | null;
   user_id: string | null;
   tenant_id: string;
   idp_config_id: string | null;
   session_id: string | null;
   ip_address: string | null;
   success: boolean;
-  metadata: Record<string, unknown>;
+  details: Record<string, unknown>;
+  error_message: string | null;
+  user_agent: string | null;
   created_at: string;
 }
 
@@ -49,11 +51,11 @@ export default function FederationAuditLogs() {
   async function loadLogs() {
     setLoading(true);
     const { data } = await supabase
-      .from('federation_audit_logs' as any)
+      .from('federation_audit_logs')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(200);
-    setLogs((data as any[]) || []);
+    setLogs((data ?? []) as unknown as AuditRow[]);
     setLoading(false);
   }
 
