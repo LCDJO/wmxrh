@@ -308,49 +308,108 @@ function createEscalationManager(slaEngine: SLAEngineAPI): EscalationManagerAPI 
 // CLIENT NOTIFICATION SERVICE
 // ══════════════════════════════════
 
+/**
+ * Multi-channel notification:
+ *   - in_app  → painel interno (always)
+ *   - email   → queued for sending
+ *   - webhook → queued for delivery
+ *
+ * Scope:
+ *   - If incident has affected_tenants → notify each tenant
+ *   - If affected_tenants is empty (global) → notify ALL tenants
+ */
+const CHANNELS: Array<'in_app' | 'email' | 'webhook'> = ['in_app', 'email', 'webhook'];
+
 function createClientNotificationService(): ClientNotificationServiceAPI {
-  async function queueNotification(incidentId: string, tenantId: string | null, subject: string, body: string) {
-    await (supabase.from('incident_notifications' as any).insert({
+
+  async function resolveRecipientTenants(incident: Incident): Promise<Array<{ id: string; name: string }>> {
+    const affectedTenants = incident.affected_tenants ?? [];
+
+    if (affectedTenants.length > 0) {
+      // Notify only affected tenants
+      const { data } = await (supabase.from('tenants' as any)
+        .select('id, name').in('id', affectedTenants) as any);
+      return (data ?? []) as Array<{ id: string; name: string }>;
+    }
+
+    // Global incident → notify all active tenants
+    const { data } = await (supabase.from('tenants' as any)
+      .select('id, name').eq('status', 'active') as any);
+    return (data ?? []) as Array<{ id: string; name: string }>;
+  }
+
+  async function fanOutNotification(
+    incidentId: string,
+    tenants: Array<{ id: string; name: string }>,
+    subject: string,
+    body: string,
+  ) {
+    const rows = tenants.flatMap(t =>
+      CHANNELS.map(channel => ({
+        incident_id: incidentId,
+        tenant_id: t.id,
+        channel,
+        recipient: channel === 'email' ? `admin@${t.name}` : t.id,
+        subject,
+        body,
+        status: 'pending',
+      }))
+    );
+
+    // Also add a platform-level in_app notification
+    rows.push({
       incident_id: incidentId,
-      tenant_id: tenantId,
+      tenant_id: null as any,
       channel: 'in_app',
-      recipient: tenantId ?? 'platform',
+      recipient: 'platform',
       subject,
       body,
       status: 'pending',
-    } as any) as any);
+    });
+
+    if (rows.length > 0) {
+      await (supabase.from('incident_notifications' as any).insert(rows as any) as any);
+    }
   }
 
   return {
     async notifyIncidentCreated(incident) {
-      await queueNotification(
-        incident.id, incident.tenant_id,
-        `[${incident.severity.toUpperCase()}] Incident: ${incident.title}`,
-        `A new ${incident.severity} incident has been detected: ${incident.title}. Our team is investigating.`
+      const tenants = await resolveRecipientTenants(incident);
+      const scope = tenants.length > 0 && (incident.affected_tenants?.length ?? 0) > 0
+        ? `Tenants afetados: ${tenants.map(t => t.name).join(', ')}`
+        : 'Impacto global — todos os tenants notificados';
+
+      await fanOutNotification(
+        incident.id, tenants,
+        `[${incident.severity.toUpperCase()}] Incidente: ${incident.title}`,
+        `Novo incidente ${incident.severity} detectado: ${incident.title}. ${scope}. Equipe investigando.`,
       );
     },
 
     async notifyStatusUpdate(incident, update) {
-      await queueNotification(
-        incident.id, incident.tenant_id,
-        `Incident Update: ${incident.title}`,
-        `Status changed to ${update.new_status}: ${update.message}`
+      const tenants = await resolveRecipientTenants(incident);
+      await fanOutNotification(
+        incident.id, tenants,
+        `Atualização: ${incident.title}`,
+        `Status alterado para ${update.new_status}: ${update.message}`,
       );
     },
 
     async notifyResolution(incident) {
-      await queueNotification(
-        incident.id, incident.tenant_id,
-        `Resolved: ${incident.title}`,
-        `The incident "${incident.title}" has been resolved. ${incident.resolution_summary ?? ''}`
+      const tenants = await resolveRecipientTenants(incident);
+      await fanOutNotification(
+        incident.id, tenants,
+        `Resolvido: ${incident.title}`,
+        `O incidente "${incident.title}" foi resolvido. ${incident.resolution_summary ?? ''}`,
       );
     },
 
     async notifySLABreach(incident) {
-      await queueNotification(
-        incident.id, incident.tenant_id,
-        `⚠️ SLA Breach: ${incident.title}`,
-        `SLA has been breached for incident "${incident.title}" (severity: ${incident.severity}).`
+      const tenants = await resolveRecipientTenants(incident);
+      await fanOutNotification(
+        incident.id, tenants,
+        `⚠️ SLA Violado: ${incident.title}`,
+        `SLA violado para o incidente "${incident.title}" (severidade: ${incident.severity}).`,
       );
     },
   };
