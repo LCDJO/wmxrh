@@ -323,6 +323,25 @@ export function exportPrometheus(): PrometheusExportResult {
     // Federation metrics unavailable — skip
   }
 
+  // ── Incident Management metrics ───────────────────────────
+  try {
+    const { getIncidentMetricsSnapshot } = require('../incident-management/incident-metrics-collector') as {
+      getIncidentMetricsSnapshot: () => import('../incident-management/incident-metrics-collector').IncidentMetricsSnapshot;
+    };
+    const im = getIncidentMetricsSnapshot();
+    collector.gauge('incident_open_total', im.open_total);
+    for (const [sev, count] of Object.entries(im.by_severity)) {
+      collector.gauge('incident_open_by_severity', count as number, { severity: sev });
+    }
+    collector.gauge('incident_mttr_minutes', im.mttr_minutes);
+    collector.gauge('incident_sla_breach_total', im.sla_breach_total);
+    collector.gauge('incident_created_total', im.created_total);
+    collector.gauge('incident_resolved_total', im.resolved_total);
+    collector.gauge('platform_uptime_30d', im.uptime_30d);
+  } catch {
+    // Incident metrics unavailable — skip
+  }
+
   const metrics = collector.toPrometheus();
   const text = collector.toPrometheusText();
 
