@@ -44,30 +44,37 @@ import type {
 // SEVERITY CLASSIFIER
 // ══════════════════════════════════
 
+/**
+ * Severity classification rules:
+ *   Sev1 → module offline OR global impact
+ *   Sev2 → critical module degraded
+ *   Sev3 → partial failure
+ *   Sev4 → minor error
+ */
 function createSeverityClassifier(): SeverityClassifierAPI {
-  const SEVERITY_WEIGHTS: Record<string, number> = {
-    health_degraded: 3,
-    error_spike: 4,
-    latency_exceeded: 2,
-    self_healing_failed: 5,
-    manual: 0,
+  const SIGNAL_TO_SEVERITY: Record<string, IncidentSeverity> = {
+    self_healing_failed: 'sev1',   // module offline
+    health_degraded: 'sev2',       // critical module degraded
+    error_spike: 'sev3',           // partial failure
+    latency_exceeded: 'sev3',      // partial failure
+    manual: 'sev4',                // minor / manual triage
   };
 
   return {
     classify(signal) {
       if (signal.severity_hint) return signal.severity_hint;
-      const weight = SEVERITY_WEIGHTS[signal.type] ?? 2;
-      if (weight >= 5) return 'sev1';
-      if (weight >= 4) return 'sev2';
-      if (weight >= 3) return 'sev3';
-      return 'sev4';
+      return SIGNAL_TO_SEVERITY[signal.type] ?? 'sev4';
     },
 
     reclassify(incident, newEvidence) {
+      // Sev1: module offline or global impact
+      if (newEvidence.module_offline === true || newEvidence.user_impact === 'total') return 'sev1';
+      // Sev2: critical module degraded
+      if (newEvidence.user_impact === 'major' || newEvidence.critical_degraded === true) return 'sev2';
+      // Sev3: partial failure (multiple modules affected)
       const affectedCount = incident.affected_modules.length + incident.affected_services.length;
-      if (affectedCount >= 5 || newEvidence.user_impact === 'total') return 'sev1';
-      if (affectedCount >= 3 || newEvidence.user_impact === 'major') return 'sev2';
-      if (affectedCount >= 1) return 'sev3';
+      if (affectedCount >= 2 || newEvidence.user_impact === 'partial') return 'sev3';
+      // Keep current or default sev4
       return incident.severity;
     },
   };
