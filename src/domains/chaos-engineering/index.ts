@@ -22,6 +22,7 @@
 
 export { createChaosEngine, getChaosEngine, resetChaosEngine } from './chaos-engine';
 export { CHAOS_KERNEL_EVENTS } from './chaos-events';
+export { collectChaosMetrics } from './chaos-metrics-collector';
 
 export type {
   ChaosKernelEvent,
@@ -38,11 +39,19 @@ export type {
   ChaosScenario,
   ChaosExperiment,
   ChaosAuditEntry,
+  FaultInjectionParams,
+  ActiveFault,
   FaultInjectionControllerAPI,
   ChaosScenarioManagerAPI,
+  ImpactAnalysisResult,
   ImpactAnalyzerAPI,
+  SLAValidationResult,
   SLAValidatorAPI,
+  RTOValidationResult,
   RTOValidatorAPI,
+  ChaosReportFinding,
+  ChaosReportRecommendation,
+  ChaosReport,
   ChaosReportGeneratorAPI,
   SafetyGuardAPI,
   ChaosEngineDashboardStats,
