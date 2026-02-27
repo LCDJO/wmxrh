@@ -2229,6 +2229,247 @@ export type Database = {
           },
         ]
       }
+      chaos_audit_log: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          event_type: string
+          experiment_id: string | null
+          id: string
+          severity: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          experiment_id?: string | null
+          id?: string
+          severity?: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          experiment_id?: string | null
+          id?: string
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chaos_audit_log_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "chaos_experiments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chaos_experiments: {
+        Row: {
+          abort_reason: string | null
+          aborted_at: string | null
+          affected_services: string[] | null
+          affected_tenants: string[] | null
+          approved_by: string | null
+          blast_radius: string
+          completed_at: string | null
+          created_at: string
+          error_rate_before: number | null
+          error_rate_during: number | null
+          escalation_triggered: boolean | null
+          failover_id: string | null
+          fault_type: string
+          findings: Json | null
+          id: string
+          impact_score: number | null
+          incident_id: string | null
+          initiated_by: string | null
+          latency_before_ms: number | null
+          latency_during_ms: number | null
+          max_duration_minutes: number
+          name: string
+          parameters: Json
+          recommendations: Json | null
+          resilience_score: number | null
+          rpo_actual_minutes: number | null
+          rpo_met: boolean | null
+          rpo_target_minutes: number | null
+          rto_actual_minutes: number | null
+          rto_met: boolean | null
+          rto_target_minutes: number | null
+          safety_stop_reason: string | null
+          safety_stopped: boolean
+          scenario_id: string | null
+          scheduled_at: string | null
+          self_healing_triggered: boolean | null
+          sla_actual_pct: number | null
+          sla_met: boolean | null
+          sla_target_pct: number | null
+          started_at: string | null
+          status: string
+          target_module: string | null
+          target_region: string | null
+          updated_at: string
+        }
+        Insert: {
+          abort_reason?: string | null
+          aborted_at?: string | null
+          affected_services?: string[] | null
+          affected_tenants?: string[] | null
+          approved_by?: string | null
+          blast_radius?: string
+          completed_at?: string | null
+          created_at?: string
+          error_rate_before?: number | null
+          error_rate_during?: number | null
+          escalation_triggered?: boolean | null
+          failover_id?: string | null
+          fault_type: string
+          findings?: Json | null
+          id?: string
+          impact_score?: number | null
+          incident_id?: string | null
+          initiated_by?: string | null
+          latency_before_ms?: number | null
+          latency_during_ms?: number | null
+          max_duration_minutes?: number
+          name: string
+          parameters?: Json
+          recommendations?: Json | null
+          resilience_score?: number | null
+          rpo_actual_minutes?: number | null
+          rpo_met?: boolean | null
+          rpo_target_minutes?: number | null
+          rto_actual_minutes?: number | null
+          rto_met?: boolean | null
+          rto_target_minutes?: number | null
+          safety_stop_reason?: string | null
+          safety_stopped?: boolean
+          scenario_id?: string | null
+          scheduled_at?: string | null
+          self_healing_triggered?: boolean | null
+          sla_actual_pct?: number | null
+          sla_met?: boolean | null
+          sla_target_pct?: number | null
+          started_at?: string | null
+          status?: string
+          target_module?: string | null
+          target_region?: string | null
+          updated_at?: string
+        }
+        Update: {
+          abort_reason?: string | null
+          aborted_at?: string | null
+          affected_services?: string[] | null
+          affected_tenants?: string[] | null
+          approved_by?: string | null
+          blast_radius?: string
+          completed_at?: string | null
+          created_at?: string
+          error_rate_before?: number | null
+          error_rate_during?: number | null
+          escalation_triggered?: boolean | null
+          failover_id?: string | null
+          fault_type?: string
+          findings?: Json | null
+          id?: string
+          impact_score?: number | null
+          incident_id?: string | null
+          initiated_by?: string | null
+          latency_before_ms?: number | null
+          latency_during_ms?: number | null
+          max_duration_minutes?: number
+          name?: string
+          parameters?: Json
+          recommendations?: Json | null
+          resilience_score?: number | null
+          rpo_actual_minutes?: number | null
+          rpo_met?: boolean | null
+          rpo_target_minutes?: number | null
+          rto_actual_minutes?: number | null
+          rto_met?: boolean | null
+          rto_target_minutes?: number | null
+          safety_stop_reason?: string | null
+          safety_stopped?: boolean
+          scenario_id?: string | null
+          scheduled_at?: string | null
+          self_healing_triggered?: boolean | null
+          sla_actual_pct?: number | null
+          sla_met?: boolean | null
+          sla_target_pct?: number | null
+          started_at?: string | null
+          status?: string
+          target_module?: string | null
+          target_region?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chaos_experiments_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "chaos_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chaos_scenarios: {
+        Row: {
+          blast_radius: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          fault_type: string
+          id: string
+          is_active: boolean
+          max_duration_minutes: number
+          name: string
+          parameters: Json
+          requires_approval: boolean
+          safety_constraints: Json
+          target_module: string | null
+          target_region: string | null
+          updated_at: string
+        }
+        Insert: {
+          blast_radius?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          fault_type?: string
+          id?: string
+          is_active?: boolean
+          max_duration_minutes?: number
+          name: string
+          parameters?: Json
+          requires_approval?: boolean
+          safety_constraints?: Json
+          target_module?: string | null
+          target_region?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blast_radius?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          fault_type?: string
+          id?: string
+          is_active?: boolean
+          max_duration_minutes?: number
+          name?: string
+          parameters?: Json
+          requires_approval?: boolean
+          safety_constraints?: Json
+          target_module?: string | null
+          target_region?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chat_assist_sessions: {
         Row: {
           assist_mode: Database["public"]["Enums"]["assist_mode"]
