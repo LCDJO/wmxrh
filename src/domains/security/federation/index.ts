@@ -56,6 +56,16 @@ export type {
 // ── UGE Provider ──
 export { federationGraphProvider } from './federation-graph-provider';
 
+// ── Kernel Events ──
+export { FEDERATION_KERNEL_EVENTS } from './federation-events';
+export type {
+  FederationKernelEvent,
+  UserFederatedLoginPayload,
+  SAMLAssertionValidatedPayload,
+  OIDCTokenIssuedPayload,
+  OAuthClientAuthorizedPayload,
+  SessionRevokedPayload,
+} from './federation-events';
 // ── Types ──
 export type {
   FederationProtocol,
