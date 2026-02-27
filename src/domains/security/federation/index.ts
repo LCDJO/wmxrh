@@ -19,7 +19,8 @@ export type { SAMLMappedIdentity, SAMLACSResult } from './saml-service-provider'
 export { createOIDCProvider } from './oidc-provider';
 export { createOAuthAuthorizationServer } from './oauth-authorization-server';
 export { createTokenService } from './token-service';
-export { createSessionManager } from './session-manager';
+export { createSessionManager, getUnifiedSession, getActiveUnifiedSessions, touchSession, extendSession } from './session-manager';
+export type { UnifiedIdentitySession } from './session-manager';
 export { createFederationAuditLogger } from './federation-audit-logger';
 export { createFederationRoleMapper } from './federation-role-mapper';
 export { createMultiTenantResolver } from './multi-tenant-resolver';
