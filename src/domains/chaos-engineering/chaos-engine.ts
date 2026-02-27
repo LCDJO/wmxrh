@@ -249,13 +249,61 @@ export function createChaosEngine(): ChaosEngineeringAPI {
   // ── SLA Validator ────────────────────────────────
   const sla: ChaosEngineeringAPI['sla'] = {
     async validate(experimentId) {
-      const { data: exp } = await (supabase as any).from('chaos_experiments').select('sla_target_pct, sla_actual_pct').eq('id', experimentId).single();
-      const target = exp?.sla_target_pct ?? 99.9;
-      const actual = exp?.sla_actual_pct ?? 100;
-      const met = actual >= target;
-      await (supabase as any).from('chaos_experiments').update({ sla_met: met }).eq('id', experimentId);
-      if (!met) await auditLog(experimentId, 'sla_breached', { target, actual }, 'critical');
-      return { sla_met: met, actual_pct: actual, target_pct: target };
+      const { data: exp } = await (supabase as any).from('chaos_experiments').select('*').eq('id', experimentId).single();
+      if (!exp) throw new Error('Experiment not found');
+
+      const breaches: string[] = [];
+
+      // ── SLA Response (latência) ──
+      const responseTargetMs = (exp.parameters as any)?.sla_response_target_ms ?? 500;
+      const responseActualMs = exp.latency_during_ms ?? 0;
+      const responseDelta = responseActualMs - responseTargetMs;
+      const responseMet = responseActualMs <= responseTargetMs;
+      const responseDegradation = responseTargetMs > 0 ? Math.round((responseDelta / responseTargetMs) * 100) : 0;
+      if (!responseMet) breaches.push(`SLA Response violado: ${responseActualMs}ms vs alvo ${responseTargetMs}ms (+${responseDegradation}%)`);
+
+      // ── SLA Resolution (tempo de resolução) ──
+      const resolutionTargetMin = exp.rto_target_minutes ?? 30;
+      let resolutionActualMin = exp.rto_actual_minutes ?? 0;
+      if (!resolutionActualMin && exp.started_at && exp.completed_at) {
+        resolutionActualMin = Math.round((new Date(exp.completed_at).getTime() - new Date(exp.started_at).getTime()) / 60_000);
+      }
+      const resolutionDelta = resolutionActualMin - resolutionTargetMin;
+      const resolutionMet = resolutionActualMin <= resolutionTargetMin;
+      if (!resolutionMet) breaches.push(`SLA Resolution violado: ${resolutionActualMin}min vs alvo ${resolutionTargetMin}min`);
+
+      // ── Uptime ──
+      const targetUptime = exp.sla_target_pct ?? 99.9;
+      const actualUptime = exp.sla_actual_pct ?? 100;
+      if (actualUptime < targetUptime) breaches.push(`Uptime abaixo do SLA: ${actualUptime}% vs alvo ${targetUptime}%`);
+
+      const overallMet = responseMet && resolutionMet && actualUptime >= targetUptime;
+
+      await (supabase as any).from('chaos_experiments').update({ sla_met: overallMet }).eq('id', experimentId);
+
+      if (!overallMet) {
+        await auditLog(experimentId, 'sla_breached', { breaches, response_ms: responseActualMs, resolution_min: resolutionActualMin, uptime: actualUptime }, 'critical');
+      }
+
+      return {
+        sla_response: {
+          met: responseMet,
+          target_ms: responseTargetMs,
+          actual_ms: responseActualMs,
+          delta_ms: responseDelta,
+          degradation_pct: responseDegradation,
+        },
+        sla_resolution: {
+          met: resolutionMet,
+          target_minutes: resolutionTargetMin,
+          actual_minutes: resolutionActualMin,
+          delta_minutes: resolutionDelta,
+        },
+        overall_met: overallMet,
+        uptime_pct: actualUptime,
+        target_uptime_pct: targetUptime,
+        breaches,
+      };
     },
   };
 
