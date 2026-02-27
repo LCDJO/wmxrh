@@ -13760,6 +13760,48 @@ export type Database = {
           },
         ]
       }
+      platform_footer_defaults: {
+        Row: {
+          compliance_items: Json
+          created_at: string
+          custom_bottom_text: string | null
+          id: string
+          show_bottom_text: boolean
+          show_compliance: boolean
+          show_institutional: boolean
+          show_support: boolean
+          show_technical: boolean
+          support_links: Json
+          updated_at: string
+        }
+        Insert: {
+          compliance_items?: Json
+          created_at?: string
+          custom_bottom_text?: string | null
+          id?: string
+          show_bottom_text?: boolean
+          show_compliance?: boolean
+          show_institutional?: boolean
+          show_support?: boolean
+          show_technical?: boolean
+          support_links?: Json
+          updated_at?: string
+        }
+        Update: {
+          compliance_items?: Json
+          created_at?: string
+          custom_bottom_text?: string | null
+          id?: string
+          show_bottom_text?: boolean
+          show_compliance?: boolean
+          show_institutional?: boolean
+          show_support?: boolean
+          show_technical?: boolean
+          support_links?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       platform_notifications: {
         Row: {
           created_at: string
