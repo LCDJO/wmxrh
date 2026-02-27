@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import {
-  Activity, Shield, Cpu, Users, Zap, Trash2, TrendingUp, Globe, Megaphone,
+  Activity, Shield, Cpu, Users, Zap, Trash2, TrendingUp, Globe, Megaphone, ServerCrash,
 } from 'lucide-react';
 import { getPlatformRuntime } from '@/domains/platform-os/platform-runtime';
 import { getControlPlaneEngine } from '@/domains/control-plane/control-plane-engine';
@@ -42,6 +42,7 @@ import { AutomationSystemHealthWidget } from '@/components/control-plane/Automat
 import { AutonomousOpsWidget } from '@/components/control-plane/AutonomousOpsWidget';
 import { AIOperationsCenterWidget } from '@/components/control-plane/AIOperationsCenterWidget';
 import { IncidentCommandCenter } from '@/components/control-plane/IncidentCommandCenter';
+import { BCDRCommandCenter } from '@/components/control-plane/BCDRCommandCenter';
 // ── Hook ──────────────────────────────────────────────────────
 
 function useControlPlane() {
@@ -147,7 +148,7 @@ export default function PlatformControlPlane() {
       </div>
 
       <Tabs defaultValue="dashboard" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6 max-w-3xl">
+        <TabsList className="grid w-full grid-cols-8 max-w-4xl">
           <TabsTrigger value="dashboard" className="gap-1.5 text-xs">
             <Activity className="h-3.5 w-3.5" /> Dashboard
           </TabsTrigger>
@@ -162,6 +163,9 @@ export default function PlatformControlPlane() {
           </TabsTrigger>
           <TabsTrigger value="growth" className="gap-1.5 text-xs">
             <TrendingUp className="h-3.5 w-3.5" /> Growth
+          </TabsTrigger>
+          <TabsTrigger value="bcdr" className="gap-1.5 text-xs">
+            <ServerCrash className="h-3.5 w-3.5" /> BCDR
           </TabsTrigger>
           <TabsTrigger value="automation" className="gap-1.5 text-xs">
             <Zap className="h-3.5 w-3.5" /> Automação
@@ -224,6 +228,10 @@ export default function PlatformControlPlane() {
 
         <TabsContent value="growth" className="space-y-4">
           <GrowthControlCenter />
+        </TabsContent>
+
+        <TabsContent value="bcdr" className="space-y-4">
+          <BCDRCommandCenter />
         </TabsContent>
 
         <TabsContent value="automation">
