@@ -160,6 +160,8 @@ export interface FailoverOrchestratorAPI {
   rollback(failoverId: string): Promise<void>;
   getActive(): Promise<FailoverRecord[]>;
   getHistory(limit?: number): Promise<FailoverRecord[]>;
+  /** Automated failover pipeline: activate secondary, update DNS/API GW, notify Incident Mgmt */
+  executeAutomatedFailover(failedRegion: string, reason: string): Promise<FailoverRecord>;
 }
 
 export interface BackupManagerAPI {
@@ -189,6 +191,8 @@ export interface RegionHealthMonitorAPI {
   getPrimary(): Promise<RegionHealth | null>;
   update(regionName: string, health: Partial<RegionHealth>): Promise<void>;
   checkAllRegions(): Promise<{ region: string; status: RegionStatus }[]>;
+  /** Evaluate all regions; if critical failure detected, trigger automated failover */
+  evaluateAndFailover(): Promise<{ triggered: boolean; failover_id?: string; region?: string }>;
 }
 
 export interface BCDRDashboardStats {
