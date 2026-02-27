@@ -20,6 +20,7 @@ import LandingPagePreview from "./pages/landing/LandingPagePreview";
 import LiveDisplayTV from "./pages/LiveDisplayTV";
 import PublicDocumentValidation from "./pages/PublicDocumentValidation";
 import LiveDisplayPair from "./pages/LiveDisplayPair";
+import StatusPage from "./pages/StatusPage";
 import { authRoutes } from "./routes/auth.routes";
 import { platformRoutes } from "./routes/platform.routes";
 import { tenantRoutes } from "./routes/tenant.routes";
@@ -44,6 +45,7 @@ const publicRoutes: RouteObject[] = [
   { path: '/display', element: <LiveDisplayTV /> },
   { path: '/live-display/pair', element: <LiveDisplayPair /> },
   { path: '/public/validate/:token', element: <PublicDocumentValidation /> },
+  { path: '/status', element: <StatusPage /> },
 ];
 
 function AppRoutes() {
