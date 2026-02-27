@@ -468,13 +468,36 @@ function createStatusPageService(): StatusPageServiceAPI {
 // ══════════════════════════════════
 
 function createPostmortemManager(): PostmortemManagerAPI {
+  /**
+   * Compute impact duration from incident timestamps (created → resolved).
+   */
+  async function computeImpactDuration(incidentId: string): Promise<number | null> {
+    const { data } = await (supabase.from('incidents' as any)
+      .select('created_at, resolved_at')
+      .eq('id', incidentId)
+      .single() as any);
+    if (!data?.created_at || !data?.resolved_at) return null;
+    const start = new Date(data.created_at).getTime();
+    const end = new Date(data.resolved_at).getTime();
+    return Math.round((end - start) / 60_000);
+  }
+
   return {
     async create(incidentId, summary, createdBy) {
+      // Auto-compute impact duration from incident
+      const impactMinutes = await computeImpactDuration(incidentId);
+
       const { data, error } = await (supabase.from('incident_postmortems' as any).insert({
         incident_id: incidentId,
         summary,
         created_by: createdBy ?? null,
         status: 'draft',
+        impact_duration_minutes: impactMinutes,
+        root_cause_analysis: null,
+        contributing_factors: [],
+        action_items: [],
+        lessons_learned: null,
+        timeline_events: [],
       } as any).select().single() as any);
 
       if (error) throw new Error(`Postmortem creation failed: ${error.message}`);
@@ -497,12 +520,24 @@ function createPostmortemManager(): PostmortemManagerAPI {
     },
 
     async publish(postmortemId, reviewedBy) {
+      // On publish, emit kernel event for cross-domain integration
+      const { data: pm } = await (supabase.from('incident_postmortems' as any)
+        .select('*').eq('id', postmortemId).single() as any);
+
       await (supabase.from('incident_postmortems' as any).update({
         status: 'published',
         reviewed_by: reviewedBy,
         reviewed_at: new Date().toISOString(),
         published_at: new Date().toISOString(),
       } as any).eq('id', postmortemId) as any);
+
+      if (pm) {
+        console.info('[PostmortemManager] Published postmortem for incident', pm.incident_id, {
+          impact_duration_minutes: pm.impact_duration_minutes,
+          action_items_count: (pm.action_items as any[])?.length ?? 0,
+          root_cause: pm.root_cause_analysis ? 'provided' : 'missing',
+        });
+      }
     },
 
     async getByIncident(incidentId) {
