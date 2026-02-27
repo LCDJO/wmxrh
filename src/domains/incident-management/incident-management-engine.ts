@@ -14,6 +14,21 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
+import { INCIDENT_KERNEL_EVENTS } from './incident-events';
+import type {
+  IncidentCreatedPayload,
+  IncidentEscalatedPayload,
+  SLABreachedPayload,
+  PostmortemPublishedPayload,
+} from './incident-events';
+import { createGlobalEventKernel } from '@/domains/platform-os/global-event-kernel';
+
+// Lazy singleton for kernel emission
+let _kernel: ReturnType<typeof createGlobalEventKernel> | null = null;
+function getKernel() {
+  if (!_kernel) _kernel = createGlobalEventKernel();
+  return _kernel;
+}
 
 const INCIDENT_ADMIN_ROLES: PlatformRoleType[] = ['platform_super_admin', 'platform_operations'];
 
@@ -252,6 +267,20 @@ function createSLAEngine(notifyBreach: (incident: Incident, type: 'response' | '
 
         // Fire alert notification
         await notifyBreach(incident, breachType);
+
+        // Emit kernel event: SLABreached
+        getKernel().emit<SLABreachedPayload>(
+          INCIDENT_KERNEL_EVENTS.SLABreached,
+          'SLAEngine',
+          {
+            incident_id: incident.id,
+            severity: incident.severity,
+            tenant_id: incident.tenant_id ?? null,
+            deadline_type: breachType === 'response' ? 'response' : 'resolution',
+            elapsed_minutes: elapsed,
+          },
+          { priority: 'critical' },
+        );
       }
 
       return breached;
@@ -316,6 +345,20 @@ function createEscalationManager(slaEngine: SLAEngineAPI): EscalationManagerAPI 
         message: `Escalated from ${incident.escalation_level} to ${toLevel}: ${reason}`,
         metadata: { auto_escalated: autoEscalated },
       } as any) as any);
+
+      // Emit kernel event: IncidentEscalated
+      getKernel().emit<IncidentEscalatedPayload>(
+        INCIDENT_KERNEL_EVENTS.IncidentEscalated,
+        'EscalationManager',
+        {
+          incident_id: incidentId,
+          from_level: incident.escalation_level,
+          to_level: toLevel,
+          reason,
+          auto_escalated: autoEscalated,
+        },
+        { priority: 'high' },
+      );
     },
 
     async getHistory(incidentId) {
@@ -560,6 +603,19 @@ function createPostmortemManager(): PostmortemManagerAPI {
           action_items_count: (pm.action_items as any[])?.length ?? 0,
           root_cause: pm.root_cause_analysis ? 'provided' : 'missing',
         });
+
+        // Emit kernel event: PostmortemPublished
+        getKernel().emit<PostmortemPublishedPayload>(
+          INCIDENT_KERNEL_EVENTS.PostmortemPublished,
+          'PostmortemManager',
+          {
+            postmortem_id: postmortemId,
+            incident_id: pm.incident_id,
+            impact_duration_minutes: pm.impact_duration_minutes ?? null,
+            action_items_count: (pm.action_items as any[])?.length ?? 0,
+          },
+          { priority: 'normal' },
+        );
       }
     },
 
@@ -689,6 +745,21 @@ export function createIncidentManagementEngine(): IncidentManagementEngineAPI {
         await statusPage.publishIncident(withSLA);
       }
 
+      // Emit kernel event: IncidentCreated
+      getKernel().emit<IncidentCreatedPayload>(
+        INCIDENT_KERNEL_EVENTS.IncidentCreated,
+        'IncidentManagementEngine',
+        {
+          incident_id: incident.id,
+          title: incident.title,
+          severity: incident.severity,
+          source: incident.source ?? 'manual',
+          tenant_id: incident.tenant_id ?? null,
+          affected_modules: incident.affected_modules ?? [],
+        },
+        { priority: incident.severity === 'sev1' ? 'critical' : 'high' },
+      );
+
       return withSLA;
     },
 
@@ -766,6 +837,19 @@ export function createIncidentManagementEngine(): IncidentManagementEngineAPI {
         if (incident.is_public) {
           await statusPage.updateIncidentStatus(incidentId, 'resolved', resolution);
         }
+
+        // Emit kernel event: IncidentResolved
+        getKernel().emit(
+          INCIDENT_KERNEL_EVENTS.IncidentResolved,
+          'IncidentManagementEngine',
+          {
+            incident_id: incidentId,
+            severity: incident.severity,
+            tenant_id: incident.tenant_id ?? null,
+            resolution_summary: resolution,
+          },
+          { priority: 'normal' },
+        );
       }
     },
 
