@@ -140,14 +140,40 @@ export interface ChaosScenarioManagerAPI {
   deactivate(id: string): Promise<void>;
 }
 
-export interface ImpactAnalyzerAPI {
-  analyze(experimentId: string): Promise<{
-    impact_score: number;
-    resilience_score: number;
-    affected_services: string[];
-    error_rate_delta: number;
+export interface ImpactAnalysisResult {
+  impact_score: number;
+  resilience_score: number;
+  affected_services: string[];
+  affected_tenants: string[];
+  affected_tenant_count: number;
+  incidents_created: number;
+  incident_ids: string[];
+  response_time: {
+    latency_before_ms: number;
+    latency_during_ms: number;
     latency_delta_ms: number;
-  }>;
+    degradation_pct: number;
+  };
+  error_rates: {
+    error_rate_before: number;
+    error_rate_during: number;
+    error_rate_delta: number;
+  };
+  self_healing: {
+    triggered: boolean;
+    recovery_time_ms: number | null;
+    actions_taken: string[];
+  };
+  rto_rpo: {
+    rto_met: boolean | null;
+    rto_actual_minutes: number | null;
+    rpo_met: boolean | null;
+    rpo_actual_minutes: number | null;
+  };
+}
+
+export interface ImpactAnalyzerAPI {
+  analyze(experimentId: string): Promise<ImpactAnalysisResult>;
 }
 
 export interface SLAValidatorAPI {
