@@ -411,38 +411,114 @@ export function createChaosEngine(): ChaosEngineeringAPI {
       const { data: exp } = await (supabase as any).from('chaos_experiments').select('*').eq('id', experimentId).single();
       if (!exp) throw new Error('Experiment not found');
 
-      const findings: any[] = [];
-      const recommendations: any[] = [];
+      // Run validators to get structured results
+      const slaResult = await sla.validate(experimentId);
+      const rtoResult = await rto.validate(experimentId);
+      const impactResult = await impact.analyze(experimentId);
 
-      if (exp.sla_met === false) {
-        findings.push({ severity: 'critical', finding: `SLA violado: ${exp.sla_actual_pct}% vs alvo ${exp.sla_target_pct}%` });
-        recommendations.push({ priority: 'high', recommendation: 'Implementar redundância adicional para manter SLA' });
+      const findings: import('./types').ChaosReportFinding[] = [];
+      const recommendations: import('./types').ChaosReportRecommendation[] = [];
+
+      // ── SLA findings ──
+      if (!slaResult.sla_response.met) {
+        findings.push({ severity: 'critical', category: 'sla_response', finding: `SLA Response violado: ${slaResult.sla_response.actual_ms}ms vs alvo ${slaResult.sla_response.target_ms}ms (+${slaResult.sla_response.degradation_pct}%)` });
+        recommendations.push({ priority: 'high', category: 'performance', recommendation: 'Otimizar latência do serviço ou implementar cache para manter SLA de resposta' });
       }
-      if (exp.rto_met === false) {
-        findings.push({ severity: 'critical', finding: `RTO violado: ${exp.rto_actual_minutes}min vs alvo ${exp.rto_target_minutes}min` });
-        recommendations.push({ priority: 'high', recommendation: 'Otimizar processo de failover para reduzir RTO' });
+      if (!slaResult.sla_resolution.met) {
+        findings.push({ severity: 'critical', category: 'sla_resolution', finding: `SLA Resolution violado: ${slaResult.sla_resolution.actual_minutes}min vs alvo ${slaResult.sla_resolution.target_minutes}min` });
+        recommendations.push({ priority: 'high', category: 'operations', recommendation: 'Automatizar runbooks de resolução para reduzir tempo de resposta' });
       }
-      if (exp.rpo_met === false) {
-        findings.push({ severity: 'warning', finding: `RPO violado: ${exp.rpo_actual_minutes}min vs alvo ${exp.rpo_target_minutes}min` });
-        recommendations.push({ priority: 'high', recommendation: 'Aumentar frequência de replicação' });
+      if (slaResult.uptime_pct < slaResult.target_uptime_pct) {
+        findings.push({ severity: 'critical', category: 'uptime', finding: `Uptime abaixo do SLA: ${slaResult.uptime_pct}% vs alvo ${slaResult.target_uptime_pct}%` });
+        recommendations.push({ priority: 'urgent', category: 'infrastructure', recommendation: 'Implementar redundância adicional para manter SLA de uptime' });
       }
-      if (exp.self_healing_triggered) {
-        findings.push({ severity: 'info', finding: 'Self-healing foi ativado automaticamente durante o experimento' });
+
+      // ── RTO/RPO findings ──
+      if (rtoResult.rto.severity !== 'ok') {
+        findings.push({ severity: rtoResult.rto.severity, category: 'rto', finding: `RTO ${rtoResult.rto.met ? 'dentro do limite' : 'violado'}: ${rtoResult.rto.actual_minutes}min vs política ${rtoResult.rto.target_minutes}min (${rtoResult.rto.policy_source})` });
+        if (!rtoResult.rto.met) recommendations.push({ priority: 'high', category: 'recovery', recommendation: 'Otimizar failover automático para reduzir RTO conforme política BCDR' });
+      }
+      if (rtoResult.rpo.severity !== 'ok') {
+        findings.push({ severity: rtoResult.rpo.severity, category: 'rpo', finding: `RPO ${rtoResult.rpo.met ? 'dentro do limite' : 'violado'}: ${rtoResult.rpo.actual_minutes}min vs alvo ${rtoResult.rpo.target_minutes}min` });
+        if (!rtoResult.rpo.met) recommendations.push({ priority: 'high', category: 'replication', recommendation: 'Aumentar frequência de replicação de dados' });
+      }
+
+      // ── Impact findings ──
+      if (impactResult.self_healing.triggered) {
+        findings.push({ severity: 'info', category: 'self_healing', finding: `Self-healing ativado — recovery em ${impactResult.self_healing.recovery_time_ms ?? 'N/A'}ms. Ações: ${impactResult.self_healing.actions_taken.join(', ')}` });
+      }
+      if (impactResult.incidents_created > 0) {
+        findings.push({ severity: 'warning', category: 'incidents', finding: `${impactResult.incidents_created} incidente(s) criado(s) durante o experimento` });
+      }
+      if (impactResult.affected_tenant_count > 0) {
+        findings.push({ severity: 'warning', category: 'tenants', finding: `${impactResult.affected_tenant_count} tenant(s) potencialmente afetado(s)` });
       }
       if (exp.safety_stopped) {
-        findings.push({ severity: 'critical', finding: `Safety guard ativou parada: ${exp.safety_stop_reason}` });
+        findings.push({ severity: 'critical', category: 'safety', finding: `Safety guard ativou parada de emergência: ${exp.safety_stop_reason}` });
+        recommendations.push({ priority: 'urgent', category: 'safety', recommendation: 'Revisar parâmetros do cenário antes de re-executar' });
       }
 
-      findings.push({ severity: 'info', finding: `Resilience score: ${exp.resilience_score ?? 'N/A'}/10` });
-      recommendations.push({ priority: 'medium', recommendation: 'Documentar procedimentos e repetir teste periodicamente' });
+      findings.push({ severity: 'info', category: 'scores', finding: `Impact: ${impactResult.impact_score}/10 | Resilience: ${impactResult.resilience_score}/10` });
+      recommendations.push({ priority: 'medium', category: 'process', recommendation: 'Documentar procedimentos e agendar re-teste periódico' });
 
+      // Persist
       await (supabase as any).from('chaos_experiments').update({ findings, recommendations }).eq('id', experimentId);
 
-      return {
+      const summary = `Experimento "${exp.name}" (${exp.fault_type} → ${exp.target_module ?? 'system'}) — ` +
+        `Impact: ${impactResult.impact_score}/10 | Resilience: ${impactResult.resilience_score}/10 | ` +
+        `SLA: ${slaResult.overall_met ? '✅' : '❌'} | RTO: ${rtoResult.rto.met ? '✅' : '❌'} | RPO: ${rtoResult.rpo.met ? '✅' : '❌'}`;
+
+      const report: import('./types').ChaosReport = {
+        experiment_id: experimentId,
+        generated_at: new Date().toISOString(),
+        scenario: {
+          name: exp.name,
+          fault_type: exp.fault_type,
+          target_module: exp.target_module,
+          blast_radius: exp.blast_radius,
+          duration_minutes: exp.max_duration_minutes,
+          parameters: exp.parameters ?? {},
+        },
+        impact: {
+          score: impactResult.impact_score,
+          resilience_score: impactResult.resilience_score,
+          affected_services: impactResult.affected_services,
+          affected_tenant_count: impactResult.affected_tenant_count,
+          incidents_created: impactResult.incidents_created,
+          self_healing_triggered: impactResult.self_healing.triggered,
+          error_rate_delta: impactResult.error_rates.error_rate_delta,
+          latency_delta_ms: impactResult.response_time.latency_delta_ms,
+          latency_degradation_pct: impactResult.response_time.degradation_pct,
+        },
+        sla_performance: {
+          overall_met: slaResult.overall_met,
+          response_met: slaResult.sla_response.met,
+          response_actual_ms: slaResult.sla_response.actual_ms,
+          response_target_ms: slaResult.sla_response.target_ms,
+          resolution_met: slaResult.sla_resolution.met,
+          resolution_actual_min: slaResult.sla_resolution.actual_minutes,
+          resolution_target_min: slaResult.sla_resolution.target_minutes,
+          uptime_pct: slaResult.uptime_pct,
+          target_uptime_pct: slaResult.target_uptime_pct,
+        },
+        rto_performance: {
+          rto_met: rtoResult.rto.met,
+          rto_actual_minutes: rtoResult.rto.actual_minutes,
+          rto_target_minutes: rtoResult.rto.target_minutes,
+          rpo_met: rtoResult.rpo.met,
+          rpo_actual_minutes: rtoResult.rpo.actual_minutes,
+          rpo_target_minutes: rtoResult.rpo.target_minutes,
+          policy_source: rtoResult.rto.policy_source,
+          total_downtime_minutes: rtoResult.recovery_timeline.total_downtime_minutes,
+        },
         findings,
         recommendations,
-        summary: `Experimento "${exp.name}" — Impact: ${exp.impact_score ?? 'N/A'}/10, Resilience: ${exp.resilience_score ?? 'N/A'}/10`,
+        summary,
       };
+
+      await auditLog(experimentId, 'report_generated', { findings_count: findings.length, recommendations_count: recommendations.length });
+
+      return report;
     },
   };
 

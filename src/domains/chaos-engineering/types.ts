@@ -233,8 +233,68 @@ export interface RTOValidatorAPI {
   validate(experimentId: string): Promise<RTOValidationResult>;
 }
 
+export interface ChaosReportFinding {
+  severity: 'info' | 'warning' | 'critical';
+  category: string;
+  finding: string;
+}
+
+export interface ChaosReportRecommendation {
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  category: string;
+  recommendation: string;
+}
+
+export interface ChaosReport {
+  experiment_id: string;
+  generated_at: string;
+  scenario: {
+    name: string;
+    fault_type: string;
+    target_module: string | null;
+    blast_radius: string;
+    duration_minutes: number;
+    parameters: Record<string, any>;
+  };
+  impact: {
+    score: number | null;
+    resilience_score: number | null;
+    affected_services: string[];
+    affected_tenant_count: number;
+    incidents_created: number;
+    self_healing_triggered: boolean;
+    error_rate_delta: number;
+    latency_delta_ms: number;
+    latency_degradation_pct: number;
+  };
+  sla_performance: {
+    overall_met: boolean;
+    response_met: boolean;
+    response_actual_ms: number;
+    response_target_ms: number;
+    resolution_met: boolean;
+    resolution_actual_min: number;
+    resolution_target_min: number;
+    uptime_pct: number;
+    target_uptime_pct: number;
+  };
+  rto_performance: {
+    rto_met: boolean | null;
+    rto_actual_minutes: number | null;
+    rto_target_minutes: number | null;
+    rpo_met: boolean | null;
+    rpo_actual_minutes: number | null;
+    rpo_target_minutes: number | null;
+    policy_source: string;
+    total_downtime_minutes: number;
+  };
+  findings: ChaosReportFinding[];
+  recommendations: ChaosReportRecommendation[];
+  summary: string;
+}
+
 export interface ChaosReportGeneratorAPI {
-  generate(experimentId: string): Promise<{ findings: any[]; recommendations: any[]; summary: string }>;
+  generate(experimentId: string): Promise<ChaosReport>;
 }
 
 export interface SafetyGuardAPI {
