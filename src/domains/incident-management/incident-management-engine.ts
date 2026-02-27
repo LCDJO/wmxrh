@@ -38,6 +38,7 @@ import type {
   EscalationLevel,
   ComponentStatus,
   IncidentDashboardStats,
+  RemediationSuggestion,
 } from './types';
 
 // ══════════════════════════════════
@@ -831,6 +832,54 @@ export function createIncidentManagementEngine(): IncidentManagementEngineAPI {
         sla_breach_count: breachCount ?? 0,
         uptime_30d,
       };
+    },
+
+    async suggestRemediation(incidentId) {
+      const incident = await this.getIncident(incidentId);
+      if (!incident) return [];
+
+      const suggestions: RemediationSuggestion[] = [];
+      const isCritical = incident.severity === 'sev1' || incident.severity === 'sev2';
+      if (!isCritical) return suggestions;
+
+      const modules = incident.affected_modules ?? [];
+
+      // 1. Rollback de módulo
+      for (const mod of modules) {
+        suggestions.push({
+          action: 'rollback_module',
+          label: `Rollback: ${mod}`,
+          description: `Reverter o módulo "${mod}" para a última versão estável.`,
+          affected_modules: [mod],
+          priority: incident.severity === 'sev1' ? 'critical' : 'high',
+          auto_applicable: true,
+        });
+      }
+
+      // 2. Ativar sandbox
+      suggestions.push({
+        action: 'activate_sandbox',
+        label: 'Ativar modo sandbox',
+        description: 'Redirecionar tráfego para ambiente sandbox enquanto o incidente é investigado.',
+        affected_modules: modules,
+        priority: 'high',
+        auto_applicable: false,
+      });
+
+      // 3. Desabilitar feature flags
+      for (const mod of modules) {
+        suggestions.push({
+          action: 'disable_feature_flag',
+          label: `Desabilitar feature flag: ${mod}`,
+          description: `Desativar feature flags do módulo "${mod}" para reverter funcionalidades experimentais.`,
+          affected_modules: [mod],
+          priority: 'medium',
+          auto_applicable: true,
+        });
+      }
+
+      console.info(`[IncidentEngine] ${suggestions.length} remediation suggestions for ${incidentId} [${incident.severity}]`);
+      return suggestions;
     },
   };
 }

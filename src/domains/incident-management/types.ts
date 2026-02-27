@@ -244,6 +244,17 @@ export interface AvailabilityReporterAPI {
   getCurrentUptime(tenantId?: string | null): Promise<{ uptime_30d: number; uptime_90d: number }>;
 }
 
+export type RemediationAction = 'rollback_module' | 'activate_sandbox' | 'disable_feature_flag';
+
+export interface RemediationSuggestion {
+  action: RemediationAction;
+  label: string;
+  description: string;
+  affected_modules: string[];
+  priority: 'critical' | 'high' | 'medium';
+  auto_applicable: boolean;
+}
+
 export interface IncidentManagementEngineAPI {
   detector: IncidentDetectorAPI;
   classifier: SeverityClassifierAPI;
@@ -263,6 +274,7 @@ export interface IncidentManagementEngineAPI {
   listIncidents(filters?: { status?: IncidentStatus; severity?: IncidentSeverity; tenant_id?: string; limit?: number }): Promise<Incident[]>;
   getTimeline(incidentId: string): Promise<IncidentUpdate[]>;
   getDashboardStats(): Promise<IncidentDashboardStats>;
+  suggestRemediation(incidentId: string): Promise<RemediationSuggestion[]>;
 }
 
 export interface IncidentDashboardStats {
