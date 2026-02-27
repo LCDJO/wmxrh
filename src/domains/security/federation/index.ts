@@ -42,6 +42,7 @@ export type {
   OAuth2AuthorizationRequest,
   OAuth2TokenRequest,
   OAuth2TokenResponse,
+  OAuth2DeviceAuthorizationResponse,
   FederationEngineAPI,
   IdentityProviderRegistryAPI,
   SAMLServiceProviderAPI,
