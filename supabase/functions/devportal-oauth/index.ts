@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
         );
 
         const now = Math.floor(Date.now() / 1000);
-        const expiresIn = oauthClient.token_lifetime_seconds || 3600;
+        const expiresIn = Math.min(oauthClient.token_lifetime_seconds || 900, 900); // Max 15min
 
         const accessToken = await signJwt(
           {
@@ -190,6 +190,14 @@ Deno.serve(async (req) => {
           return errorResponse(
             "invalid_request",
             "code and client_id required"
+          );
+
+        // PKCE is MANDATORY — reject if no code_verifier
+        if (!code_verifier)
+          return errorResponse(
+            "invalid_request",
+            "PKCE is required. Provide code_verifier parameter.",
+            400
           );
 
         // Lookup the authorization code grant
