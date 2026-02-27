@@ -22,6 +22,13 @@ export { createTokenService } from './token-service';
 export { createSessionManager } from './session-manager';
 export { createFederationAuditLogger } from './federation-audit-logger';
 export { createFederationRoleMapper } from './federation-role-mapper';
+export { createMultiTenantResolver } from './multi-tenant-resolver';
+export type {
+  TenantResolutionStrategy,
+  TenantResolutionResult,
+  MultiTenantResolverAPI,
+  TenantDomainRecord,
+} from './multi-tenant-resolver';
 
 // ── UGE Provider ──
 export { federationGraphProvider } from './federation-graph-provider';
