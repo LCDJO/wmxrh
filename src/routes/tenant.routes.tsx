@@ -70,6 +70,7 @@ import ReferenceLetters from '@/pages/ReferenceLetters';
 import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
 import LgpdCompliance from '@/pages/LgpdCompliance';
 import FooterSettings from '@/pages/FooterSettings';
+import SsoSettings from '@/pages/SsoSettings';
 
 const TenantOnboarding = lazy(() => import('@/pages/TenantOnboarding'));
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
@@ -158,6 +159,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/settings/roles', element: pr('iam_roles', <SettingsRoles />) },
       { path: '/settings/webhooks', element: pr('iam_users', <WebhookSettings />) },
       { path: '/settings/footer', element: pr('iam_users', <FooterSettings />) },
+      { path: '/settings/sso', element: pr('iam_users', <SsoSettings />) },
       // ── Referral ──
       { path: '/referral', element: pr('referral', <ReferralPage />) },
       // ── Support ──
