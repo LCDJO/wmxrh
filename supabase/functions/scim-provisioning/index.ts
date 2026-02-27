@@ -144,6 +144,7 @@ async function checkRateLimit(tenantId: string): Promise<boolean> {
 
 // ── Mass Deletion Protection (max 50 deactivations/hour) ──
 const MAX_DELETIONS_PER_HOUR = 50;
+const MODIFICATION_ALERT_THRESHOLD = 30; // Alert when 30+ modifications/hour
 
 async function checkMassDeletionThreshold(tenantId: string): Promise<boolean> {
   const db = supabaseAdmin();
@@ -155,6 +156,35 @@ async function checkMassDeletionThreshold(tenantId: string): Promise<boolean> {
     .in("operation", ["DELETE", "DEACTIVATE"])
     .gte("created_at", oneHourAgo);
   return (count ?? 0) < MAX_DELETIONS_PER_HOUR;
+}
+
+// ── High-modification-rate alert ──
+async function checkAndAlertHighModificationRate(tenantId: string, ip: string | null): Promise<void> {
+  const db = supabaseAdmin();
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count } = await db
+    .from("scim_provisioning_logs")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+    .in("operation", ["CREATE", "UPDATE", "PATCH", "DELETE", "DEACTIVATE"])
+    .gte("created_at", oneHourAgo);
+
+  if ((count ?? 0) >= MODIFICATION_ALERT_THRESHOLD) {
+    await db.from("audit_logs").insert({
+      tenant_id: tenantId,
+      action: "SCIM_HIGH_MODIFICATION_RATE",
+      entity_type: "scim_provisioning",
+      entity_id: null,
+      metadata: {
+        modifications_last_hour: count,
+        threshold: MODIFICATION_ALERT_THRESHOLD,
+        ip_address: ip,
+        source: "scim_provisioning",
+        severity: "warning",
+        message: `High SCIM modification rate detected: ${count} operations in the last hour (threshold: ${MODIFICATION_ALERT_THRESHOLD})`,
+      } as any,
+    });
+  }
 }
 
 // ── ServiceProviderConfig ──
@@ -406,6 +436,8 @@ async function handleUsers(
     const user = toScimUser(data);
     await logOperation(client, "CREATE", "User", scimId, externalId, body, 201, user, null, ip, startTime);
     await auditScimEvent(tenantId, "USER_CREATE", "User", scimId, { external_id: externalId, email }, ip);
+    await checkAndAlertHighModificationRate(tenantId, ip);
+    return scimResponse(user, 201);
     return scimResponse(user, 201);
   }
 
@@ -500,6 +532,7 @@ async function handleUsers(
 
     await logOperation(client, "DEACTIVATE", "User", resourceId, data.external_id, null, 204, null, null, ip, startTime);
     await auditScimEvent(tenantId, "USER_DELETE", "User", resourceId, { external_id: data.external_id, soft_delete: true }, ip);
+    await checkAndAlertHighModificationRate(tenantId, ip);
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
