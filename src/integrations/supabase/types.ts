@@ -16097,6 +16097,8 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          deactivated_at: string | null
+          deactivated_reason: string | null
           display_name: string | null
           email: string | null
           external_id: string
@@ -16112,6 +16114,8 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          deactivated_at?: string | null
+          deactivated_reason?: string | null
           display_name?: string | null
           email?: string | null
           external_id: string
@@ -16127,6 +16131,8 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          deactivated_at?: string | null
+          deactivated_reason?: string | null
           display_name?: string | null
           email?: string | null
           external_id?: string
@@ -16215,6 +16221,72 @@ export type Database = {
           },
           {
             foreignKeyName: "scim_provisioning_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scim_provisioning_queue: {
+        Row: {
+          attempts: number
+          created_at: string
+          error_message: string | null
+          external_id: string
+          id: string
+          max_attempts: number
+          operation: string
+          processed_at: string | null
+          resource_type: string
+          scim_client_id: string
+          scim_payload: Json
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error_message?: string | null
+          external_id: string
+          id?: string
+          max_attempts?: number
+          operation: string
+          processed_at?: string | null
+          resource_type: string
+          scim_client_id: string
+          scim_payload: Json
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error_message?: string | null
+          external_id?: string
+          id?: string
+          max_attempts?: number
+          operation?: string
+          processed_at?: string | null
+          resource_type?: string
+          scim_client_id?: string
+          scim_payload?: Json
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scim_provisioning_queue_scim_client_id_fkey"
+            columns: ["scim_client_id"]
+            isOneToOne: false
+            referencedRelation: "scim_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scim_provisioning_queue_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

@@ -10,6 +10,7 @@ import { ScimConfigTab } from '@/components/scim/ScimConfigTab';
 import { ScimProvisionedUsersTab } from '@/components/scim/ScimProvisionedUsersTab';
 import { ScimProvisionedGroupsTab } from '@/components/scim/ScimProvisionedGroupsTab';
 import { ScimLogsTab } from '@/components/scim/ScimLogsTab';
+import { ScimQueueTab } from '@/components/scim/ScimQueueTab';
 
 export default function ScimSettings() {
   const [tab, setTab] = useState('config');
@@ -32,6 +33,7 @@ export default function ScimSettings() {
           <TabsTrigger value="clients">Clientes SCIM</TabsTrigger>
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="groups">Grupos</TabsTrigger>
+          <TabsTrigger value="queue">Fila</TabsTrigger>
           <TabsTrigger value="logs">Logs</TabsTrigger>
         </TabsList>
 
@@ -39,6 +41,7 @@ export default function ScimSettings() {
         <TabsContent value="clients"><ScimClientsTab /></TabsContent>
         <TabsContent value="users"><ScimProvisionedUsersTab /></TabsContent>
         <TabsContent value="groups"><ScimProvisionedGroupsTab /></TabsContent>
+        <TabsContent value="queue"><ScimQueueTab /></TabsContent>
         <TabsContent value="logs"><ScimLogsTab /></TabsContent>
       </Tabs>
     </div>
