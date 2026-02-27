@@ -164,6 +164,18 @@ const NAV_SECTIONS: NavSection[] = [
         ],
       },
       { to: '/platform/logs', label: 'Logs do Sistema', icon: FileText, requiredRole: 'platform_super_admin' },
+      {
+        to: '/platform/incidents',
+        label: 'Incident Management',
+        icon: Shield,
+        requiredPermission: 'security.view',
+        children: [
+          { to: '/platform/incidents', label: 'Incidentes' },
+          { to: '/platform/incidents?tab=sla', label: 'SLA' },
+          { to: '/platform/incidents?tab=postmortems', label: 'Postmortems' },
+          { to: '/platform/incidents?tab=availability', label: 'Disponibilidade' },
+        ],
+      },
     ],
   },
   {

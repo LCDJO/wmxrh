@@ -80,6 +80,8 @@ import FederationTokenSettings from '@/pages/platform/federation/FederationToken
 import FederationAuditLogs from '@/pages/platform/federation/FederationAuditLogs';
 import PlatformScim from '@/pages/platform/security/PlatformScim';
 
+const IncidentManagementDashboard = lazy(() => import('@/modules/incident-management/ui/IncidentManagementDashboard'));
+
 const PlatformSupportConsole = lazy(() => import('@/modules/support/ui/PlatformSupportConsole'));
 
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
@@ -230,6 +232,7 @@ export const platformRoutes: RouteObject[] = [
       { path: 'ai-operations', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformAIOperations /></PlatformGuard> },
       { path: 'document-signature', element: <PlatformGuard allowedRoles={opsAdmin}><DocumentSignatureIntegrations /></PlatformGuard> },
       { path: 'integration-health', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformIntegrationHealth /></PlatformGuard> },
+      { path: 'incidents/*', element: <PlatformGuard allowedRoles={opsAdmin}><Suspense fallback={SuspenseFallback}><IncidentManagementDashboard /></Suspense></PlatformGuard> },
     ],
   },
 ];
