@@ -41,6 +41,7 @@ import { MarketplaceHealthWidget } from '@/components/control-plane/MarketplaceH
 import { AutomationSystemHealthWidget } from '@/components/control-plane/AutomationSystemHealthWidget';
 import { AutonomousOpsWidget } from '@/components/control-plane/AutonomousOpsWidget';
 import { AIOperationsCenterWidget } from '@/components/control-plane/AIOperationsCenterWidget';
+import { IncidentCommandCenter } from '@/components/control-plane/IncidentCommandCenter';
 // ── Hook ──────────────────────────────────────────────────────
 
 function useControlPlane() {
@@ -146,9 +147,12 @@ export default function PlatformControlPlane() {
       </div>
 
       <Tabs defaultValue="dashboard" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5 max-w-2xl">
+        <TabsList className="grid w-full grid-cols-6 max-w-3xl">
           <TabsTrigger value="dashboard" className="gap-1.5 text-xs">
             <Activity className="h-3.5 w-3.5" /> Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="incidents" className="gap-1.5 text-xs">
+            <Shield className="h-3.5 w-3.5" /> Incidentes
           </TabsTrigger>
           <TabsTrigger value="website" className="gap-1.5 text-xs">
             <Globe className="h-3.5 w-3.5" /> Website
@@ -204,6 +208,10 @@ export default function PlatformControlPlane() {
 
           {/* Row 11: Autonomous Operations AI (detailed) */}
           <AutonomousOpsWidget />
+        </TabsContent>
+
+        <TabsContent value="incidents" className="space-y-4">
+          <IncidentCommandCenter />
         </TabsContent>
 
         <TabsContent value="website" className="space-y-4">
