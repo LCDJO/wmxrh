@@ -16443,6 +16443,56 @@ export type Database = {
           },
         ]
       }
+      tenant_domains: {
+        Row: {
+          created_at: string
+          domain: string
+          domain_type: string
+          id: string
+          is_primary: boolean
+          is_verified: boolean
+          ssl_status: string
+          tenant_id: string
+          updated_at: string
+          verification_token: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          domain_type?: string
+          id?: string
+          is_primary?: boolean
+          is_verified?: boolean
+          ssl_status?: string
+          tenant_id: string
+          updated_at?: string
+          verification_token?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          domain_type?: string
+          id?: string
+          is_primary?: boolean
+          is_verified?: boolean
+          ssl_status?: string
+          tenant_id?: string
+          updated_at?: string
+          verification_token?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_domains_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_event_consumer_offsets: {
         Row: {
           consumer_group: string
@@ -16929,6 +16979,7 @@ export type Database = {
           name: string
           phone: string | null
           scheduled_deletion_at: string | null
+          slug: string | null
           status: string
           updated_at: string
         }
@@ -16941,6 +16992,7 @@ export type Database = {
           name: string
           phone?: string | null
           scheduled_deletion_at?: string | null
+          slug?: string | null
           status?: string
           updated_at?: string
         }
@@ -16953,6 +17005,7 @@ export type Database = {
           name?: string
           phone?: string | null
           scheduled_deletion_at?: string | null
+          slug?: string | null
           status?: string
           updated_at?: string
         }

@@ -20,6 +20,7 @@
 
 import type { TenantRole, UserRole, ScopeType } from '@/domains/shared/types';
 import type { IdentitySession, TenantScope, ContextSwitchRequest } from '../identity-boundary.types';
+import { createMultiTenantResolver } from '@/domains/security/federation/multi-tenant-resolver';
 
 // ════════════════════════════════════
 // TYPES
@@ -37,7 +38,7 @@ export interface ScopeValidation {
   reason: string;
 }
 
-export type ResolutionStrategy = 'subdomain' | 'manual' | 'persisted' | 'default';
+export type ResolutionStrategy = 'subdomain' | 'custom_domain' | 'explicit' | 'manual' | 'persisted' | 'default';
 
 export interface InitialContextResolution {
   /** The resolved switch request to apply */
@@ -261,8 +262,48 @@ export const contextResolver = {
    * @param identity - The established IdentitySession
    * @returns InitialContextResolution with the request to apply
    */
-  resolveInitial(identity: IdentitySession): InitialContextResolution {
-    // ── Strategy 1: Subdomain ──
+  async resolveInitial(identity: IdentitySession): Promise<InitialContextResolution> {
+    // ── Strategy 0: Explicit tenant_id from query params ──
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const explicitId = params.get('tenant_id') || params.get('tenantId');
+      if (explicitId) {
+        const matched = identity.tenantScopes.find(t => t.tenantId === explicitId);
+        if (matched) {
+          return {
+            request: { targetTenantId: matched.tenantId },
+            resolvedBy: 'explicit',
+            reason: `Tenant resolved from explicit tenant_id param: ${explicitId}`,
+          };
+        }
+      }
+    } catch { /* ignore */ }
+
+    // ── Strategy 1: Custom domain lookup ──
+    try {
+      const hostname = window.location.hostname;
+      if (
+        hostname !== 'localhost' &&
+        !/^\d+\.\d+\.\d+\.\d+$/.test(hostname) &&
+        !hostname.endsWith('.lovable.app') &&
+        !hostname.endsWith('.lovableproject.com')
+      ) {
+        const resolver = createMultiTenantResolver();
+        const domainResult = await resolver.resolveByDomain(hostname);
+        if (domainResult.tenantId) {
+          const matched = identity.tenantScopes.find(t => t.tenantId === domainResult.tenantId);
+          if (matched) {
+            return {
+              request: { targetTenantId: matched.tenantId },
+              resolvedBy: 'custom_domain',
+              reason: `Tenant resolved from custom domain: ${hostname} → ${matched.tenantId}`,
+            };
+          }
+        }
+      }
+    } catch { /* ignore domain lookup errors */ }
+
+    // ── Strategy 2: Subdomain slug ──
     const subdomainSlug = resolveSubdomainTenant();
     if (subdomainSlug) {
       const matched = this._matchTenantBySlug(identity.tenantScopes, subdomainSlug);
@@ -273,7 +314,6 @@ export const contextResolver = {
           reason: `Tenant resolved from subdomain: ${subdomainSlug} → ${matched.tenantId}`,
         };
       }
-      // Subdomain didn't match any tenant — fall through
     }
 
     // ── Strategy 2: Persisted context ──
