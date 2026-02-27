@@ -16,5 +16,7 @@ export function createObservabilityGateway(sandbox: SandboxContext) {
       gateway.mutate('metrics', 'export', data),
     queryLogs: (params?: Record<string, unknown>) =>
       gateway.query<unknown[]>('logs', 'stream', params),
+    queryScimMetrics: (params?: Record<string, unknown>) =>
+      gateway.query<unknown[]>('scim', 'metrics', params),
   };
 }

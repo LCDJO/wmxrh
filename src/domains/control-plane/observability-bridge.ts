@@ -21,6 +21,11 @@ export class ObservabilityBridge {
     metrics.increment('referral_conversion_total', {}, 0);
     metrics.increment('gamification_points_total', {}, 0);
     metrics.gauge('apcp_risk_score', 0);
+    // SCIM baselines
+    metrics.increment('scim_users_created_total', {}, 0);
+    metrics.increment('scim_users_updated_total', {}, 0);
+    metrics.increment('scim_users_deactivated_total', {}, 0);
+    metrics.increment('scim_errors_total', {}, 0);
     // Workflow / Automation baselines
     metrics.increment('workflow_executions_total', {}, 0);
     metrics.increment('workflow_failures_total', {}, 0);

@@ -40,3 +40,7 @@ export { OBSERVABILITY_KERNEL_EVENTS } from './observability-events';
 export type * from './observability-events';
 export { collectFederationMetrics, getFederationMetricsSnapshot } from './federation-metrics-collector';
 export type { FederationMetricsSnapshot } from './federation-metrics-collector';
+export {
+  incrementScimCreated, incrementScimUpdated,
+  incrementScimDeactivated, incrementScimErrors,
+} from './scim-metrics';
