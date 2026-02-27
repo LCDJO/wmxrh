@@ -14,7 +14,8 @@ export {
 
 // ── Sub-services ──
 export { createIdentityProviderRegistry } from './identity-provider-registry';
-export { createSAMLServiceProvider } from './saml-service-provider';
+export { createSAMLServiceProvider, SAML_DEFAULT_ATTRIBUTE_MAP, mapSAMLAttributes } from './saml-service-provider';
+export type { SAMLMappedIdentity, SAMLACSResult } from './saml-service-provider';
 export { createOIDCProvider } from './oidc-provider';
 export { createOAuthAuthorizationServer } from './oauth-authorization-server';
 export { createTokenService } from './token-service';
