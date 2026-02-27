@@ -706,6 +706,13 @@ export function generateDashboardModel(): {
       { title: 'Marketplace Installs', type: 'graph', metric: 'marketplace_installs_total', description: 'Total installs per app (labels: app_id, app_name)', datasource: 'prometheus' },
       { title: 'OAuth Tokens Issued', type: 'stat', metric: 'oauth_token_issued_total', description: 'Active API subscriptions (proxy for OAuth tokens)', datasource: 'prometheus' },
       { title: 'API Calls by App', type: 'graph', metric: 'api_calls_by_app', description: 'API call volume per app (labels: app_id, app_name)', datasource: 'prometheus' },
+      // ── Incident Management panels ─────────────────────────────
+      { title: 'Incidents Total', type: 'stat', metric: 'incidents_total', description: 'Total incidents created (all time)', datasource: 'prometheus' },
+      { title: 'Incidents by Severity', type: 'graph', metric: 'incident_severity_count', description: 'Open incidents by severity (label: severity)', datasource: 'prometheus' },
+      { title: 'SLA Breaches Total', type: 'stat', metric: 'sla_breach_total', description: 'Total SLA breaches across all incidents', datasource: 'prometheus' },
+      { title: 'Uptime %', type: 'gauge', metric: 'uptime_percentage', description: 'Platform uptime percentage (30d rolling avg)', datasource: 'prometheus' },
+      { title: 'MTTR (min)', type: 'gauge', metric: 'incident_mttr_minutes', description: 'Mean Time To Resolve in minutes', datasource: 'prometheus' },
+      { title: 'Open Incidents', type: 'stat', metric: 'incident_open_total', description: 'Currently open/investigating/mitigated incidents', datasource: 'prometheus' },
       // ── Loki panels ────────────────────────────────────────
       { title: 'Log Stream', type: 'logs', metric: 'logs_total', description: 'Structured log stream from all sources', datasource: 'loki' },
       // ── Tempo panels ───────────────────────────────────────
