@@ -18,6 +18,16 @@ export {
   DeveloperAnalytics,
 } from './engine/developer-platform-engine';
 
+export { DevPortalOAuthIntegration } from './engine/devportal-oauth-integration';
+export type {
+  DevPortalTokenRequest,
+  DevPortalTokenResponse,
+  DevPortalIntrospectionResult,
+  DevPortalUserInfo,
+  DevPortalOIDCDiscovery,
+  AppAuthorizationParams,
+} from './engine/devportal-oauth-integration';
+
 export type {
   DeveloperTier,
   VerificationLevel,
