@@ -39,6 +39,7 @@ export type {
   OIDCDiscoveryDocument,
   OIDCTokenSet,
   OIDCUserInfo,
+  OIDCPlatformClaims,
   OAuth2AuthorizationRequest,
   OAuth2TokenRequest,
   OAuth2TokenResponse,
