@@ -7105,14 +7105,19 @@ export type Database = {
           attributes: Json
           authenticated_at: string | null
           created_at: string
+          device_fingerprint: string | null
           expires_at: string | null
           external_subject: string | null
           id: string
           idp_config_id: string
+          idp_source: string | null
           ip_address: string | null
+          last_activity_at: string | null
           name_id: string | null
           protocol: Database["public"]["Enums"]["federation_protocol"]
+          refresh_token_hash: string | null
           revoked_at: string | null
+          scopes: string[] | null
           session_index: string | null
           started_at: string
           status: Database["public"]["Enums"]["federation_session_status"]
@@ -7124,14 +7129,19 @@ export type Database = {
           attributes?: Json
           authenticated_at?: string | null
           created_at?: string
+          device_fingerprint?: string | null
           expires_at?: string | null
           external_subject?: string | null
           id?: string
           idp_config_id: string
+          idp_source?: string | null
           ip_address?: string | null
+          last_activity_at?: string | null
           name_id?: string | null
           protocol: Database["public"]["Enums"]["federation_protocol"]
+          refresh_token_hash?: string | null
           revoked_at?: string | null
+          scopes?: string[] | null
           session_index?: string | null
           started_at?: string
           status?: Database["public"]["Enums"]["federation_session_status"]
@@ -7143,14 +7153,19 @@ export type Database = {
           attributes?: Json
           authenticated_at?: string | null
           created_at?: string
+          device_fingerprint?: string | null
           expires_at?: string | null
           external_subject?: string | null
           id?: string
           idp_config_id?: string
+          idp_source?: string | null
           ip_address?: string | null
+          last_activity_at?: string | null
           name_id?: string | null
           protocol?: Database["public"]["Enums"]["federation_protocol"]
+          refresh_token_hash?: string | null
           revoked_at?: string | null
+          scopes?: string[] | null
           session_index?: string | null
           started_at?: string
           status?: Database["public"]["Enums"]["federation_session_status"]
