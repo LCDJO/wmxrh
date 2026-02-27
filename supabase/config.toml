@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.api-gateway-validate]
 verify_jwt = false
+
+[functions.devportal-oauth]
+verify_jwt = false
