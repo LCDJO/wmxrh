@@ -13,6 +13,28 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
+
+const INCIDENT_ADMIN_ROLES: PlatformRoleType[] = ['platform_super_admin', 'platform_operations'];
+
+/**
+ * Verify caller has PlatformOperations or PlatformSuperAdmin role.
+ * Throws if unauthorized.
+ */
+async function assertIncidentAdmin(userId?: string): Promise<void> {
+  if (!userId) throw new Error('Unauthorized: user ID required to modify incident status.');
+
+  const { data } = await supabase
+    .from('platform_users')
+    .select('role_id, platform_roles(slug)')
+    .eq('user_id', userId)
+    .single();
+
+  const roleSlug = (data as any)?.platform_roles?.slug as string | undefined;
+  if (!roleSlug || !INCIDENT_ADMIN_ROLES.includes(roleSlug as PlatformRoleType)) {
+    throw new Error(`Unauthorized: role "${roleSlug ?? 'unknown'}" cannot modify incident status. Required: ${INCIDENT_ADMIN_ROLES.join(', ')}`);
+  }
+}
 import type {
   IncidentManagementEngineAPI,
   IncidentDetectorAPI,
@@ -671,6 +693,7 @@ export function createIncidentManagementEngine(): IncidentManagementEngineAPI {
     },
 
     async acknowledgeIncident(incidentId, userId) {
+      await assertIncidentAdmin(userId);
       await (supabase.from('incidents' as any).update({
         status: 'investigating',
         acknowledged_by: userId,
@@ -689,6 +712,7 @@ export function createIncidentManagementEngine(): IncidentManagementEngineAPI {
     },
 
     async updateIncidentStatus(incidentId, status, message, userId) {
+      await assertIncidentAdmin(userId);
       const { data: current } = await (supabase.from('incidents' as any)
         .select('status, is_public, tenant_id, title')
         .eq('id', incidentId).single() as any);
@@ -719,6 +743,7 @@ export function createIncidentManagementEngine(): IncidentManagementEngineAPI {
     },
 
     async resolveIncident(incidentId, resolution, userId) {
+      await assertIncidentAdmin(userId);
       await (supabase.from('incidents' as any).update({
         status: 'resolved',
         resolution_summary: resolution,
@@ -745,6 +770,7 @@ export function createIncidentManagementEngine(): IncidentManagementEngineAPI {
     },
 
     async closeIncident(incidentId, userId) {
+      await assertIncidentAdmin(userId);
       await (supabase.from('incidents' as any).update({
         status: 'closed',
         closed_by: userId ?? null,
