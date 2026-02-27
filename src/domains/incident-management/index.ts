@@ -26,6 +26,7 @@ export {
 } from './incident-management-engine';
 
 export { INCIDENT_KERNEL_EVENTS } from './incident-events';
+export { installSelfHealingIncidentBridge } from './self-healing-incident-bridge';
 export type {
   IncidentKernelEvent,
   IncidentCreatedPayload,
