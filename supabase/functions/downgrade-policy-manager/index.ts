@@ -95,7 +95,34 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 5. Schedule the downgrade (apply at cycle_end_date)
+    // 5. Fraud check — block if review_required
+    const { data: fraudResult } = await supabase.rpc("check_tenant_fraud", {
+      p_tenant_id: tenant_id,
+    });
+
+    const signals = (fraudResult as any[]) ?? [];
+    const hasCritical = signals.some((s: any) => s.severity === "critical");
+
+    if (hasCritical) {
+      // Log fraud signals
+      for (const signal of signals) {
+        await supabase.from("fraud_detection_logs").insert({
+          tenant_id,
+          detection_type: signal.type,
+          severity: signal.severity,
+          details: signal,
+          action_taken: "blocked",
+        });
+      }
+      return json({
+        success: false,
+        error: "Mudança bloqueada: atividade suspeita detectada. Sua conta está em revisão.",
+        review_required: true,
+        signals,
+      }, 403);
+    }
+
+    // 6. Schedule the downgrade (apply at cycle_end_date)
     const { error: updateErr } = await supabase
       .from("tenant_plans")
       .update({
