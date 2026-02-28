@@ -1,6 +1,7 @@
 /**
  * GlobalFooter — Enterprise SaaS footer with dynamic tenant/platform data.
  * Reads footer_configs to allow per-tenant section toggling & content editing.
+ * Falls back to platform_footer_defaults when tenant has no config.
  */
 import { useMemo, forwardRef } from 'react';
 import { Shield, Headphones, Cpu, ExternalLink } from 'lucide-react';
@@ -9,7 +10,7 @@ import { useTenant } from '@/contexts/TenantContext';
 import { usePermissions } from '@/domains/security';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-
+import { usePlatformFooterDefaults } from '@/hooks/use-footer-defaults';
 const currentYear = new Date().getFullYear();
 
 /* ── helpers ── */
@@ -39,26 +40,7 @@ interface FooterConfigData {
   compliance_items: { text: string }[];
 }
 
-const DEFAULT_CONFIG: FooterConfigData = {
-  show_institutional: true,
-  show_compliance: true,
-  show_support: true,
-  show_technical: true,
-  show_bottom_text: true,
-  custom_bottom_text: null,
-  support_links: [
-    { label: 'Central de Ajuda', href: '#' },
-    { label: 'Documentação Técnica', href: '#' },
-    { label: 'Política de Privacidade', href: '#' },
-    { label: 'Termos de Uso', href: '#' },
-    { label: 'Contato', href: '#' },
-  ],
-  compliance_items: [
-    { text: 'CLT — Consolidação das Leis do Trabalho' },
-    { text: 'Normas Regulamentadoras (NR)' },
-    { text: 'eSocial — Leiautes S-2.5+' },
-  ],
-};
+// Hardcoded fallback removed — now uses platform_footer_defaults via hook
 
 function StatusDot({ online }: { online: boolean }) {
   return (
@@ -73,6 +55,7 @@ function StatusDot({ online }: { online: boolean }) {
 export const GlobalFooter = forwardRef<HTMLElement, {}>(function GlobalFooter(_props, ref) {
   const { currentTenant } = useTenant();
   const { isTenantAdmin } = usePermissions();
+  const { data: platformDefaults } = usePlatformFooterDefaults();
 
   const { data: appVersion } = usePlatformSetting('app_version');
   const { data: lastLegalUpdate } = usePlatformSetting('last_legal_update');
@@ -92,8 +75,14 @@ export const GlobalFooter = forwardRef<HTMLElement, {}>(function GlobalFooter(_p
     staleTime: 5 * 60_000,
   });
 
+  const fallback = platformDefaults ?? {
+    show_institutional: true, show_compliance: true, show_support: true,
+    show_technical: true, show_bottom_text: true, custom_bottom_text: null,
+    support_links: [], compliance_items: [],
+  };
+
   const cfg: FooterConfigData = useMemo(() => {
-    if (!footerConfigRaw) return DEFAULT_CONFIG;
+    if (!footerConfigRaw) return fallback;
     return {
       show_institutional: footerConfigRaw.show_institutional,
       show_compliance: footerConfigRaw.show_compliance,
@@ -103,12 +92,12 @@ export const GlobalFooter = forwardRef<HTMLElement, {}>(function GlobalFooter(_p
       custom_bottom_text: footerConfigRaw.custom_bottom_text,
       support_links: Array.isArray(footerConfigRaw.support_links)
         ? (footerConfigRaw.support_links as unknown as { label: string; href: string }[])
-        : DEFAULT_CONFIG.support_links,
+        : fallback.support_links,
       compliance_items: Array.isArray(footerConfigRaw.compliance_items)
         ? (footerConfigRaw.compliance_items as unknown as { text: string }[])
-        : DEFAULT_CONFIG.compliance_items,
+        : fallback.compliance_items,
     };
-  }, [footerConfigRaw]);
+  }, [footerConfigRaw, fallback]);
 
   const environment = import.meta.env.MODE === 'production' ? 'Produção' : 'Homologação';
   const envColor = import.meta.env.MODE === 'production' ? 'text-primary' : 'text-amber-500';

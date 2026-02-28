@@ -1,10 +1,12 @@
 /**
  * FooterSettings — Configures which sections and links appear in the global footer.
+ * Falls back to platform_footer_defaults when no tenant config exists.
  */
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
+import { usePlatformFooterDefaults } from '@/hooks/use-footer-defaults';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -13,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, Trash2, Save, PanelBottom, ExternalLink, Shield, Headphones } from 'lucide-react';
-
 interface SupportLink {
   label: string;
   href: string;
@@ -36,24 +37,11 @@ interface FooterConfig {
   compliance_items: ComplianceItem[];
 }
 
-const DEFAULT_SUPPORT_LINKS: SupportLink[] = [
-  { label: 'Central de Ajuda', href: '#' },
-  { label: 'Documentação Técnica', href: '#' },
-  { label: 'Política de Privacidade', href: '#' },
-  { label: 'Termos de Uso', href: '#' },
-  { label: 'Contato', href: '#' },
-];
-
-const DEFAULT_COMPLIANCE_ITEMS: ComplianceItem[] = [
-  { text: 'CLT — Consolidação das Leis do Trabalho' },
-  { text: 'Normas Regulamentadoras (NR)' },
-  { text: 'eSocial — Leiautes S-2.5+' },
-];
-
 export default function FooterSettings() {
   const { currentTenant } = useTenant();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: platformDefaults } = usePlatformFooterDefaults();
 
   const [config, setConfig] = useState<FooterConfig | null>(null);
 
@@ -75,23 +63,24 @@ export default function FooterSettings() {
     if (data) {
       setConfig({
         ...data,
-        support_links: Array.isArray(data.support_links) ? data.support_links as unknown as SupportLink[] : DEFAULT_SUPPORT_LINKS,
-        compliance_items: Array.isArray(data.compliance_items) ? data.compliance_items as unknown as ComplianceItem[] : DEFAULT_COMPLIANCE_ITEMS,
+        support_links: Array.isArray(data.support_links) ? data.support_links as unknown as SupportLink[] : (platformDefaults?.support_links ?? []),
+        compliance_items: Array.isArray(data.compliance_items) ? data.compliance_items as unknown as ComplianceItem[] : (platformDefaults?.compliance_items ?? []),
       });
-    } else if (currentTenant?.id && !isLoading) {
+    } else if (currentTenant?.id && !isLoading && platformDefaults) {
+      // No tenant config — seed from platform defaults
       setConfig({
         tenant_id: currentTenant.id,
-        show_institutional: true,
-        show_compliance: true,
-        show_support: true,
-        show_technical: true,
-        show_bottom_text: true,
-        custom_bottom_text: null,
-        support_links: DEFAULT_SUPPORT_LINKS,
-        compliance_items: DEFAULT_COMPLIANCE_ITEMS,
+        show_institutional: platformDefaults.show_institutional,
+        show_compliance: platformDefaults.show_compliance,
+        show_support: platformDefaults.show_support,
+        show_technical: platformDefaults.show_technical,
+        show_bottom_text: platformDefaults.show_bottom_text,
+        custom_bottom_text: platformDefaults.custom_bottom_text,
+        support_links: platformDefaults.support_links,
+        compliance_items: platformDefaults.compliance_items,
       });
     }
-  }, [data, currentTenant?.id, isLoading]);
+  }, [data, currentTenant?.id, isLoading, platformDefaults]);
 
   const saveMutation = useMutation({
     mutationFn: async (cfg: FooterConfig) => {
