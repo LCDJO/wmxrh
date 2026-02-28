@@ -25,6 +25,13 @@ Deno.serve(async (req) => {
       errors: [] as string[],
     };
 
+    // ─── STEP 0: Identify banned/suspended tenants to exclude ───
+    const { data: blockedTenants } = await supabase
+      .from("tenants")
+      .select("id")
+      .in("account_status", ["banned", "suspended"]);
+    const blockedIds = new Set((blockedTenants ?? []).map((t: any) => t.id));
+
     // ─── STEP 1: Generate invoices for subscriptions due today ───
     const { data: dueSubs, error: dueErr } = await supabase
       .from("tenant_plans")
@@ -38,6 +45,9 @@ Deno.serve(async (req) => {
       results.errors.push(`Fetch due subs: ${dueErr.message}`);
     } else if (dueSubs) {
       for (const sub of dueSubs) {
+        // Skip banned/suspended tenants — freeze their subscription
+        if (blockedIds.has(sub.tenant_id)) continue;
+
         const plan = (sub as any).saas_plans;
         if (!plan || plan.price === 0) continue; // Skip free plans
 
