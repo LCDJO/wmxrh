@@ -2,6 +2,8 @@
  * Platform Policy & Terms Governance — Type definitions
  */
 
+export type PolicyCategory = 'terms_of_use' | 'privacy' | 'security' | 'billing' | 'conduct';
+export type PolicyAppliesTo = 'tenant' | 'user' | 'developer';
 export type PolicyType = 'terms_of_service' | 'acceptable_use' | 'privacy_policy' | 'data_processing' | 'sla' | 'custom';
 export type AcceptanceMethod = 'click' | 'signature' | 'api' | 'migration';
 
@@ -11,6 +13,8 @@ export interface PlatformPolicy {
   name: string;
   description: string | null;
   policy_type: PolicyType;
+  category: PolicyCategory;
+  applies_to: PolicyAppliesTo;
   is_mandatory: boolean;
   is_active: boolean;
   current_version_id: string | null;

@@ -15014,6 +15014,8 @@ export type Database = {
       }
       platform_policies: {
         Row: {
+          applies_to: string
+          category: string
           created_at: string
           current_version_id: string | null
           description: string | null
@@ -15028,6 +15030,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          applies_to?: string
+          category?: string
           created_at?: string
           current_version_id?: string | null
           description?: string | null
@@ -15042,6 +15046,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          applies_to?: string
+          category?: string
           created_at?: string
           current_version_id?: string | null
           description?: string | null
