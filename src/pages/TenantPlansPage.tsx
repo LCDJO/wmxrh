@@ -82,6 +82,7 @@ export default function TenantPlansPage() {
   const [plans, setPlans] = useState<SaasPlan[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
   const [dbPlanStatus, setDbPlanStatus] = useState<string | null>(null);
+  const [downgradeInfo, setDowngradeInfo] = useState<{ scheduled: boolean; planName?: string; date?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly');
   const [changePlanDialog, setChangePlanDialog] = useState<{ plan: SaasPlan; direction: 'upgrade' | 'downgrade' } | null>(null);
@@ -97,14 +98,26 @@ export default function TenantPlansPage() {
       const [plansRes, subRes] = await Promise.all([
         supabase.from('saas_plans').select('*').eq('is_active', true).order('price', { ascending: true }),
         currentTenant?.id
-          ? supabase.from('tenant_plans').select('plan_id, status, billing_cycle').eq('tenant_id', currentTenant.id).eq('status', 'active').maybeSingle()
+          ? supabase.from('tenant_plans').select('plan_id, status, billing_cycle, downgrade_scheduled, scheduled_plan_id, cycle_end_date').eq('tenant_id', currentTenant.id).in('status', ['active', 'trial']).order('created_at', { ascending: false }).limit(1).maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
-      setPlans((plansRes.data as SaasPlan[]) ?? []);
+      const fetchedPlans = (plansRes.data as SaasPlan[]) ?? [];
+      setPlans(fetchedPlans);
       if (subRes.data) {
-        setCurrentPlanId((subRes.data as any).plan_id);
-        setDbPlanStatus((subRes.data as any).status);
-        if ((subRes.data as any).billing_cycle === 'yearly') setBillingInterval('annual');
+        const sub = subRes.data as any;
+        setCurrentPlanId(sub.plan_id);
+        setDbPlanStatus(sub.status);
+        if (sub.billing_cycle === 'yearly') setBillingInterval('annual');
+        if (sub.downgrade_scheduled && sub.scheduled_plan_id) {
+          const targetPlan = fetchedPlans.find(p => p.id === sub.scheduled_plan_id);
+          setDowngradeInfo({
+            scheduled: true,
+            planName: targetPlan?.name ?? 'Desconhecido',
+            date: sub.cycle_end_date ? new Date(sub.cycle_end_date).toLocaleDateString('pt-BR') : undefined,
+          });
+        } else {
+          setDowngradeInfo(null);
+        }
       }
       setLoading(false);
     }
@@ -143,7 +156,41 @@ export default function TenantPlansPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
 
-      // 1. Cancel current active plan
+      // ─── DOWNGRADE: route through policy manager ───
+      if (direction === 'downgrade') {
+        const { data, error } = await supabase.functions.invoke('downgrade-policy-manager', {
+          body: { tenant_id: currentTenant.id, target_plan_id: plan.id },
+        });
+
+        if (error) throw error;
+        if (!data?.success) {
+          toast.error('Downgrade não permitido', { description: data?.error });
+          setProcessing(false);
+          return;
+        }
+
+        // Update local state to show scheduled info
+        setDowngradeInfo({
+          scheduled: true,
+          planName: plan.name,
+          date: data.scheduled_date ? new Date(data.scheduled_date).toLocaleDateString('pt-BR') : undefined,
+        });
+
+        setChangePlanDialog(null);
+        toast.success(data.message);
+        setProcessing(false);
+        return;
+      }
+
+      // ─── UPGRADE: immediate (existing logic) ───
+      // Cancel scheduled downgrade if any
+      if (downgradeInfo?.scheduled) {
+        await supabase.functions.invoke('downgrade-policy-manager', {
+          body: { tenant_id: currentTenant.id, action: 'cancel' },
+        });
+        setDowngradeInfo(null);
+      }
+
       if (currentPlanId) {
         await supabase
           .from('tenant_plans' as any)
@@ -153,7 +200,6 @@ export default function TenantPlansPage() {
           .eq('status', 'active');
       }
 
-      // 2. Insert new active plan
       await (supabase.from('tenant_plans' as any) as any).insert({
         tenant_id: currentTenant.id,
         plan_id: plan.id,
@@ -161,51 +207,56 @@ export default function TenantPlansPage() {
         billing_cycle: billingInterval === 'annual' ? 'yearly' : 'monthly',
         price_at_signup: billingInterval === 'annual' ? (plan.annual_price ?? plan.price * 12) : plan.price,
         started_at: new Date().toISOString(),
+        cycle_start_date: new Date().toISOString(),
+        cycle_end_date: new Date(
+          billingInterval === 'annual'
+            ? new Date().setFullYear(new Date().getFullYear() + 1)
+            : new Date().setMonth(new Date().getMonth() + 1)
+        ).toISOString(),
+        next_billing_date: new Date(
+          billingInterval === 'annual'
+            ? new Date().setFullYear(new Date().getFullYear() + 1)
+            : new Date().setMonth(new Date().getMonth() + 1)
+        ).toISOString(),
         created_by: user.id,
       });
 
-      // 3. Sync experience_profiles to reflect new plan's modules immediately
+      // Sync experience_profiles
       const tierKey = plan.name.toLowerCase();
       const allModuleKeys = Object.keys(MODULE_LABELS);
       const hiddenModules = allModuleKeys
         .filter(m => !plan.allowed_modules.includes(m))
         .map(m => `/${m}`);
 
-      const experienceUpdate = {
-        tenant_id: currentTenant.id,
-        plan_id: plan.id,
-        hidden_navigation: hiddenModules,
-        visible_navigation: plan.allowed_modules.map(m => `/${m}`),
-        locked_navigation: [],
-        cognitive_context_level: tierKey === 'enterprise' ? 'full' : tierKey === 'pro' ? 'advanced' : 'basic',
-        cognitive_hints_enabled: ['pro', 'enterprise'].includes(tierKey),
-        ui_features: {
-          enable_advanced_filters: ['pro', 'enterprise'].includes(tierKey),
-          enable_bulk_actions: ['pro', 'enterprise'].includes(tierKey),
-          enable_custom_branding: tierKey === 'enterprise',
-          enable_export: ['basic', 'pro', 'enterprise'].includes(tierKey),
-          show_upgrade_prompts: tierKey !== 'enterprise',
-        },
-        updated_at: new Date().toISOString(),
-        resolved_at: new Date().toISOString(),
-      };
-
       await supabase
         .from('experience_profiles' as any)
-        .upsert(experienceUpdate as any, { onConflict: 'tenant_id' });
+        .upsert({
+          tenant_id: currentTenant.id,
+          plan_id: plan.id,
+          hidden_navigation: hiddenModules,
+          visible_navigation: plan.allowed_modules.map(m => `/${m}`),
+          locked_navigation: [],
+          cognitive_context_level: tierKey === 'enterprise' ? 'full' : tierKey === 'pro' ? 'advanced' : 'basic',
+          cognitive_hints_enabled: ['pro', 'enterprise'].includes(tierKey),
+          ui_features: {
+            enable_advanced_filters: ['pro', 'enterprise'].includes(tierKey),
+            enable_bulk_actions: ['pro', 'enterprise'].includes(tierKey),
+            enable_custom_branding: tierKey === 'enterprise',
+            enable_export: ['basic', 'pro', 'enterprise'].includes(tierKey),
+            show_upgrade_prompts: tierKey !== 'enterprise',
+          },
+          updated_at: new Date().toISOString(),
+          resolved_at: new Date().toISOString(),
+        } as any, { onConflict: 'tenant_id' });
 
-      // 4. Force PXE engine to re-resolve with new plan
       try {
         engine.lifecycle.transition(currentTenant.id, 'activate', plan.id);
-      } catch {
-        // Already in correct state — ignore
-      }
+      } catch { /* Already in correct state */ }
 
-      // 5. Log in audit
       await supabase.from('audit_logs').insert({
         tenant_id: currentTenant.id,
         user_id: user.id,
-        action: direction === 'upgrade' ? 'plan_upgrade' : 'plan_downgrade',
+        action: 'plan_upgrade',
         entity_type: 'tenant_plan',
         entity_id: plan.id,
         metadata: {
@@ -219,17 +270,28 @@ export default function TenantPlansPage() {
       setCurrentPlanId(plan.id);
       setChangePlanDialog(null);
       queryClient.invalidateQueries({ queryKey: ['tenant_plans'] });
-
-      // 6. Force PXE hook to re-resolve with new plan
       refreshPlan();
 
-      toast.success(
-        direction === 'upgrade'
-          ? `Upgrade para ${plan.name} realizado! Módulos liberados imediatamente.`
-          : `Downgrade para ${plan.name} realizado. Módulos atualizados.`
-      );
+      toast.success(`Upgrade para ${plan.name} realizado! Módulos liberados imediatamente.`);
     } catch (err: any) {
       toast.error('Erro ao alterar plano', { description: err.message });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleCancelDowngrade = async () => {
+    if (!currentTenant?.id) return;
+    setProcessing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('downgrade-policy-manager', {
+        body: { tenant_id: currentTenant.id, action: 'cancel' },
+      });
+      if (error) throw error;
+      setDowngradeInfo(null);
+      toast.success('Downgrade cancelado com sucesso.');
+    } catch (err: any) {
+      toast.error('Erro ao cancelar downgrade', { description: err.message });
     } finally {
       setProcessing(false);
     }
@@ -327,6 +389,30 @@ export default function TenantPlansPage() {
                 de {Math.max(...plans.map(p => p.allowed_modules.length), 0)} disponíveis
               </p>
             </div>
+          {/* Scheduled downgrade banner */}
+          {downgradeInfo?.scheduled && (
+            <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                  Downgrade agendado para {downgradeInfo.planName}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Será aplicado {downgradeInfo.date ? `em ${downgradeInfo.date}` : 'ao final do ciclo atual'}.
+                  Até lá, você mantém todos os recursos do plano atual.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 text-xs"
+                  onClick={handleCancelDowngrade}
+                  disabled={processing}
+                >
+                  Cancelar Downgrade
+                </Button>
+              </div>
+            </div>
+          )}
           </div>
         </CardContent>
       </Card>
@@ -510,7 +596,7 @@ export default function TenantPlansPage() {
               <DialogDescription>
                 {changePlanDialog.direction === 'upgrade'
                   ? `Você está fazendo upgrade de ${currentPlan?.name ?? 'Free'} para ${changePlanDialog.plan.name}.`
-                  : `Você está fazendo downgrade de ${currentPlan?.name ?? 'Free'} para ${changePlanDialog.plan.name}.`
+                  : `O downgrade para ${changePlanDialog.plan.name} será agendado para o fim do ciclo atual. Você mantém o plano ${currentPlan?.name ?? 'atual'} até lá.`
                 }
               </DialogDescription>
             </DialogHeader>
@@ -539,14 +625,17 @@ export default function TenantPlansPage() {
 
               {/* Downgrade warning */}
               {changePlanDialog.direction === 'downgrade' && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
                   <div className="text-xs space-y-1">
-                    <p className="font-medium text-destructive">Atenção ao downgrade</p>
+                    <p className="font-medium text-amber-700 dark:text-amber-400">Downgrade agendado</p>
                     <p className="text-muted-foreground">
-                      Módulos não inclusos no novo plano serão desativados.
+                      O downgrade será aplicado somente ao final do ciclo de faturamento pago. Módulos não inclusos no novo plano serão desativados nessa data.
                       {changePlanDialog.plan.max_employees && currentCount > changePlanDialog.plan.max_employees && (
-                        <> Você tem {currentCount} colaboradores, mas o plano permite apenas {changePlanDialog.plan.max_employees}.</>
+                        <span className="block mt-1 text-destructive font-medium">
+                          ⚠ Você tem {currentCount} colaboradores ativos, mas o plano {changePlanDialog.plan.name} permite apenas {changePlanDialog.plan.max_employees}. 
+                          Reduza o número antes do fim do ciclo para que o downgrade seja aplicado.
+                        </span>
                       )}
                     </p>
                   </div>
@@ -579,7 +668,7 @@ export default function TenantPlansPage() {
                 className="gap-1.5"
               >
                 {processing && <Loader2 className="h-4 w-4 animate-spin" />}
-                {changePlanDialog.direction === 'upgrade' ? 'Confirmar Upgrade' : 'Confirmar Downgrade'}
+                {changePlanDialog.direction === 'upgrade' ? 'Confirmar Upgrade' : 'Agendar Downgrade'}
               </Button>
             </DialogFooter>
           </DialogContent>
