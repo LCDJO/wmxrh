@@ -18653,14 +18653,25 @@ export type Database = {
         Row: {
           activated_by: string | null
           billing_cycle: string
+          cancel_reason: string | null
+          cancelled_at: string | null
           created_at: string
+          cycle_end_date: string | null
+          cycle_start_date: string | null
+          downgrade_scheduled: boolean
           expires_at: string | null
+          failed_payment_count: number
+          grace_period_ends_at: string | null
           id: string
+          last_payment_at: string | null
           next_billing_date: string | null
+          paid_until: string | null
           payment_method: string | null
           plan_id: string
+          scheduled_plan_id: string | null
           started_at: string
           status: string
+          suspension_reason: string | null
           tenant_id: string
           trial_ends_at: string | null
           updated_at: string
@@ -18668,14 +18679,25 @@ export type Database = {
         Insert: {
           activated_by?: string | null
           billing_cycle?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
           created_at?: string
+          cycle_end_date?: string | null
+          cycle_start_date?: string | null
+          downgrade_scheduled?: boolean
           expires_at?: string | null
+          failed_payment_count?: number
+          grace_period_ends_at?: string | null
           id?: string
+          last_payment_at?: string | null
           next_billing_date?: string | null
+          paid_until?: string | null
           payment_method?: string | null
           plan_id: string
+          scheduled_plan_id?: string | null
           started_at?: string
           status?: string
+          suspension_reason?: string | null
           tenant_id: string
           trial_ends_at?: string | null
           updated_at?: string
@@ -18683,14 +18705,25 @@ export type Database = {
         Update: {
           activated_by?: string | null
           billing_cycle?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
           created_at?: string
+          cycle_end_date?: string | null
+          cycle_start_date?: string | null
+          downgrade_scheduled?: boolean
           expires_at?: string | null
+          failed_payment_count?: number
+          grace_period_ends_at?: string | null
           id?: string
+          last_payment_at?: string | null
           next_billing_date?: string | null
+          paid_until?: string | null
           payment_method?: string | null
           plan_id?: string
+          scheduled_plan_id?: string | null
           started_at?: string
           status?: string
+          suspension_reason?: string | null
           tenant_id?: string
           trial_ends_at?: string | null
           updated_at?: string
@@ -18699,6 +18732,13 @@ export type Database = {
           {
             foreignKeyName: "tenant_plans_plan_id_fkey"
             columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_plans_scheduled_plan_id_fkey"
+            columns: ["scheduled_plan_id"]
             isOneToOne: false
             referencedRelation: "saas_plans"
             referencedColumns: ["id"]
