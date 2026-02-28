@@ -92,7 +92,7 @@ export default function TenantPlansPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentTenant } = useTenant();
-  const { planSnapshot, planTier, planStatus, engine, canUpgrade, canDowngrade } = usePXE();
+  const { planSnapshot, planTier, planStatus, engine, canUpgrade, canDowngrade, refreshPlan } = usePXE();
   const { currentCount, maxAllowed, remaining } = useEmployeeLimit();
 
   const [plans, setPlans] = useState<SaasPlan[]>([]);
@@ -153,7 +153,7 @@ export default function TenantPlansPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
 
-      // Update tenant_plans — upsert active plan
+      // 1. Cancel current active plan
       if (currentPlanId) {
         await supabase
           .from('tenant_plans' as any)
@@ -163,6 +163,7 @@ export default function TenantPlansPage() {
           .eq('status', 'active');
       }
 
+      // 2. Insert new active plan
       await (supabase.from('tenant_plans' as any) as any).insert({
         tenant_id: currentTenant.id,
         plan_id: plan.id,
@@ -173,7 +174,44 @@ export default function TenantPlansPage() {
         created_by: user.id,
       });
 
-      // Log in audit
+      // 3. Sync experience_profiles to reflect new plan's modules immediately
+      const tierKey = plan.name.toLowerCase();
+      const allModuleKeys = Object.keys(MODULE_LABELS);
+      const hiddenModules = allModuleKeys
+        .filter(m => !plan.allowed_modules.includes(m))
+        .map(m => `/${m}`);
+
+      const experienceUpdate = {
+        tenant_id: currentTenant.id,
+        plan_id: plan.id,
+        hidden_navigation: hiddenModules,
+        visible_navigation: plan.allowed_modules.map(m => `/${m}`),
+        locked_navigation: [],
+        cognitive_context_level: tierKey === 'enterprise' ? 'full' : tierKey === 'pro' ? 'advanced' : 'basic',
+        cognitive_hints_enabled: ['pro', 'enterprise'].includes(tierKey),
+        ui_features: {
+          enable_advanced_filters: ['pro', 'enterprise'].includes(tierKey),
+          enable_bulk_actions: ['pro', 'enterprise'].includes(tierKey),
+          enable_custom_branding: tierKey === 'enterprise',
+          enable_export: ['basic', 'pro', 'enterprise'].includes(tierKey),
+          show_upgrade_prompts: tierKey !== 'enterprise',
+        },
+        updated_at: new Date().toISOString(),
+        resolved_at: new Date().toISOString(),
+      };
+
+      await supabase
+        .from('experience_profiles' as any)
+        .upsert(experienceUpdate as any, { onConflict: 'tenant_id' });
+
+      // 4. Force PXE engine to re-resolve with new plan
+      try {
+        engine.lifecycle.transition(currentTenant.id, 'activate', plan.id);
+      } catch {
+        // Already in correct state — ignore
+      }
+
+      // 5. Log in audit
       await supabase.from('audit_logs').insert({
         tenant_id: currentTenant.id,
         user_id: user.id,
@@ -184,16 +222,21 @@ export default function TenantPlansPage() {
           from_plan: currentPlan?.name,
           to_plan: plan.name,
           billing_interval: billingInterval,
+          modules_enabled: plan.allowed_modules,
         },
       });
 
       setCurrentPlanId(plan.id);
       setChangePlanDialog(null);
       queryClient.invalidateQueries({ queryKey: ['tenant_plans'] });
+
+      // 6. Force PXE hook to re-resolve with new plan
+      refreshPlan();
+
       toast.success(
         direction === 'upgrade'
-          ? `Upgrade para ${plan.name} realizado com sucesso!`
-          : `Downgrade para ${plan.name} realizado.`
+          ? `Upgrade para ${plan.name} realizado! Módulos liberados imediatamente.`
+          : `Downgrade para ${plan.name} realizado. Módulos atualizados.`
       );
     } catch (err: any) {
       toast.error('Erro ao alterar plano', { description: err.message });

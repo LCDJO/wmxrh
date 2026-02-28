@@ -90,6 +90,8 @@ export function usePXE() {
   }, [engine]);
 
   // ── Resolve tenant plan + experience on context switch ──
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   useEffect(() => {
     if (!tenantId) {
       setState({ ready: true, planSnapshot: null, experienceProfile: null });
@@ -128,7 +130,11 @@ export function usePXE() {
       });
 
     return () => { cancelled = true; };
-  }, [tenantId, engine]);
+  }, [tenantId, engine, refreshTrigger]);
+
+  const refreshPlan = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
 
   // ── Convenience methods ──
 
@@ -177,6 +183,7 @@ export function usePXE() {
     getUpgradePrompt,
     canUpgrade,
     canDowngrade,
+    refreshPlan,
   };
 }
 
