@@ -90,57 +90,64 @@ function FleetMap({ vehicles, expanded, onToggleExpand }: { vehicles: MapVehicle
   useEffect(() => {
     if (!mapRef.current || leafletRef.current) return;
 
-    const map = L.map(mapRef.current, {
-      center: [-23.55, -46.63],
-      zoom: 12,
-      zoomControl: false,
-      attributionControl: false,
-    });
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-    }).addTo(map);
-
-    L.control.zoom({ position: 'topright' }).addTo(map);
-
-    const statusColor: Record<string, string> = {
-      moving: '#22c55e',
-      idle: '#f59e0b',
-      stopped: '#6b7280',
-      speeding: '#ef4444',
-    };
-
-    vehicles.forEach((v) => {
-      const color = statusColor[v.status] || '#6b7280';
-      const icon = L.divIcon({
-        className: '',
-        html: `<div style="
-          width:28px;height:28px;border-radius:50%;
-          background:${color};border:2px solid white;
-          display:flex;align-items:center;justify-content:center;
-          font-size:10px;font-weight:700;color:white;
-          box-shadow:0 2px 8px rgba(0,0,0,0.4);
-        ">${v.speed}</div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
+    let map: L.Map | null = null;
+    try {
+      map = L.map(mapRef.current, {
+        center: [-23.55, -46.63],
+        zoom: 12,
+        zoomControl: false,
+        attributionControl: false,
       });
 
-      L.marker([v.lat, v.lng], { icon }).addTo(map)
-        .bindPopup(`
-          <div style="font-size:12px;line-height:1.6">
-            <strong>${v.plate}</strong> — ${v.driver}<br/>
-            Velocidade: <strong>${v.speed} km/h</strong><br/>
-            Status: <strong>${v.status}</strong><br/>
-            Ignição: ${v.ignition ? '🟢 Ligada' : '⚪ Desligada'}
-          </div>
-        `);
-    });
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+      }).addTo(map);
 
-    leafletRef.current = map;
+      L.control.zoom({ position: 'topright' }).addTo(map);
+
+      const statusColor: Record<string, string> = {
+        moving: '#22c55e',
+        idle: '#f59e0b',
+        stopped: '#6b7280',
+        speeding: '#ef4444',
+      };
+
+      vehicles.forEach((v) => {
+        const color = statusColor[v.status] || '#6b7280';
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="
+            width:28px;height:28px;border-radius:50%;
+            background:${color};border:2px solid white;
+            display:flex;align-items:center;justify-content:center;
+            font-size:10px;font-weight:700;color:white;
+            box-shadow:0 2px 8px rgba(0,0,0,0.4);
+          ">${v.speed}</div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+        });
+
+        L.marker([v.lat, v.lng], { icon }).addTo(map!)
+          .bindPopup(`
+            <div style="font-size:12px;line-height:1.6">
+              <strong>${v.plate}</strong> — ${v.driver}<br/>
+              Velocidade: <strong>${v.speed} km/h</strong><br/>
+              Status: <strong>${v.status}</strong><br/>
+              Ignição: ${v.ignition ? '🟢 Ligada' : '⚪ Desligada'}
+            </div>
+          `);
+      });
+
+      leafletRef.current = map;
+    } catch (err) {
+      console.error('[FleetMap] Leaflet init error:', err);
+    }
 
     return () => {
-      map.remove();
-      leafletRef.current = null;
+      if (map) {
+        map.remove();
+        leafletRef.current = null;
+      }
     };
   }, [vehicles]);
 
@@ -176,10 +183,16 @@ export default function FleetDashboard() {
   const { vehicles: traccarVehicles, isConfigured: traccarConfigured } = useTraccarFleet({
     tenantId,
     pollIntervalMs: 15_000,
+    useCache: true,
   });
 
   const mapVehicles = useMemo<MapVehicle[]>(() => {
-    return traccarVehicles.map(traccarToMapVehicle).filter((v): v is MapVehicle => v !== null);
+    try {
+      return traccarVehicles.map(traccarToMapVehicle).filter((v): v is MapVehicle => v !== null);
+    } catch (err) {
+      console.error('[FleetDashboard] mapVehicles error:', err);
+      return [];
+    }
   }, [traccarVehicles]);
 
   const { events, status, refresh } = useFleetRealtime({
