@@ -27,6 +27,10 @@ import { AcceptanceAuditLog } from './acceptance-audit-log';
 import { PolicyRenderer } from './policy-renderer';
 import { PolicyScopeResolver } from './policy-scope-resolver';
 import { PolicyNotifier } from './policy-notifier';
+import { GOVERNANCE_KERNEL_EVENTS } from './governance-events';
+import { createGlobalEventKernel } from '@/domains/platform-os/global-event-kernel';
+
+const kernel = createGlobalEventKernel();
 
 export class PlatformPolicyGovernanceEngine implements PlatformPolicyGovernanceAPI {
   readonly registry = new PolicyRegistry();
@@ -59,11 +63,29 @@ export class PlatformPolicyGovernanceEngine implements PlatformPolicyGovernanceA
       this.notifier.notifyPolicyUpdate(policy, version).catch(console.error);
     }
 
+    kernel.emit(GOVERNANCE_KERNEL_EVENTS.PolicyVersionPublished, 'GovernanceEngine', {
+      policy_id: payload.policy_id,
+      version_number: version.version_number,
+      title: version.title,
+      requires_reacceptance: payload.requires_reacceptance ?? false,
+      published_by: 'system',
+    });
+
     return version;
   }
 
   async accept(payload: AcceptPolicyPayload): Promise<PolicyAcceptance> {
-    return this.acceptance.accept(payload);
+    const result = await this.acceptance.accept(payload);
+
+    kernel.emit(GOVERNANCE_KERNEL_EVENTS.PolicyAccepted, 'GovernanceEngine', {
+      policy_id: payload.policy_id,
+      version_id: payload.policy_version_id,
+      user_id: 'system',
+      tenant_id: payload.tenant_id,
+      accepted_at: Date.now(),
+    });
+
+    return result;
   }
 
   async getPendingForTenant(tenantId: string): Promise<PendingPolicy[]> {
