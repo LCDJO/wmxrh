@@ -76,15 +76,20 @@ export default function TenantPlansPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentTenant } = useTenant();
-  const { planSnapshot, planTier, planStatus, engine, canUpgrade, canDowngrade, refreshPlan } = usePXE();
+  const { planSnapshot, planTier, planStatus, ready: pxeReady, engine, canUpgrade, canDowngrade, refreshPlan } = usePXE();
   const { currentCount, maxAllowed, remaining } = useEmployeeLimit();
 
   const [plans, setPlans] = useState<SaasPlan[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
+  const [dbPlanStatus, setDbPlanStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly');
   const [changePlanDialog, setChangePlanDialog] = useState<{ plan: SaasPlan; direction: 'upgrade' | 'downgrade' } | null>(null);
   const [processing, setProcessing] = useState(false);
+
+  // Effective status: prefer PXE when ready, fallback to DB-fetched status
+  const effectiveStatus = pxeReady && planStatus !== 'cancelled' ? planStatus : (dbPlanStatus ?? planStatus);
+  const effectiveTier = pxeReady && planTier !== 'free' ? planTier : (currentPlanId ? undefined : planTier);
 
   useEffect(() => {
     async function fetchData() {
@@ -98,6 +103,7 @@ export default function TenantPlansPage() {
       setPlans((plansRes.data as SaasPlan[]) ?? []);
       if (subRes.data) {
         setCurrentPlanId((subRes.data as any).plan_id);
+        setDbPlanStatus((subRes.data as any).status);
         if ((subRes.data as any).billing_cycle === 'yearly') setBillingInterval('annual');
       }
       setLoading(false);
@@ -263,16 +269,16 @@ export default function TenantPlansPage() {
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Plano</p>
               <div className="flex items-center gap-2">
-                <PlanBadge tier={planTier} size="md" />
+                <PlanBadge tier={pxeReady ? planTier : (currentPlan?.name?.toLowerCase() as any ?? 'free')} size="md" />
                 <span className="text-lg font-bold text-foreground">{currentPlan?.name ?? 'Free'}</span>
               </div>
               <Badge variant="outline" className={cn(
                 "text-[10px]",
-                planStatus === 'active' ? 'border-primary/30 text-primary' :
-                planStatus === 'trial' ? 'border-primary/30 text-primary' :
+                effectiveStatus === 'active' ? 'border-primary/30 text-primary' :
+                effectiveStatus === 'trial' ? 'border-primary/30 text-primary' :
                 'border-destructive/30 text-destructive'
               )}>
-                {planStatus === 'active' ? 'Ativo' : planStatus === 'trial' ? 'Trial' : planStatus}
+                {effectiveStatus === 'active' ? 'Ativo' : effectiveStatus === 'trial' ? 'Trial' : effectiveStatus}
               </Badge>
             </div>
 
