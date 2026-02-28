@@ -2,6 +2,7 @@
  * AccountEnforcementEngine
  *
  * Manages structured account bans, suspensions, restrictions, and appeals.
+ * Unified Account Status Model applies to: Tenant, User, DeveloperApp.
  * Integrates with: FraudDetection, IncidentManagement, BillingCore, ControlPlane, AuditLogger.
  */
 
@@ -14,37 +15,60 @@ import type {
   EnforceAccountPayload,
   AppealPayload,
   ReviewAppealPayload,
+  AccountEntityType,
+  AccountStatusInfo,
+  AccountStatus,
 } from './types';
 
 export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
 
   async isTenantRestricted(tenantId: string): Promise<{ restricted: boolean; enforcements: AccountEnforcement[] }> {
+    const info = await this.isEntityRestricted('tenant', tenantId);
+    return { restricted: info.account_status !== 'active', enforcements: info.active_enforcements };
+  }
+
+  async isEntityRestricted(entityType: AccountEntityType, entityId: string): Promise<AccountStatusInfo> {
     const { data, error } = await supabase
       .from('account_enforcements')
       .select('*')
-      .eq('tenant_id', tenantId)
-      .in('status', ['active'])
-      .in('action_type', ['ban', 'suspend']);
+      .eq('entity_type', entityType)
+      .eq('entity_id', entityId)
+      .eq('status', 'active');
 
     if (error) throw error;
 
-    const active = (data ?? []) as unknown as AccountEnforcement[];
-    // Filter expired
     const now = new Date().toISOString();
-    const valid = active.filter(e => !e.expires_at || e.expires_at > now);
+    const active = ((data ?? []) as unknown as AccountEnforcement[]).filter(
+      (e) => !e.expires_at || e.expires_at > now,
+    );
 
-    return { restricted: valid.length > 0, enforcements: valid };
+    let accountStatus: AccountStatus = 'active';
+    if (active.some((e) => e.action_type === 'ban')) accountStatus = 'banned';
+    else if (active.some((e) => e.action_type === 'suspend')) accountStatus = 'suspended';
+    else if (active.some((e) => e.action_type === 'restrict')) accountStatus = 'restricted';
+    else if (active.length > 0) accountStatus = 'under_review';
+
+    return {
+      entity_type: entityType,
+      entity_id: entityId,
+      account_status: accountStatus,
+      active_enforcements: active,
+    };
   }
 
   async enforce(payload: EnforceAccountPayload): Promise<AccountEnforcement> {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
 
-    // 1) Create enforcement record
+    const entityType = payload.entity_type ?? 'tenant';
+    const entityId = payload.entity_id ?? payload.tenant_id;
+
     const { data: enforcement, error } = await supabase
       .from('account_enforcements')
       .insert({
         tenant_id: payload.tenant_id,
+        entity_type: entityType,
+        entity_id: entityId,
         action_type: payload.action_type,
         reason: payload.reason,
         reason_category: payload.reason_category ?? 'policy_violation',
@@ -64,7 +88,7 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
 
     const record = enforcement as unknown as AccountEnforcement;
 
-    // 2) Create ban registry entry if ban
+    // Ban registry entry
     if (payload.action_type === 'ban') {
       await supabase.from('ban_registry').insert({
         tenant_id: payload.tenant_id,
@@ -76,17 +100,17 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
       } as any);
     }
 
-    // 3) Audit log
+    // Audit log
     await supabase.from('enforcement_audit_log').insert({
       enforcement_id: record.id,
       event_type: `account_${payload.action_type}`,
       actor_id: userId,
       tenant_id: payload.tenant_id,
-      details: { reason: payload.reason, severity: payload.severity },
+      details: { reason: payload.reason, severity: payload.severity, entity_type: entityType, entity_id: entityId },
     } as any);
 
-    // 4) If ban/suspend → suspend billing
-    if (['ban', 'suspend'].includes(payload.action_type)) {
+    // Suspend billing if tenant ban/suspend
+    if (entityType === 'tenant' && ['ban', 'suspend'].includes(payload.action_type)) {
       await supabase
         .from('tenant_plans')
         .update({ status: 'suspended', updated_at: new Date().toISOString() } as any)
@@ -114,7 +138,6 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
       .update({ status: 'revoked', updated_at: new Date().toISOString() } as any)
       .eq('id', enforcementId);
 
-    // Unban if applicable
     await supabase
       .from('ban_registry')
       .update({ unbanned_at: new Date().toISOString(), unbanned_by: userId, unban_reason: reason } as any)
@@ -156,7 +179,6 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
 
     if (error) throw error;
 
-    // Update enforcement status
     await supabase
       .from('account_enforcements')
       .update({ status: 'appealed' } as any)
@@ -179,7 +201,6 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
       } as any)
       .eq('id', payload.appeal_id);
 
-    // If approved → revoke enforcement
     if (payload.status === 'approved') {
       const { data: appeal } = await supabase
         .from('enforcement_appeals')

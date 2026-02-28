@@ -1,6 +1,12 @@
 /**
  * Account Enforcement Engine — Type definitions
+ *
+ * Unified Account Status Model applies to: Tenant, User, DeveloperApp
  */
+
+// ── Account Status (unified across all entity types) ──
+export type AccountStatus = 'active' | 'restricted' | 'suspended' | 'banned' | 'under_review';
+export type AccountEntityType = 'tenant' | 'user' | 'developer_app';
 
 export type EnforcementActionType = 'ban' | 'suspend' | 'restrict' | 'warn';
 export type EnforcementSeverity = 'low' | 'medium' | 'high' | 'critical';
@@ -11,6 +17,8 @@ export type BanType = 'full' | 'module' | 'feature' | 'api';
 export interface AccountEnforcement {
   id: string;
   tenant_id: string;
+  entity_type: AccountEntityType;
+  entity_id: string | null;
   action_type: EnforcementActionType;
   reason: string;
   reason_category: string;
@@ -60,6 +68,8 @@ export interface EnforcementAppeal {
 
 export interface EnforceAccountPayload {
   tenant_id: string;
+  entity_type?: AccountEntityType;
+  entity_id?: string;
   action_type: EnforcementActionType;
   reason: string;
   reason_category?: string;
@@ -85,10 +95,20 @@ export interface ReviewAppealPayload {
   reviewer_notes?: string;
 }
 
+/** Resolved account status for any entity */
+export interface AccountStatusInfo {
+  entity_type: AccountEntityType;
+  entity_id: string;
+  account_status: AccountStatus;
+  active_enforcements: AccountEnforcement[];
+}
+
 export interface AccountEnforcementEngineAPI {
   /** Check if a tenant is currently banned or suspended */
   isTenantRestricted(tenantId: string): Promise<{ restricted: boolean; enforcements: AccountEnforcement[] }>;
-  /** Enforce an action on a tenant account */
+  /** Check restriction for any entity type */
+  isEntityRestricted(entityType: AccountEntityType, entityId: string): Promise<AccountStatusInfo>;
+  /** Enforce an action on an account (tenant, user, or developer_app) */
   enforce(payload: EnforceAccountPayload): Promise<AccountEnforcement>;
   /** Revoke an active enforcement */
   revoke(enforcementId: string, reason: string): Promise<void>;
