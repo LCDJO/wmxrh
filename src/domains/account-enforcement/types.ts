@@ -69,7 +69,10 @@ export interface EnforcementAppeal {
   status: AppealStatus;
   reviewer_id: string | null;
   reviewer_notes: string | null;
+  decision_summary: string | null;
   reviewed_at: string | null;
+  escalated_to: string | null;
+  escalation_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -101,6 +104,9 @@ export interface ReviewAppealPayload {
   appeal_id: string;
   status: 'approved' | 'denied' | 'escalated';
   reviewer_notes?: string;
+  decision_summary?: string;
+  escalated_to?: string;
+  escalation_reason?: string;
 }
 
 /** Resolved account status for any entity */

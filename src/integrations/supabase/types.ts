@@ -5897,7 +5897,10 @@ export type Database = {
           appeal_reason: string
           appealed_by: string | null
           created_at: string
+          decision_summary: string | null
           enforcement_id: string
+          escalated_to: string | null
+          escalation_reason: string | null
           id: string
           reviewed_at: string | null
           reviewer_id: string | null
@@ -5911,7 +5914,10 @@ export type Database = {
           appeal_reason: string
           appealed_by?: string | null
           created_at?: string
+          decision_summary?: string | null
           enforcement_id: string
+          escalated_to?: string | null
+          escalation_reason?: string | null
           id?: string
           reviewed_at?: string | null
           reviewer_id?: string | null
@@ -5925,7 +5931,10 @@ export type Database = {
           appeal_reason?: string
           appealed_by?: string | null
           created_at?: string
+          decision_summary?: string | null
           enforcement_id?: string
+          escalated_to?: string | null
+          escalation_reason?: string | null
           id?: string
           reviewed_at?: string | null
           reviewer_id?: string | null

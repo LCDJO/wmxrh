@@ -192,13 +192,36 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
   async appeal(payload: AppealPayload): Promise<EnforcementAppeal> {
     const { data: userData } = await supabase.auth.getUser();
 
+    // Fetch enforcement + validate appeal is allowed
     const { data: enforcement } = await supabase
       .from('account_enforcements')
-      .select('tenant_id')
+      .select('tenant_id, status')
       .eq('id', payload.enforcement_id)
       .single();
 
     if (!enforcement) throw new Error('Enforcement not found');
+    if ((enforcement as any).status === 'revoked') throw new Error('Enforcement already revoked — appeal not needed');
+
+    // Check ban_registry to see if appeal_allowed
+    const { data: banEntry } = await supabase
+      .from('ban_registry')
+      .select('appeal_allowed')
+      .eq('enforcement_id', payload.enforcement_id)
+      .maybeSingle();
+
+    if (banEntry && (banEntry as any).appeal_allowed === false) {
+      throw new Error('Recurso não permitido para este enforcement. Contate o suporte.');
+    }
+
+    // Prevent duplicate pending appeals
+    const { data: existing } = await supabase
+      .from('enforcement_appeals')
+      .select('id')
+      .eq('enforcement_id', payload.enforcement_id)
+      .in('status', ['pending', 'under_review'])
+      .maybeSingle();
+
+    if (existing) throw new Error('Já existe um recurso em andamento para este enforcement.');
 
     const { data, error } = await supabase
       .from('enforcement_appeals')
@@ -215,38 +238,86 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
 
     if (error) throw error;
 
+    // Mark enforcement as appealed
     await supabase
       .from('account_enforcements')
       .update({ status: 'appealed' } as any)
       .eq('id', payload.enforcement_id);
+
+    // Audit
+    await supabase.from('enforcement_audit_log').insert({
+      enforcement_id: payload.enforcement_id,
+      event_type: 'appeal_submitted',
+      actor_id: userData?.user?.id,
+      tenant_id: (enforcement as any).tenant_id,
+      details: { appeal_reason: payload.appeal_reason },
+    } as any);
 
     return data as unknown as EnforcementAppeal;
   }
 
   async reviewAppeal(payload: ReviewAppealPayload): Promise<void> {
     const { data: userData } = await supabase.auth.getUser();
+    const reviewerId = userData?.user?.id;
 
+    // Update appeal with decision
     await supabase
       .from('enforcement_appeals')
       .update({
         status: payload.status,
-        reviewer_id: userData?.user?.id,
+        reviewer_id: reviewerId,
         reviewer_notes: payload.reviewer_notes ?? null,
+        decision_summary: payload.decision_summary ?? null,
         reviewed_at: new Date().toISOString(),
+        escalated_to: payload.status === 'escalated' ? (payload.escalated_to ?? null) : null,
+        escalation_reason: payload.status === 'escalated' ? (payload.escalation_reason ?? null) : null,
         updated_at: new Date().toISOString(),
       } as any)
       .eq('id', payload.appeal_id);
 
-    if (payload.status === 'approved') {
-      const { data: appeal } = await supabase
-        .from('enforcement_appeals')
-        .select('enforcement_id')
-        .eq('id', payload.appeal_id)
-        .single();
+    // Fetch appeal to get enforcement_id and tenant_id
+    const { data: appeal } = await supabase
+      .from('enforcement_appeals')
+      .select('enforcement_id, tenant_id')
+      .eq('id', payload.appeal_id)
+      .single();
 
-      if (appeal) {
-        await this.revoke((appeal as any).enforcement_id, `Appeal approved: ${payload.reviewer_notes ?? ''}`);
-      }
+    if (!appeal) return;
+
+    const enforcementId = (appeal as any).enforcement_id;
+    const tenantId = (appeal as any).tenant_id;
+
+    // Audit the decision
+    await supabase.from('enforcement_audit_log').insert({
+      enforcement_id: enforcementId,
+      event_type: `appeal_${payload.status}`,
+      actor_id: reviewerId,
+      tenant_id: tenantId,
+      details: {
+        appeal_id: payload.appeal_id,
+        decision: payload.status,
+        reviewer_notes: payload.reviewer_notes,
+        decision_summary: payload.decision_summary,
+      },
+    } as any);
+
+    // If approved → revoke enforcement and restore account
+    if (payload.status === 'approved') {
+      await this.revoke(enforcementId, `Appeal approved: ${payload.decision_summary ?? payload.reviewer_notes ?? ''}`);
+
+      // Restore tenant account_status to active
+      await supabase
+        .from('tenants')
+        .update({ account_status: 'active' } as any)
+        .eq('id', tenantId);
+    }
+
+    // If denied → re-activate enforcement
+    if (payload.status === 'denied') {
+      await supabase
+        .from('account_enforcements')
+        .update({ status: 'active' } as any)
+        .eq('id', enforcementId);
     }
   }
 
