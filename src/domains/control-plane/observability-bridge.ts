@@ -42,6 +42,12 @@ export class ObservabilityBridge {
     metrics.gauge('landing_revenue_generated', 0);
     metrics.gauge('landing_revenue_generated_total', 0);
     metrics.gauge('fab_engagement_score', 0);
+    // Subscription health baselines
+    metrics.gauge('active_subscriptions_total', 0);
+    metrics.gauge('past_due_total', 0);
+    metrics.gauge('downgrades_scheduled_total', 0);
+    metrics.increment('plan_limit_exceeded_total', {}, 0);
+    metrics.gauge('fraud_flags_total', 0);
   }
 
   /** Update gauges from current state */

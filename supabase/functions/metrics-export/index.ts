@@ -39,7 +39,7 @@ serve(async (req) => {
       const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const sb = createClient(supabaseUrl, serviceKey);
 
-      // Parallel queries — billing + support
+      // Parallel queries — billing + support + subscription health
       const [
         usageRes, redemptionsRes, discountRes, overageRes,
         activeSessions, recentMessages, closedSessions,
@@ -49,6 +49,12 @@ serve(async (req) => {
         // Integration Automation Engine
         workflowExecutionsRes,
         activeWorkflowsRes,
+        // ── Subscription Health metrics ──
+        activeSubsRes,
+        pastDueSubsRes,
+        downgradeScheduledRes,
+        planLimitExceededRes,
+        fraudFlagsRes,
       ] = await Promise.all([
         sb.from("platform_financial_entries").select("entry_type, description, amount"),
         sb.from("coupon_redemptions").select("coupon_id, discount_applied_brl, coupons(code)"),
@@ -69,6 +75,12 @@ serve(async (req) => {
         // ── Integration Automation Engine metrics ──
         sb.from("integration_workflow_executions").select("tenant_id, status, duration_ms"),
         sb.from("integration_workflows").select("tenant_id, status").eq("status", "active"),
+        // ── Subscription Health ──
+        sb.from("tenant_plans").select("id", { count: "exact", head: true }).eq("status", "active"),
+        sb.from("tenant_plans").select("id", { count: "exact", head: true }).eq("status", "past_due"),
+        sb.from("tenant_plans").select("id", { count: "exact", head: true }).eq("downgrade_scheduled", true),
+        sb.from("audit_logs").select("id", { count: "exact", head: true }).eq("action", "plan_limit_exceeded"),
+        sb.from("tenant_plans").select("id", { count: "exact", head: true }).eq("review_required", true),
       ]);
 
       const lines: string[] = [];
@@ -239,7 +251,34 @@ serve(async (req) => {
         }
       }
 
-      return new Response(lines.join("\n") + "\n", {
+      // ══════════════════════════════════════════════════════════
+      // Subscription Health Metrics (Grafana)
+      // ══════════════════════════════════════════════════════════
+
+      // ── active_subscriptions_total ─────────────────────────────
+      lines.push("# HELP active_subscriptions_total Total active subscriptions");
+      lines.push("# TYPE active_subscriptions_total gauge");
+      lines.push(`active_subscriptions_total ${activeSubsRes.count ?? 0} ${ts}`);
+
+      // ── past_due_total ─────────────────────────────────────────
+      lines.push("# HELP past_due_total Total subscriptions in past_due status");
+      lines.push("# TYPE past_due_total gauge");
+      lines.push(`past_due_total ${pastDueSubsRes.count ?? 0} ${ts}`);
+
+      // ── downgrades_scheduled_total ─────────────────────────────
+      lines.push("# HELP downgrades_scheduled_total Total subscriptions with scheduled downgrade");
+      lines.push("# TYPE downgrades_scheduled_total gauge");
+      lines.push(`downgrades_scheduled_total ${downgradeScheduledRes.count ?? 0} ${ts}`);
+
+      // ── plan_limit_exceeded_total ──────────────────────────────
+      lines.push("# HELP plan_limit_exceeded_total Total plan limit exceeded events");
+      lines.push("# TYPE plan_limit_exceeded_total counter");
+      lines.push(`plan_limit_exceeded_total ${planLimitExceededRes.count ?? 0} ${ts}`);
+
+      // ── fraud_flags_total ──────────────────────────────────────
+      lines.push("# HELP fraud_flags_total Total tenants flagged for fraud review");
+      lines.push("# TYPE fraud_flags_total gauge");
+      lines.push(`fraud_flags_total ${fraudFlagsRes.count ?? 0} ${ts}`);
         headers: {
           ...corsHeaders,
           "Content-Type": "text/plain; version=0.0.4; charset=utf-8",
