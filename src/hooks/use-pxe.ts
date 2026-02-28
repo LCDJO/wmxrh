@@ -73,7 +73,7 @@ export function usePXE() {
             enabled_features: row.feature_flags ?? [],
             max_users: null,
             max_companies: null,
-            max_employees: null,
+            max_employees: (row as any).max_employees ?? null,
             storage_quota_mb: null,
             pricing: {
               monthly_brl: row.billing_cycle === 'monthly' ? row.price : row.price / 12,
