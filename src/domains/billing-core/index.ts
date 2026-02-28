@@ -36,6 +36,11 @@ export {
   createBillingAdjustmentService,
 } from './coupon-discount-engine';
 export { createUsageEventBridge, USAGE_EVENTS } from './usage-event-bridge';
+export { createCouponPolicyResolver } from './coupon-policy-resolver';
+export type {
+  CouponPolicyResult,
+  CouponPolicyResolverAPI,
+} from './coupon-policy-resolver';
 export type {
   UsageEventBridgeAPI,
   UserCreatedPayload,
