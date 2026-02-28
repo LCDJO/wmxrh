@@ -40,8 +40,24 @@ interface SaasPlan {
   feature_flags: string[];
   is_active: boolean;
   max_employees: number | null;
+  max_active_users: number | null;
+  max_api_calls: number | null;
+  max_workflows: number | null;
+  max_storage_mb: number | null;
   annual_price: number | null;
   annual_discount_pct: number | null;
+}
+
+interface TenantSubscription {
+  plan_id: string;
+  status: string;
+  billing_cycle: string;
+  downgrade_scheduled: boolean;
+  scheduled_plan_id: string | null;
+  cycle_end_date: string | null;
+  cycle_start_date: string | null;
+  paid_until: string | null;
+  next_billing_date: string | null;
 }
 
 type BillingInterval = 'monthly' | 'annual';
@@ -82,6 +98,7 @@ export default function TenantPlansPage() {
   const [plans, setPlans] = useState<SaasPlan[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
   const [dbPlanStatus, setDbPlanStatus] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<TenantSubscription | null>(null);
   const [downgradeInfo, setDowngradeInfo] = useState<{ scheduled: boolean; planName?: string; date?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly');
@@ -98,15 +115,16 @@ export default function TenantPlansPage() {
       const [plansRes, subRes] = await Promise.all([
         supabase.from('saas_plans').select('*').eq('is_active', true).order('price', { ascending: true }),
         currentTenant?.id
-          ? supabase.from('tenant_plans').select('plan_id, status, billing_cycle, downgrade_scheduled, scheduled_plan_id, cycle_end_date').eq('tenant_id', currentTenant.id).in('status', ['active', 'trial']).order('created_at', { ascending: false }).limit(1).maybeSingle()
+          ? supabase.from('tenant_plans').select('plan_id, status, billing_cycle, downgrade_scheduled, scheduled_plan_id, cycle_end_date, cycle_start_date, paid_until, next_billing_date').eq('tenant_id', currentTenant.id).in('status', ['active', 'trial']).order('created_at', { ascending: false }).limit(1).maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
       const fetchedPlans = (plansRes.data as SaasPlan[]) ?? [];
       setPlans(fetchedPlans);
       if (subRes.data) {
-        const sub = subRes.data as any;
+        const sub = subRes.data as TenantSubscription;
         setCurrentPlanId(sub.plan_id);
         setDbPlanStatus(sub.status);
+        setSubscription(sub);
         if (sub.billing_cycle === 'yearly') setBillingInterval('annual');
         if (sub.downgrade_scheduled && sub.scheduled_plan_id) {
           const targetPlan = fetchedPlans.find(p => p.id === sub.scheduled_plan_id);
@@ -325,7 +343,8 @@ export default function TenantPlansPage() {
             Seu Plano Atual
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          {/* Row 1: Plan + Status + Billing + Next Billing */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {/* Plan name + badge */}
             <div className="space-y-2">
@@ -344,25 +363,6 @@ export default function TenantPlansPage() {
               </Badge>
             </div>
 
-            {/* Employee usage */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-                <Users className="h-3 w-3" /> Colaboradores
-              </p>
-              <p className="text-lg font-bold text-foreground">
-                {currentCount} <span className="text-sm font-normal text-muted-foreground">/ {maxAllowed ?? '∞'}</span>
-              </p>
-              {maxAllowed && (
-                <Progress value={(currentCount / maxAllowed) * 100} className="h-1.5" />
-              )}
-              {remaining !== null && remaining <= 3 && remaining > 0 && (
-                <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3 text-amber-500" />
-                  Restam {remaining} vagas
-                </p>
-              )}
-            </div>
-
             {/* Billing */}
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
@@ -373,28 +373,114 @@ export default function TenantPlansPage() {
                 {(currentPlan?.price ?? 0) > 0 && <span className="text-sm font-normal text-muted-foreground">/mês</span>}
               </p>
               <p className="text-[10px] text-muted-foreground">
-                Ciclo: {planSnapshot?.billing_cycle === 'annual' ? 'Anual' : 'Mensal'}
+                Ciclo: {subscription?.billing_cycle === 'yearly' ? 'Anual' : 'Mensal'}
               </p>
             </div>
 
-            {/* Modules count */}
+            {/* Paid until */}
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-                <Shield className="h-3 w-3" /> Módulos Ativos
+                <Shield className="h-3 w-3" /> Pago até
               </p>
               <p className="text-lg font-bold text-foreground">
-                {currentPlan?.allowed_modules.length ?? 0}
+                {subscription?.paid_until
+                  ? new Date(subscription.paid_until).toLocaleDateString('pt-BR')
+                  : '—'}
               </p>
-              <p className="text-[10px] text-muted-foreground">
-                de {Math.max(...plans.map(p => p.allowed_modules.length), 0)} disponíveis
-              </p>
+              {subscription?.paid_until && new Date(subscription.paid_until) < new Date() && (
+                <p className="text-[10px] text-destructive flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> Pagamento atrasado
+                </p>
+              )}
             </div>
+
+            {/* Next billing */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                <Calendar className="h-3 w-3" /> Próximo vencimento
+              </p>
+              <p className="text-lg font-bold text-foreground">
+                {subscription?.next_billing_date
+                  ? new Date(subscription.next_billing_date).toLocaleDateString('pt-BR')
+                  : '—'}
+              </p>
+              {subscription?.next_billing_date && (() => {
+                const daysUntil = Math.ceil(
+                  (new Date(subscription.next_billing_date).getTime() - Date.now()) / 86400000,
+                );
+                if (daysUntil > 0 && daysUntil <= 7) {
+                  return (
+                    <p className="text-[10px] text-muted-foreground">
+                      Em {daysUntil} dia{daysUntil > 1 ? 's' : ''}
+                    </p>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+          </div>
+
+          {/* Row 2: Resource Limits */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+              Limites de Uso
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <LimitBar
+                icon={<Users className="h-3.5 w-3.5" />}
+                label="Colaboradores"
+                current={currentCount}
+                max={maxAllowed}
+              />
+              <LimitBar
+                icon={<Zap className="h-3.5 w-3.5" />}
+                label="Chamadas API"
+                current={null}
+                max={currentPlan?.max_api_calls ?? null}
+                placeholder
+              />
+              <LimitBar
+                icon={<Building2 className="h-3.5 w-3.5" />}
+                label="Workflows"
+                current={null}
+                max={currentPlan?.max_workflows ?? null}
+                placeholder
+              />
+              <LimitBar
+                icon={<HardDrive className="h-3.5 w-3.5" />}
+                label="Armazenamento"
+                current={null}
+                max={currentPlan?.max_storage_mb ?? null}
+                suffix="MB"
+                placeholder
+              />
+            </div>
+          </div>
+
+          {/* Upgrade CTA */}
+          {currentPlanIndex >= 0 && currentPlanIndex < plans.length - 1 && (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Sparkles className="h-5 w-5 text-primary shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Upgrade disponível</p>
+                  <p className="text-xs text-muted-foreground">
+                    Desbloqueie mais módulos, limites maiores e funcionalidades avançadas.
+                  </p>
+                </div>
+              </div>
+              <Button size="sm" className="shrink-0 gap-1.5">
+                <ArrowUp className="h-3.5 w-3.5" /> Ver Planos
+              </Button>
+            </div>
+          )}
+
           {/* Scheduled downgrade banner */}
           {downgradeInfo?.scheduled && (
-            <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex items-start gap-3">
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                <p className="text-sm font-medium text-foreground">
                   Downgrade agendado para {downgradeInfo.planName}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -413,7 +499,6 @@ export default function TenantPlansPage() {
               </div>
             </div>
           )}
-          </div>
         </CardContent>
       </Card>
 
@@ -673,6 +758,54 @@ export default function TenantPlansPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+    </div>
+  );
+}
+
+// ── LimitBar sub-component ──
+
+function LimitBar({
+  icon,
+  label,
+  current,
+  max,
+  suffix,
+  placeholder,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  current: number | null;
+  max: number | null;
+  suffix?: string;
+  placeholder?: boolean;
+}) {
+  const isUnlimited = max === null || max === -1;
+  const pct = !isUnlimited && current != null && max > 0 ? Math.min((current / max) * 100, 100) : 0;
+  const isNearLimit = !isUnlimited && current != null && max != null && max > 0 && (current / max) >= 0.85;
+
+  return (
+    <div className="rounded-lg border border-border p-3 space-y-2">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        {icon} {label}
+      </div>
+      <p className="text-sm font-bold text-foreground">
+        {placeholder && current == null ? '—' : (current ?? 0)}
+        {suffix ? ` ${suffix}` : ''}
+        <span className="text-xs font-normal text-muted-foreground ml-1">
+          / {isUnlimited ? '∞' : `${max}${suffix ? ` ${suffix}` : ''}`}
+        </span>
+      </p>
+      {!isUnlimited && (
+        <Progress
+          value={pct}
+          className={cn('h-1.5', isNearLimit && '[&>div]:bg-destructive')}
+        />
+      )}
+      {isNearLimit && (
+        <p className="text-[10px] text-destructive flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3" /> Limite próximo
+        </p>
       )}
     </div>
   );
