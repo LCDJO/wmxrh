@@ -15,7 +15,9 @@ import { ErrorBoundary } from "./components/shared/ErrorBoundary";
 import { pushAppError } from "./lib/app-error-store";
 import { toast } from "sonner";
 import { usePendingPolicies } from "./hooks/use-pending-policies";
+import { useBanCheck } from "./hooks/use-ban-check";
 import { MandatoryPolicyScreen } from "./components/policy/MandatoryPolicyScreen";
+import { BannedAccountScreen } from "./components/enforcement/BannedAccountScreen";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
@@ -55,6 +57,7 @@ function AppRoutes() {
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { isPlatformUser, loading: platformLoading } = useAdaptiveUserType();
   const { pending, loading: policyLoading, hasPending, checked: policyChecked, refresh: refreshPolicies } = usePendingPolicies();
+  const banCheck = useBanCheck();
 
   const routes = useMemo<RouteObject[]>(() => {
     if (authLoading || (user && tenantLoading) || (user && platformLoading)) {
@@ -68,11 +71,19 @@ function AppRoutes() {
       return [...authRoutes, ...publicRoutes];
     }
 
-    // Wait for policy check before rendering tenant routes
-    if (currentTenant && !policyChecked) {
+    // Wait for ban + policy checks before rendering tenant routes
+    if (currentTenant && (!banCheck.checked || !policyChecked)) {
       return [
         ...publicRoutes,
-        { path: '*', element: <FullScreenLoader label="Verificando políticas..." /> },
+        { path: '*', element: <FullScreenLoader label="Verificando status da conta..." /> },
+      ];
+    }
+
+    // ── BAN GATE: block all access for banned/suspended tenants ──
+    if (currentTenant && banCheck.restricted && banCheck.status !== 'active') {
+      return [
+        ...publicRoutes,
+        { path: '*', element: <BannedAccountScreen status={banCheck.status as any} enforcements={banCheck.enforcements} /> },
       ];
     }
 
@@ -112,7 +123,7 @@ function AppRoutes() {
       ...tenantRoutes,
       { path: '*', element: <NotFound /> },
     ];
-  }, [user, authLoading, tenantLoading, platformLoading, currentTenant, isPlatformUser, policyChecked, hasPending, pending, refreshPolicies]);
+  }, [user, authLoading, tenantLoading, platformLoading, currentTenant, isPlatformUser, policyChecked, hasPending, pending, refreshPolicies, banCheck]);
 
   return useRoutes(routes);
 }

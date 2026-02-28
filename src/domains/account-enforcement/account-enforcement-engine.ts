@@ -19,6 +19,10 @@ import type {
   AccountStatusInfo,
   AccountStatus,
 } from './types';
+import { GOVERNANCE_KERNEL_EVENTS } from '@/domains/platform-policy-governance/governance-events';
+import { createGlobalEventKernel } from '@/domains/platform-os/global-event-kernel';
+
+const kernel = createGlobalEventKernel();
 
 export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
 
@@ -160,6 +164,30 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
         .in('status', ['active', 'trial']);
     }
 
+    // ── Emit governance kernel events ──
+    if (payload.action_type === 'ban') {
+      kernel.emit(GOVERNANCE_KERNEL_EVENTS.AccountBanned, 'AccountEnforcementEngine', {
+        tenant_id: payload.tenant_id,
+        entity_id: entityId,
+        entity_type: entityType,
+        ban_type: payload.ban_type ?? 'full',
+        reason_category: payload.reason_category ?? 'abuse',
+        severity_level: payload.severity ?? 'medium',
+        is_permanent: payload.is_permanent ?? false,
+        banned_by: userId ?? null,
+      }, { priority: 'critical' });
+    } else if (payload.action_type === 'suspend') {
+      kernel.emit(GOVERNANCE_KERNEL_EVENTS.AccountSuspended, 'AccountEnforcementEngine', {
+        tenant_id: payload.tenant_id,
+        entity_id: entityId,
+        entity_type: entityType,
+        action_type: 'suspend',
+        reason: payload.reason,
+        severity: payload.severity ?? 'medium',
+        expires_at: payload.expires_at ?? null,
+      }, { priority: 'high' });
+    }
+
     return record;
   }
 
@@ -271,6 +299,15 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
       details: { appeal_reason: payload.appeal_reason },
     } as any);
 
+    kernel.emit(GOVERNANCE_KERNEL_EVENTS.AppealSubmitted, 'AccountEnforcementEngine', {
+      tenant_id: (enforcement as any).tenant_id,
+      enforcement_id: payload.enforcement_id,
+      entity_id: (enforcement as any).tenant_id,
+      entity_type: 'tenant',
+      reason: payload.appeal_reason,
+      submitted_by: userData?.user?.id ?? 'unknown',
+    });
+
     return data as unknown as EnforcementAppeal;
   }
 
@@ -342,6 +379,18 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
         .from('account_enforcements')
         .update({ status: 'active' } as any)
         .eq('id', enforcementId);
+    }
+
+    // Emit AppealResolved event
+    if (payload.status === 'approved' || payload.status === 'denied') {
+      kernel.emit(GOVERNANCE_KERNEL_EVENTS.AppealResolved, 'AccountEnforcementEngine', {
+        tenant_id: tenantId,
+        enforcement_id: enforcementId,
+        entity_id: tenantId,
+        resolution: payload.status === 'approved' ? 'approved' : 'rejected',
+        resolved_by: reviewerId ?? 'system',
+        notes: payload.decision_summary ?? payload.reviewer_notes ?? null,
+      });
     }
   }
 
