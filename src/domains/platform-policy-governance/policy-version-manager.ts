@@ -1,10 +1,19 @@
 /**
  * PolicyVersionManager — Immutable versioning for policy content.
  * New versions never overwrite old ones — append-only model.
+ * Versions are protected by DB triggers: no DELETE, no destructive UPDATE.
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import type { PolicyVersion, PublishVersionPayload } from './types';
+
+export interface VersionDiff {
+  from: PolicyVersion;
+  to: PolicyVersion;
+  changeSummary: string | null;
+  contentChanged: boolean;
+  requiresReacceptance: boolean;
+}
 
 export class PolicyVersionManager {
   async getCurrent(policyId: string): Promise<PolicyVersion | null> {
@@ -25,6 +34,15 @@ export class PolicyVersionManager {
     return data as unknown as PolicyVersion | null;
   }
 
+  async getById(versionId: string): Promise<PolicyVersion | null> {
+    const { data } = await supabase
+      .from('platform_policy_versions')
+      .select('*')
+      .eq('id', versionId)
+      .single();
+    return data as unknown as PolicyVersion | null;
+  }
+
   async getAll(policyId: string): Promise<PolicyVersion[]> {
     const { data } = await supabase
       .from('platform_policy_versions')
@@ -33,6 +51,20 @@ export class PolicyVersionManager {
       .order('version_number', { ascending: false });
 
     return (data ?? []) as unknown as PolicyVersion[];
+  }
+
+  /** Compare two versions side-by-side */
+  async compare(versionIdA: string, versionIdB: string): Promise<VersionDiff> {
+    const [a, b] = await Promise.all([this.getById(versionIdA), this.getById(versionIdB)]);
+    if (!a || !b) throw new Error('One or both versions not found');
+    const [from, to] = a.version_number < b.version_number ? [a, b] : [b, a];
+    return {
+      from,
+      to,
+      changeSummary: to.change_summary,
+      contentChanged: from.content_hash !== to.content_hash,
+      requiresReacceptance: to.requires_reacceptance,
+    };
   }
 
   async publish(payload: PublishVersionPayload): Promise<PolicyVersion> {
