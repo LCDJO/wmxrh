@@ -38,6 +38,7 @@ export {
 export { createUsageEventBridge, USAGE_EVENTS } from './usage-event-bridge';
 export { createCouponPolicyResolver } from './coupon-policy-resolver';
 export { createPlanApplicationOrchestrator } from './plan-application-orchestrator';
+export { createSuspensionEnforcementService } from './suspension-enforcement-service';
 export type {
   CouponPolicyResult,
   CouponPolicyResolverAPI,
@@ -46,6 +47,14 @@ export type {
   PlanApplicationResult,
   PlanApplicationOrchestratorAPI,
 } from './plan-application-orchestrator';
+export type {
+  SuspensionEnforcementAPI,
+  SuspensionState,
+  SuspensionPolicy,
+  SuspensionReason,
+  ModuleAccessMode,
+  SuspensionEligibility,
+} from './suspension-enforcement-service';
 export type {
   UsageEventBridgeAPI,
   UserCreatedPayload,
@@ -74,6 +83,8 @@ export type {
   CouponRedeemedEvent,
   InvoiceDiscountAppliedEvent,
   UsageOverageCalculatedEvent,
+  TenantSuspendedEvent,
+  TenantReactivatedEvent,
 } from './billing-events';
 
 // ── Types ────────────────────────────────────────────────────

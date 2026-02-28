@@ -24,7 +24,9 @@ export type BillingEventType =
   | 'CouponCreated'
   | 'CouponRedeemed'
   | 'InvoiceDiscountApplied'
-  | 'UsageOverageCalculated';
+  | 'UsageOverageCalculated'
+  | 'TenantSuspended'
+  | 'TenantReactivated';
 
 export interface BillingEventBase {
   type: BillingEventType;
@@ -101,6 +103,18 @@ export interface UsageOverageCalculatedEvent extends BillingEventBase {
   overage_amount_brl: number;
 }
 
+export interface TenantSuspendedEvent extends BillingEventBase {
+  type: 'TenantSuspended';
+  reason: string;
+  read_only_modules: string[];
+  forced_cancellation_at: number | null;
+}
+
+export interface TenantReactivatedEvent extends BillingEventBase {
+  type: 'TenantReactivated';
+  was_suspended_days: number;
+}
+
 export type BillingDomainEvent =
   | TenantPlanAssignedEvent
   | TenantPlanUpgradedEvent
@@ -110,7 +124,9 @@ export type BillingDomainEvent =
   | CouponCreatedEvent
   | CouponRedeemedEvent
   | InvoiceDiscountAppliedEvent
-  | UsageOverageCalculatedEvent;
+  | UsageOverageCalculatedEvent
+  | TenantSuspendedEvent
+  | TenantReactivatedEvent;
 
 // ── Event Bus ───────────────────────────────────────────────────
 
@@ -183,5 +199,7 @@ export const __DOMAIN_CATALOG = {
     { name: 'CouponRedeemed', description: 'Cupom resgatado por um cliente' },
     { name: 'InvoiceDiscountApplied', description: 'Desconto aplicado em fatura' },
     { name: 'UsageOverageCalculated', description: 'Excedente de uso calculado' },
+    { name: 'TenantSuspended', description: 'Tenant suspenso por inadimplência' },
+    { name: 'TenantReactivated', description: 'Tenant reativado após pagamento' },
   ],
 };
