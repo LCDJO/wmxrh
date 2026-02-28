@@ -79,9 +79,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listener reativo: fonte ÚNICA de verdade para o estado de auth.
     // Captura login, logout, token_refreshed, etc.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       logger.info('Auth state changed', { event, userId: session?.user?.id });
       initialized = true;
+
+      // ── LOGIN BLOCKER on session restore / token refresh ──
+      if (session?.user?.id && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+        const { data: pu } = await supabase
+          .from('platform_users')
+          .select('account_status')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        const status = (pu as any)?.account_status;
+        if (status === 'banned' || status === 'suspended') {
+          logger.warn('Sessão revogada — conta bloqueada', { userId: session.user.id, status });
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -147,18 +167,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * Autentica usuário existente com email e senha.
    * Em caso de sucesso, `onAuthStateChange` atualiza automaticamente o estado.
    */
+  /**
+   * Verifica se o tenant/user está banido ou suspenso.
+   * Retorna o status bloqueado ou null se livre.
+   */
+  async function checkAccountBlocked(userId: string): Promise<string | null> {
+    // Check platform_users status
+    const { data: pu } = await supabase
+      .from('platform_users')
+      .select('account_status')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const puStatus = (pu as any)?.account_status;
+    if (puStatus === 'banned' || puStatus === 'suspended') return puStatus;
+
+    // Check tenant membership → tenant account_status
+    const { data: membership } = await supabase
+      .from('tenant_memberships')
+      .select('tenant_id')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle();
+
+    if (membership?.tenant_id) {
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('account_status')
+        .eq('id', membership.tenant_id)
+        .maybeSingle();
+
+      const tStatus = (tenant as any)?.account_status;
+      if (tStatus === 'banned' || tStatus === 'suspended') return tStatus;
+    }
+
+    return null;
+  }
+
   const signIn = async (email: string, password: string) => {
     logger.info('Tentativa de login', { email });
     
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (error) {
       logger.error('Falha no login', { error: error.message, email });
-    } else {
-      logger.info('Login realizado com sucesso', { email });
+      return { error: error as Error | null };
     }
-    
-    return { error: error as Error | null };
+
+    // ── LOGIN BLOCKER: verificar account_status antes de emitir sessão ──
+    const userId = data.user?.id;
+    if (userId) {
+      const blockedStatus = await checkAccountBlocked(userId);
+      if (blockedStatus) {
+        logger.warn('Login bloqueado — conta com status restritivo', { email, status: blockedStatus });
+        // Revogar sessão imediatamente
+        await supabase.auth.signOut();
+        const msg = blockedStatus === 'banned'
+          ? 'Sua conta foi banida. Entre em contato com o suporte.'
+          : 'Sua conta está suspensa. Entre em contato com o suporte.';
+        return { error: new Error(msg) };
+      }
+    }
+
+    logger.info('Login realizado com sucesso', { email });
+    return { error: null };
   };
 
   /**
