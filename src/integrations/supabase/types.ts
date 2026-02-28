@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_enforcements: {
+        Row: {
+          action_type: string
+          created_at: string
+          enforced_at: string
+          enforced_by: string | null
+          expires_at: string | null
+          id: string
+          metadata: Json | null
+          notes: string | null
+          reason: string
+          reason_category: string
+          related_fraud_log_id: string | null
+          related_incident_id: string | null
+          risk_score_at_enforcement: number | null
+          severity: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          enforced_at?: string
+          enforced_by?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          reason: string
+          reason_category?: string
+          related_fraud_log_id?: string | null
+          related_incident_id?: string | null
+          risk_score_at_enforcement?: number | null
+          severity?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          enforced_at?: string
+          enforced_by?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          reason?: string
+          reason_category?: string
+          related_fraud_log_id?: string | null
+          related_incident_id?: string | null
+          risk_score_at_enforcement?: number | null
+          severity?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_enforcements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agreement_assignment_rules: {
         Row: {
           agente_risco: string | null
@@ -1011,6 +1079,66 @@ export type Database = {
           },
           {
             foreignKeyName: "availability_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ban_registry: {
+        Row: {
+          ban_type: string
+          banned_at: string
+          banned_by: string | null
+          created_at: string
+          enforcement_id: string | null
+          id: string
+          is_permanent: boolean
+          scope_detail: string | null
+          tenant_id: string
+          unban_reason: string | null
+          unbanned_at: string | null
+          unbanned_by: string | null
+        }
+        Insert: {
+          ban_type?: string
+          banned_at?: string
+          banned_by?: string | null
+          created_at?: string
+          enforcement_id?: string | null
+          id?: string
+          is_permanent?: boolean
+          scope_detail?: string | null
+          tenant_id: string
+          unban_reason?: string | null
+          unbanned_at?: string | null
+          unbanned_by?: string | null
+        }
+        Update: {
+          ban_type?: string
+          banned_at?: string
+          banned_by?: string | null
+          created_at?: string
+          enforcement_id?: string | null
+          id?: string
+          is_permanent?: boolean
+          scope_detail?: string | null
+          tenant_id?: string
+          unban_reason?: string | null
+          unbanned_at?: string | null
+          unbanned_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ban_registry_enforcement_id_fkey"
+            columns: ["enforcement_id"]
+            isOneToOne: false
+            referencedRelation: "account_enforcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ban_registry_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -5727,6 +5855,111 @@ export type Database = {
           },
           {
             foreignKeyName: "employees_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enforcement_appeals: {
+        Row: {
+          appeal_reason: string
+          appealed_by: string | null
+          created_at: string
+          enforcement_id: string
+          id: string
+          reviewed_at: string | null
+          reviewer_id: string | null
+          reviewer_notes: string | null
+          status: string
+          supporting_evidence: Json | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          appeal_reason: string
+          appealed_by?: string | null
+          created_at?: string
+          enforcement_id: string
+          id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          reviewer_notes?: string | null
+          status?: string
+          supporting_evidence?: Json | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          appeal_reason?: string
+          appealed_by?: string | null
+          created_at?: string
+          enforcement_id?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          reviewer_notes?: string | null
+          status?: string
+          supporting_evidence?: Json | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enforcement_appeals_enforcement_id_fkey"
+            columns: ["enforcement_id"]
+            isOneToOne: false
+            referencedRelation: "account_enforcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcement_appeals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enforcement_audit_log: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          enforcement_id: string | null
+          event_type: string
+          id: string
+          tenant_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          enforcement_id?: string | null
+          event_type: string
+          id?: string
+          tenant_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          enforcement_id?: string | null
+          event_type?: string
+          id?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enforcement_audit_log_enforcement_id_fkey"
+            columns: ["enforcement_id"]
+            isOneToOne: false
+            referencedRelation: "account_enforcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcement_audit_log_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -14721,6 +14954,174 @@ export type Database = {
           resource?: string
         }
         Relationships: []
+      }
+      platform_policies: {
+        Row: {
+          created_at: string
+          current_version_id: string | null
+          description: string | null
+          grace_period_days: number
+          id: string
+          is_active: boolean
+          is_mandatory: boolean
+          name: string
+          policy_type: string
+          requires_re_acceptance_on_update: boolean
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_version_id?: string | null
+          description?: string | null
+          grace_period_days?: number
+          id?: string
+          is_active?: boolean
+          is_mandatory?: boolean
+          name: string
+          policy_type?: string
+          requires_re_acceptance_on_update?: boolean
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_version_id?: string | null
+          description?: string | null
+          grace_period_days?: number
+          id?: string
+          is_active?: boolean
+          is_mandatory?: boolean
+          name?: string
+          policy_type?: string
+          requires_re_acceptance_on_update?: boolean
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_policy_acceptances: {
+        Row: {
+          acceptance_method: string
+          accepted_at: string
+          accepted_by: string
+          id: string
+          ip_address: string | null
+          is_current: boolean
+          metadata: Json | null
+          policy_id: string
+          policy_version_id: string
+          revoked_at: string | null
+          tenant_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          acceptance_method?: string
+          accepted_at?: string
+          accepted_by: string
+          id?: string
+          ip_address?: string | null
+          is_current?: boolean
+          metadata?: Json | null
+          policy_id: string
+          policy_version_id: string
+          revoked_at?: string | null
+          tenant_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          acceptance_method?: string
+          accepted_at?: string
+          accepted_by?: string
+          id?: string
+          ip_address?: string | null
+          is_current?: boolean
+          metadata?: Json | null
+          policy_id?: string
+          policy_version_id?: string
+          revoked_at?: string | null
+          tenant_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_policy_acceptances_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "platform_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_policy_acceptances_policy_version_id_fkey"
+            columns: ["policy_version_id"]
+            isOneToOne: false
+            referencedRelation: "platform_policy_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_policy_acceptances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_policy_versions: {
+        Row: {
+          change_summary: string | null
+          content_hash: string | null
+          content_html: string
+          content_plain: string | null
+          created_at: string
+          effective_from: string | null
+          id: string
+          is_current: boolean
+          policy_id: string
+          published_at: string | null
+          published_by: string | null
+          title: string
+          version_number: number
+        }
+        Insert: {
+          change_summary?: string | null
+          content_hash?: string | null
+          content_html: string
+          content_plain?: string | null
+          created_at?: string
+          effective_from?: string | null
+          id?: string
+          is_current?: boolean
+          policy_id: string
+          published_at?: string | null
+          published_by?: string | null
+          title: string
+          version_number?: number
+        }
+        Update: {
+          change_summary?: string | null
+          content_hash?: string | null
+          content_html?: string
+          content_plain?: string | null
+          created_at?: string
+          effective_from?: string | null
+          id?: string
+          is_current?: boolean
+          policy_id?: string
+          published_at?: string | null
+          published_by?: string | null
+          title?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_policy_versions_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "platform_policies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_role_permissions: {
         Row: {
