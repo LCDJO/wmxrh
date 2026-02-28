@@ -116,8 +116,37 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
       details: { reason: payload.reason, severity: payload.severity, entity_type: entityType, entity_id: entityId },
     } as any);
 
-    // Suspend billing if tenant ban/suspend
-    if (entityType === 'tenant' && ['ban', 'suspend'].includes(payload.action_type)) {
+    // ── Cascading effects based on action_type ──
+    if (payload.action_type === 'ban') {
+      // 1) Suspend billing
+      await supabase
+        .from('tenant_plans')
+        .update({ status: 'suspended', updated_at: new Date().toISOString() } as any)
+        .eq('tenant_id', payload.tenant_id)
+        .in('status', ['active', 'trial']);
+
+      // 2) Revoke API clients
+      await supabase
+        .from('api_clients')
+        .update({ status: 'revoked', account_status: 'banned', updated_at: new Date().toISOString() } as any)
+        .eq('tenant_id', payload.tenant_id)
+        .eq('status', 'active');
+
+      // 3) Suspend automation workflows
+      await supabase
+        .from('automation_rules')
+        .update({ is_active: false, updated_at: new Date().toISOString() } as any)
+        .eq('tenant_id', payload.tenant_id)
+        .eq('is_active', true);
+    } else if (payload.action_type === 'restrict') {
+      // Set restricted status (new integrations blocked at app layer)
+      if (entityType === 'tenant') {
+        await supabase
+          .from('tenants')
+          .update({ account_status: 'restricted' } as any)
+          .eq('id', payload.tenant_id);
+      }
+    } else if (payload.action_type === 'suspend') {
       await supabase
         .from('tenant_plans')
         .update({ status: 'suspended', updated_at: new Date().toISOString() } as any)
