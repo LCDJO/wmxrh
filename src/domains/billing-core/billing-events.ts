@@ -26,7 +26,15 @@ export type BillingEventType =
   | 'InvoiceDiscountApplied'
   | 'UsageOverageCalculated'
   | 'TenantSuspended'
-  | 'TenantReactivated';
+  | 'TenantReactivated'
+  | 'SubscriptionCreated'
+  | 'SubscriptionRenewed'
+  | 'DowngradeScheduled'
+  | 'DowngradeApplied'
+  | 'PlanLimitExceeded'
+  | 'FraudDetected'
+  | 'PaymentConfirmed'
+  | 'SubscriptionSuspended';
 
 export interface BillingEventBase {
   type: BillingEventType;
@@ -115,6 +123,61 @@ export interface TenantReactivatedEvent extends BillingEventBase {
   was_suspended_days: number;
 }
 
+export interface SubscriptionCreatedEvent extends BillingEventBase {
+  type: 'SubscriptionCreated';
+  plan_id: string;
+  billing_cycle: string;
+  trial_days: number;
+}
+
+export interface SubscriptionRenewedEvent extends BillingEventBase {
+  type: 'SubscriptionRenewed';
+  plan_id: string;
+  invoice_id: string;
+  amount: number;
+  next_billing_date: string;
+}
+
+export interface DowngradeScheduledEvent extends BillingEventBase {
+  type: 'DowngradeScheduled';
+  from_plan_id: string;
+  to_plan_id: string;
+  effective_date: string;
+}
+
+export interface DowngradeAppliedEvent extends BillingEventBase {
+  type: 'DowngradeApplied';
+  from_plan_id: string;
+  to_plan_id: string;
+}
+
+export interface PlanLimitExceededEvent extends BillingEventBase {
+  type: 'PlanLimitExceeded';
+  limit_type: string;
+  current_value: number;
+  max_value: number;
+}
+
+export interface FraudDetectedEvent extends BillingEventBase {
+  type: 'FraudDetected';
+  signal_type: string;
+  severity: 'medium' | 'high' | 'critical';
+  description: string;
+}
+
+export interface PaymentConfirmedEvent extends BillingEventBase {
+  type: 'PaymentConfirmed';
+  invoice_id: string;
+  amount: number;
+  payment_method: string;
+}
+
+export interface SubscriptionSuspendedEvent extends BillingEventBase {
+  type: 'SubscriptionSuspended';
+  reason: string;
+  grace_period_ended: boolean;
+}
+
 export type BillingDomainEvent =
   | TenantPlanAssignedEvent
   | TenantPlanUpgradedEvent
@@ -126,7 +189,15 @@ export type BillingDomainEvent =
   | InvoiceDiscountAppliedEvent
   | UsageOverageCalculatedEvent
   | TenantSuspendedEvent
-  | TenantReactivatedEvent;
+  | TenantReactivatedEvent
+  | SubscriptionCreatedEvent
+  | SubscriptionRenewedEvent
+  | DowngradeScheduledEvent
+  | DowngradeAppliedEvent
+  | PlanLimitExceededEvent
+  | FraudDetectedEvent
+  | PaymentConfirmedEvent
+  | SubscriptionSuspendedEvent;
 
 // ── Event Bus ───────────────────────────────────────────────────
 
@@ -201,5 +272,13 @@ export const __DOMAIN_CATALOG = {
     { name: 'UsageOverageCalculated', description: 'Excedente de uso calculado' },
     { name: 'TenantSuspended', description: 'Tenant suspenso por inadimplência' },
     { name: 'TenantReactivated', description: 'Tenant reativado após pagamento' },
+    { name: 'SubscriptionCreated', description: 'Nova assinatura criada' },
+    { name: 'SubscriptionRenewed', description: 'Assinatura renovada com sucesso' },
+    { name: 'DowngradeScheduled', description: 'Downgrade agendado para fim do ciclo' },
+    { name: 'DowngradeApplied', description: 'Downgrade aplicado ao tenant' },
+    { name: 'PlanLimitExceeded', description: 'Limite do plano excedido' },
+    { name: 'FraudDetected', description: 'Fraude detectada no tenant' },
+    { name: 'PaymentConfirmed', description: 'Pagamento confirmado' },
+    { name: 'SubscriptionSuspended', description: 'Assinatura suspensa' },
   ],
 };
