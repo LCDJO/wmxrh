@@ -280,13 +280,14 @@ export default function FleetDashboard() {
                             {/* Actions */}
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="h-7 px-2 gap-1 text-[10px] font-medium"
                                 onClick={(e) => { e.stopPropagation(); setHistoryDeviceId(v.id); }}
                                 title="Ver histórico"
                               >
-                                <History className="h-3.5 w-3.5" />
+                                <History className="h-3 w-3" />
+                                Replay
                               </Button>
                               <Badge
                                 variant="outline"
