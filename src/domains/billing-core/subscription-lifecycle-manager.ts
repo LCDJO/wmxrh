@@ -69,8 +69,26 @@ export function createSubscriptionLifecycleManager(
     return { discountBrl: 0, notes: '' };
   }
 
+  /** Guard: check if tenant is banned/suspended — block billing operations */
+  async function assertNotBanned(tenantId: string): Promise<void> {
+    const { data } = await supabase
+      .from('tenants')
+      .select('account_status')
+      .eq('id', tenantId)
+      .maybeSingle();
+
+    const status = (data as any)?.account_status;
+    if (status === 'banned') {
+      throw new Error('[Billing] Operação bloqueada: conta banida. Histórico financeiro preservado.');
+    }
+    if (status === 'suspended') {
+      throw new Error('[Billing] Operação bloqueada: conta suspensa.');
+    }
+  }
+
   return {
     async activate(tenantId, planId, cycle, couponCode?) {
+      await assertNotBanned(tenantId);
       if (paymentPolicy) {
         paymentPolicy.getAllowedMethods(tenantId);
       }
@@ -125,6 +143,7 @@ export function createSubscriptionLifecycleManager(
     },
 
     async upgrade(tenantId, toPlanId, couponCode?) {
+      await assertNotBanned(tenantId);
       if (paymentPolicy) {
         const validation = paymentPolicy.validatePaymentMethod(tenantId, 'credit_card', toPlanId);
         if (!validation.valid) {
@@ -194,6 +213,7 @@ export function createSubscriptionLifecycleManager(
     },
 
     async downgrade(tenantId, toPlanId) {
+      await assertNotBanned(tenantId);
       // Schedule downgrade for end of current cycle — never apply immediately
       planLifecycle.transition(tenantId, 'downgrade', toPlanId, 'Plan downgrade scheduled for cycle end');
 
@@ -249,6 +269,7 @@ export function createSubscriptionLifecycleManager(
     },
 
     async processRenewal(tenantId, couponCode?): Promise<Invoice> {
+      await assertNotBanned(tenantId);
       const calc = calculator.calculate(tenantId);
 
       // Apply coupon or recurring discount
