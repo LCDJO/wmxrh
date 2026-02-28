@@ -11,6 +11,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { emitBillingEvent } from '@/domains/billing-core/billing-events';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -252,6 +253,18 @@ export function createSubscriptionHealthMonitor(): SubscriptionHealthMonitorAPI 
         const w: Record<string, number> = { medium: 20, high: 35, critical: 50 };
         return s + (w[sig.severity] ?? 10);
       }, 0));
+
+      // Emit FraudDetected events for new signals
+      for (const sig of fraudSignals) {
+        emitBillingEvent({
+          type: 'FraudDetected',
+          timestamp: Date.now(),
+          tenant_id: tenantId,
+          signal_type: sig.type,
+          severity: sig.severity,
+          description: sig.description,
+        });
+      }
 
       // ── Overall health ──
       const healthScore = Math.max(0, 100 - churnScore - Math.floor(fraudScore * 0.5));

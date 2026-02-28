@@ -198,13 +198,50 @@ async function handleStripeWebhook(payload: Record<string, unknown>, _signature:
         invoice_id: invoiceId,
       });
 
-      // Update tenant paid_until
-      const paidUntil = new Date();
-      paidUntil.setMonth(paidUntil.getMonth() + 1);
-      await db
+      // Update tenant paid_until based on billing cycle
+      const { data: tenantPlan } = await db
         .from('tenant_plans')
-        .update({ paid_until: paidUntil.toISOString(), status: 'active' })
-        .eq('tenant_id', tenantId);
+        .select('id, billing_cycle, paid_until')
+        .eq('tenant_id', tenantId)
+        .in('status', ['active', 'past_due', 'trial'])
+        .maybeSingle();
+
+      if (tenantPlan) {
+        const baseDate = tenantPlan.paid_until && new Date(tenantPlan.paid_until) > new Date()
+          ? new Date(tenantPlan.paid_until)
+          : new Date();
+        const paidUntil = new Date(baseDate);
+        if (tenantPlan.billing_cycle === 'yearly') {
+          paidUntil.setFullYear(paidUntil.getFullYear() + 1);
+        } else if (tenantPlan.billing_cycle === 'quarterly') {
+          paidUntil.setMonth(paidUntil.getMonth() + 3);
+        } else {
+          paidUntil.setMonth(paidUntil.getMonth() + 1);
+        }
+
+        await db
+          .from('tenant_plans')
+          .update({
+            paid_until: paidUntil.toISOString(),
+            status: 'active',
+            failed_payment_count: 0,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', tenantPlan.id);
+      }
+
+      // Log PaymentConfirmed event
+      await db.from('audit_logs').insert({
+        tenant_id: tenantId,
+        entity_type: 'payment',
+        entity_id: transactionId ?? data.id,
+        action: 'payment_confirmed',
+        metadata: {
+          invoice_id: invoiceId,
+          amount: amountBrl,
+          payment_method: data.payment_method_types?.[0] ?? 'card',
+        },
+      });
 
       break;
     }

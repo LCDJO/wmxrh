@@ -17,6 +17,7 @@ import type {
   Invoice,
 } from './types';
 import type { BillingCycle } from '@/domains/platform-experience/types';
+import { supabase } from '@/integrations/supabase/client';
 import type { ModulePlanSyncAPI } from './module-plan-sync-service';
 import { createPlanApplicationOrchestrator } from './plan-application-orchestrator';
 import { emitBillingEvent } from './billing-events';
@@ -97,17 +98,17 @@ export function createSubscriptionLifecycleManager(
 
       ledger.recordCharge(tenantId, invoice.id, finalAmount, `Fatura #${invoice.id.slice(0, 8)}`);
 
-      // Record coupon discount in ledger
       if (discountBrl > 0) {
         ledger.recordCouponDiscount(tenantId, invoice.id, discountBrl, couponCode ?? 'recurring');
       }
 
       emitBillingEvent({
-        type: 'TenantPlanAssigned',
+        type: 'SubscriptionCreated',
         timestamp: Date.now(),
         tenant_id: tenantId,
         plan_id: planId,
         billing_cycle: cycle,
+        trial_days: 0,
       });
       emitBillingEvent({
         type: 'InvoiceGenerated',
@@ -118,18 +119,8 @@ export function createSubscriptionLifecycleManager(
         due_date: calc.period_start,
         notes: invoiceNotes,
       });
-      emitBillingEvent({
-        type: 'RevenueUpdated',
-        timestamp: Date.now(),
-        tenant_id: tenantId,
-        invoice_id: invoice.id,
-        amount: finalAmount,
-        entry_type: 'charge',
-      });
 
       modulePlanSync?.syncModulesForPlan(tenantId, planId);
-
-      // Apply all plan side-effects atomically
       await planOrchestrator.applyPlanChange(tenantId, planId);
     },
 
@@ -203,12 +194,49 @@ export function createSubscriptionLifecycleManager(
     },
 
     async downgrade(tenantId, toPlanId) {
-      planLifecycle.transition(tenantId, 'downgrade', toPlanId, 'Plan downgrade (next cycle)');
+      // Schedule downgrade for end of current cycle — never apply immediately
+      planLifecycle.transition(tenantId, 'downgrade', toPlanId, 'Plan downgrade scheduled for cycle end');
+
+      // Persist schedule in DB
+      const { data: currentSub } = await supabase
+        .from('tenant_plans')
+        .select('id, plan_id, cycle_end_date')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (currentSub) {
+        await supabase
+          .from('tenant_plans')
+          .update({
+            downgrade_scheduled: true,
+            scheduled_plan_id: toPlanId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', currentSub.id);
+
+        emitBillingEvent({
+          type: 'DowngradeScheduled',
+          timestamp: Date.now(),
+          tenant_id: tenantId,
+          from_plan_id: currentSub.plan_id,
+          to_plan_id: toPlanId,
+          effective_date: currentSub.cycle_end_date ?? new Date().toISOString(),
+        });
+      }
     },
 
     async suspend(tenantId, reason) {
       planLifecycle.transition(tenantId, 'suspend', 'current', reason);
       modulePlanSync?.deactivateAllModules(tenantId);
+
+      emitBillingEvent({
+        type: 'SubscriptionSuspended',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        reason,
+        grace_period_ended: true,
+      });
     },
 
     async cancel(tenantId, reason) {
@@ -256,12 +284,13 @@ export function createSubscriptionLifecycleManager(
         notes: invoiceNotes,
       });
       emitBillingEvent({
-        type: 'RevenueUpdated',
+        type: 'SubscriptionRenewed',
         timestamp: Date.now(),
         tenant_id: tenantId,
+        plan_id: calc.plan_id,
         invoice_id: invoice.id,
         amount: finalAmount,
-        entry_type: 'charge',
+        next_billing_date: calc.period_end,
       });
 
       return invoice;

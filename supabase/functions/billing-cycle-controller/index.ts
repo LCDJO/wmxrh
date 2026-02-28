@@ -87,16 +87,32 @@ Deno.serve(async (req) => {
             `Invoice for tenant ${sub.tenant_id}: ${invErr.message}`
           );
         } else {
-          // Advance cycle dates on subscription
+          // Advance cycle dates and paid_until on subscription
           await supabase
             .from("tenant_plans")
             .update({
               cycle_start_date: periodStart.toISOString(),
               cycle_end_date: periodEnd.toISOString(),
               next_billing_date: periodEnd.toISOString(),
+              paid_until: periodEnd.toISOString(),
               updated_at: now.toISOString(),
             })
             .eq("id", sub.id);
+
+          // Log SubscriptionRenewed event to audit_logs
+          await supabase.from("audit_logs").insert({
+            tenant_id: sub.tenant_id,
+            entity_type: "subscription",
+            entity_id: sub.id,
+            action: "subscription_renewed",
+            metadata: {
+              plan_id: sub.plan_id,
+              billing_cycle: sub.billing_cycle,
+              period_start: periodStart.toISOString(),
+              period_end: periodEnd.toISOString(),
+              amount,
+            },
+          });
 
           results.invoices_generated++;
         }
@@ -179,22 +195,57 @@ Deno.serve(async (req) => {
     // ─── STEP 4: Apply scheduled downgrades at cycle end ───
     const { data: downgradeSubs } = await supabase
       .from("tenant_plans")
-      .select("id, tenant_id, scheduled_plan_id, cycle_end_date")
+      .select("id, tenant_id, plan_id, scheduled_plan_id, cycle_end_date")
       .eq("downgrade_scheduled", true)
       .not("scheduled_plan_id", "is", null)
       .lte("cycle_end_date", now.toISOString());
 
     if (downgradeSubs) {
       for (const sub of downgradeSubs) {
-        await supabase
+        const fromPlanId = sub.plan_id;
+        const toPlanId = sub.scheduled_plan_id;
+
+        const { error: dgErr } = await supabase
           .from("tenant_plans")
           .update({
-            plan_id: sub.scheduled_plan_id,
+            plan_id: toPlanId,
             downgrade_scheduled: false,
             scheduled_plan_id: null,
             updated_at: now.toISOString(),
           })
           .eq("id", sub.id);
+
+        if (!dgErr) {
+          // Log DowngradeApplied event to audit_logs
+          await supabase.from("audit_logs").insert({
+            tenant_id: sub.tenant_id,
+            entity_type: "subscription",
+            entity_id: sub.id,
+            action: "downgrade_applied",
+            metadata: {
+              from_plan_id: fromPlanId,
+              to_plan_id: toPlanId,
+            },
+          });
+
+          // Refresh experience profile with new plan's modules
+          const { data: newPlan } = await supabase
+            .from("saas_plans")
+            .select("allowed_modules")
+            .eq("id", toPlanId)
+            .maybeSingle();
+
+          if (newPlan?.allowed_modules) {
+            await supabase
+              .from("experience_profiles")
+              .update({
+                plan_id: toPlanId,
+                visible_navigation: newPlan.allowed_modules,
+                updated_at: now.toISOString(),
+              })
+              .eq("tenant_id", sub.tenant_id);
+          }
+        }
       }
     }
 

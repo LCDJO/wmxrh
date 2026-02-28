@@ -9,6 +9,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
+import { emitBillingEvent } from '@/domains/billing-core/billing-events';
 
 export type PlanLimitKey = 'employees' | 'active_users' | 'api_calls' | 'workflows' | 'storage_mb';
 
@@ -52,11 +53,27 @@ export function usePlanLimit(limitKey: PlanLimitKey) {
     }
 
     const result = data as any;
+    const allowed = result.allowed ?? true;
+    const current = result.current ?? 0;
+    const max = result.max ?? null;
+
+    // Emit PlanLimitExceeded when blocked
+    if (!allowed && tenantId && max !== null) {
+      emitBillingEvent({
+        type: 'PlanLimitExceeded',
+        timestamp: Date.now(),
+        tenant_id: tenantId,
+        limit_type: limitKey,
+        current_value: current,
+        max_value: max,
+      });
+    }
+
     setState({
       loading: false,
-      allowed: result.allowed ?? true,
-      current: result.current ?? 0,
-      max: result.max ?? null,
+      allowed,
+      current,
+      max,
       remaining: result.remaining ?? null,
       planName: result.plan ?? null,
       error: result.error ?? null,
