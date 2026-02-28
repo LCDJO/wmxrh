@@ -18,18 +18,20 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   MapPin, Activity, AlertTriangle, RefreshCw, Loader2,
-  Car, Gauge, Flame, Eye, Layers, BarChart3,
+  Car, Gauge, Flame, Eye, Layers, BarChart3, History,
 } from 'lucide-react';
 import { FleetMap } from './FleetMap';
 import { InfractionsList } from './InfractionsList';
 import { DeviceProfile } from './DeviceProfile';
 import { BtieIntelligenceDashboard } from './BtieIntelligenceDashboard';
+import { DeviceHistoryReplay } from './DeviceHistoryReplay';
 
 export default function FleetDashboard() {
   const { currentTenant } = useTenant();
   const tenantId = currentTenant?.id ?? null;
   const [selectedVehicle, setSelectedVehicle] = useState<TraccarVehicle | null>(null);
   const [heatmapMode, setHeatmapMode] = useState(false);
+  const [historyDeviceId, setHistoryDeviceId] = useState<number | null>(null);
 
   const {
     vehicles, loading, error, isConfigured, syncHealth,
@@ -169,6 +171,9 @@ export default function FleetDashboard() {
                 <TabsTrigger value="vehicles" className="gap-1.5 text-xs flex-1">
                   <Car className="h-3 w-3" /> Veículos
                 </TabsTrigger>
+                <TabsTrigger value="history" className="gap-1.5 text-xs flex-1">
+                  <History className="h-3 w-3" /> Histórico
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="infractions" className="mt-3">
                 <InfractionsList
@@ -200,6 +205,14 @@ export default function FleetDashboard() {
                             <span className="text-sm font-medium">{v.name}</span>
                           </div>
                           <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs gap-1"
+                              onClick={(e) => { e.stopPropagation(); setHistoryDeviceId(v.id); }}
+                            >
+                              <History className="h-3 w-3" /> Histórico
+                            </Button>
                             {v.speed != null && (
                               <span className="text-xs text-muted-foreground">{v.speed} km/h</span>
                             )}
@@ -218,10 +231,28 @@ export default function FleetDashboard() {
                   </CardContent>
                 </Card>
               </TabsContent>
+              <TabsContent value="history" className="mt-3">
+                <DeviceHistoryReplay
+                  tenantId={tenantId}
+                  vehicles={vehicles}
+                  initialDeviceId={historyDeviceId ?? undefined}
+                  onClose={() => setHistoryDeviceId(null)}
+                />
+              </TabsContent>
             </Tabs>
           )}
         </div>
       </div>
+
+      {/* History Replay Modal (when opened from vehicle list) */}
+      {historyDeviceId && (
+        <DeviceHistoryReplay
+          tenantId={tenantId}
+          vehicles={vehicles}
+          initialDeviceId={historyDeviceId}
+          onClose={() => setHistoryDeviceId(null)}
+        />
+      )}
 
       {/* BTIE Intelligence */}
       <BtieIntelligenceDashboard tenantId={tenantId} />
