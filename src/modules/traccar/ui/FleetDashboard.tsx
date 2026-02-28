@@ -204,7 +204,7 @@ export default function FleetDashboard() {
                               <span className="text-xs text-muted-foreground">{v.speed} km/h</span>
                             )}
                             <Badge variant={v.status === 'online' ? 'default' : 'secondary'} className="text-xs">
-                              {v.status}
+                              {v.status === 'online' ? '🟢 Online' : v.status === 'offline' ? '🔴 Offline' : '⚪ Desconhecido'}
                             </Badge>
                           </div>
                         </div>

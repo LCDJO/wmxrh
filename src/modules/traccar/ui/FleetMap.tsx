@@ -101,7 +101,7 @@ export function FleetMap({ vehicles, onVehicleClick, heatmapMode = false, tenant
           infoWindowRef.current.setContent(`
             <div style="font-family: system-ui; font-size: 12px; min-width: 140px;">
               <strong>${v.name}</strong><br/>
-              <span style="color: ${color}">● ${v.computedStatus}</span><br/>
+              <span style="color: ${color}">● ${{moving:'Em Movimento',idle:'Parado (Ligado)',stopped:'Parado',speeding:'Excesso'}[v.computedStatus||'stopped']||v.computedStatus}</span><br/>
               ${v.speed != null ? `Velocidade: ${v.speed} km/h<br/>` : ''}
               ${v.ignition != null ? `Ignição: ${v.ignition ? 'Ligada' : 'Desligada'}<br/>` : ''}
             </div>
