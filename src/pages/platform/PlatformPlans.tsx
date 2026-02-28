@@ -30,7 +30,7 @@ const ALL_MODULES = [
   'employees', 'departments', 'positions', 'companies', 'groups',
   'compensation', 'benefits', 'payroll_simulation', 'health',
   'compliance', 'labor_rules', 'labor_compliance', 'esocial',
-  'agreements', 'workforce_intelligence', 'audit',
+  'agreements', 'workforce_intelligence', 'audit', 'iam', 'fleet',
 ];
 
 const ALL_PAYMENT_METHODS = [

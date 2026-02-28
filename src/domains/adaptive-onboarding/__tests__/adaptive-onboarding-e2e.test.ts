@@ -212,7 +212,7 @@ describe('3. Module Wizard', () => {
   it('enterprise tier includes intelligence and audit', () => {
     const mods = engine.moduleWizard.getAvailableModules('enterprise');
     const keys = mods.map(m => m.module_key);
-    expect(keys).toContain('intelligence');
+    expect(keys).toContain('workforce_intelligence');
     expect(keys).toContain('audit');
   });
 
