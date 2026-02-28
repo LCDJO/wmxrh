@@ -28,6 +28,7 @@ import { useIdentityIntelligence } from '@/domains/security/kernel/identity-inte
 import { useNavigationPins } from '@/hooks/use-navigation-pins';
 import { useOnboardingStatus } from '@/hooks/use-onboarding-status';
 import { useExperienceProfile } from '@/hooks/use-experience-profile';
+import { usePXE } from '@/hooks/use-pxe';
 // NavigationSuggestionsPanel moved to NotificationBell flyout
 import { Progress } from '@/components/ui/progress';
 import { ContextSelector } from './ContextSelector';
@@ -45,6 +46,8 @@ interface NavItem {
   label: string;
   key: NavKey;
   featureFlag?: FeatureKey;
+  /** Module key from saas_plans.allowed_modules — if set, item is hidden when module is not in tenant plan */
+  moduleKey?: string;
   children?: NavItem[];
 }
 
@@ -70,14 +73,14 @@ const navSections: NavSection[] = [
   {
     label: 'Organização',
     items: [
-      { to: '/companies', icon: Building2, label: 'Empresas', key: 'companies' },
-      { to: '/groups', icon: Layers, label: 'Grupos Econômicos', key: 'groups' },
-      { to: '/departments', icon: Briefcase, label: 'Departamentos', key: 'departments' },
+      { to: '/companies', icon: Building2, label: 'Empresas', key: 'companies', moduleKey: 'companies' },
+      { to: '/groups', icon: Layers, label: 'Grupos Econômicos', key: 'groups', moduleKey: 'groups' },
+      { to: '/departments', icon: Briefcase, label: 'Departamentos', key: 'departments', moduleKey: 'departments' },
       {
-        to: '/positions', icon: UserCog, label: 'Cargos', key: 'positions',
+        to: '/positions', icon: UserCog, label: 'Cargos', key: 'positions', moduleKey: 'positions',
         children: [
-          { to: '/positions', icon: UserCog, label: 'Lista de Cargos', key: 'positions' },
-          { to: '/pccs-dashboard', icon: TrendingUp, label: 'PCCS', key: 'positions' },
+          { to: '/positions', icon: UserCog, label: 'Lista de Cargos', key: 'positions', moduleKey: 'positions' },
+          { to: '/pccs-dashboard', icon: TrendingUp, label: 'PCCS', key: 'positions', moduleKey: 'positions' },
         ],
       },
     ],
@@ -87,17 +90,17 @@ const navSections: NavSection[] = [
   {
     label: 'Pessoas',
     items: [
-      { to: '/employees', icon: Users, label: 'Colaboradores', key: 'employees' },
-      { to: '/agreements', icon: ScrollText, label: 'Termos e Acordos', key: 'employees' },
-      { to: '/offboarding', icon: UserMinus, label: 'Desligamento', key: 'employees' },
+      { to: '/employees', icon: Users, label: 'Colaboradores', key: 'employees', moduleKey: 'employees' },
+      { to: '/agreements', icon: ScrollText, label: 'Termos e Acordos', key: 'employees', moduleKey: 'agreements' },
+      { to: '/offboarding', icon: UserMinus, label: 'Desligamento', key: 'employees', moduleKey: 'employees' },
       {
-        to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation',
+        to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation', moduleKey: 'compensation',
         children: [
-          { to: '/compensation', icon: TrendingUp, label: 'Visão Geral', key: 'compensation' },
-          { to: '/payroll-simulation', icon: Calculator, label: 'Simulação Folha', key: 'compensation' },
+          { to: '/compensation', icon: TrendingUp, label: 'Visão Geral', key: 'compensation', moduleKey: 'compensation' },
+          { to: '/payroll-simulation', icon: Calculator, label: 'Simulação Folha', key: 'compensation', moduleKey: 'payroll_simulation' },
         ],
       },
-      { to: '/benefits', icon: Gift, label: 'Benefícios', key: 'benefits' },
+      { to: '/benefits', icon: Gift, label: 'Benefícios', key: 'benefits', moduleKey: 'benefits' },
     ],
   },
 
@@ -106,36 +109,36 @@ const navSections: NavSection[] = [
     label: 'Saúde & Segurança',
     items: [
       {
-        to: '/health', icon: Stethoscope, label: 'Saúde Ocupacional', key: 'health' as NavKey,
+        to: '/health', icon: Stethoscope, label: 'Saúde Ocupacional', key: 'health' as NavKey, moduleKey: 'health',
         children: [
-          { to: '/health', icon: Stethoscope, label: 'Programas (PCMSO)', key: 'health' as NavKey },
-          { to: '/occupational-compliance', icon: GraduationCap, label: 'Riscos Ocupacionais', key: 'health' as NavKey },
+          { to: '/health', icon: Stethoscope, label: 'Programas (PCMSO)', key: 'health' as NavKey, moduleKey: 'health' },
+          { to: '/occupational-compliance', icon: GraduationCap, label: 'Riscos Ocupacionais', key: 'health' as NavKey, moduleKey: 'health' },
         ],
       },
       {
-        to: '/epi-catalog', icon: HardHat, label: 'EPI', key: 'health' as NavKey,
+        to: '/epi-catalog', icon: HardHat, label: 'EPI', key: 'health' as NavKey, moduleKey: 'health',
         children: [
-          { to: '/epi-catalog', icon: HardHat, label: 'Catálogo', key: 'health' as NavKey },
-          { to: '/epi-delivery', icon: ClipboardCheck, label: 'Entregas', key: 'health' as NavKey },
-          { to: '/epi-dashboard', icon: ShieldCheck, label: 'Dashboard', key: 'health' as NavKey },
-          { to: '/epi-audit', icon: ScrollText, label: 'Auditoria', key: 'health' as NavKey },
+          { to: '/epi-catalog', icon: HardHat, label: 'Catálogo', key: 'health' as NavKey, moduleKey: 'health' },
+          { to: '/epi-delivery', icon: ClipboardCheck, label: 'Entregas', key: 'health' as NavKey, moduleKey: 'health' },
+          { to: '/epi-dashboard', icon: ShieldCheck, label: 'Dashboard', key: 'health' as NavKey, moduleKey: 'health' },
+          { to: '/epi-audit', icon: ScrollText, label: 'Auditoria', key: 'health' as NavKey, moduleKey: 'health' },
         ],
       },
       {
-        to: '/nr-compliance', icon: ShieldAlert, label: 'Normas & Automação', key: 'health' as NavKey,
+        to: '/nr-compliance', icon: ShieldAlert, label: 'Normas & Automação', key: 'health' as NavKey, moduleKey: 'health',
         children: [
-          { to: '/nr-compliance', icon: ShieldAlert, label: 'NR Compliance', key: 'health' as NavKey },
-          { to: '/safety-automation', icon: Zap, label: 'Automação SST', key: 'health' as NavKey },
+          { to: '/nr-compliance', icon: ShieldAlert, label: 'NR Compliance', key: 'health' as NavKey, moduleKey: 'health' },
+          { to: '/safety-automation', icon: Zap, label: 'Automação SST', key: 'health' as NavKey, moduleKey: 'health' },
         ],
       },
       {
-        to: '/fleet-dashboard', icon: Car, label: 'Frota & Compliance', key: 'dashboard' as NavKey,
+        to: '/fleet-dashboard', icon: Car, label: 'Frota & Compliance', key: 'fleet' as NavKey, moduleKey: 'fleet',
       },
       {
-        to: '/live-display', icon: Monitor, label: 'Live Display (TV)', key: 'dashboard' as NavKey,
+        to: '/live-display', icon: Monitor, label: 'Live Display (TV)', key: 'live_display' as NavKey, moduleKey: 'fleet',
       },
       {
-        to: '/command-center', icon: Radio, label: 'Command Center', key: 'dashboard' as NavKey,
+        to: '/command-center', icon: Radio, label: 'Command Center', key: 'operations' as NavKey, moduleKey: 'fleet',
       },
     ],
   },
@@ -144,14 +147,14 @@ const navSections: NavSection[] = [
   {
     label: 'Trabalhista & Legal',
     items: [
-      { to: '/labor-dashboard', icon: ClipboardCheck, label: 'Painel Trabalhista', key: 'labor_dashboard' },
-      { to: '/labor-compliance', icon: Scale, label: 'Conformidade', key: 'labor_compliance' },
-      { to: '/labor-rules', icon: Gavel, label: 'Regras & Convenções', key: 'labor_rules' },
-      { to: '/legal-dashboard', icon: Landmark, label: 'Dashboard Legal', key: 'legal_dashboard' },
-      { to: '/regulatory-dashboard', icon: Activity, label: 'Regulatório', key: 'legal_dashboard' },
-      { to: '/legal-intelligence', icon: Scale, label: 'Inteligência Jurídica', key: 'legal_dashboard' },
-      { to: '/compliance', icon: FileText, label: 'Rubricas', key: 'compliance' },
-      { to: '/audit', icon: ScrollText, label: 'Auditoria', key: 'audit' },
+      { to: '/labor-dashboard', icon: ClipboardCheck, label: 'Painel Trabalhista', key: 'labor_dashboard', moduleKey: 'labor_rules' },
+      { to: '/labor-compliance', icon: Scale, label: 'Conformidade', key: 'labor_compliance', moduleKey: 'labor_compliance' },
+      { to: '/labor-rules', icon: Gavel, label: 'Regras & Convenções', key: 'labor_rules', moduleKey: 'labor_rules' },
+      { to: '/legal-dashboard', icon: Landmark, label: 'Dashboard Legal', key: 'legal_dashboard', moduleKey: 'labor_compliance' },
+      { to: '/regulatory-dashboard', icon: Activity, label: 'Regulatório', key: 'legal_dashboard', moduleKey: 'labor_compliance' },
+      { to: '/legal-intelligence', icon: Scale, label: 'Inteligência Jurídica', key: 'legal_dashboard', moduleKey: 'labor_compliance' },
+      { to: '/compliance', icon: FileText, label: 'Rubricas', key: 'compliance', moduleKey: 'compliance' },
+      { to: '/audit', icon: ScrollText, label: 'Auditoria', key: 'audit', moduleKey: 'audit' },
     ],
   },
 
@@ -159,8 +162,8 @@ const navSections: NavSection[] = [
   {
     label: 'Inteligência',
     items: [
-      { to: '/workforce-intelligence', icon: Brain, label: 'Inteligência RH', key: 'dashboard' },
-      { to: '/strategic-intelligence', icon: Sparkles, label: 'IA Estratégica', key: 'dashboard' },
+      { to: '/workforce-intelligence', icon: Brain, label: 'Inteligência RH', key: 'intelligence', moduleKey: 'workforce_intelligence' },
+      { to: '/strategic-intelligence', icon: Sparkles, label: 'IA Estratégica', key: 'intelligence', moduleKey: 'workforce_intelligence' },
     ],
   },
 
@@ -168,11 +171,11 @@ const navSections: NavSection[] = [
   {
     label: 'Integrações',
     items: [
-      { to: '/apps', icon: Store, label: 'Apps & Integrações', key: 'dashboard' as NavKey },
-      { to: '/integrations/telegram', icon: Bot, label: 'Telegram', key: 'dashboard' as NavKey },
-      { to: '/integrations/traccar', icon: Car, label: 'Traccar (GPS)', key: 'dashboard' as NavKey },
-      { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' as NavKey },
-      { to: '/esocial-governance', icon: ShieldCheck, label: 'eSocial Governance', key: 'esocial' as NavKey },
+      { to: '/apps', icon: Store, label: 'Apps & Integrações', key: 'iam_users' as NavKey },
+      { to: '/integrations/telegram', icon: Bot, label: 'Telegram', key: 'integrations' as NavKey },
+      { to: '/integrations/traccar', icon: Car, label: 'Traccar (GPS)', key: 'integrations' as NavKey, moduleKey: 'fleet' },
+      { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' as NavKey, moduleKey: 'esocial' },
+      { to: '/esocial-governance', icon: ShieldCheck, label: 'eSocial Governance', key: 'esocial' as NavKey, moduleKey: 'esocial' },
     ],
   },
 
@@ -191,7 +194,7 @@ const navSections: NavSection[] = [
   {
     label: 'Growth',
     items: [
-      { to: '/referral', icon: Trophy, label: 'Indique e Ganhe', key: 'dashboard' },
+      { to: '/referral', icon: Trophy, label: 'Indique e Ganhe', key: 'referral' },
     ],
   },
 
@@ -202,9 +205,9 @@ const navSections: NavSection[] = [
       { to: '/settings/users', icon: Users, label: 'Usuários', key: 'iam_users' },
       { to: '/settings/roles', icon: ShieldCheck, label: 'Cargos & Permissões', key: 'iam_roles' },
       { to: '/settings/pdf-layout', icon: FileText, label: 'Layout do PDF', key: 'iam_users' },
-      { to: '/settings/webhooks', icon: Webhook, label: 'Webhooks', key: 'dashboard' },
-      { to: '/settings/sso', icon: Shield, label: 'SSO / Federação', key: 'iam_users' },
-      { to: '/settings/scim', icon: Shield, label: 'SCIM Provisioning', key: 'iam_users' },
+      { to: '/settings/webhooks', icon: Webhook, label: 'Webhooks', key: 'iam_users' },
+      { to: '/settings/sso', icon: Shield, label: 'SSO / Federação', key: 'iam_users', moduleKey: 'iam' },
+      { to: '/settings/scim', icon: Shield, label: 'SCIM Provisioning', key: 'iam_users', moduleKey: 'iam' },
       
       { to: '/announcements', icon: Megaphone, label: 'Avisos do Sistema', key: 'dashboard' },
     ],
@@ -227,6 +230,7 @@ export function AppSidebar() {
   const { announcements } = useAnnouncements();
   const hasCriticalAnnouncement = announcements.some(a => a.severity === 'critical');
   const { isPathVisible, isPathLocked, profile: expProfile } = useExperienceProfile();
+  const { isModuleAccessible, ready: pxeReady } = usePXE();
   const { isOnboarding, completionPct: onboardingPct } = useOnboardingStatus();
   const onboardingComplete = !isOnboarding;
 
@@ -235,6 +239,8 @@ export function AppSidebar() {
     if (item.featureFlag && !isFeatureEnabled(item.featureFlag)) return false;
     if (!canNav(item.key)) return false;
     if (!isPathVisible(item.to)) return false;
+    // Plan-based module gating: hide items whose module is not in the tenant's plan
+    if (item.moduleKey && pxeReady && !isModuleAccessible(item.moduleKey)) return false;
     return true;
   };
 
