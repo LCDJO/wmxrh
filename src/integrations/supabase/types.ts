@@ -15566,6 +15566,7 @@ export type Database = {
           feature_flags: string[]
           id: string
           is_active: boolean
+          max_employees: number | null
           name: string
           price: number
           tenant_id: string | null
@@ -15580,6 +15581,7 @@ export type Database = {
           feature_flags?: string[]
           id?: string
           is_active?: boolean
+          max_employees?: number | null
           name: string
           price?: number
           tenant_id?: string | null
@@ -15594,6 +15596,7 @@ export type Database = {
           feature_flags?: string[]
           id?: string
           is_active?: boolean
+          max_employees?: number | null
           name?: string
           price?: number
           tenant_id?: string | null

@@ -13,8 +13,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Rocket } from 'lucide-react';
+import { Loader2, Rocket, AlertTriangle } from 'lucide-react';
 import { HIRING_STEPS, type HiringStepState } from '@/domains/automated-hiring/types';
+import { useEmployeeLimit } from '@/hooks/use-employee-limit';
 
 interface Props {
   open: boolean;
@@ -27,6 +28,7 @@ export function StartHiringDialog({ open, onOpenChange, tenantId, companies }: P
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const { canAddMore, remaining, maxAllowed, currentCount, loading: limitLoading } = useEmployeeLimit();
 
   const [candidateName, setCandidateName] = useState('');
   const [candidateCpf, setCandidateCpf] = useState('');
@@ -47,6 +49,10 @@ export function StartHiringDialog({ open, onOpenChange, tenantId, companies }: P
   };
 
   const handleSubmit = async () => {
+    if (!canAddMore) {
+      toast({ title: `Limite de ${maxAllowed} colaboradores atingido`, description: 'Faça upgrade do plano para adicionar mais.', variant: 'destructive' });
+      return;
+    }
     if (!candidateName.trim()) {
       toast({ title: 'Nome do candidato é obrigatório', variant: 'destructive' });
       return;
@@ -115,6 +121,25 @@ export function StartHiringDialog({ open, onOpenChange, tenantId, companies }: P
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
+          {!canAddMore && maxAllowed !== null && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-destructive">Limite de colaboradores atingido</p>
+                <p className="text-xs text-muted-foreground">
+                  Seu plano permite até {maxAllowed} colaboradores ({currentCount} ativos). Faça upgrade para continuar.
+                </p>
+              </div>
+            </div>
+          )}
+          {canAddMore && remaining !== null && remaining <= 3 && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-muted-foreground">
+                Restam apenas <strong>{remaining}</strong> vaga(s) no seu plano ({currentCount}/{maxAllowed}).
+              </p>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="hire-name">Nome do Candidato *</Label>
             <Input
@@ -169,7 +194,7 @@ export function StartHiringDialog({ open, onOpenChange, tenantId, companies }: P
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={saving} className="gap-2">
+          <Button onClick={handleSubmit} disabled={saving || !canAddMore} className="gap-2">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             <Rocket className="h-4 w-4" />
             Iniciar Admissão
