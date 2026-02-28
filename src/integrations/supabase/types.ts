@@ -11155,14 +11155,17 @@ export type Database = {
       }
       invoices: {
         Row: {
+          auto_generated: boolean
           billing_period_end: string
           billing_period_start: string
           created_at: string
           currency: string
           due_date: string
           id: string
+          invoice_number: string | null
           metadata: Json | null
           notes: string | null
+          overdue_notified_at: string | null
           paid_at: string | null
           payment_method: string | null
           plan_id: string | null
@@ -11175,14 +11178,17 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_generated?: boolean
           billing_period_end: string
           billing_period_start: string
           created_at?: string
           currency?: string
           due_date: string
           id?: string
+          invoice_number?: string | null
           metadata?: Json | null
           notes?: string | null
+          overdue_notified_at?: string | null
           paid_at?: string | null
           payment_method?: string | null
           plan_id?: string | null
@@ -11195,14 +11201,17 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_generated?: boolean
           billing_period_end?: string
           billing_period_start?: string
           created_at?: string
           currency?: string
           due_date?: string
           id?: string
+          invoice_number?: string | null
           metadata?: Json | null
           notes?: string | null
+          overdue_notified_at?: string | null
           paid_at?: string | null
           payment_method?: string | null
           plan_id?: string | null
@@ -15566,6 +15575,7 @@ export type Database = {
           created_at: string
           description: string | null
           feature_flags: string[]
+          grace_period_days: number
           id: string
           is_active: boolean
           max_employees: number | null
@@ -15583,6 +15593,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           feature_flags?: string[]
+          grace_period_days?: number
           id?: string
           is_active?: boolean
           max_employees?: number | null
@@ -15600,6 +15611,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           feature_flags?: string[]
+          grace_period_days?: number
           id?: string
           is_active?: boolean
           max_employees?: number | null
@@ -20040,6 +20052,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_failed_payments: {
+        Args: { sub_id: string }
+        Returns: undefined
       }
       increment_referral_link_conversions: {
         Args: { link_id: string }
