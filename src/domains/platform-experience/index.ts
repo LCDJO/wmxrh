@@ -17,13 +17,13 @@
 // ── Factory functions ────────────────────────────────────────
 export { createPlanRegistry } from './plan-registry';
 export { createPlanLifecycleManager } from './plan-lifecycle-manager';
-export { createTenantPlanResolver } from './tenant-plan-resolver';
+export { createTenantPlanResolver, type ExtendedTenantPlanResolverAPI, type TenantPlanBinding } from './tenant-plan-resolver';
 export { createPaymentPolicyEngine } from './payment-policy-engine';
 export { createModuleAccessResolver } from './module-access-resolver';
 export { createExperienceOrchestrator } from './experience-orchestrator';
 
 // ── Aggregate factory ────────────────────────────────────────
-export { createPlatformExperienceEngine } from './platform-experience-engine';
+export { createPlatformExperienceEngine, type ExtendedPlatformExperienceEngineAPI } from './platform-experience-engine';
 
 // ── Types ────────────────────────────────────────────────────
 export type {

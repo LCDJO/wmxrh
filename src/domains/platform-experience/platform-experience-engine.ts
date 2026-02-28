@@ -5,12 +5,16 @@
 import type { PlatformExperienceEngineAPI } from './types';
 import { createPlanRegistry } from './plan-registry';
 import { createPlanLifecycleManager } from './plan-lifecycle-manager';
-import { createTenantPlanResolver } from './tenant-plan-resolver';
+import { createTenantPlanResolver, type ExtendedTenantPlanResolverAPI } from './tenant-plan-resolver';
 import { createPaymentPolicyEngine } from './payment-policy-engine';
 import { createModuleAccessResolver } from './module-access-resolver';
 import { createExperienceOrchestrator } from './experience-orchestrator';
 
-export function createPlatformExperienceEngine(): PlatformExperienceEngineAPI {
+export interface ExtendedPlatformExperienceEngineAPI extends PlatformExperienceEngineAPI {
+  tenantPlan: ExtendedTenantPlanResolverAPI;
+}
+
+export function createPlatformExperienceEngine(): ExtendedPlatformExperienceEngineAPI {
   const plans = createPlanRegistry();
   const lifecycle = createPlanLifecycleManager();
   const tenantPlan = createTenantPlanResolver(plans, lifecycle);

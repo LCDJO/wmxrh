@@ -10,12 +10,24 @@ import type {
 } from './types';
 import type { ModuleKey } from '@/domains/platform/platform-modules';
 
+export interface TenantPlanBinding {
+  planId: string;
+  addons: string[];
+  billing_cycle: 'monthly' | 'quarterly' | 'annual' | 'custom';
+}
+
+export interface ExtendedTenantPlanResolverAPI extends TenantPlanResolverAPI {
+  /** Bind a tenant to a specific plan (call after fetching from DB) */
+  bind(tenantId: string, binding: TenantPlanBinding): void;
+  /** Unbind a tenant (on logout / context clear) */
+  unbind(tenantId: string): void;
+}
+
 export function createTenantPlanResolver(
   planRegistry: PlanRegistryAPI,
   lifecycleManager: PlanLifecycleManagerAPI
-): TenantPlanResolverAPI {
-  // In-memory tenant → planId mapping (would be DB-backed in production)
-  const tenantPlans = new Map<string, { planId: string; addons: string[]; billing_cycle: 'monthly' | 'quarterly' | 'annual' | 'custom' }>();
+): ExtendedTenantPlanResolverAPI {
+  const tenantPlans = new Map<string, TenantPlanBinding>();
 
   function getSnapshot(tenantId: string): TenantPlanSnapshot {
     const binding = tenantPlans.get(tenantId);
@@ -54,6 +66,14 @@ export function createTenantPlanResolver(
 
   return {
     resolve: getSnapshot,
+
+    bind(tenantId: string, binding: TenantPlanBinding) {
+      tenantPlans.set(tenantId, binding);
+    },
+
+    unbind(tenantId: string) {
+      tenantPlans.delete(tenantId);
+    },
 
     isModuleAccessible(tenantId, moduleKey: ModuleKey | string) {
       const snap = getSnapshot(tenantId);
