@@ -22,6 +22,7 @@ import { RiskCommandCenter } from './risk-command-center';
 import { ModuleControlCenter } from './module-control-center';
 import { IdentityControlCenter } from './identity-control-center';
 import { ObservabilityBridge } from './observability-bridge';
+import { createSubscriptionHealthMonitor, type SubscriptionHealthMonitorAPI } from './subscription-health-monitor';
 
 const TICK_INTERVAL_MS = 30_000; // 30s state refresh
 
@@ -33,6 +34,7 @@ export class ControlPlaneEngine implements ControlPlaneAPI {
   private moduleCenter: ModuleControlCenter;
   private identityCenter: IdentityControlCenter;
   private observability: ObservabilityBridge;
+  private subscriptionHealth: SubscriptionHealthMonitorAPI;
 
   private tickTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -44,6 +46,7 @@ export class ControlPlaneEngine implements ControlPlaneAPI {
     this.moduleCenter = new ModuleControlCenter(runtime);
     this.identityCenter = new IdentityControlCenter(runtime);
     this.observability = new ObservabilityBridge(runtime);
+    this.subscriptionHealth = createSubscriptionHealthMonitor();
   }
 
   start(): void {
@@ -119,6 +122,10 @@ export class ControlPlaneEngine implements ControlPlaneAPI {
 
   getIdentityControl() {
     return this.identityCenter.getSummary();
+  }
+
+  getSubscriptionHealth() {
+    return this.subscriptionHealth;
   }
 }
 

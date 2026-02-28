@@ -253,6 +253,9 @@ export interface ControlPlaneAPI {
   // Identity control
   getIdentityControl(): IdentityControlSummary;
 
+  // Subscription health
+  getSubscriptionHealth(): import('./subscription-health-monitor').SubscriptionHealthMonitorAPI;
+
   // Lifecycle
   start(): void;
   stop(): void;
