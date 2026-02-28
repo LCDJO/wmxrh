@@ -79,21 +79,29 @@ export default function PlatformFooterDefaults() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!defaults?.id) throw new Error('No defaults record found');
-      const { error } = await supabase
-        .from('platform_footer_defaults')
-        .update({
-          show_institutional: form.show_institutional,
-          show_compliance: form.show_compliance,
-          show_support: form.show_support,
-          show_technical: form.show_technical,
-          show_bottom_text: form.show_bottom_text,
-          custom_bottom_text: form.custom_bottom_text,
-          support_links: form.support_links as unknown as any,
-          compliance_items: form.compliance_items as unknown as any,
-        })
-        .eq('id', defaults.id);
-      if (error) throw error;
+      const payload = {
+        show_institutional: form.show_institutional,
+        show_compliance: form.show_compliance,
+        show_support: form.show_support,
+        show_technical: form.show_technical,
+        show_bottom_text: form.show_bottom_text,
+        custom_bottom_text: form.custom_bottom_text,
+        support_links: form.support_links as unknown as any,
+        compliance_items: form.compliance_items as unknown as any,
+      };
+
+      if (defaults?.id) {
+        const { error } = await supabase
+          .from('platform_footer_defaults')
+          .update(payload)
+          .eq('id', defaults.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('platform_footer_defaults')
+          .insert(payload);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['platform_footer_defaults'] });
