@@ -1,6 +1,6 @@
 /**
  * DeviceHistoryReplay — Fetches route history from Traccar API and renders replay.
- * Allows selecting a device and date range to view historical routes.
+ * Redesigned with cleaner layout and grouped controls.
  */
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,14 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, History, Loader2, MapPin, AlertTriangle } from 'lucide-react';
+import { History, Loader2, MapPin, AlertTriangle, Route, Gauge, Clock, X } from 'lucide-react';
 import { RouteReplayPanel } from './btie/RouteReplayPanel';
 import type { TraccarVehicle } from '@/hooks/useTraccarFleet';
 
 interface DeviceHistoryReplayProps {
   tenantId: string;
   vehicles: TraccarVehicle[];
-  /** Pre-select a specific device */
   initialDeviceId?: number;
   onClose?: () => void;
 }
@@ -99,22 +98,19 @@ export function DeviceHistoryReplay({ tenantId, vehicles, initialDeviceId, onClo
         return;
       }
 
-      // Transform Traccar positions to our replay format
       const mapped = routeData.map((p: any) => ({
         latitude: p.latitude,
         longitude: p.longitude,
-        speed: p.speed, // already in knots from Traccar
+        speed: p.speed,
         event_timestamp: p.deviceTime || p.fixTime,
         course: p.course,
         attributes: p.attributes || {},
       }));
 
-      // Calculate stats
       const speeds = mapped.map((p: any) => p.speed * KNOTS_TO_KMH);
       const maxSpeed = Math.round(Math.max(...speeds));
       const avgSpeed = Math.round(speeds.reduce((a: number, b: number) => a + b, 0) / speeds.length);
 
-      // Rough distance calc (Haversine sum)
       let totalDist = 0;
       for (let i = 1; i < mapped.length; i++) {
         totalDist += haversine(
@@ -142,89 +138,102 @@ export function DeviceHistoryReplay({ tenantId, vehicles, initialDeviceId, onClo
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader className="flex-row items-center justify-between pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <History className="h-4 w-4" />
-            Histórico de Rota — Replay
-          </CardTitle>
-          {onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose}>✕</Button>
-          )}
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="h-4 w-4 text-primary" />
+              Replay de Rota
+            </CardTitle>
+            {onClose && (
+              <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-3 items-end">
-            {/* Device selector */}
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-xs text-muted-foreground mb-1 block">Dispositivo</label>
-              <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um dispositivo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vehicles.map(v => (
-                    <SelectItem key={v.id} value={String(v.id)}>
-                      {v.name} {v.uniqueId && `(${v.uniqueId})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* ── Controls Group ── */}
+          <div className="bg-muted/30 rounded-lg p-3 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Dispositivo</label>
+                <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Selecione um dispositivo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehicles.map(v => (
+                      <SelectItem key={v.id} value={String(v.id)}>
+                        {v.name} {v.uniqueId && `(${v.uniqueId})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Período</label>
+                <Select value={period} onValueChange={(v) => setPeriod(v as PeriodPreset)}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PERIOD_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* Period selector */}
-            <div className="min-w-[160px]">
-              <label className="text-xs text-muted-foreground mb-1 block">Período</label>
-              <Select value={period} onValueChange={(v) => setPeriod(v as PeriodPreset)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PERIOD_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Fetch button */}
             <Button
               onClick={fetchRoute}
               disabled={!selectedDeviceId || loading}
-              className="gap-1.5"
+              className="w-full gap-2 h-9"
+              size="sm"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
-              Buscar Rota
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Route className="h-4 w-4" />}
+              {loading ? 'Buscando...' : 'Buscar Rota'}
             </Button>
           </div>
 
-          {/* Stats summary */}
+          {/* ── Stats Grid ── */}
           {routeStats && (
-            <div className="flex flex-wrap gap-3">
-              <Badge variant="outline" className="text-xs gap-1">
-                <MapPin className="h-3 w-3" /> {routeStats.distance} km
-              </Badge>
-              <Badge variant="outline" className="text-xs gap-1">
-                {routeStats.points} pontos
-              </Badge>
-              <Badge variant="outline" className="text-xs gap-1">
-                Méd: {routeStats.avgSpeed} km/h
-              </Badge>
-              <Badge variant={routeStats.maxSpeed > 80 ? 'destructive' : 'outline'} className="text-xs gap-1">
-                Máx: {routeStats.maxSpeed} km/h
-              </Badge>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="bg-muted/30 rounded-lg p-2.5 text-center">
+                <MapPin className="h-3.5 w-3.5 text-muted-foreground mx-auto mb-1" />
+                <p className="text-sm font-bold tabular-nums">{routeStats.distance} km</p>
+                <p className="text-[10px] text-muted-foreground">Distância</p>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-2.5 text-center">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground mx-auto mb-1" />
+                <p className="text-sm font-bold tabular-nums">{routeStats.points}</p>
+                <p className="text-[10px] text-muted-foreground">Pontos</p>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-2.5 text-center">
+                <Gauge className="h-3.5 w-3.5 text-muted-foreground mx-auto mb-1" />
+                <p className="text-sm font-bold tabular-nums">{routeStats.avgSpeed} km/h</p>
+                <p className="text-[10px] text-muted-foreground">Média</p>
+              </div>
+              <div className={`rounded-lg p-2.5 text-center ${routeStats.maxSpeed > 80 ? 'bg-destructive/5 border border-destructive/10' : 'bg-muted/30'}`}>
+                <Gauge className={`h-3.5 w-3.5 mx-auto mb-1 ${routeStats.maxSpeed > 80 ? 'text-destructive' : 'text-muted-foreground'}`} />
+                <p className={`text-sm font-bold tabular-nums ${routeStats.maxSpeed > 80 ? 'text-destructive' : ''}`}>{routeStats.maxSpeed} km/h</p>
+                <p className="text-[10px] text-muted-foreground">Máxima</p>
+              </div>
             </div>
           )}
 
-          {/* Error */}
+          {/* ── Error ── */}
           {error && (
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
-              <span className="text-sm text-destructive">{error}</span>
+            <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Replay panel */}
+      {/* ── Replay Panel ── */}
       {positions && positions.length >= 2 && (
         <RouteReplayPanel
           positions={positions}
@@ -237,7 +246,6 @@ export function DeviceHistoryReplay({ tenantId, vehicles, initialDeviceId, onClo
   );
 }
 
-// Haversine distance in km
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;

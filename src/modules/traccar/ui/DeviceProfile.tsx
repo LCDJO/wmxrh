@@ -1,12 +1,13 @@
 /**
  * DeviceProfile — Drill-down view for a specific vehicle/device.
+ * Redesigned with grouped sections and clear visual hierarchy.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { X, Car, MapPin, Gauge, Clock, AlertTriangle, Shield, TrendingUp } from 'lucide-react';
+import { X, Car, MapPin, Gauge, Clock, AlertTriangle, Shield, TrendingUp, Cpu, Navigation } from 'lucide-react';
 import type { TraccarVehicle } from '@/hooks/useTraccarFleet';
 import { getBehaviorSummary, type BehaviorSummary } from '../services/behavior-engine.service';
 import { getComplianceSummary, type ComplianceSummary } from '../services/compliance.service';
@@ -22,6 +23,13 @@ const STATUS_LABELS: Record<string, string> = {
   idle: 'Parado (Ligado)',
   stopped: 'Parado',
   speeding: 'Excesso de Velocidade',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  moving: 'bg-emerald-500',
+  idle: 'bg-amber-500',
+  stopped: 'bg-muted-foreground',
+  speeding: 'bg-destructive',
 };
 
 export function DeviceProfile({ vehicle, tenantId, onClose }: DeviceProfileProps) {
@@ -41,110 +49,161 @@ export function DeviceProfile({ vehicle, tenantId, onClose }: DeviceProfileProps
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const computedStatus = vehicle.computedStatus || 'stopped';
+
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full">
+      {/* ── Header ── */}
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Car className="h-4 w-4" /> {vehicle.name}
-          </CardTitle>
-          <Button size="sm" variant="ghost" onClick={onClose}><X className="h-4 w-4" /></Button>
-        </div>
-        <div className="flex gap-2 mt-1">
-          <Badge variant={vehicle.status === 'online' ? 'default' : 'secondary'} className="text-xs">
-            {vehicle.status === 'online' ? '🟢 Online' : '🔴 Offline'}
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            {STATUS_LABELS[vehicle.computedStatus || 'stopped'] || vehicle.computedStatus}
-          </Badge>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Car className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">{vehicle.name}</CardTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge
+                  variant={vehicle.status === 'online' ? 'default' : 'secondary'}
+                  className={`text-[10px] px-2 py-0 h-5 ${
+                    vehicle.status === 'online'
+                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                      : ''
+                  }`}
+                >
+                  {vehicle.status === 'online' ? '● Online' : '● Offline'}
+                </Badge>
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[computedStatus]}`} />
+                  <span className="text-xs text-muted-foreground">
+                    {STATUS_LABELS[computedStatus] || computedStatus}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <Button size="sm" variant="ghost" onClick={onClose} className="h-8 w-8 p-0">
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Telemetry */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-2 text-sm">
-            <Gauge className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-muted-foreground">Velocidade:</span>
-            <span className="font-medium">{vehicle.speed ?? 0} km/h</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-muted-foreground">Lat/Lng:</span>
-            <span className="font-mono text-xs">{vehicle.lat?.toFixed(4)}, {vehicle.lng?.toFixed(4)}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-muted-foreground">Atualizado:</span>
-            <span className="text-xs">{vehicle.lastUpdate ? new Date(vehicle.lastUpdate).toLocaleString('pt-BR') : '—'}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Ignição:</span>
-            <Badge variant={vehicle.ignition ? 'default' : 'secondary'} className="text-xs">
-              {vehicle.ignition ? 'Ligada' : 'Desligada'}
-            </Badge>
+
+      <CardContent className="space-y-5">
+        {/* ── Telemetria em Tempo Real ── */}
+        <div>
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Navigation className="h-3 w-3" /> Telemetria
+          </h4>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-muted/30 rounded-lg p-3 space-y-1">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Gauge className="h-3 w-3" />
+                <span className="text-[11px] uppercase tracking-wider">Velocidade</span>
+              </div>
+              <p className="text-lg font-bold tabular-nums">{vehicle.speed ?? 0} <span className="text-xs font-normal text-muted-foreground">km/h</span></p>
+            </div>
+            <div className="bg-muted/30 rounded-lg p-3 space-y-1">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <MapPin className="h-3 w-3" />
+                <span className="text-[11px] uppercase tracking-wider">Posição</span>
+              </div>
+              <p className="text-xs font-mono tabular-nums">{vehicle.lat?.toFixed(5)}, {vehicle.lng?.toFixed(5)}</p>
+            </div>
+            <div className="bg-muted/30 rounded-lg p-3 space-y-1">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span className="text-[11px] uppercase tracking-wider">Última Att.</span>
+              </div>
+              <p className="text-xs">{vehicle.lastUpdate ? new Date(vehicle.lastUpdate).toLocaleString('pt-BR') : '—'}</p>
+            </div>
+            <div className="bg-muted/30 rounded-lg p-3 space-y-1">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <span className="text-[11px] uppercase tracking-wider">Ignição</span>
+              </div>
+              <Badge variant={vehicle.ignition ? 'default' : 'secondary'} className="text-xs mt-0.5">
+                {vehicle.ignition ? '⚡ Ligada' : '○ Desligada'}
+              </Badge>
+            </div>
           </div>
         </div>
 
         <Separator />
 
-        {/* Behavior Summary */}
+        {/* ── Comportamento (30 dias) ── */}
         <div>
-          <h4 className="text-sm font-medium flex items-center gap-1.5 mb-2">
-            <AlertTriangle className="h-3.5 w-3.5" /> Comportamento (30 dias)
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <AlertTriangle className="h-3 w-3" /> Comportamento (30 dias)
           </h4>
           {behaviorSummary ? (
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="bg-muted/40 rounded p-2">
-                <div className="text-lg font-bold">{behaviorSummary.totalEvents}</div>
-                <div className="text-xs text-muted-foreground">Total Eventos</div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-muted/30 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold tabular-nums">{behaviorSummary.totalEvents}</p>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider mt-0.5">Eventos</p>
               </div>
-              <div className="bg-muted/40 rounded p-2">
-                <div className="text-lg font-bold text-destructive">
+              <div className="bg-destructive/5 border border-destructive/10 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold tabular-nums text-destructive">
                   {(behaviorSummary.bySeverity.critical || 0) + (behaviorSummary.bySeverity.high || 0)}
-                </div>
-                <div className="text-xs text-muted-foreground">Crítico + Alto</div>
+                </p>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider mt-0.5">Crítico + Alto</p>
               </div>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">Carregando...</p>
+            <div className="h-16 flex items-center justify-center">
+              <p className="text-xs text-muted-foreground animate-pulse">Carregando dados...</p>
+            </div>
           )}
         </div>
 
         <Separator />
 
-        {/* Compliance Summary */}
+        {/* ── Compliance ── */}
         <div>
-          <h4 className="text-sm font-medium flex items-center gap-1.5 mb-2">
-            <Shield className="h-3.5 w-3.5" /> Compliance
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Shield className="h-3 w-3" /> Compliance
           </h4>
           {complianceSummary ? (
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <div className="bg-muted/40 rounded p-2 text-center">
-                <div className="text-lg font-bold">{complianceSummary.totalIncidents}</div>
-                <div className="text-xs text-muted-foreground">Incidentes</div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-muted/30 rounded-lg p-3 text-center">
+                <p className="text-xl font-bold tabular-nums">{complianceSummary.totalIncidents}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Incidentes</p>
               </div>
-              <div className="bg-muted/40 rounded p-2 text-center">
-                <div className="text-lg font-bold text-amber-500">{complianceSummary.pendingReview}</div>
-                <div className="text-xs text-muted-foreground">Pendentes</div>
+              <div className="bg-amber-500/5 border border-amber-500/10 rounded-lg p-3 text-center">
+                <p className="text-xl font-bold tabular-nums text-amber-600">{complianceSummary.pendingReview}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Pendentes</p>
               </div>
-              <div className="bg-muted/40 rounded p-2 text-center">
-                <div className="text-lg font-bold text-primary">
-                  <TrendingUp className="h-4 w-4 inline" />
-                </div>
-                <div className="text-xs text-muted-foreground">Score</div>
+              <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 text-center">
+                <TrendingUp className="h-5 w-5 text-primary mx-auto" />
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Score</p>
               </div>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">Carregando...</p>
+            <div className="h-16 flex items-center justify-center">
+              <p className="text-xs text-muted-foreground animate-pulse">Carregando dados...</p>
+            </div>
           )}
         </div>
 
-        {/* Device metadata */}
         <Separator />
-        <div className="text-xs text-muted-foreground space-y-1">
-          <div>ID Único: <span className="font-mono">{vehicle.uniqueId}</span></div>
-          <div>Categoria: {vehicle.category || '—'}</div>
-          <div>Modelo: {vehicle.model || '—'}</div>
+
+        {/* ── Metadados do Dispositivo ── */}
+        <div>
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <Cpu className="h-3 w-3" /> Dispositivo
+          </h4>
+          <div className="grid grid-cols-1 gap-1.5 text-xs">
+            <div className="flex justify-between py-1">
+              <span className="text-muted-foreground">ID Único</span>
+              <span className="font-mono text-foreground">{vehicle.uniqueId}</span>
+            </div>
+            <div className="flex justify-between py-1">
+              <span className="text-muted-foreground">Categoria</span>
+              <span className="text-foreground">{vehicle.category || '—'}</span>
+            </div>
+            <div className="flex justify-between py-1">
+              <span className="text-muted-foreground">Modelo</span>
+              <span className="text-foreground">{vehicle.model || '—'}</span>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
