@@ -26,6 +26,7 @@ import { MandatoryAcceptanceController } from './mandatory-acceptance-controller
 import { AcceptanceAuditLog } from './acceptance-audit-log';
 import { PolicyRenderer } from './policy-renderer';
 import { PolicyScopeResolver } from './policy-scope-resolver';
+import { PolicyNotifier } from './policy-notifier';
 
 export class PlatformPolicyGovernanceEngine implements PlatformPolicyGovernanceAPI {
   readonly registry = new PolicyRegistry();
@@ -34,6 +35,7 @@ export class PlatformPolicyGovernanceEngine implements PlatformPolicyGovernanceA
   readonly auditLog = new AcceptanceAuditLog();
   readonly renderer = new PolicyRenderer();
   readonly scopeResolver = new PolicyScopeResolver();
+  private notifier = new PolicyNotifier();
 
   async listPolicies(): Promise<PlatformPolicy[]> {
     return this.registry.list();
@@ -52,6 +54,9 @@ export class PlatformPolicyGovernanceEngine implements PlatformPolicyGovernanceA
     const policy = await this.registry.getById(payload.policy_id);
     if (policy.requires_re_acceptance_on_update || payload.requires_reacceptance) {
       await this.acceptance.invalidateAcceptances(payload.policy_id);
+
+      // Notify all affected tenants asynchronously
+      this.notifier.notifyPolicyUpdate(policy, version).catch(console.error);
     }
 
     return version;
