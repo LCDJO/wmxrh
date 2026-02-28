@@ -93,10 +93,17 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
       await supabase.from('ban_registry').insert({
         tenant_id: payload.tenant_id,
         enforcement_id: record.id,
+        entity_type: entityType,
+        entity_id: entityId,
         ban_type: payload.ban_type ?? 'full',
         scope_detail: payload.scope_detail ?? null,
+        reason_category: payload.reason_category ?? 'abuse',
+        reason_description: payload.reason,
+        severity_level: payload.severity ?? 'medium',
         is_permanent: payload.is_permanent ?? false,
         banned_by: userId,
+        review_required: payload.severity === 'critical',
+        appeal_allowed: payload.is_permanent !== true,
       } as any);
     }
 

@@ -1097,42 +1097,63 @@ export type Database = {
       }
       ban_registry: {
         Row: {
+          appeal_allowed: boolean
           ban_type: string
           banned_at: string
           banned_by: string | null
           created_at: string
           enforcement_id: string | null
+          entity_id: string | null
+          entity_type: string
           id: string
           is_permanent: boolean
+          reason_category: string
+          reason_description: string | null
+          review_required: boolean
           scope_detail: string | null
+          severity_level: string | null
           tenant_id: string
           unban_reason: string | null
           unbanned_at: string | null
           unbanned_by: string | null
         }
         Insert: {
+          appeal_allowed?: boolean
           ban_type?: string
           banned_at?: string
           banned_by?: string | null
           created_at?: string
           enforcement_id?: string | null
+          entity_id?: string | null
+          entity_type?: string
           id?: string
           is_permanent?: boolean
+          reason_category?: string
+          reason_description?: string | null
+          review_required?: boolean
           scope_detail?: string | null
+          severity_level?: string | null
           tenant_id: string
           unban_reason?: string | null
           unbanned_at?: string | null
           unbanned_by?: string | null
         }
         Update: {
+          appeal_allowed?: boolean
           ban_type?: string
           banned_at?: string
           banned_by?: string | null
           created_at?: string
           enforcement_id?: string | null
+          entity_id?: string | null
+          entity_type?: string
           id?: string
           is_permanent?: boolean
+          reason_category?: string
+          reason_description?: string | null
+          review_required?: boolean
           scope_detail?: string | null
+          severity_level?: string | null
           tenant_id?: string
           unban_reason?: string | null
           unbanned_at?: string | null
