@@ -15578,7 +15578,11 @@ export type Database = {
           grace_period_days: number
           id: string
           is_active: boolean
+          max_active_users: number | null
+          max_api_calls: number | null
           max_employees: number | null
+          max_storage_mb: number | null
+          max_workflows: number | null
           name: string
           price: number
           tenant_id: string | null
@@ -15596,7 +15600,11 @@ export type Database = {
           grace_period_days?: number
           id?: string
           is_active?: boolean
+          max_active_users?: number | null
+          max_api_calls?: number | null
           max_employees?: number | null
+          max_storage_mb?: number | null
+          max_workflows?: number | null
           name: string
           price?: number
           tenant_id?: string | null
@@ -15614,7 +15622,11 @@ export type Database = {
           grace_period_days?: number
           id?: string
           is_active?: boolean
+          max_active_users?: number | null
+          max_api_calls?: number | null
           max_employees?: number | null
+          max_storage_mb?: number | null
+          max_workflows?: number | null
           name?: string
           price?: number
           tenant_id?: string | null
@@ -19886,6 +19898,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      check_plan_limit: {
+        Args: { p_limit_key: string; p_tenant_id: string }
+        Returns: Json
       }
       check_tenant_needs_onboarding: {
         Args: { p_tenant_id: string }
