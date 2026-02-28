@@ -11,6 +11,7 @@ export type AccountEntityType = 'tenant' | 'user' | 'developer_app';
 export type EnforcementActionType = 'ban' | 'suspend' | 'restrict' | 'warn';
 export type EnforcementSeverity = 'low' | 'medium' | 'high' | 'critical';
 export type EnforcementStatus = 'active' | 'appealed' | 'resolved' | 'expired' | 'revoked';
+export type BanReasonCategory = 'fraud' | 'abuse' | 'security' | 'legal';
 export type AppealStatus = 'pending' | 'under_review' | 'approved' | 'denied' | 'escalated';
 export type BanType = 'full' | 'module' | 'feature' | 'api';
 
@@ -40,14 +41,21 @@ export interface BanRegistryEntry {
   id: string;
   tenant_id: string;
   enforcement_id: string | null;
+  entity_type: AccountEntityType;
+  entity_id: string | null;
   ban_type: BanType;
   scope_detail: string | null;
+  reason_category: BanReasonCategory;
+  reason_description: string | null;
+  severity_level: EnforcementSeverity;
   is_permanent: boolean;
   banned_by: string | null;
   banned_at: string;
   unbanned_at: string | null;
   unbanned_by: string | null;
   unban_reason: string | null;
+  review_required: boolean;
+  appeal_allowed: boolean;
   created_at: string;
 }
 
