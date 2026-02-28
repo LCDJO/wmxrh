@@ -205,7 +205,7 @@ const navSections: NavSection[] = [
       { to: '/settings/webhooks', icon: Webhook, label: 'Webhooks', key: 'dashboard' },
       { to: '/settings/sso', icon: Shield, label: 'SSO / Federação', key: 'iam_users' },
       { to: '/settings/scim', icon: Shield, label: 'SCIM Provisioning', key: 'iam_users' },
-      { to: '/settings/footer', icon: PanelBottom, label: 'Rodapé', key: 'iam_users' },
+      
       { to: '/announcements', icon: Megaphone, label: 'Avisos do Sistema', key: 'dashboard' },
     ],
   },
