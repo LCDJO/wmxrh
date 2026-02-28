@@ -2,7 +2,9 @@ import { useState, useMemo } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
 import { useEmployees, useCompaniesSimple, useCreateEmployee, useDeleteEmployee } from '@/domains/hooks';
 import { usePermissions } from '@/domains/security';
+import { useEmployeeLimit } from '@/hooks/use-employee-limit';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { EmployeeLimitBanner } from '@/components/shared/EmployeeLimitBanner';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -37,8 +39,13 @@ export default function Employees() {
   const createMutation = useCreateEmployee();
   const deleteMutation = useDeleteEmployee();
   const { canManageEmployees } = usePermissions();
+  const { canAddMore, maxAllowed } = useEmployeeLimit();
 
   const handleCreate = () => {
+    if (!canAddMore) {
+      toast({ title: `Limite de ${maxAllowed} colaboradores atingido`, description: 'Faça upgrade do plano para adicionar mais.', variant: 'destructive' });
+      return;
+    }
     if (!tenantId || !formCompany) { toast({ title: 'Erro', description: 'Preencha os campos obrigatórios', variant: 'destructive' }); return; }
     const salary = parseFloat(formSalary) || 0;
     createMutation.mutate({
@@ -82,6 +89,8 @@ export default function Employees() {
 
   return (
     <div className="space-y-6">
+      <EmployeeLimitBanner />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold font-display text-foreground">Funcionários</h1>
@@ -95,7 +104,7 @@ export default function Employees() {
             </Button>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2"><Plus className="h-4 w-4" />Novo Funcionário</Button>
+                <Button className="gap-2" disabled={!canAddMore}><Plus className="h-4 w-4" />Novo Funcionário</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Novo Funcionário</DialogTitle></DialogHeader>
