@@ -20,6 +20,8 @@ export type Database = {
           created_at: string
           enforced_at: string
           enforced_by: string | null
+          entity_id: string | null
+          entity_type: string
           expires_at: string | null
           id: string
           metadata: Json | null
@@ -39,6 +41,8 @@ export type Database = {
           created_at?: string
           enforced_at?: string
           enforced_by?: string | null
+          entity_id?: string | null
+          entity_type?: string
           expires_at?: string | null
           id?: string
           metadata?: Json | null
@@ -58,6 +62,8 @@ export type Database = {
           created_at?: string
           enforced_at?: string
           enforced_by?: string | null
+          entity_id?: string | null
+          entity_type?: string
           expires_at?: string | null
           id?: string
           metadata?: Json | null
@@ -441,6 +447,7 @@ export type Database = {
       }
       api_clients: {
         Row: {
+          account_status: Database["public"]["Enums"]["account_status"]
           allowed_origins: string[] | null
           client_type: string
           contact_email: string | null
@@ -457,6 +464,7 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
+          account_status?: Database["public"]["Enums"]["account_status"]
           allowed_origins?: string[] | null
           client_type?: string
           contact_email?: string | null
@@ -473,6 +481,7 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
+          account_status?: Database["public"]["Enums"]["account_status"]
           allowed_origins?: string[] | null
           client_type?: string
           contact_email?: string | null
@@ -15233,6 +15242,7 @@ export type Database = {
       }
       platform_users: {
         Row: {
+          account_status: Database["public"]["Enums"]["account_status"]
           created_at: string
           display_name: string | null
           email: string
@@ -15244,6 +15254,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_status?: Database["public"]["Enums"]["account_status"]
           created_at?: string
           display_name?: string | null
           email: string
@@ -15255,6 +15266,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account_status?: Database["public"]["Enums"]["account_status"]
           created_at?: string
           display_name?: string | null
           email?: string
@@ -19477,6 +19489,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          account_status: Database["public"]["Enums"]["account_status"]
           address: string | null
           created_at: string
           document: string | null
@@ -19490,6 +19503,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_status?: Database["public"]["Enums"]["account_status"]
           address?: string | null
           created_at?: string
           document?: string | null
@@ -19503,6 +19517,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_status?: Database["public"]["Enums"]["account_status"]
           address?: string | null
           created_at?: string
           document?: string | null
@@ -20912,6 +20927,12 @@ export type Database = {
       }
     }
     Enums: {
+      account_status:
+        | "active"
+        | "restricted"
+        | "suspended"
+        | "banned"
+        | "under_review"
       announcement_category:
         | "maintenance"
         | "update"
@@ -21338,6 +21359,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_status: [
+        "active",
+        "restricted",
+        "suspended",
+        "banned",
+        "under_review",
+      ],
       announcement_category: [
         "maintenance",
         "update",
