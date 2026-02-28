@@ -37,10 +37,15 @@ export {
 } from './coupon-discount-engine';
 export { createUsageEventBridge, USAGE_EVENTS } from './usage-event-bridge';
 export { createCouponPolicyResolver } from './coupon-policy-resolver';
+export { createPlanApplicationOrchestrator } from './plan-application-orchestrator';
 export type {
   CouponPolicyResult,
   CouponPolicyResolverAPI,
 } from './coupon-policy-resolver';
+export type {
+  PlanApplicationResult,
+  PlanApplicationOrchestratorAPI,
+} from './plan-application-orchestrator';
 export type {
   UsageEventBridgeAPI,
   UserCreatedPayload,

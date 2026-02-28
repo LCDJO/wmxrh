@@ -589,6 +589,8 @@ export interface PlatformBillingCoreAPI {
   adjustments: BillingAdjustmentServiceAPI;
   /** Coupon policy resolver — enforces cycle-aware coupon rules */
   couponPolicy: import('./coupon-policy-resolver').CouponPolicyResolverAPI;
+  /** Plan application orchestrator — atomic side-effects on plan change */
+  planOrchestrator: import('./plan-application-orchestrator').PlanApplicationOrchestratorAPI;
   /** Reuses PXE lifecycle (internal) */
   _planLifecycle: PlanLifecycleManagerAPI;
 }
