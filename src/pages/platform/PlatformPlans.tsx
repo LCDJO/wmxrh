@@ -23,14 +23,72 @@ import {
 import {
   Package, Plus, Pencil, Trash2, CreditCard, Puzzle, Flag,
   AlertTriangle, Check, X, DollarSign, ToggleLeft, Users,
+  Link2, Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ── Derive module list from canonical source ──
 const ALL_MODULES = PLATFORM_MODULES.map(m => m.key);
 const MODULE_LABEL_MAP: Record<string, string> = Object.fromEntries(
   PLATFORM_MODULES.map(m => [m.key, m.label])
 );
+const MODULE_DESC_MAP: Record<string, string> = Object.fromEntries(
+  PLATFORM_MODULES.map(m => [m.key, m.description])
+);
+
+// ── Module groups for organized display ──
+interface ModuleGroup {
+  label: string;
+  icon: string;
+  modules: string[];
+}
+
+const MODULE_GROUPS: ModuleGroup[] = [
+  {
+    label: 'Gestão de Pessoas',
+    icon: 'Users',
+    modules: ['core_hr', 'compensation', 'benefits', 'health', 'compensation_engine'],
+  },
+  {
+    label: 'Compliance & Legal',
+    icon: 'Shield',
+    modules: ['agreements', 'compliance', 'labor_rules', 'nr_training', 'esocial', 'esocial_governance'],
+  },
+  {
+    label: 'Inteligência & Operações',
+    icon: 'Brain',
+    modules: ['payroll_sim', 'workforce_intel', 'fleet_traccar', 'support_module'],
+  },
+  {
+    label: 'Plataforma SaaS',
+    icon: 'Settings',
+    modules: ['iam', 'tenant_admin', 'billing', 'automation', 'observability', 'analytics', 'autonomous_ops'],
+  },
+  {
+    label: 'Growth & Marketing',
+    icon: 'Rocket',
+    modules: ['ads', 'growth', 'landing_engine', 'website_engine'],
+  },
+];
+
+// ── Module dependencies: key → required modules ──
+const MODULE_DEPENDENCIES: Record<string, { requires: string[]; reason: string }> = {
+  core_hr:            { requires: ['agreements'],           reason: 'RH Core exige Termos & Documentos para compliance de admissão' },
+  compensation:       { requires: ['core_hr'],              reason: 'Remuneração depende do cadastro de colaboradores (RH Core)' },
+  compensation_engine:{ requires: ['compensation'],         reason: 'Motor de Compensação depende do módulo de Remuneração' },
+  benefits:           { requires: ['core_hr'],              reason: 'Benefícios depende do cadastro de colaboradores (RH Core)' },
+  health:             { requires: ['core_hr', 'agreements'],reason: 'Saúde Ocupacional exige RH Core e Termos (ASO, PCMSO)' },
+  payroll_sim:        { requires: ['compensation'],         reason: 'Simulação de Folha depende de Remuneração' },
+  compliance:         { requires: ['agreements'],           reason: 'Compliance exige Termos & Documentos para conformidade' },
+  labor_rules:        { requires: ['compliance'],           reason: 'Regras Trabalhistas depende de Compliance' },
+  nr_training:        { requires: ['health'],               reason: 'Treinamentos NR depende de Saúde Ocupacional' },
+  esocial:            { requires: ['core_hr', 'compliance'],reason: 'eSocial exige RH Core e Compliance' },
+  esocial_governance: { requires: ['esocial'],              reason: 'Governança eSocial depende do módulo eSocial' },
+  workforce_intel:    { requires: ['core_hr'],              reason: 'Inteligência RH depende de dados de RH Core' },
+  fleet_traccar:      { requires: ['agreements'],           reason: 'Frota exige Termos (responsabilidade veicular, GPS)' },
+  autonomous_ops:     { requires: ['observability', 'analytics'], reason: 'Autonomous Ops depende de Observabilidade e Analytics' },
+};
 
 const ALL_PAYMENT_METHODS = [
   { value: 'credit_card', label: 'Cartão de Crédito' },
@@ -199,12 +257,40 @@ export default function PlatformPlans() {
   };
 
   const toggleArrayItem = (field: 'allowed_modules' | 'allowed_payment_methods' | 'feature_flags', item: string) => {
-    setForm(prev => ({
-      ...prev,
-      [field]: prev[field].includes(item)
-        ? prev[field].filter(i => i !== item)
-        : [...prev[field], item],
-    }));
+    setForm(prev => {
+      const current = prev[field];
+      if (current.includes(item)) {
+        // Removing: also check if other enabled modules depend on this one
+        if (field === 'allowed_modules') {
+          const dependents = Object.entries(MODULE_DEPENDENCIES)
+            .filter(([key, dep]) => dep.requires.includes(item) && current.includes(key))
+            .map(([key]) => MODULE_LABEL_MAP[key] ?? key);
+          if (dependents.length > 0) {
+            toast.error(`Não é possível remover "${MODULE_LABEL_MAP[item] ?? item}"`, {
+              description: `Módulos dependentes ativos: ${dependents.join(', ')}. Desative-os primeiro.`,
+            });
+            return prev;
+          }
+        }
+        return { ...prev, [field]: current.filter(i => i !== item) };
+      } else {
+        // Adding: auto-enable dependencies
+        if (field === 'allowed_modules') {
+          const deps = MODULE_DEPENDENCIES[item];
+          if (deps) {
+            const missing = deps.requires.filter(r => !current.includes(r));
+            if (missing.length > 0) {
+              const newModules = [...new Set([...current, item, ...missing])];
+              toast.info(`Dependências adicionadas automaticamente`, {
+                description: `${missing.map(m => MODULE_LABEL_MAP[m] ?? m).join(', ')} — ${deps.reason}`,
+              });
+              return { ...prev, [field]: newModules };
+            }
+          }
+        }
+        return { ...prev, [field]: [...current, item] };
+      }
+    });
   };
 
   if (loading) return <PlansSkeleton />;
@@ -421,32 +507,95 @@ export default function PlatformPlans() {
 
             <Separator />
 
-            {/* Modules */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Puzzle className="h-4 w-4 text-primary" />
-                <Label className="text-sm font-semibold">Módulos Permitidos</Label>
+            {/* Modules — Grouped & Dependency-aware */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Puzzle className="h-4 w-4 text-primary" />
+                  <Label className="text-sm font-semibold">Módulos Permitidos</Label>
+                </div>
+                <Badge variant="outline" className="text-[10px]">
+                  {form.allowed_modules.length} / {ALL_MODULES.length} selecionados
+                </Badge>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {ALL_MODULES.map(mod => (
-                  <button
-                    key={mod}
-                    type="button"
-                    onClick={() => toggleArrayItem('allowed_modules', mod)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
-                      form.allowed_modules.includes(mod)
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border text-muted-foreground hover:border-primary/30'
-                    }`}
-                  >
-                    {form.allowed_modules.includes(mod)
-                      ? <Check className="h-3 w-3" />
-                      : <X className="h-3 w-3 opacity-30" />
-                    }
-                    {MODULE_LABEL_MAP[mod] ?? mod}
-                  </button>
-                ))}
+
+              {/* Dependency legend */}
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-muted/30 rounded-lg px-3 py-2 border border-border/50">
+                <Link2 className="h-3 w-3 shrink-0" />
+                <span>Módulos com <strong className="text-foreground">●</strong> possuem dependências. Ao ativar, dependências são incluídas automaticamente.</span>
               </div>
+
+              <TooltipProvider delayDuration={200}>
+                {MODULE_GROUPS.map(group => {
+                  const groupEnabled = group.modules.filter(m => form.allowed_modules.includes(m)).length;
+                  return (
+                    <div key={group.label} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          {group.label}
+                        </p>
+                        <span className="text-[10px] text-muted-foreground">
+                          {groupEnabled}/{group.modules.length}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                        {group.modules.map(mod => {
+                          const isEnabled = form.allowed_modules.includes(mod);
+                          const deps = MODULE_DEPENDENCIES[mod];
+                          const hasDeps = !!deps;
+                          const missingDeps = deps?.requires.filter(r => !form.allowed_modules.includes(r)) ?? [];
+
+                          return (
+                            <Tooltip key={mod}>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleArrayItem('allowed_modules', mod)}
+                                  className={`relative flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                                    isEnabled
+                                      ? 'border-primary bg-primary/10 text-primary'
+                                      : 'border-border text-muted-foreground hover:border-primary/30'
+                                  }`}
+                                >
+                                  {isEnabled
+                                    ? <Check className="h-3 w-3 shrink-0" />
+                                    : <X className="h-3 w-3 opacity-30 shrink-0" />
+                                  }
+                                  <span className="truncate">{MODULE_LABEL_MAP[mod] ?? mod}</span>
+                                  {hasDeps && (
+                                    <span className={`ml-auto h-1.5 w-1.5 rounded-full shrink-0 ${
+                                      isEnabled && missingDeps.length === 0 ? 'bg-primary' : 'bg-muted-foreground/40'
+                                    }`} />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[260px] text-xs">
+                                <p className="font-medium">{MODULE_LABEL_MAP[mod] ?? mod}</p>
+                                <p className="text-muted-foreground mt-0.5">{MODULE_DESC_MAP[mod] ?? ''}</p>
+                                {hasDeps && (
+                                  <div className="mt-1.5 pt-1.5 border-t border-border/50">
+                                    <p className="flex items-center gap-1 text-[10px] font-medium">
+                                      <Link2 className="h-2.5 w-2.5" /> Dependências:
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground">{deps!.reason}</p>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {deps!.requires.map(r => (
+                                        <Badge key={r} variant={form.allowed_modules.includes(r) ? 'default' : 'destructive'} className="text-[9px] px-1.5 py-0">
+                                          {MODULE_LABEL_MAP[r] ?? r}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </TooltipProvider>
             </div>
 
             <Separator />
