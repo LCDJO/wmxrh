@@ -15026,6 +15026,7 @@ export type Database = {
           name: string
           policy_type: string
           requires_re_acceptance_on_update: boolean
+          scope: string
           slug: string
           updated_at: string
         }
@@ -15042,6 +15043,7 @@ export type Database = {
           name: string
           policy_type?: string
           requires_re_acceptance_on_update?: boolean
+          scope?: string
           slug: string
           updated_at?: string
         }
@@ -15058,6 +15060,7 @@ export type Database = {
           name?: string
           policy_type?: string
           requires_re_acceptance_on_update?: boolean
+          scope?: string
           slug?: string
           updated_at?: string
         }

@@ -3,7 +3,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import type { PlatformPolicy, PolicyCategory, PolicyAppliesTo } from './types';
+import type { PlatformPolicy, PolicyCategory, PolicyAppliesTo, PolicyScope } from './types';
 
 export class PolicyRegistry {
   async list(): Promise<PlatformPolicy[]> {
@@ -66,6 +66,18 @@ export class PolicyRegistry {
       .select('*')
       .eq('is_active', true)
       .eq('applies_to', appliesTo)
+      .order('created_at', { ascending: true });
+
+    return (data ?? []) as unknown as PlatformPolicy[];
+  }
+
+  /** Filter policies by scope (global, marketplace, api, billing, custom) */
+  async getByScope(scope: PolicyScope): Promise<PlatformPolicy[]> {
+    const { data } = await supabase
+      .from('platform_policies')
+      .select('*')
+      .eq('is_active', true)
+      .eq('scope', scope)
       .order('created_at', { ascending: true });
 
     return (data ?? []) as unknown as PlatformPolicy[];
