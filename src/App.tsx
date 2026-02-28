@@ -14,6 +14,8 @@ import { DevConsole } from "./components/shared/DevConsole";
 import { ErrorBoundary } from "./components/shared/ErrorBoundary";
 import { pushAppError } from "./lib/app-error-store";
 import { toast } from "sonner";
+import { usePendingPolicies } from "./hooks/use-pending-policies";
+import { MandatoryPolicyScreen } from "./components/policy/MandatoryPolicyScreen";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
@@ -52,6 +54,7 @@ function AppRoutes() {
   const { user, loading: authLoading } = useAuth();
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { isPlatformUser, loading: platformLoading } = useAdaptiveUserType();
+  const { pending, loading: policyLoading, hasPending, checked: policyChecked, refresh: refreshPolicies } = usePendingPolicies();
 
   const routes = useMemo<RouteObject[]>(() => {
     if (authLoading || (user && tenantLoading) || (user && platformLoading)) {
@@ -63,6 +66,14 @@ function AppRoutes() {
 
     if (!user) {
       return [...authRoutes, ...publicRoutes];
+    }
+
+    // Wait for policy check before rendering tenant routes
+    if (currentTenant && !policyChecked) {
+      return [
+        ...publicRoutes,
+        { path: '*', element: <FullScreenLoader label="Verificando políticas..." /> },
+      ];
     }
 
     const hasPendingRedirect = !!sessionStorage.getItem('redirectAfterLogin');
@@ -88,12 +99,20 @@ function AppRoutes() {
       ];
     }
 
+    // ── MANDATORY POLICY GATE: block all tenant access until accepted ──
+    if (hasPending) {
+      return [
+        ...publicRoutes,
+        { path: '*', element: <MandatoryPolicyScreen pending={pending} onAccepted={refreshPolicies} /> },
+      ];
+    }
+
     return [
       ...sharedRoutes,
       ...tenantRoutes,
       { path: '*', element: <NotFound /> },
     ];
-  }, [user, authLoading, tenantLoading, platformLoading, currentTenant, isPlatformUser]);
+  }, [user, authLoading, tenantLoading, platformLoading, currentTenant, isPlatformUser, policyChecked, hasPending, pending, refreshPolicies]);
 
   return useRoutes(routes);
 }
