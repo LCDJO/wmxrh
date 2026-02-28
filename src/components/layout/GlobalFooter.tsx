@@ -75,14 +75,14 @@ export const GlobalFooter = forwardRef<HTMLElement, {}>(function GlobalFooter(_p
     staleTime: 5 * 60_000,
   });
 
-  const fallback = platformDefaults ?? {
-    show_institutional: true, show_compliance: true, show_support: true,
-    show_technical: true, show_bottom_text: true, custom_bottom_text: null,
-    support_links: [], compliance_items: [],
-  };
-
   const cfg: FooterConfigData = useMemo(() => {
-    if (!footerConfigRaw) return fallback;
+    const fb: FooterConfigData = platformDefaults ?? {
+      show_institutional: true, show_compliance: true, show_support: true,
+      show_technical: true, show_bottom_text: true, custom_bottom_text: null,
+      support_links: [], compliance_items: [],
+    };
+
+    if (!footerConfigRaw) return fb;
     return {
       show_institutional: footerConfigRaw.show_institutional,
       show_compliance: footerConfigRaw.show_compliance,
@@ -92,12 +92,12 @@ export const GlobalFooter = forwardRef<HTMLElement, {}>(function GlobalFooter(_p
       custom_bottom_text: footerConfigRaw.custom_bottom_text,
       support_links: Array.isArray(footerConfigRaw.support_links)
         ? (footerConfigRaw.support_links as unknown as { label: string; href: string }[])
-        : fallback.support_links,
+        : fb.support_links,
       compliance_items: Array.isArray(footerConfigRaw.compliance_items)
         ? (footerConfigRaw.compliance_items as unknown as { text: string }[])
-        : fallback.compliance_items,
+        : fb.compliance_items,
     };
-  }, [footerConfigRaw, fallback]);
+  }, [footerConfigRaw, platformDefaults]);
 
   const environment = import.meta.env.MODE === 'production' ? 'Produção' : 'Homologação';
   const envColor = import.meta.env.MODE === 'production' ? 'text-primary' : 'text-amber-500';
