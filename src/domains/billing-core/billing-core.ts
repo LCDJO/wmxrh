@@ -17,6 +17,7 @@ import { createModulePlanSyncService } from './module-plan-sync-service';
 import { createUsageBillingEngine } from './usage-billing-engine';
 import { createUsageEventBridge } from './usage-event-bridge';
 import { createCouponPolicyResolver } from './coupon-policy-resolver';
+import { createPlanApplicationOrchestrator } from './plan-application-orchestrator';
 import {
   createCouponManager,
   createCouponValidationService,
@@ -55,6 +56,7 @@ export function createPlatformBillingCore(
   const discounts = createDiscountEngine();
   const adjustments = createBillingAdjustmentService();
   const couponPolicy = createCouponPolicyResolver();
+  const planOrchestrator = createPlanApplicationOrchestrator();
   // Module sync: auto-activate/deactivate modules when plan changes
   const modulePlanSync = modules
     ? createModulePlanSyncService(modules, pxe.plans)
@@ -86,6 +88,7 @@ export function createPlatformBillingCore(
     discounts,
     adjustments,
     couponPolicy,
+    planOrchestrator,
     _planLifecycle: pxe.lifecycle,
   };
 }

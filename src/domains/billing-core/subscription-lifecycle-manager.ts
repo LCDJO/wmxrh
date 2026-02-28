@@ -18,6 +18,7 @@ import type {
 } from './types';
 import type { BillingCycle } from '@/domains/platform-experience/types';
 import type { ModulePlanSyncAPI } from './module-plan-sync-service';
+import { createPlanApplicationOrchestrator } from './plan-application-orchestrator';
 import { emitBillingEvent } from './billing-events';
 
 export function createSubscriptionLifecycleManager(
@@ -29,6 +30,7 @@ export function createSubscriptionLifecycleManager(
   modulePlanSync?: ModulePlanSyncAPI,
   discountEngine?: DiscountEngineAPI,
 ): SubscriptionLifecycleManagerAPI {
+  const planOrchestrator = createPlanApplicationOrchestrator();
 
   /**
    * Helper: apply coupon or recurring discounts to a subtotal.
@@ -126,6 +128,9 @@ export function createSubscriptionLifecycleManager(
       });
 
       modulePlanSync?.syncModulesForPlan(tenantId, planId);
+
+      // Apply all plan side-effects atomically
+      await planOrchestrator.applyPlanChange(tenantId, planId);
     },
 
     async upgrade(tenantId, toPlanId, couponCode?) {
@@ -192,6 +197,9 @@ export function createSubscriptionLifecycleManager(
       });
 
       modulePlanSync?.syncModulesForPlan(tenantId, toPlanId);
+
+      // Apply all plan side-effects atomically
+      await planOrchestrator.applyPlanChange(tenantId, toPlanId);
     },
 
     async downgrade(tenantId, toPlanId) {
