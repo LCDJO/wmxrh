@@ -16,6 +16,7 @@ import { createSubscriptionLifecycleManager } from './subscription-lifecycle-man
 import { createModulePlanSyncService } from './module-plan-sync-service';
 import { createUsageBillingEngine } from './usage-billing-engine';
 import { createUsageEventBridge } from './usage-event-bridge';
+import { createCouponPolicyResolver } from './coupon-policy-resolver';
 import {
   createCouponManager,
   createCouponValidationService,
@@ -53,7 +54,7 @@ export function createPlatformBillingCore(
   const couponLifecycle = createCouponLifecycleManager();
   const discounts = createDiscountEngine();
   const adjustments = createBillingAdjustmentService();
-
+  const couponPolicy = createCouponPolicyResolver();
   // Module sync: auto-activate/deactivate modules when plan changes
   const modulePlanSync = modules
     ? createModulePlanSyncService(modules, pxe.plans)
@@ -84,6 +85,7 @@ export function createPlatformBillingCore(
     couponLifecycle,
     discounts,
     adjustments,
+    couponPolicy,
     _planLifecycle: pxe.lifecycle,
   };
 }
