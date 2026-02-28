@@ -70,6 +70,7 @@ export class PolicyVersionManager {
         published_at: now,
         is_current: true,
         effective_from: payload.effective_from ?? now,
+        requires_reacceptance: payload.requires_reacceptance ?? false,
       } as any)
       .select()
       .single();
