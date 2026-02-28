@@ -107,13 +107,19 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
       } as any);
     }
 
-    // Audit log
+    // Audit log with structured fields
     await supabase.from('enforcement_audit_log').insert({
       enforcement_id: record.id,
       event_type: `account_${payload.action_type}`,
+      action: payload.action_type,
+      entity_id: entityId,
+      previous_status: 'active',
+      new_status: payload.action_type === 'ban' ? 'banned' : payload.action_type === 'suspend' ? 'suspended' : payload.action_type === 'restrict' ? 'restricted' : 'warned',
+      reason: payload.reason,
+      executor: userId,
       actor_id: userId,
       tenant_id: payload.tenant_id,
-      details: { reason: payload.reason, severity: payload.severity, entity_type: entityType, entity_id: entityId },
+      details: { severity: payload.severity, entity_type: entityType, entity_id: entityId },
     } as any);
 
     // ── Cascading effects based on action_type ──
@@ -183,6 +189,12 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
     await supabase.from('enforcement_audit_log').insert({
       enforcement_id: enforcementId,
       event_type: 'enforcement_revoked',
+      action: 'revoke',
+      entity_id: (existing as any).entity_id,
+      previous_status: (existing as any).status,
+      new_status: 'revoked',
+      reason,
+      executor: userId,
       actor_id: userId,
       tenant_id: (existing as any).tenant_id,
       details: { reason },
@@ -248,6 +260,12 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
     await supabase.from('enforcement_audit_log').insert({
       enforcement_id: payload.enforcement_id,
       event_type: 'appeal_submitted',
+      action: 'appeal',
+      entity_id: (enforcement as any).tenant_id,
+      previous_status: (enforcement as any).status,
+      new_status: 'appealed',
+      reason: payload.appeal_reason,
+      executor: userData?.user?.id,
       actor_id: userData?.user?.id,
       tenant_id: (enforcement as any).tenant_id,
       details: { appeal_reason: payload.appeal_reason },
@@ -291,6 +309,12 @@ export class AccountEnforcementEngine implements AccountEnforcementEngineAPI {
     await supabase.from('enforcement_audit_log').insert({
       enforcement_id: enforcementId,
       event_type: `appeal_${payload.status}`,
+      action: `appeal_${payload.status}`,
+      entity_id: tenantId,
+      previous_status: 'appealed',
+      new_status: payload.status === 'approved' ? 'revoked' : payload.status === 'denied' ? 'active' : 'escalated',
+      reason: payload.decision_summary ?? payload.reviewer_notes ?? null,
+      executor: reviewerId,
       actor_id: reviewerId,
       tenant_id: tenantId,
       details: {

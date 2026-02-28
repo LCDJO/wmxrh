@@ -5963,30 +5963,48 @@ export type Database = {
       }
       enforcement_audit_log: {
         Row: {
+          action: string | null
           actor_id: string | null
           created_at: string
           details: Json | null
           enforcement_id: string | null
+          entity_id: string | null
           event_type: string
+          executor: string | null
           id: string
+          new_status: string | null
+          previous_status: string | null
+          reason: string | null
           tenant_id: string | null
         }
         Insert: {
+          action?: string | null
           actor_id?: string | null
           created_at?: string
           details?: Json | null
           enforcement_id?: string | null
+          entity_id?: string | null
           event_type: string
+          executor?: string | null
           id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          reason?: string | null
           tenant_id?: string | null
         }
         Update: {
+          action?: string | null
           actor_id?: string | null
           created_at?: string
           details?: Json | null
           enforcement_id?: string | null
+          entity_id?: string | null
           event_type?: string
+          executor?: string | null
           id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          reason?: string | null
           tenant_id?: string | null
         }
         Relationships: [
