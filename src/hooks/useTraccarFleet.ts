@@ -309,11 +309,19 @@ function enrichDevices(
     else if (speedKmh > 5) computedStatus = 'moving';
     else if (ignition) computedStatus = 'idle';
 
+    // Derive a better connection status when Traccar reports 'unknown'
+    let deviceStatus: 'online' | 'offline' | 'unknown' = (dev.status || 'unknown') as any;
+    if (deviceStatus === 'unknown' && pos) {
+      // If we have recent position data, consider it online
+      const posAge = pos.fixTime ? Date.now() - new Date(pos.fixTime).getTime() : Infinity;
+      deviceStatus = posAge < 10 * 60 * 1000 ? 'online' : 'offline'; // 10min threshold
+    }
+
     return {
       id: dev.id,
       name: dev.name,
       uniqueId: dev.uniqueId,
-      status: dev.status || 'unknown',
+      status: deviceStatus,
       disabled: dev.disabled,
       lastUpdate: dev.lastUpdate,
       positionId: dev.positionId,
