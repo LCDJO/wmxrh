@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PLATFORM_MODULES } from '@/domains/platform/platform-modules';
 import { logger } from '@/lib/logger';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,57 +38,106 @@ const MODULE_DESC_MAP: Record<string, string> = Object.fromEntries(
   PLATFORM_MODULES.map(m => [m.key, m.description])
 );
 
-// ── Module groups for organized display ──
-interface ModuleGroup {
-  label: string;
-  icon: string;
-  modules: string[];
+// ── Module tree: root modules with their dependency children ──
+// Only root modules are selectable. Children are auto-included/excluded.
+interface ModuleTreeNode {
+  key: string;
+  children: ModuleTreeNode[];
 }
 
-const MODULE_GROUPS: ModuleGroup[] = [
+interface ModuleTreeGroup {
+  label: string;
+  trees: ModuleTreeNode[];
+}
+
+// Build the dependency tree. A "child" is a module whose `requires` includes the parent.
+// Roots are modules with no dependencies, or whose dependencies are in other groups.
+
+const MODULE_TREE_GROUPS: ModuleTreeGroup[] = [
   {
     label: 'Gestão de Pessoas',
-    icon: 'Users',
-    modules: ['core_hr', 'compensation', 'benefits', 'health', 'compensation_engine'],
+    trees: [
+      {
+        key: 'core_hr', // depends on agreements (cross-group, handled separately)
+        children: [
+          { key: 'compensation', children: [
+            { key: 'compensation_engine', children: [] },
+            { key: 'payroll_sim', children: [] },
+          ]},
+          { key: 'benefits', children: [] },
+          { key: 'health', children: [
+            { key: 'nr_training', children: [] },
+          ]},
+          { key: 'workforce_intel', children: [] },
+        ],
+      },
+    ],
   },
   {
     label: 'Compliance & Legal',
-    icon: 'Shield',
-    modules: ['agreements', 'compliance', 'labor_rules', 'nr_training', 'esocial', 'esocial_governance'],
-  },
-  {
-    label: 'Inteligência & Operações',
-    icon: 'Brain',
-    modules: ['payroll_sim', 'workforce_intel', 'fleet_traccar', 'support_module'],
+    trees: [
+      {
+        key: 'agreements', // root — no deps
+        children: [
+          { key: 'compliance', children: [
+            { key: 'labor_rules', children: [] },
+          ]},
+          { key: 'fleet_traccar', children: [] },
+        ],
+      },
+      {
+        key: 'esocial', // depends on core_hr + compliance (cross-tree)
+        children: [
+          { key: 'esocial_governance', children: [] },
+        ],
+      },
+    ],
   },
   {
     label: 'Plataforma SaaS',
-    icon: 'Settings',
-    modules: ['iam', 'tenant_admin', 'billing', 'automation', 'observability', 'analytics', 'autonomous_ops'],
+    trees: [
+      { key: 'iam', children: [] },
+      { key: 'tenant_admin', children: [] },
+      { key: 'billing', children: [] },
+      { key: 'automation', children: [] },
+      { key: 'observability', children: [] },
+      { key: 'analytics', children: [] },
+      { key: 'autonomous_ops', children: [] }, // deps: observability + analytics
+      { key: 'support_module', children: [] },
+    ],
   },
   {
     label: 'Growth & Marketing',
-    icon: 'Rocket',
-    modules: ['ads', 'growth', 'landing_engine', 'website_engine'],
+    trees: [
+      { key: 'ads', children: [] },
+      { key: 'growth', children: [] },
+      { key: 'landing_engine', children: [] },
+      { key: 'website_engine', children: [] },
+    ],
   },
 ];
 
-// ── Module dependencies: key → required modules ──
-const MODULE_DEPENDENCIES: Record<string, { requires: string[]; reason: string }> = {
-  core_hr:            { requires: ['agreements'],           reason: 'RH Core exige Termos & Documentos para compliance de admissão' },
-  compensation:       { requires: ['core_hr'],              reason: 'Remuneração depende do cadastro de colaboradores (RH Core)' },
-  compensation_engine:{ requires: ['compensation'],         reason: 'Motor de Compensação depende do módulo de Remuneração' },
-  benefits:           { requires: ['core_hr'],              reason: 'Benefícios depende do cadastro de colaboradores (RH Core)' },
-  health:             { requires: ['core_hr', 'agreements'],reason: 'Saúde Ocupacional exige RH Core e Termos (ASO, PCMSO)' },
-  payroll_sim:        { requires: ['compensation'],         reason: 'Simulação de Folha depende de Remuneração' },
-  compliance:         { requires: ['agreements'],           reason: 'Compliance exige Termos & Documentos para conformidade' },
-  labor_rules:        { requires: ['compliance'],           reason: 'Regras Trabalhistas depende de Compliance' },
-  nr_training:        { requires: ['health'],               reason: 'Treinamentos NR depende de Saúde Ocupacional' },
-  esocial:            { requires: ['core_hr', 'compliance'],reason: 'eSocial exige RH Core e Compliance' },
-  esocial_governance: { requires: ['esocial'],              reason: 'Governança eSocial depende do módulo eSocial' },
-  workforce_intel:    { requires: ['core_hr'],              reason: 'Inteligência RH depende de dados de RH Core' },
-  fleet_traccar:      { requires: ['agreements'],           reason: 'Frota exige Termos (responsabilidade veicular, GPS)' },
-  autonomous_ops:     { requires: ['observability', 'analytics'], reason: 'Autonomous Ops depende de Observabilidade e Analytics' },
+// ── Collect all keys in a subtree (node + all descendants) ──
+function collectTreeKeys(node: ModuleTreeNode): string[] {
+  return [node.key, ...node.children.flatMap(collectTreeKeys)];
+}
+
+// ── Cross-tree dependencies (root modules that require modules from other trees) ──
+// ── Helper: find a node by key in a tree ──
+function findNode(node: ModuleTreeNode, key: string): ModuleTreeNode | null {
+  if (node.key === key) return node;
+  for (const child of node.children) {
+    const found = findNode(child, key);
+    if (found) return found;
+  }
+  return null;
+}
+
+const CROSS_TREE_DEPS: Record<string, string[]> = {
+  core_hr: ['agreements'],
+  esocial: ['core_hr', 'compliance'],
+  autonomous_ops: ['observability', 'analytics'],
+  health: ['agreements'],
 };
 
 const ALL_PAYMENT_METHODS = [
@@ -256,41 +306,63 @@ export default function PlatformPlans() {
     else { toast.success(plan.is_active ? 'Plano desativado' : 'Plano ativado'); fetchPlans(); }
   };
 
-  const toggleArrayItem = (field: 'allowed_modules' | 'allowed_payment_methods' | 'feature_flags', item: string) => {
+  /** Toggle a root module — adds/removes entire subtree + cross-tree deps */
+  const toggleRootModule = (node: ModuleTreeNode) => {
     setForm(prev => {
-      const current = prev[field];
-      if (current.includes(item)) {
-        // Removing: also check if other enabled modules depend on this one
-        if (field === 'allowed_modules') {
-          const dependents = Object.entries(MODULE_DEPENDENCIES)
-            .filter(([key, dep]) => dep.requires.includes(item) && current.includes(key))
-            .map(([key]) => MODULE_LABEL_MAP[key] ?? key);
-          if (dependents.length > 0) {
-            toast.error(`Não é possível remover "${MODULE_LABEL_MAP[item] ?? item}"`, {
-              description: `Módulos dependentes ativos: ${dependents.join(', ')}. Desative-os primeiro.`,
-            });
-            return prev;
-          }
-        }
-        return { ...prev, [field]: current.filter(i => i !== item) };
+      const treeKeys = collectTreeKeys(node);
+      const isEnabled = prev.allowed_modules.includes(node.key);
+
+      if (isEnabled) {
+        // Remove entire subtree
+        const toRemove = new Set(treeKeys);
+        return { ...prev, allowed_modules: prev.allowed_modules.filter(m => !toRemove.has(m)) };
       } else {
-        // Adding: auto-enable dependencies
-        if (field === 'allowed_modules') {
-          const deps = MODULE_DEPENDENCIES[item];
-          if (deps) {
-            const missing = deps.requires.filter(r => !current.includes(r));
-            if (missing.length > 0) {
-              const newModules = [...new Set([...current, item, ...missing])];
-              toast.info(`Dependências adicionadas automaticamente`, {
-                description: `${missing.map(m => MODULE_LABEL_MAP[m] ?? m).join(', ')} — ${deps.reason}`,
-              });
-              return { ...prev, [field]: newModules };
+        // Add entire subtree + cross-tree dependencies
+        const crossDeps = treeKeys.flatMap(k => CROSS_TREE_DEPS[k] ?? []);
+        // Recursively resolve cross-deps' own subtrees
+        const allCrossDeps = new Set<string>();
+        const resolveCross = (keys: string[]) => {
+          for (const k of keys) {
+            if (allCrossDeps.has(k)) continue;
+            allCrossDeps.add(k);
+            // Find the tree node for this key and add its subtree
+            for (const group of MODULE_TREE_GROUPS) {
+              for (const tree of group.trees) {
+                const found = findNode(tree, k);
+                if (found) collectTreeKeys(found).forEach(ck => allCrossDeps.add(ck));
+              }
             }
+            // Also resolve cross-deps of cross-deps
+            const moreCross = CROSS_TREE_DEPS[k] ?? [];
+            resolveCross(moreCross);
+          }
+        };
+        resolveCross(crossDeps);
+
+        const newModules = [...new Set([...prev.allowed_modules, ...treeKeys, ...allCrossDeps])];
+        if (allCrossDeps.size > 0) {
+          const crossLabels = [...allCrossDeps]
+            .filter(k => !prev.allowed_modules.includes(k) && !treeKeys.includes(k))
+            .map(k => MODULE_LABEL_MAP[k] ?? k);
+          if (crossLabels.length > 0) {
+            toast.info('Dependências entre grupos incluídas', {
+              description: crossLabels.join(', '),
+            });
           }
         }
-        return { ...prev, [field]: [...current, item] };
+        return { ...prev, allowed_modules: newModules };
       }
     });
+  };
+
+  /** For non-module arrays (payment methods, feature flags) */
+  const toggleArrayItem = (field: 'allowed_payment_methods' | 'feature_flags', item: string) => {
+    setForm(prev => ({
+      ...prev,
+      [field]: prev[field].includes(item)
+        ? prev[field].filter(i => i !== item)
+        : [...prev[field], item],
+    }));
   };
 
   if (loading) return <PlansSkeleton />;
@@ -507,7 +579,7 @@ export default function PlatformPlans() {
 
             <Separator />
 
-            {/* Modules — Grouped & Dependency-aware */}
+            {/* Modules — Tree-based with dependencies */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -519,15 +591,15 @@ export default function PlatformPlans() {
                 </Badge>
               </div>
 
-              {/* Dependency legend */}
               <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-muted/30 rounded-lg px-3 py-2 border border-border/50">
-                <Link2 className="h-3 w-3 shrink-0" />
-                <span>Módulos com <strong className="text-foreground">●</strong> possuem dependências. Ao ativar, dependências são incluídas automaticamente.</span>
+                <Info className="h-3 w-3 shrink-0" />
+                <span>Selecione o módulo raiz para ativar/desativar todo o grupo com suas dependências.</span>
               </div>
 
               <TooltipProvider delayDuration={200}>
-                {MODULE_GROUPS.map(group => {
-                  const groupEnabled = group.modules.filter(m => form.allowed_modules.includes(m)).length;
+                {MODULE_TREE_GROUPS.map(group => {
+                  const allGroupKeys = group.trees.flatMap(collectTreeKeys);
+                  const groupEnabled = allGroupKeys.filter(k => form.allowed_modules.includes(k)).length;
                   return (
                     <div key={group.label} className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -535,62 +607,19 @@ export default function PlatformPlans() {
                           {group.label}
                         </p>
                         <span className="text-[10px] text-muted-foreground">
-                          {groupEnabled}/{group.modules.length}
+                          {groupEnabled}/{allGroupKeys.length}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                        {group.modules.map(mod => {
-                          const isEnabled = form.allowed_modules.includes(mod);
-                          const deps = MODULE_DEPENDENCIES[mod];
-                          const hasDeps = !!deps;
-                          const missingDeps = deps?.requires.filter(r => !form.allowed_modules.includes(r)) ?? [];
-
-                          return (
-                            <Tooltip key={mod}>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleArrayItem('allowed_modules', mod)}
-                                  className={`relative flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
-                                    isEnabled
-                                      ? 'border-primary bg-primary/10 text-primary'
-                                      : 'border-border text-muted-foreground hover:border-primary/30'
-                                  }`}
-                                >
-                                  {isEnabled
-                                    ? <Check className="h-3 w-3 shrink-0" />
-                                    : <X className="h-3 w-3 opacity-30 shrink-0" />
-                                  }
-                                  <span className="truncate">{MODULE_LABEL_MAP[mod] ?? mod}</span>
-                                  {hasDeps && (
-                                    <span className={`ml-auto h-1.5 w-1.5 rounded-full shrink-0 ${
-                                      isEnabled && missingDeps.length === 0 ? 'bg-primary' : 'bg-muted-foreground/40'
-                                    }`} />
-                                  )}
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="max-w-[260px] text-xs">
-                                <p className="font-medium">{MODULE_LABEL_MAP[mod] ?? mod}</p>
-                                <p className="text-muted-foreground mt-0.5">{MODULE_DESC_MAP[mod] ?? ''}</p>
-                                {hasDeps && (
-                                  <div className="mt-1.5 pt-1.5 border-t border-border/50">
-                                    <p className="flex items-center gap-1 text-[10px] font-medium">
-                                      <Link2 className="h-2.5 w-2.5" /> Dependências:
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground">{deps!.reason}</p>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                      {deps!.requires.map(r => (
-                                        <Badge key={r} variant={form.allowed_modules.includes(r) ? 'default' : 'destructive'} className="text-[9px] px-1.5 py-0">
-                                          {MODULE_LABEL_MAP[r] ?? r}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </TooltipContent>
-                            </Tooltip>
-                          );
-                        })}
+                      <div className="space-y-1">
+                        {group.trees.map(tree => (
+                          <ModuleTreeRow
+                            key={tree.key}
+                            node={tree}
+                            depth={0}
+                            enabledModules={form.allowed_modules}
+                            onToggleRoot={toggleRootModule}
+                          />
+                        ))}
                       </div>
                     </div>
                   );
@@ -687,6 +716,81 @@ export default function PlatformPlans() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ── Tree Row Component ──
+
+interface ModuleTreeRowProps {
+  node: ModuleTreeNode;
+  depth: number;
+  enabledModules: string[];
+  onToggleRoot: (node: ModuleTreeNode) => void;
+}
+
+function ModuleTreeRow({ node, depth, enabledModules, onToggleRoot }: ModuleTreeRowProps) {
+  const isEnabled = enabledModules.includes(node.key);
+  const isRoot = depth === 0;
+  const hasChildren = node.children.length > 0;
+  const childCount = collectTreeKeys(node).length - 1;
+
+  return (
+    <div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={isRoot ? () => onToggleRoot(node) : undefined}
+            disabled={!isRoot}
+            className={cn(
+              'flex items-center gap-2 w-full text-left text-xs font-medium rounded-lg border px-3 py-2 transition-all',
+              isEnabled
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border text-muted-foreground',
+              isRoot
+                ? 'cursor-pointer hover:border-primary/40'
+                : 'cursor-default opacity-80',
+            )}
+            style={{ marginLeft: depth * 20 }}
+          >
+            {isEnabled
+              ? <Check className="h-3 w-3 shrink-0" />
+              : <X className="h-3 w-3 opacity-30 shrink-0" />
+            }
+            {depth > 0 && (
+              <span className="text-muted-foreground/40 text-[10px] mr-0.5">└</span>
+            )}
+            <span className="truncate">{MODULE_LABEL_MAP[node.key] ?? node.key}</span>
+            {isRoot && hasChildren && (
+              <Badge variant="outline" className="ml-auto text-[9px] px-1.5 py-0 shrink-0">
+                +{childCount} dep{childCount > 1 ? 's' : ''}
+              </Badge>
+            )}
+            {!isRoot && (
+              <span className="ml-auto text-[9px] text-muted-foreground/60 italic shrink-0">auto</span>
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="max-w-[240px] text-xs">
+          <p className="font-medium">{MODULE_LABEL_MAP[node.key] ?? node.key}</p>
+          <p className="text-muted-foreground mt-0.5">{MODULE_DESC_MAP[node.key] ?? ''}</p>
+          {!isRoot && (
+            <p className="text-[10px] text-muted-foreground/80 mt-1 italic">
+              Gerenciado automaticamente pelo módulo raiz
+            </p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+      {node.children.map(child => (
+        <ModuleTreeRow
+          key={child.key}
+          node={child}
+          depth={depth + 1}
+          enabledModules={enabledModules}
+          onToggleRoot={onToggleRoot}
+        />
+      ))}
     </div>
   );
 }
