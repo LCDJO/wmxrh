@@ -13771,6 +13771,53 @@ export type Database = {
           },
         ]
       }
+      payment_gateway_configs: {
+        Row: {
+          api_key_encrypted: string | null
+          created_at: string
+          environment: string
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          provider: string
+          tenant_id: string
+          updated_at: string
+          webhook_secret_encrypted: string | null
+        }
+        Insert: {
+          api_key_encrypted?: string | null
+          created_at?: string
+          environment?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          provider?: string
+          tenant_id: string
+          updated_at?: string
+          webhook_secret_encrypted?: string | null
+        }
+        Update: {
+          api_key_encrypted?: string | null
+          created_at?: string
+          environment?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          provider?: string
+          tenant_id?: string
+          updated_at?: string
+          webhook_secret_encrypted?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_gateway_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_policies: {
         Row: {
           allow_installments: boolean
@@ -13827,6 +13874,75 @@ export type Database = {
           },
           {
             foreignKeyName: "payment_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_transactions: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          error_message: string | null
+          gateway_provider: string
+          gateway_session_id: string | null
+          gateway_transaction_id: string | null
+          id: string
+          invoice_id: string | null
+          metadata: Json | null
+          payment_method: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          webhook_payload: Json | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          currency?: string
+          error_message?: string | null
+          gateway_provider: string
+          gateway_session_id?: string | null
+          gateway_transaction_id?: string | null
+          id?: string
+          invoice_id?: string | null
+          metadata?: Json | null
+          payment_method?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          webhook_payload?: Json | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          error_message?: string | null
+          gateway_provider?: string
+          gateway_session_id?: string | null
+          gateway_transaction_id?: string | null
+          id?: string
+          invoice_id?: string | null
+          metadata?: Json | null
+          payment_method?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          webhook_payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

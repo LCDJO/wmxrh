@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.devportal-oauth]
 verify_jwt = false
+
+[functions.payment-gateway]
+verify_jwt = false
