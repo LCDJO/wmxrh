@@ -17,7 +17,7 @@ import {
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
   Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook, Store, Bot,
   HardHat, Activity, Stethoscope, Car, Monitor, Radio, UserMinus, PanelBottom,
-  Shield,
+  Shield, Crown,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -202,6 +202,7 @@ const navSections: NavSection[] = [
   {
     label: 'Configurações',
     items: [
+      { to: '/plans', icon: Crown, label: 'Meu Plano', key: 'iam_users' },
       { to: '/settings/users', icon: Users, label: 'Usuários', key: 'iam_users' },
       { to: '/settings/roles', icon: ShieldCheck, label: 'Cargos & Permissões', key: 'iam_roles' },
       { to: '/settings/pdf-layout', icon: FileText, label: 'Layout do PDF', key: 'iam_users' },
