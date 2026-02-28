@@ -3,6 +3,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { PLATFORM_MODULES } from '@/domains/platform/platform-modules';
 import { logger } from '@/lib/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,13 +26,11 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// ── Module options available in the platform ──
-const ALL_MODULES = [
-  'employees', 'departments', 'positions', 'companies', 'groups',
-  'compensation', 'benefits', 'payroll_simulation', 'health',
-  'compliance', 'labor_rules', 'labor_compliance', 'esocial',
-  'agreements', 'workforce_intelligence', 'audit', 'iam', 'fleet',
-];
+// ── Derive module list from canonical source ──
+const ALL_MODULES = PLATFORM_MODULES.map(m => m.key);
+const MODULE_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  PLATFORM_MODULES.map(m => [m.key, m.label])
+);
 
 const ALL_PAYMENT_METHODS = [
   { value: 'credit_card', label: 'Cartão de Crédito' },
@@ -444,7 +443,7 @@ export default function PlatformPlans() {
                       ? <Check className="h-3 w-3" />
                       : <X className="h-3 w-3 opacity-30" />
                     }
-                    {mod}
+                    {MODULE_LABEL_MAP[mod] ?? mod}
                   </button>
                 ))}
               </div>

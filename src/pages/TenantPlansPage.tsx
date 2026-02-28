@@ -10,6 +10,7 @@ import { useTenant } from '@/contexts/TenantContext';
 import { usePXE } from '@/hooks/use-pxe';
 import { useEmployeeLimit } from '@/hooks/use-employee-limit';
 import { PlanBadge } from '@/components/shared/PlanBadge';
+import { PLATFORM_MODULES } from '@/domains/platform/platform-modules';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -61,26 +62,9 @@ const TIER_GRADIENT: Record<string, string> = {
   enterprise: 'from-primary/30 to-primary/10',
 };
 
-const MODULE_LABELS: Record<string, string> = {
-  employees: 'Colaboradores',
-  departments: 'Departamentos',
-  positions: 'Cargos',
-  companies: 'Empresas',
-  compensation: 'Remuneração',
-  benefits: 'Benefícios',
-  health: 'Saúde Ocupacional',
-  compliance: 'Compliance',
-  agreements: 'Termos & Acordos',
-  labor_rules: 'Regras Trabalhistas',
-  labor_compliance: 'Conformidade Trabalhista',
-  esocial: 'eSocial',
-  payroll_simulation: 'Simulação de Folha',
-  workforce_intelligence: 'Inteligência RH',
-  audit: 'Auditoria',
-  iam: 'Gestão de Acessos',
-  groups: 'Grupos Empresariais',
-  fleet: 'Frota & Compliance',
-};
+const MODULE_LABELS: Record<string, string> = Object.fromEntries(
+  PLATFORM_MODULES.map(m => [m.key, m.label])
+);
 
 function formatBRL(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
