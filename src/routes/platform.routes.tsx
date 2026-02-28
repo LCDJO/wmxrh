@@ -87,6 +87,9 @@ import FederationAuditLogs from '@/pages/platform/federation/FederationAuditLogs
 import PlatformScim from '@/pages/platform/security/PlatformScim';
 
 const IncidentManagementDashboard = lazy(() => import('@/modules/incident-management/ui/IncidentManagementDashboard'));
+const GovernancePolicies = lazy(() => import('@/pages/platform/governance/GovernancePolicies'));
+const GovernanceEnforcement = lazy(() => import('@/pages/platform/governance/GovernanceEnforcement'));
+const GovernanceAppeals = lazy(() => import('@/pages/platform/governance/GovernanceAppeals'));
 
 const PlatformSupportConsole = lazy(() => import('@/modules/support/ui/PlatformSupportConsole'));
 
@@ -222,7 +225,13 @@ export const platformRoutes: RouteObject[] = [
       { path: 'audit', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformAudit /></PlatformGuard> },
       { path: 'logs', element: <PlatformGuard allowedRoles={['platform_super_admin']}><PlatformLogs /></PlatformGuard> },
       { path: 'communications', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformCommunications /></PlatformGuard> },
-      { path: 'governance', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformGovernanceDashboard /></PlatformGuard> },
+      // ── Governance Control Plane ──
+      sectionGuard('governance', opsAdmin, [
+        { index: true, element: <PlatformGovernanceDashboard /> },
+        { path: 'policies', element: <Suspense fallback={SuspenseFallback}><GovernancePolicies /></Suspense> },
+        { path: 'enforcement', element: <Suspense fallback={SuspenseFallback}><GovernanceEnforcement /></Suspense> },
+        { path: 'appeals', element: <Suspense fallback={SuspenseFallback}><GovernanceAppeals /></Suspense> },
+      ]),
       { path: 'automation', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformAutomation /></PlatformGuard> },
       { path: 'integration-automation/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformIntegrationAutomation /></PlatformGuard> },
       { path: 'observability', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformObservability /></PlatformGuard> },

@@ -129,6 +129,17 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: '/platform/governance', label: 'Governance Dashboard', icon: BarChart3, requiredPermission: 'security.view' },
       {
+        to: '/platform/governance/policies',
+        label: 'Policy Governance',
+        icon: FileText,
+        requiredPermission: 'security.view',
+        children: [
+          { to: '/platform/governance/policies', label: 'Políticas' },
+          { to: '/platform/governance/enforcement', label: 'Enforcement' },
+          { to: '/platform/governance/appeals', label: 'Appeals' },
+        ],
+      },
+      {
         to: '/platform/security/governance',
         label: 'Governança',
         icon: Shield,
