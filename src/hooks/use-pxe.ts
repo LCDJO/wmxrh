@@ -8,12 +8,11 @@
  * resolves tenant plan on context switch only.
  */
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
-import { createPlatformExperienceEngine } from '@/domains/platform-experience/platform-experience-engine';
+import { createPlatformExperienceEngine, type ExtendedPlatformExperienceEngineAPI } from '@/domains/platform-experience/platform-experience-engine';
 import type {
-  PlatformExperienceEngineAPI,
   PlanDefinition,
   TenantPlanSnapshot,
   ExperienceProfile,
@@ -23,14 +22,55 @@ import type {
 import type { ModuleKey } from '@/domains/platform/platform-modules';
 
 // ── Singleton engine ─────────────────────────────────────────────
-let engineInstance: PlatformExperienceEngineAPI | null = null;
-let seededFromDb = false;
+let engineInstance: ExtendedPlatformExperienceEngineAPI | null = null;
+let seedPromise: Promise<void> | null = null;
 
-function getEngine(): PlatformExperienceEngineAPI {
+function getEngine(): ExtendedPlatformExperienceEngineAPI {
   if (!engineInstance) {
     engineInstance = createPlatformExperienceEngine();
   }
   return engineInstance;
+}
+
+/** Seed PlanRegistry from saas_plans (once, returns promise) */
+function ensureSeeded(engine: ExtendedPlatformExperienceEngineAPI): Promise<void> {
+  if (seedPromise) return seedPromise;
+
+  seedPromise = (async () => {
+    const { data } = await supabase
+      .from('saas_plans')
+      .select('*')
+      .eq('is_active', true)
+      .order('price', { ascending: true });
+
+    if (!data) return;
+    (data as any[]).forEach((row, idx) => {
+      const def: PlanDefinition = {
+        id: row.id,
+        name: row.name,
+        tier: inferTier(row.price, idx),
+        description: row.description ?? '',
+        included_modules: row.allowed_modules ?? [],
+        addon_modules: [],
+        enabled_features: row.feature_flags ?? [],
+        max_users: null,
+        max_companies: null,
+        max_employees: (row as any).max_employees ?? null,
+        storage_quota_mb: null,
+        pricing: {
+          monthly_brl: row.billing_cycle === 'monthly' ? row.price : row.price / 12,
+          annual_brl: row.billing_cycle === 'yearly' ? row.price : row.price * 12,
+        },
+        allowed_payment_methods: (row.allowed_payment_methods ?? []) as any[],
+        trial_days: 0,
+        is_public: true,
+        display_order: idx,
+      };
+      engine.plans.register(def);
+    });
+  })();
+
+  return seedPromise;
 }
 
 interface PxeState {
@@ -50,48 +90,9 @@ export function usePXE() {
     experienceProfile: null,
   });
 
-  // ── Seed PlanRegistry from saas_plans (once) ──
-  useEffect(() => {
-    if (seededFromDb) return;
-    seededFromDb = true;
-
-    supabase
-      .from('saas_plans')
-      .select('*')
-      .eq('is_active', true)
-      .order('price', { ascending: true })
-      .then(({ data }) => {
-        if (!data) return;
-        (data as any[]).forEach((row, idx) => {
-          const def: PlanDefinition = {
-            id: row.id,
-            name: row.name,
-            tier: inferTier(row.price, idx),
-            description: row.description ?? '',
-            included_modules: row.allowed_modules ?? [],
-            addon_modules: [],
-            enabled_features: row.feature_flags ?? [],
-            max_users: null,
-            max_companies: null,
-            max_employees: (row as any).max_employees ?? null,
-            storage_quota_mb: null,
-            pricing: {
-              monthly_brl: row.billing_cycle === 'monthly' ? row.price : row.price / 12,
-              annual_brl: row.billing_cycle === 'yearly' ? row.price : row.price * 12,
-            },
-            allowed_payment_methods: (row.allowed_payment_methods ?? []) as any[],
-            trial_days: 0,
-            is_public: true,
-            display_order: idx,
-          };
-          engine.plans.register(def);
-        });
-      });
-  }, [engine]);
-
-  // ── Resolve tenant plan + experience on context switch ──
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // ── Seed plans + resolve tenant binding (sequenced correctly) ──
   useEffect(() => {
     if (!tenantId) {
       setState({ ready: true, planSnapshot: null, experienceProfile: null });
@@ -100,34 +101,58 @@ export function usePXE() {
 
     let cancelled = false;
 
-    // Fetch tenant's active plan binding
-    supabase
-      .from('tenant_plans')
-      .select('plan_id, status, billing_cycle')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active')
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled) return;
+    // 1. Ensure plans are seeded first, THEN resolve tenant
+    ensureSeeded(engine).then(() => {
+      if (cancelled) return;
 
-        if (data) {
-          // Activate in lifecycle
-          try {
-            engine.lifecycle.transition(tenantId, 'activate', (data as any).plan_id);
-          } catch {
-            // Already active — ignore
-          }
-        }
+      // 2. Fetch tenant's active plan binding from DB
+      return supabase
+        .from('tenant_plans')
+        .select('plan_id, status, billing_cycle')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active')
+        .maybeSingle();
+    }).then((result) => {
+      if (cancelled || !result) return;
+      const { data } = result;
 
-        const planSnapshot = engine.tenantPlan.resolve(tenantId);
-        const experienceProfile = engine.experience.resolveProfile(tenantId);
+      if (data) {
+        const planId = (data as any).plan_id;
+        const billingCycle = (data as any).billing_cycle ?? 'monthly';
 
-        setState({
-          ready: true,
-          planSnapshot,
-          experienceProfile,
+        // 3. Bind the tenant to the plan in the in-memory resolver
+        engine.tenantPlan.bind(tenantId, {
+          planId,
+          addons: [],
+          billing_cycle: billingCycle,
         });
+
+        // 4. Set lifecycle status to active
+        try {
+          engine.lifecycle.transition(tenantId, 'activate', planId);
+        } catch {
+          // Already active — ignore
+        }
+      }
+
+      // 5. Resolve snapshot and experience profile
+      const planSnapshot = engine.tenantPlan.resolve(tenantId);
+      const experienceProfile = engine.experience.resolveProfile(tenantId);
+
+      console.log('[PXE] Resolved plan for tenant:', tenantId, {
+        plan_id: planSnapshot.plan_id,
+        plan_tier: planSnapshot.plan_tier,
+        status: planSnapshot.status,
+        active_modules: planSnapshot.active_modules.length,
+        features: planSnapshot.effective_features.length,
       });
+
+      setState({
+        ready: true,
+        planSnapshot,
+        experienceProfile,
+      });
+    });
 
     return () => { cancelled = true; };
   }, [tenantId, engine, refreshTrigger]);
