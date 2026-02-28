@@ -30,7 +30,7 @@ export function createModuleAccessResolver(
       const snap = tenantPlanResolver.resolve(tenantId);
 
       if (snap.status === 'suspended') {
-        return { module_key: moduleKey, accessible: false, reason: 'denied_suspended' };
+        return { module_key: moduleKey, accessible: false, reason: 'denied_suspended', access_mode: 'blocked' };
       }
 
       if (snap.active_modules.includes(moduleKey)) {

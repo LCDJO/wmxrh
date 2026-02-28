@@ -591,6 +591,8 @@ export interface PlatformBillingCoreAPI {
   couponPolicy: import('./coupon-policy-resolver').CouponPolicyResolverAPI;
   /** Plan application orchestrator — atomic side-effects on plan change */
   planOrchestrator: import('./plan-application-orchestrator').PlanApplicationOrchestratorAPI;
+  /** Suspension enforcement — blocks modules, keeps read-only access */
+  suspension: import('./suspension-enforcement-service').SuspensionEnforcementAPI;
   /** Reuses PXE lifecycle (internal) */
   _planLifecycle: PlanLifecycleManagerAPI;
 }

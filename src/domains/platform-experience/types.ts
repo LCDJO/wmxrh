@@ -200,6 +200,8 @@ export interface ModuleAccessResult {
   required_plan?: PlanTier;
   /** If addon, when it expires */
   addon_expires_at?: number | null;
+  /** Access mode during suspension: 'full' | 'read_only' | 'blocked' */
+  access_mode?: 'full' | 'read_only' | 'blocked';
 }
 
 export interface ModuleAccessResolverAPI {

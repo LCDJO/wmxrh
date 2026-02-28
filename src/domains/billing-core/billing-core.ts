@@ -18,6 +18,7 @@ import { createUsageBillingEngine } from './usage-billing-engine';
 import { createUsageEventBridge } from './usage-event-bridge';
 import { createCouponPolicyResolver } from './coupon-policy-resolver';
 import { createPlanApplicationOrchestrator } from './plan-application-orchestrator';
+import { createSuspensionEnforcementService } from './suspension-enforcement-service';
 import {
   createCouponManager,
   createCouponValidationService,
@@ -61,6 +62,7 @@ export function createPlatformBillingCore(
   const modulePlanSync = modules
     ? createModulePlanSyncService(modules, pxe.plans)
     : undefined;
+  const suspension = createSuspensionEnforcementService(pxe.lifecycle, pxe.plans, modulePlanSync);
 
   const subscriptionLifecycle = createSubscriptionLifecycleManager(
     pxe.lifecycle,
@@ -89,6 +91,7 @@ export function createPlatformBillingCore(
     adjustments,
     couponPolicy,
     planOrchestrator,
+    suspension,
     _planLifecycle: pxe.lifecycle,
   };
 }
