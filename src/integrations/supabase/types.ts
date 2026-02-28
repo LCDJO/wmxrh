@@ -15560,6 +15560,8 @@ export type Database = {
         Row: {
           allowed_modules: string[]
           allowed_payment_methods: string[]
+          annual_discount_pct: number | null
+          annual_price: number | null
           billing_cycle: string
           created_at: string
           description: string | null
@@ -15575,6 +15577,8 @@ export type Database = {
         Insert: {
           allowed_modules?: string[]
           allowed_payment_methods?: string[]
+          annual_discount_pct?: number | null
+          annual_price?: number | null
           billing_cycle?: string
           created_at?: string
           description?: string | null
@@ -15590,6 +15594,8 @@ export type Database = {
         Update: {
           allowed_modules?: string[]
           allowed_payment_methods?: string[]
+          annual_discount_pct?: number | null
+          annual_price?: number | null
           billing_cycle?: string
           created_at?: string
           description?: string | null
