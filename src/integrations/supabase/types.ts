@@ -9334,6 +9334,53 @@ export type Database = {
           },
         ]
       }
+      fraud_detection_logs: {
+        Row: {
+          action_taken: string | null
+          created_at: string
+          details: Json | null
+          detection_type: string
+          id: string
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          tenant_id: string
+        }
+        Insert: {
+          action_taken?: string | null
+          created_at?: string
+          details?: Json | null
+          detection_type: string
+          id?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id: string
+        }
+        Update: {
+          action_taken?: string | null
+          created_at?: string
+          details?: Json | null
+          detection_type?: string
+          id?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fraud_detection_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gamification_leaderboard: {
         Row: {
           current_tier: string
@@ -14168,6 +14215,64 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_change_history: {
+        Row: {
+          change_type: string
+          changed_at: string
+          changed_by: string | null
+          from_plan_id: string | null
+          id: string
+          metadata: Json | null
+          new_status: string | null
+          tenant_id: string
+          to_plan_id: string | null
+        }
+        Insert: {
+          change_type: string
+          changed_at?: string
+          changed_by?: string | null
+          from_plan_id?: string | null
+          id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          tenant_id: string
+          to_plan_id?: string | null
+        }
+        Update: {
+          change_type?: string
+          changed_at?: string
+          changed_by?: string | null
+          from_plan_id?: string | null
+          id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          tenant_id?: string
+          to_plan_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_change_history_from_plan_id_fkey"
+            columns: ["from_plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_change_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_change_history_to_plan_id_fkey"
+            columns: ["to_plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_modules: {
         Row: {
           created_at: string
@@ -18692,6 +18797,9 @@ export type Database = {
           paid_until: string | null
           payment_method: string | null
           plan_id: string
+          review_flagged_at: string | null
+          review_reason: string | null
+          review_required: boolean
           scheduled_plan_id: string | null
           started_at: string
           status: string
@@ -18718,6 +18826,9 @@ export type Database = {
           paid_until?: string | null
           payment_method?: string | null
           plan_id: string
+          review_flagged_at?: string | null
+          review_reason?: string | null
+          review_required?: boolean
           scheduled_plan_id?: string | null
           started_at?: string
           status?: string
@@ -18744,6 +18855,9 @@ export type Database = {
           paid_until?: string | null
           payment_method?: string | null
           plan_id?: string
+          review_flagged_at?: string | null
+          review_reason?: string | null
+          review_required?: boolean
           scheduled_plan_id?: string | null
           started_at?: string
           status?: string
@@ -19903,6 +20017,7 @@ export type Database = {
         Args: { p_limit_key: string; p_tenant_id: string }
         Returns: Json
       }
+      check_tenant_fraud: { Args: { p_tenant_id: string }; Returns: Json }
       check_tenant_needs_onboarding: {
         Args: { p_tenant_id: string }
         Returns: boolean
