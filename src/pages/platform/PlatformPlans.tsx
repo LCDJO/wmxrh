@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 import {
   Package, Plus, Pencil, Trash2, CreditCard, Puzzle, Flag,
-  AlertTriangle, Check, X, DollarSign, ToggleLeft,
+  AlertTriangle, Check, X, DollarSign, ToggleLeft, Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -72,6 +72,8 @@ type PlanFormData = {
   allowed_modules: string[];
   allowed_payment_methods: string[];
   feature_flags: string[];
+  max_employees: string;
+  unlimited_employees: boolean;
 };
 
 const emptyForm: PlanFormData = {
@@ -83,6 +85,8 @@ const emptyForm: PlanFormData = {
   allowed_modules: [],
   allowed_payment_methods: [],
   feature_flags: [],
+  max_employees: '',
+  unlimited_employees: true,
 };
 
 export default function PlatformPlans() {
@@ -120,6 +124,7 @@ export default function PlatformPlans() {
 
   const openEdit = (plan: SaasPlan) => {
     setEditingPlan(plan);
+    const maxEmp = (plan as any).max_employees;
     setForm({
       name: plan.name,
       description: plan.description ?? '',
@@ -129,6 +134,8 @@ export default function PlatformPlans() {
       allowed_modules: plan.allowed_modules ?? [],
       allowed_payment_methods: plan.allowed_payment_methods ?? [],
       feature_flags: plan.feature_flags ?? [],
+      max_employees: maxEmp != null ? String(maxEmp) : '',
+      unlimited_employees: maxEmp == null,
     });
     setDialogOpen(true);
   };
@@ -150,6 +157,7 @@ export default function PlatformPlans() {
       allowed_modules: form.allowed_modules,
       allowed_payment_methods: form.allowed_payment_methods,
       feature_flags: form.feature_flags,
+      max_employees: form.unlimited_employees ? null : (parseInt(form.max_employees) || null),
     };
 
     if (editingPlan) {
@@ -266,6 +274,12 @@ export default function PlatformPlans() {
                   </span>
                 </div>
 
+                {/* Employee limit */}
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Users className="h-3.5 w-3.5" />
+                  Colaboradores: {(plan as any).max_employees ? `até ${(plan as any).max_employees}` : 'Ilimitado'}
+                </div>
+
                 <Separator />
 
                 {/* Modules */}
@@ -374,6 +388,36 @@ export default function PlatformPlans() {
             <div className="space-y-2">
               <Label>Descrição</Label>
               <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Descrição do plano..." rows={2} />
+            </div>
+
+            <Separator />
+
+            {/* Employee Limits */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                <Label className="text-sm font-semibold">Limite de Colaboradores</Label>
+              </div>
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={form.unlimited_employees}
+                  onCheckedChange={v => setForm(p => ({ ...p, unlimited_employees: v, max_employees: v ? '' : p.max_employees }))}
+                />
+                <Label className="text-sm text-muted-foreground">Ilimitado</Label>
+              </div>
+              {!form.unlimited_employees && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Máximo de colaboradores permitidos</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={form.max_employees}
+                    onChange={e => setForm(p => ({ ...p, max_employees: e.target.value }))}
+                    placeholder="Ex: 5, 20, 100"
+                    className="max-w-[200px]"
+                  />
+                </div>
+              )}
             </div>
 
             <Separator />
