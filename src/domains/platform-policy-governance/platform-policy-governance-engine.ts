@@ -48,9 +48,9 @@ export class PlatformPolicyGovernanceEngine implements PlatformPolicyGovernanceA
   async publishVersion(payload: PublishVersionPayload): Promise<PolicyVersion> {
     const version = await this.versions.publish(payload);
 
-    // Check if policy requires re-acceptance on update
+    // Invalidate acceptances if version or policy requires re-acceptance
     const policy = await this.registry.getById(payload.policy_id);
-    if (policy.requires_re_acceptance_on_update) {
+    if (policy.requires_re_acceptance_on_update || payload.requires_reacceptance) {
       await this.acceptance.invalidateAcceptances(payload.policy_id);
     }
 

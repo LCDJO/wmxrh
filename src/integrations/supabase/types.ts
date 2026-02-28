@@ -15143,6 +15143,7 @@ export type Database = {
           policy_id: string
           published_at: string | null
           published_by: string | null
+          requires_reacceptance: boolean
           title: string
           version_number: number
         }
@@ -15158,6 +15159,7 @@ export type Database = {
           policy_id: string
           published_at?: string | null
           published_by?: string | null
+          requires_reacceptance?: boolean
           title: string
           version_number?: number
         }
@@ -15173,6 +15175,7 @@ export type Database = {
           policy_id?: string
           published_at?: string | null
           published_by?: string | null
+          requires_reacceptance?: boolean
           title?: string
           version_number?: number
         }

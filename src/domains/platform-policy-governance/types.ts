@@ -37,6 +37,7 @@ export interface PolicyVersion {
   published_at: string | null;
   is_current: boolean;
   effective_from: string | null;
+  requires_reacceptance: boolean;
   created_at: string;
 }
 
@@ -70,6 +71,7 @@ export interface PublishVersionPayload {
   content_plain?: string;
   change_summary?: string;
   effective_from?: string;
+  requires_reacceptance?: boolean;
 }
 
 export interface AcceptPolicyPayload {
