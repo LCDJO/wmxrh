@@ -32,6 +32,7 @@ export class MandatoryAcceptanceController {
         accepted_by: userData?.user?.id ?? payload.tenant_id,
         acceptance_method: payload.acceptance_method ?? 'click',
         is_current: true,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
         metadata: {},
       } as any)
       .select()
