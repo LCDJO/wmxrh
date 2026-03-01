@@ -92,7 +92,18 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Overview',
     items: [
       { to: '/platform/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { to: '/platform/control-plane', label: 'Control Plane', icon: Gauge, requiredPermission: 'security.manage' },
+      {
+        to: '/platform/control-plane',
+        label: 'Control Plane',
+        icon: Gauge,
+        requiredPermission: 'security.manage',
+        children: [
+          { to: '/platform/control-plane', label: 'Visão Geral' },
+          { to: '/platform/control-plane/dr-tests', label: 'DR Tests' },
+          { to: '/platform/control-plane/chaos', label: 'Chaos Engineering' },
+        ],
+      },
+      { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'security.view' },
     ],
   },
   {
@@ -221,6 +232,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       { to: '/platform/ai-operations', label: 'AI Operations', icon: Brain, requiredPermission: 'security.manage' },
       { to: '/platform/document-signature', label: 'Assinatura Digital', icon: FileSignature, requiredPermission: 'security.manage' },
+      { to: '/platform/integration-health', label: 'Integration Health', icon: Activity, requiredPermission: 'security.manage' },
     ],
   },
   {
@@ -248,7 +260,7 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/revenue/intelligence', label: 'Intelligence' },
         ],
       },
-      { to: '/platform/fiscal', label: 'Fiscal', icon: ScrollText, requiredPermission: 'fiscal.view' },
+      // Fiscal: aguardando implementação da página
     ],
   },
   {
