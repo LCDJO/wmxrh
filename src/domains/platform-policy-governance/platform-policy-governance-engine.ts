@@ -18,6 +18,8 @@ import type {
   PendingPolicy,
   PublishVersionPayload,
   AcceptPolicyPayload,
+  CreatePolicyPayload,
+  UpdatePolicyPayload,
 } from './types';
 
 import { PolicyRegistry } from './policy-registry';
@@ -49,6 +51,22 @@ export class PlatformPolicyGovernanceEngine implements PlatformPolicyGovernanceA
     const policy = await this.registry.getById(policyId);
     const version = await this.versions.getCurrent(policyId);
     return { policy, version };
+  }
+
+  async createPolicy(payload: CreatePolicyPayload): Promise<PlatformPolicy> {
+    return this.registry.create(payload);
+  }
+
+  async updatePolicy(policyId: string, payload: UpdatePolicyPayload): Promise<PlatformPolicy> {
+    return this.registry.update(policyId, payload);
+  }
+
+  async deletePolicy(policyId: string): Promise<void> {
+    return this.registry.softDelete(policyId);
+  }
+
+  async getVersions(policyId: string): Promise<PolicyVersion[]> {
+    return this.versions.getAll(policyId);
   }
 
   async publishVersion(payload: PublishVersionPayload): Promise<PolicyVersion> {
