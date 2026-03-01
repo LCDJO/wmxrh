@@ -83,19 +83,42 @@ export interface AcceptPolicyPayload {
   acceptance_method?: AcceptanceMethod;
 }
 
+export interface CreatePolicyPayload {
+  slug: string;
+  name: string;
+  description?: string;
+  policy_type: PolicyType;
+  category: PolicyCategory;
+  applies_to: PolicyAppliesTo;
+  scope: PolicyScope;
+  is_mandatory?: boolean;
+  requires_re_acceptance_on_update?: boolean;
+  grace_period_days?: number;
+}
+
+export interface UpdatePolicyPayload {
+  name?: string;
+  description?: string;
+  policy_type?: PolicyType;
+  category?: PolicyCategory;
+  applies_to?: PolicyAppliesTo;
+  scope?: PolicyScope;
+  is_mandatory?: boolean;
+  requires_re_acceptance_on_update?: boolean;
+  grace_period_days?: number;
+  is_active?: boolean;
+}
+
 export interface PlatformPolicyGovernanceAPI {
-  /** List all active policies */
   listPolicies(): Promise<PlatformPolicy[]>;
-  /** Get a policy with its current version */
   getPolicy(policyId: string): Promise<{ policy: PlatformPolicy; version: PolicyVersion | null }>;
-  /** Publish a new version of a policy */
+  createPolicy(payload: CreatePolicyPayload): Promise<PlatformPolicy>;
+  updatePolicy(policyId: string, payload: UpdatePolicyPayload): Promise<PlatformPolicy>;
+  deletePolicy(policyId: string): Promise<void>;
   publishVersion(payload: PublishVersionPayload): Promise<PolicyVersion>;
-  /** Accept a policy version for a tenant */
+  getVersions(policyId: string): Promise<PolicyVersion[]>;
   accept(payload: AcceptPolicyPayload): Promise<PolicyAcceptance>;
-  /** Get pending policies for a tenant (needs acceptance) */
   getPendingForTenant(tenantId: string): Promise<PendingPolicy[]>;
-  /** Get acceptance history for a tenant */
   getAcceptanceHistory(tenantId: string): Promise<PolicyAcceptance[]>;
-  /** Check if tenant has accepted all mandatory policies */
   isCompliant(tenantId: string): Promise<{ compliant: boolean; pending: PendingPolicy[] }>;
 }
