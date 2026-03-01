@@ -9921,6 +9921,104 @@ export type Database = {
           },
         ]
       }
+      governance_events: {
+        Row: {
+          aggregate_id: string
+          aggregate_type: string
+          event_type: string
+          event_version: number
+          id: string
+          metadata: Json
+          occurred_at: string
+          payload: Json
+          recorded_at: string
+          tenant_id: string
+        }
+        Insert: {
+          aggregate_id: string
+          aggregate_type: string
+          event_type: string
+          event_version?: number
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          payload?: Json
+          recorded_at?: string
+          tenant_id: string
+        }
+        Update: {
+          aggregate_id?: string
+          aggregate_type?: string
+          event_type?: string
+          event_version?: number
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          payload?: Json
+          recorded_at?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governance_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      governance_projections: {
+        Row: {
+          aggregate_id: string
+          aggregate_type: string
+          id: string
+          last_event_id: string | null
+          projection_name: string
+          state: Json
+          tenant_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          aggregate_id: string
+          aggregate_type: string
+          id?: string
+          last_event_id?: string | null
+          projection_name: string
+          state?: Json
+          tenant_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          aggregate_id?: string
+          aggregate_type?: string
+          id?: string
+          last_event_id?: string | null
+          projection_name?: string
+          state?: Json
+          tenant_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governance_projections_last_event_id_fkey"
+            columns: ["last_event_id"]
+            isOneToOne: false
+            referencedRelation: "governance_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "governance_projections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       growth_submission_logs: {
         Row: {
           action: string
