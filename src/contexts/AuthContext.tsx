@@ -79,32 +79,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listener reativo: fonte ÚNICA de verdade para o estado de auth.
     // Captura login, logout, token_refreshed, etc.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       logger.info('Auth state changed', { event, userId: session?.user?.id });
       initialized = true;
 
-      // ── LOGIN BLOCKER on session restore / token refresh ──
-      if (session?.user?.id && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-        const { data: pu } = await supabase
-          .from('platform_users')
-          .select('account_status')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-
-        const status = (pu as any)?.account_status;
-        if (status === 'banned' || status === 'suspended') {
-          logger.warn('Sessão revogada — conta bloqueada', { userId: session.user.id, status });
-          await supabase.auth.signOut();
-          setSession(null);
-          setUser(null);
-          setLoading(false);
-          return;
-        }
-      }
-
+      // Update state synchronously first to avoid blocking auth events
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // ── LOGIN BLOCKER on session restore / token refresh (non-blocking) ──
+      if (session?.user?.id && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+        setTimeout(() => {
+          supabase
+            .from('platform_users')
+            .select('account_status')
+            .eq('user_id', session.user.id)
+            .maybeSingle()
+            .then(({ data: pu }) => {
+              const status = (pu as any)?.account_status;
+              if (status === 'banned' || status === 'suspended') {
+                logger.warn('Sessão revogada — conta bloqueada', { userId: session.user.id, status });
+                supabase.auth.signOut();
+                setSession(null);
+                setUser(null);
+              }
+            });
+        }, 0);
+      }
     });
 
     // Fallback: se o listener não disparar em 500ms (sessão existente sem mudança),
