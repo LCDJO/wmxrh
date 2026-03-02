@@ -244,6 +244,43 @@ export interface FraudIncident {
   created_at: string;
 }
 
+// ── Suspicious Device Registry ──────────────────────────────────
+
+export type DeviceThreatLevel = 'clean' | 'watch' | 'suspicious' | 'blocked';
+
+export interface SuspiciousDevice {
+  id: string;
+  tenant_id: string;
+  device_fingerprint: string;
+  threat_level: DeviceThreatLevel;
+  associated_employee_ids: string[];
+  incident_count: number;
+  last_incident_id?: string;
+  flags: string[];                  // e.g. ['rooted', 'emulator', 'vpn', 'multi_user']
+  first_seen_at: string;
+  last_seen_at: string;
+  blocked_at?: string;
+  notes?: string;
+}
+
+// ── Anomalous Behavior Cluster ──────────────────────────────────
+
+export interface BehaviorCluster {
+  id: string;
+  tenant_id: string;
+  cluster_type: 'temporal' | 'spatial' | 'device' | 'behavioral';
+  description: string;
+  employee_ids: string[];
+  session_ids: string[];
+  centroid_features: Partial<BehavioralFeatureVector>;
+  anomaly_types: AnomalyType[];
+  severity: AnomalySeverity;
+  confidence: number;
+  first_detected_at: string;
+  last_updated_at: string;
+  is_active: boolean;
+}
+
 // ── Adaptive Learning ───────────────────────────────────────────
 
 export interface LearningFeedback {
