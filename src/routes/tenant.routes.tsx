@@ -69,6 +69,7 @@ import TerminatedEmployees from '@/pages/TerminatedEmployees';
 import ReferenceLetters from '@/pages/ReferenceLetters';
 import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
 import LgpdCompliance from '@/pages/LgpdCompliance';
+import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
 
 import SsoSettings from '@/pages/SsoSettings';
 import ScimSettings from '@/pages/ScimSettings';
@@ -119,6 +120,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/payroll-simulation', element: pr('payroll', <PayrollSimulation />) },
       { path: '/workforce-intelligence', element: pr('intelligence', <WorkforceIntelligence />) },
       { path: '/strategic-intelligence', element: pr('intelligence', <StrategicIntelligence />) },
+      { path: '/executive-dashboard', element: pr('intelligence', <ExecutiveDashboard />) },
       // ── Occupational Safety ──
       { path: '/occupational-compliance', element: pr('health', <OccupationalCompliance />) },
       { path: '/nr-compliance', element: pr('health', <NrComplianceDashboard />) },
