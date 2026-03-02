@@ -11,6 +11,7 @@
  *    ├── BehaviorProfileManager     — Baseline por colaborador (EMA)
  *    ├── AnomalyDetectionModel      — Z-score + bot + replay detection
  *    ├── BehavioralRiskScoringEngine — Score ponderado com merge biométrico
+ *    ├── UnifiedRiskScoringEngine   — Score unificado (5 pilares)
  *    ├── FraudPatternDatabase       — Catálogo de padrões (buddy punch, bot, proxy)
  *    └── AdaptiveLearningModule     — Feedback loop + Bayesian tuning
  *
@@ -29,6 +30,7 @@ export { FeatureExtractionService } from './feature-extraction-service';
 export { BehaviorProfileManager } from './behavior-profile-manager';
 export { AnomalyDetectionModel } from './anomaly-detection-model';
 export { BehavioralRiskScoringEngine } from './behavioral-risk-scoring-engine';
+export { UnifiedRiskScoringEngine } from './unified-risk-scoring-engine';
 export { FraudPatternDatabase } from './fraud-pattern-database';
 export { AdaptiveLearningModule } from './adaptive-learning-module';
 export type * from './types';
