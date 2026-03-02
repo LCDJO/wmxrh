@@ -302,6 +302,18 @@ export interface ModelPerformanceMetrics {
   evaluated_at: string;
 }
 
+// ── Shared Device / Profile Similarity ──────────────────────────
+
+export interface ProfileSimilarityMatch {
+  employee_a: string;
+  employee_b: string;
+  cosine_similarity: number;    // 0-1, where 1 = identical
+  euclidean_distance: number;   // normalized
+  matching_dimensions: string[];
+  suspected_reason: 'shared_device' | 'proxy_clocking' | 'credential_sharing';
+  detected_at: string;
+}
+
 // ── Engine API ──────────────────────────────────────────────────
 
 export interface BehavioralAIEngineAPI {
@@ -312,4 +324,5 @@ export interface BehavioralAIEngineAPI {
   matchFraudPatterns(features: BehavioralFeatureVector, anomalies: AnomalyDetection[]): FraudIncident[];
   submitFeedback(feedback: LearningFeedback): Promise<void>;
   getProfile(tenantId: string, employeeId: string): BehaviorProfile | null;
+  detectSharedProfiles(tenantId: string, threshold?: number): ProfileSimilarityMatch[];
 }

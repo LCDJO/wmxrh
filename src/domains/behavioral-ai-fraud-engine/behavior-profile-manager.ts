@@ -11,7 +11,7 @@
  *   established (>100 sessions)
  */
 
-import type { BehaviorProfile, BehavioralFeatureVector, ProfileMaturity, AnomalyHistoryEntry } from './types';
+import type { BehaviorProfile, BehavioralFeatureVector, ProfileMaturity, AnomalyHistoryEntry, ProfileSimilarityMatch } from './types';
 import type { AnomalyDetection } from './types';
 
 const EMA_ALPHA = 0.15;
@@ -184,6 +184,86 @@ export class BehaviorProfileManager {
   /** Reset profile (LGPD right to erasure) */
   deleteProfile(tenantId: string, employeeId: string): boolean {
     return this.profiles.delete(this.key(tenantId, employeeId));
+  }
+
+  // ── Anti-Shared-Device Detection ────────────────────────────
+
+  /**
+   * Compare all trained profiles within a tenant and detect pairs
+   * with excessive behavioral similarity (cosine similarity > threshold).
+   * Default threshold: 0.92 (very similar baselines).
+   */
+  detectSharedProfiles(tenantId: string, threshold = 0.92): ProfileSimilarityMatch[] {
+    const tenantProfiles = [...this.profiles.values()].filter(
+      p => p.tenant_id === tenantId && p.is_trained,
+    );
+
+    const matches: ProfileSimilarityMatch[] = [];
+
+    for (let i = 0; i < tenantProfiles.length; i++) {
+      for (let j = i + 1; j < tenantProfiles.length; j++) {
+        const a = tenantProfiles[i];
+        const b = tenantProfiles[j];
+
+        const { cosine, euclidean, matchingDims } = this.computeSimilarity(
+          a.baseline_features, b.baseline_features,
+        );
+
+        if (cosine >= threshold) {
+          matches.push({
+            employee_a: a.employee_id,
+            employee_b: b.employee_id,
+            cosine_similarity: Math.round(cosine * 1000) / 1000,
+            euclidean_distance: Math.round(euclidean * 1000) / 1000,
+            matching_dimensions: matchingDims,
+            suspected_reason: cosine >= 0.97 ? 'shared_device'
+              : cosine >= 0.95 ? 'proxy_clocking'
+              : 'credential_sharing',
+            detected_at: new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    return matches.sort((a, b) => b.cosine_similarity - a.cosine_similarity);
+  }
+
+  private computeSimilarity(
+    a: BehavioralFeatureVector,
+    b: BehavioralFeatureVector,
+  ): { cosine: number; euclidean: number; matchingDims: string[] } {
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    let sumSqDiff = 0;
+    const matchingDims: string[] = [];
+    let dimCount = 0;
+
+    for (const key of NUMERIC_FEATURE_KEYS) {
+      const va = (a as any)[key] as number;
+      const vb = (b as any)[key] as number;
+      if (typeof va !== 'number' || typeof vb !== 'number') continue;
+
+      dotProduct += va * vb;
+      normA += va * va;
+      normB += vb * vb;
+
+      const maxVal = Math.max(Math.abs(va), Math.abs(vb), 1);
+      const normalizedDiff = Math.abs(va - vb) / maxVal;
+      sumSqDiff += normalizedDiff * normalizedDiff;
+      dimCount++;
+
+      // Track dimensions with very high similarity (< 5% difference)
+      if (normalizedDiff < 0.05) {
+        matchingDims.push(key);
+      }
+    }
+
+    const denominator = Math.sqrt(normA) * Math.sqrt(normB);
+    const cosine = denominator > 0 ? dotProduct / denominator : 0;
+    const euclidean = dimCount > 0 ? Math.sqrt(sumSqDiff / dimCount) : 1;
+
+    return { cosine, euclidean, matchingDims };
   }
 
   get profileCount(): number {

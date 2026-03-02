@@ -26,7 +26,7 @@ import { incrementFraudFlags } from '@/domains/observability/worktime-metrics';
 import type {
   BehavioralAIEngineAPI, BehaviorCaptureSession, BehavioralFeatureVector,
   AnomalyDetection, BehavioralRiskAssessment, FraudIncident, LearningFeedback,
-  BehaviorProfile, UnifiedRiskInput, UnifiedRiskAssessment,
+  BehaviorProfile, UnifiedRiskInput, UnifiedRiskAssessment, ProfileSimilarityMatch,
 } from './types';
 
 export class BehavioralAIEngine implements BehavioralAIEngineAPI {
@@ -142,10 +142,18 @@ export class BehavioralAIEngine implements BehavioralAIEngineAPI {
     this.adaptiveLearning.processManagerApproval(feedback);
   }
 
-  // ── Profile access ───────────────────────────────────────────
+  // ── Profile access & Shared-Device Detection ─────────────────
 
   getProfile(tenantId: string, employeeId: string): BehaviorProfile | null {
     return this.profileManager.getProfile(tenantId, employeeId);
+  }
+
+  /**
+   * Detect pairs of employees with excessively similar behavioral baselines.
+   * Indicates shared device, proxy clocking, or credential sharing.
+   */
+  detectSharedProfiles(tenantId: string, threshold?: number) {
+    return this.profileManager.detectSharedProfiles(tenantId, threshold);
   }
 
   // ═══════════════════════════════════════════════════════════════
