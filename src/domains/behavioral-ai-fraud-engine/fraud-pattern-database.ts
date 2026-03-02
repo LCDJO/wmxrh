@@ -10,6 +10,8 @@
 import type {
   FraudPattern, FraudDetectionRule, FraudIncident,
   FraudPatternCategory, BehavioralFeatureVector, AnomalyDetection,
+  SuspiciousDevice, DeviceThreatLevel, BehaviorCluster,
+  AnomalyType, AnomalySeverity,
 } from './types';
 
 // ── Built-in patterns ──────────────────────────────────────────
@@ -115,11 +117,11 @@ const BUILT_IN_PATTERNS: FraudPattern[] = [
 
 export class FraudPatternDatabase {
   private patterns: FraudPattern[] = [...BUILT_IN_PATTERNS];
+  private devices = new Map<string, SuspiciousDevice>();      // fingerprint → device
+  private clusters = new Map<string, BehaviorCluster>();      // cluster_id → cluster
 
-  /**
-   * Match feature deviations against known fraud patterns.
-   * `deviations` = Z-scores from BehaviorProfileManager.computeDeviations()
-   */
+  // ── Pattern Matching ────────────────────────────────────────
+
   matchPatterns(
     tenantId: string,
     employeeId: string,
@@ -213,5 +215,163 @@ export class FraudPatternDatabase {
   togglePattern(patternId: string, active: boolean): void {
     const p = this.patterns.find(p => p.id === patternId);
     if (p) p.is_active = active;
+  }
+
+  // ── Suspicious Device Registry ──────────────────────────────
+
+  /**
+   * Register or escalate a suspicious device.
+   */
+  reportDevice(
+    tenantId: string,
+    fingerprint: string,
+    employeeId: string,
+    flags: string[],
+    incidentId?: string,
+  ): SuspiciousDevice {
+    const existing = this.devices.get(fingerprint);
+    const now = new Date().toISOString();
+
+    if (existing) {
+      existing.incident_count += 1;
+      existing.last_seen_at = now;
+      if (incidentId) existing.last_incident_id = incidentId;
+      if (!existing.associated_employee_ids.includes(employeeId)) {
+        existing.associated_employee_ids.push(employeeId);
+      }
+      for (const f of flags) {
+        if (!existing.flags.includes(f)) existing.flags.push(f);
+      }
+      // Auto-escalate threat level
+      existing.threat_level = this.escalateDeviceThreat(existing);
+      return existing;
+    }
+
+    const device: SuspiciousDevice = {
+      id: crypto.randomUUID(),
+      tenant_id: tenantId,
+      device_fingerprint: fingerprint,
+      threat_level: flags.length > 2 ? 'suspicious' : 'watch',
+      associated_employee_ids: [employeeId],
+      incident_count: 1,
+      last_incident_id: incidentId,
+      flags,
+      first_seen_at: now,
+      last_seen_at: now,
+    };
+    this.devices.set(fingerprint, device);
+    return device;
+  }
+
+  getDevice(fingerprint: string): SuspiciousDevice | null {
+    return this.devices.get(fingerprint) ?? null;
+  }
+
+  getSuspiciousDevices(tenantId: string): SuspiciousDevice[] {
+    return [...this.devices.values()].filter(d => d.tenant_id === tenantId);
+  }
+
+  blockDevice(fingerprint: string, notes?: string): void {
+    const d = this.devices.get(fingerprint);
+    if (d) {
+      d.threat_level = 'blocked';
+      d.blocked_at = new Date().toISOString();
+      if (notes) d.notes = notes;
+    }
+  }
+
+  isDeviceBlocked(fingerprint: string): boolean {
+    return this.devices.get(fingerprint)?.threat_level === 'blocked';
+  }
+
+  private escalateDeviceThreat(device: SuspiciousDevice): DeviceThreatLevel {
+    if (device.threat_level === 'blocked') return 'blocked';
+    if (device.associated_employee_ids.length >= 3 || device.incident_count >= 5) return 'suspicious';
+    if (device.incident_count >= 2 || device.flags.length >= 2) return 'watch';
+    return 'clean';
+  }
+
+  // ── Anomalous Behavior Clusters ─────────────────────────────
+
+  /**
+   * Register or update a behavior cluster (group of correlated anomalies).
+   */
+  registerCluster(
+    tenantId: string,
+    clusterType: BehaviorCluster['cluster_type'],
+    employeeId: string,
+    sessionId: string,
+    anomalyTypes: AnomalyType[],
+    severity: AnomalySeverity,
+    confidence: number,
+    centroidFeatures?: Partial<BehaviorCluster['centroid_features']>,
+  ): BehaviorCluster {
+    const now = new Date().toISOString();
+
+    // Try to find existing cluster of same type + tenant with overlapping employees
+    const existing = [...this.clusters.values()].find(
+      c => c.tenant_id === tenantId
+        && c.cluster_type === clusterType
+        && c.is_active
+        && c.employee_ids.includes(employeeId),
+    );
+
+    if (existing) {
+      if (!existing.session_ids.includes(sessionId)) {
+        existing.session_ids.push(sessionId);
+      }
+      for (const t of anomalyTypes) {
+        if (!existing.anomaly_types.includes(t)) existing.anomaly_types.push(t);
+      }
+      existing.confidence = Math.max(existing.confidence, confidence);
+      existing.last_updated_at = now;
+      return existing;
+    }
+
+    const cluster: BehaviorCluster = {
+      id: crypto.randomUUID(),
+      tenant_id: tenantId,
+      cluster_type: clusterType,
+      description: `Cluster ${clusterType} — ${anomalyTypes.join(', ')}`,
+      employee_ids: [employeeId],
+      session_ids: [sessionId],
+      centroid_features: centroidFeatures ?? {},
+      anomaly_types: [...anomalyTypes],
+      severity,
+      confidence,
+      first_detected_at: now,
+      last_updated_at: now,
+      is_active: true,
+    };
+    this.clusters.set(cluster.id, cluster);
+    return cluster;
+  }
+
+  /**
+   * Merge an employee into an existing cluster (e.g. same device, same location).
+   */
+  mergeIntoCluster(clusterId: string, employeeId: string, sessionId: string): void {
+    const c = this.clusters.get(clusterId);
+    if (!c) return;
+    if (!c.employee_ids.includes(employeeId)) c.employee_ids.push(employeeId);
+    if (!c.session_ids.includes(sessionId)) c.session_ids.push(sessionId);
+    c.last_updated_at = new Date().toISOString();
+  }
+
+  getActiveClusters(tenantId: string): BehaviorCluster[] {
+    return [...this.clusters.values()].filter(c => c.tenant_id === tenantId && c.is_active);
+  }
+
+  deactivateCluster(clusterId: string): void {
+    const c = this.clusters.get(clusterId);
+    if (c) c.is_active = false;
+  }
+
+  get deviceCount(): number {
+    return this.devices.size;
+  }
+
+  get clusterCount(): number {
+    return this.clusters.size;
   }
 }
