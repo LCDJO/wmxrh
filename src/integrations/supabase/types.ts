@@ -9853,6 +9853,56 @@ export type Database = {
           },
         ]
       }
+      governance_alert_configs: {
+        Row: {
+          conditions: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          notify_channels: Json
+          rule_code: string
+          rule_name: string
+          severity: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notify_channels?: Json
+          rule_code: string
+          rule_name: string
+          severity?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notify_channels?: Json
+          rule_code?: string
+          rule_name?: string
+          severity?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governance_alert_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       governance_audit_snapshots: {
         Row: {
           anomalies: Json
@@ -9961,6 +10011,77 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "governance_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      governance_executive_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          created_at: string
+          description: string
+          employee_id: string
+          id: string
+          recommended_actions: Json
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          risk_score: number
+          severity: string
+          status: string
+          tenant_id: string
+          title: string
+          trigger_factors: Json
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          created_at?: string
+          description: string
+          employee_id: string
+          id?: string
+          recommended_actions?: Json
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          risk_score?: number
+          severity?: string
+          status?: string
+          tenant_id: string
+          title: string
+          trigger_factors?: Json
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          created_at?: string
+          description?: string
+          employee_id?: string
+          id?: string
+          recommended_actions?: Json
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          risk_score?: number
+          severity?: string
+          status?: string
+          tenant_id?: string
+          title?: string
+          trigger_factors?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governance_executive_alerts_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
