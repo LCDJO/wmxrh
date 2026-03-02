@@ -21603,6 +21603,53 @@ export type Database = {
           },
         ]
       }
+      worktime_audit_trail: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_name: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_name?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worktime_audit_trail_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worktime_compliance_audits: {
         Row: {
           audit_type: string
@@ -21719,13 +21766,16 @@ export type Database = {
           employee_ids: string[] | null
           error_message: string | null
           export_type: string
+          file_content: string | null
           file_hash: string | null
           file_url: string | null
           id: string
+          legal_basis: string | null
           period_end: string
           period_start: string
           record_count: number | null
           requested_by: string | null
+          retention_until: string | null
           status: string
           tenant_id: string
         }
@@ -21735,13 +21785,16 @@ export type Database = {
           employee_ids?: string[] | null
           error_message?: string | null
           export_type: string
+          file_content?: string | null
           file_hash?: string | null
           file_url?: string | null
           id?: string
+          legal_basis?: string | null
           period_end: string
           period_start: string
           record_count?: number | null
           requested_by?: string | null
+          retention_until?: string | null
           status?: string
           tenant_id: string
         }
@@ -21751,13 +21804,16 @@ export type Database = {
           employee_ids?: string[] | null
           error_message?: string | null
           export_type?: string
+          file_content?: string | null
           file_hash?: string | null
           file_url?: string | null
           id?: string
+          legal_basis?: string | null
           period_end?: string
           period_start?: string
           record_count?: number | null
           requested_by?: string | null
+          retention_until?: string | null
           status?: string
           tenant_id?: string
         }
@@ -21907,7 +21963,10 @@ export type Database = {
           device_fingerprint: string | null
           device_model: string | null
           device_os: string | null
+          employee_cpf_masked: string | null
           employee_id: string
+          employee_name: string | null
+          employee_pis: string | null
           event_type: string
           geofence_id: string | null
           geofence_matched: boolean | null
@@ -21936,7 +21995,10 @@ export type Database = {
           device_fingerprint?: string | null
           device_model?: string | null
           device_os?: string | null
+          employee_cpf_masked?: string | null
           employee_id: string
+          employee_name?: string | null
+          employee_pis?: string | null
           event_type: string
           geofence_id?: string | null
           geofence_matched?: boolean | null
@@ -21965,7 +22027,10 @@ export type Database = {
           device_fingerprint?: string | null
           device_model?: string | null
           device_os?: string | null
+          employee_cpf_masked?: string | null
           employee_id?: string
+          employee_name?: string | null
+          employee_pis?: string | null
           event_type?: string
           geofence_id?: string | null
           geofence_matched?: boolean | null
@@ -22058,6 +22123,44 @@ export type Database = {
             foreignKeyName: "worktime_ledger_adjustments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worktime_retention_policies: {
+        Row: {
+          auto_archive_after_years: number
+          created_at: string
+          id: string
+          legal_basis: string
+          retention_years: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_archive_after_years?: number
+          created_at?: string
+          id?: string
+          legal_basis?: string
+          retention_years?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_archive_after_years?: number
+          created_at?: string
+          id?: string
+          legal_basis?: string
+          retention_years?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worktime_retention_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },

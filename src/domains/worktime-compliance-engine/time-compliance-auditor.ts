@@ -1,6 +1,12 @@
 /**
  * WorkTime Compliance Engine — TimeComplianceAuditor
- * Automated compliance checks per Portaria 671/2021 and CLT.
+ *
+ * Compliance checks per Portaria 671/2021 and CLT:
+ *   - Identificação clara do empregado (nome, CPF, PIS)
+ *   - Armazenamento mínimo 5 anos (CLT Art. 11)
+ *   - Cadeia de integridade SHA-256
+ *   - Verificações diárias (intervalo, HE, saída)
+ *   - Trilha de auditoria completa
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -45,7 +51,20 @@ export class TimeComplianceAuditor implements TimeComplianceAuditorAPI {
       const breakStarts = empEntries.filter(e => e.event_type === 'break_start');
       const breakEnds = empEntries.filter(e => e.event_type === 'break_end');
 
-      // Check: missing clock_out
+      // ── 1. Identificação do empregado ──
+      const firstEntry = empEntries[0];
+      if (firstEntry && (!firstEntry.employee_name || !firstEntry.employee_cpf_masked)) {
+        findings.push({
+          code: 'MISSING_EMPLOYEE_ID',
+          severity: 'violation',
+          description: 'Registro sem identificação completa do empregado (nome/CPF)',
+          legal_reference: 'Portaria 671/2021 Art. 79 §1º',
+          employee_id: empId,
+          date,
+        });
+      }
+
+      // ── 2. Missing clock_out ──
       if (clockIns.length > clockOuts.length) {
         findings.push({
           code: 'MISSING_CLOCK_OUT',
@@ -57,7 +76,7 @@ export class TimeComplianceAuditor implements TimeComplianceAuditorAPI {
         });
       }
 
-      // Check: break violation (jornada > 6h sem intervalo)
+      // ── 3. Break violation (jornada > 6h sem intervalo) ──
       if (clockIns.length > 0 && clockOuts.length > 0) {
         const totalMinutes = clockIns.reduce((sum, ci, i) => {
           const co = clockOuts[i];
@@ -77,7 +96,7 @@ export class TimeComplianceAuditor implements TimeComplianceAuditorAPI {
           });
         }
 
-        // Check: overtime limit (>2h extras)
+        // ── 4. Overtime limit (>2h extras) ──
         const overtime = totalMinutes - 480;
         if (overtime > 120) {
           findings.push({
@@ -92,7 +111,7 @@ export class TimeComplianceAuditor implements TimeComplianceAuditorAPI {
         }
       }
 
-      // Check: break too short
+      // ── 5. Break too short ──
       if (breakStarts.length > 0 && breakEnds.length > 0) {
         const breakMin = breakStarts.reduce((sum, bs, i) => {
           const be = breakEnds[i];
@@ -110,7 +129,40 @@ export class TimeComplianceAuditor implements TimeComplianceAuditorAPI {
           });
         }
       }
+
+      // ── 6. Hash integrity per entry ──
+      for (const entry of empEntries) {
+        if (!entry.integrity_hash) {
+          findings.push({
+            code: 'MISSING_HASH',
+            severity: 'violation',
+            description: 'Registro sem hash de integridade SHA-256',
+            legal_reference: 'Portaria 671/2021 Art. 79',
+            employee_id: empId,
+            date,
+            details: { entry_id: entry.id },
+          });
+        }
+        if (!entry.server_signature) {
+          findings.push({
+            code: 'MISSING_SIGNATURE',
+            severity: 'warning',
+            description: 'Registro sem assinatura do servidor (HMAC)',
+            legal_reference: 'Portaria 671/2021 Art. 79',
+            employee_id: empId,
+            date,
+            details: { entry_id: entry.id },
+          });
+        }
+      }
     }
+
+    // Log audit action
+    await this.logAuditTrail(tenantId, 'daily_audit_executed', 'compliance_audit', undefined, {
+      date,
+      employee_id: employeeId ?? 'all',
+      findings_count: findings.length,
+    });
 
     return this.persistAudit(tenantId, {
       audit_type: 'daily_closure',
@@ -124,10 +176,10 @@ export class TimeComplianceAuditor implements TimeComplianceAuditorAPI {
   async runPortaria671Check(tenantId: string, periodStart: string, periodEnd: string): Promise<WorkTimeComplianceAudit> {
     const findings: ComplianceFinding[] = [];
 
-    // Verify hash chain integrity
+    // ── Hash chain integrity ──
     const { data: entries, error } = await supabase
       .from('worktime_ledger' as any)
-      .select('integrity_hash, previous_hash, recorded_at, employee_id')
+      .select('id, integrity_hash, previous_hash, server_signature, recorded_at, employee_id, employee_name, employee_cpf_masked')
       .eq('tenant_id', tenantId)
       .gte('recorded_at', `${periodStart}T00:00:00Z`)
       .lte('recorded_at', `${periodEnd}T23:59:59Z`)
@@ -138,7 +190,7 @@ export class TimeComplianceAuditor implements TimeComplianceAuditorAPI {
 
     const allEntries = (entries ?? []) as any[];
 
-    // Check chain integrity
+    // Chain verification
     for (let i = 1; i < allEntries.length; i++) {
       if (allEntries[i].previous_hash && allEntries[i].previous_hash !== allEntries[i - 1].integrity_hash) {
         findings.push({
@@ -152,14 +204,52 @@ export class TimeComplianceAuditor implements TimeComplianceAuditorAPI {
       }
     }
 
-    // Check for gaps (employees with no records on work days)
-    // Simplified: just report count
+    // ── Employee identification compliance ──
+    const missingId = allEntries.filter(e => !e.employee_name || !e.employee_cpf_masked);
+    if (missingId.length > 0) {
+      findings.push({
+        code: 'EMPLOYEE_ID_INCOMPLETE',
+        severity: 'violation',
+        description: `${missingId.length} registros sem identificação completa do empregado`,
+        legal_reference: 'Portaria 671/2021 Art. 79 §1º',
+        details: { count: missingId.length, sample_ids: missingId.slice(0, 5).map((e: any) => e.id) },
+      });
+    }
+
+    // ── Signature coverage ──
+    const unsigned = allEntries.filter(e => !e.server_signature);
+    if (unsigned.length > 0) {
+      findings.push({
+        code: 'UNSIGNED_ENTRIES',
+        severity: 'warning',
+        description: `${unsigned.length} registros sem assinatura HMAC do servidor`,
+        legal_reference: 'Portaria 671/2021 Art. 79',
+        details: { count: unsigned.length },
+      });
+    }
+
+    // ── Retention compliance (5 years) ──
+    const retentionFinding = await this.checkRetention(tenantId);
+    if (retentionFinding) findings.push(retentionFinding);
+
+    // Summary
     findings.push({
       code: 'PORTARIA_671_COMPLIANCE',
       severity: 'info',
-      description: `Verificação de ${allEntries.length} registros no período`,
+      description: `Verificação de ${allEntries.length} registros no período ${periodStart} → ${periodEnd}`,
       legal_reference: 'Portaria 671/2021',
-      details: { total_entries: allEntries.length, period: `${periodStart} → ${periodEnd}` },
+      details: {
+        total_entries: allEntries.length,
+        with_hash: allEntries.filter(e => e.integrity_hash).length,
+        with_signature: allEntries.filter(e => e.server_signature).length,
+        with_employee_id: allEntries.filter(e => e.employee_name && e.employee_cpf_masked).length,
+      },
+    });
+
+    await this.logAuditTrail(tenantId, 'portaria671_check_executed', 'compliance_audit', undefined, {
+      period: `${periodStart} → ${periodEnd}`,
+      entries_checked: allEntries.length,
+      findings_count: findings.length,
     });
 
     return this.persistAudit(tenantId, {
@@ -184,6 +274,66 @@ export class TimeComplianceAuditor implements TimeComplianceAuditorAPI {
     if (error) throw error;
     return (data ?? []) as unknown as WorkTimeComplianceAudit[];
   }
+
+  // ── Retention check ──
+
+  private async checkRetention(tenantId: string): Promise<ComplianceFinding | null> {
+    // Check for oldest record
+    const { data } = await supabase
+      .from('worktime_ledger' as any)
+      .select('recorded_at')
+      .eq('tenant_id', tenantId)
+      .order('recorded_at', { ascending: true })
+      .limit(1);
+
+    if (!data || data.length === 0) return null;
+
+    const oldest = new Date((data[0] as any).recorded_at);
+    const yearsStored = (Date.now() - oldest.getTime()) / (365.25 * 86400000);
+
+    // Warn if approaching 5 year mark with no archive policy
+    if (yearsStored >= 4.5) {
+      return {
+        code: 'RETENTION_APPROACHING_LIMIT',
+        severity: 'warning',
+        description: `Registros mais antigos têm ${Math.round(yearsStored * 10) / 10} anos. Prazo legal: 5 anos (CLT Art. 11)`,
+        legal_reference: 'CLT Art. 11 / Portaria 671/2021 Art. 83',
+        details: {
+          oldest_record: oldest.toISOString(),
+          years_stored: Math.round(yearsStored * 10) / 10,
+          required_years: 5,
+        },
+      };
+    }
+
+    return null;
+  }
+
+  // ── Audit trail logging ──
+
+  private async logAuditTrail(
+    tenantId: string,
+    action: string,
+    entityType: string,
+    entityId?: string,
+    details?: Record<string, unknown>,
+  ): Promise<void> {
+    try {
+      await supabase
+        .from('worktime_audit_trail' as any)
+        .insert({
+          tenant_id: tenantId,
+          action,
+          entity_type: entityType,
+          entity_id: entityId ?? null,
+          details: details ?? {},
+        });
+    } catch (err) {
+      console.error('[TimeComplianceAuditor] audit trail log failed:', err);
+    }
+  }
+
+  // ── Persist audit result ──
 
   private async persistAudit(tenantId: string, audit: {
     audit_type: ComplianceAuditType;

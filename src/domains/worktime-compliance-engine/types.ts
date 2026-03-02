@@ -35,6 +35,10 @@ export interface WorkTimeLedgerEntry {
   is_offline_sync: boolean;
   offline_recorded_at: string | null;
   status: WorkTimeEntryStatus;
+  // Employee identification (Portaria 671/2021)
+  employee_name: string | null;
+  employee_cpf_masked: string | null;
+  employee_pis: string | null;
   created_at: string;
 }
 
@@ -170,7 +174,8 @@ export interface WorkTimeFraudLog {
 // ── Compliance Audit ──
 export type ComplianceAuditType =
   | 'daily_closure' | 'weekly_review' | 'monthly_report' | 'portaria_671_check'
-  | 'overtime_limit' | 'break_violation' | 'nocturnal_check' | 'hash_verification';
+  | 'overtime_limit' | 'break_violation' | 'nocturnal_check' | 'hash_verification'
+  | 'retention_check' | 'employee_id_check';
 
 export interface WorkTimeComplianceAudit {
   id: string;
@@ -195,6 +200,31 @@ export interface ComplianceFinding {
   employee_id?: string;
   date?: string;
   details?: Record<string, unknown>;
+}
+
+// ── Retention ──
+export interface WorkTimeRetentionPolicy {
+  id: string;
+  tenant_id: string;
+  retention_years: number;
+  legal_basis: string;
+  auto_archive_after_years: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Audit Trail ──
+export interface WorkTimeAuditTrailEntry {
+  id: string;
+  tenant_id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  actor_id: string | null;
+  actor_name: string | null;
+  details: Record<string, unknown>;
+  ip_address: string | null;
+  created_at: string;
 }
 
 // ── Export ──
