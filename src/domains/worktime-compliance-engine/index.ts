@@ -45,7 +45,7 @@ export {
 } from './repc';
 export type {
   AFDFile, AFDHeader, AFDDetail, AFDAdjustment, AFDTrailer, AFDRecord, AFDRecordType,
-  AEJFile, AEJJornada,
+  AEJFile, AEJJornada, AEJIntervalo, AEJEspelhoMensal,
   REPCLogEntry, REPCLogEventType,
   REPCSystemIdentification,
   REPVersion,

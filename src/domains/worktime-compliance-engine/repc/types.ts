@@ -88,8 +88,10 @@ export interface AEJFile {
   /** Período coberto */
   periodo_inicio: string;
   periodo_fim: string;
-  /** Jornadas */
+  /** Jornadas diárias */
   jornadas: AEJJornada[];
+  /** Espelhos mensais por empregado */
+  espelhos_mensais: AEJEspelhoMensal[];
   /** Metadados */
   generated_at: string;
   generated_by: string;
@@ -102,11 +104,37 @@ export interface AEJJornada {
   nome: string;
   data: string;                // DDMMAAAA
   marcacoes: string[];         // HHMM[]
+  entradas: string[];          // HHMM[] — todas as entradas
+  saidas: string[];            // HHMM[] — todas as saídas
+  intervalos: AEJIntervalo[];  // Intervalos (intrajornada/interjornada)
   horas_trabalhadas: string;   // HH:MM
   horas_extras: string;        // HH:MM
   horas_noturnas: string;      // HH:MM
+  banco_horas_saldo: string;   // +HH:MM ou -HH:MM
   faltas_atrasos: string;      // HH:MM
   observacoes: string;
+}
+
+export interface AEJIntervalo {
+  inicio: string;              // HHMM
+  fim: string;                 // HHMM
+  duracao_minutos: number;
+  tipo: 'intrajornada' | 'interjornada';
+  conforme_clt: boolean;       // >= 1h para jornada > 6h
+}
+
+/** Espelho mensal agrupado por empregado */
+export interface AEJEspelhoMensal {
+  pis: string;
+  cpf: string;
+  nome: string;
+  competencia: string;         // MMAAAA
+  dias: AEJJornada[];
+  total_horas_trabalhadas: string;
+  total_horas_extras: string;
+  total_horas_noturnas: string;
+  total_banco_horas: string;
+  total_faltas_atrasos: string;
 }
 
 // ══════════════════════════════════════════════════════════════════
