@@ -18,6 +18,7 @@ import { FeatureExtractionService } from './feature-extraction-service';
 import { BehaviorProfileManager } from './behavior-profile-manager';
 import { AnomalyDetectionModel } from './anomaly-detection-model';
 import { BehavioralRiskScoringEngine } from './behavioral-risk-scoring-engine';
+import { UnifiedRiskScoringEngine } from './unified-risk-scoring-engine';
 import { FraudPatternDatabase } from './fraud-pattern-database';
 import { AdaptiveLearningModule } from './adaptive-learning-module';
 import { incrementFraudFlags } from '@/domains/observability/worktime-metrics';
@@ -25,7 +26,7 @@ import { incrementFraudFlags } from '@/domains/observability/worktime-metrics';
 import type {
   BehavioralAIEngineAPI, BehaviorCaptureSession, BehavioralFeatureVector,
   AnomalyDetection, BehavioralRiskAssessment, FraudIncident, LearningFeedback,
-  BehaviorProfile,
+  BehaviorProfile, UnifiedRiskInput, UnifiedRiskAssessment,
 } from './types';
 
 export class BehavioralAIEngine implements BehavioralAIEngineAPI {
@@ -34,6 +35,7 @@ export class BehavioralAIEngine implements BehavioralAIEngineAPI {
   readonly profileManager = new BehaviorProfileManager();
   readonly anomalyModel: AnomalyDetectionModel;
   readonly riskScoring = new BehavioralRiskScoringEngine();
+  readonly unifiedRisk = new UnifiedRiskScoringEngine();
   readonly fraudDB = new FraudPatternDatabase();
   readonly adaptiveLearning: AdaptiveLearningModule;
 
@@ -95,6 +97,19 @@ export class BehavioralAIEngine implements BehavioralAIEngineAPI {
     biometricRiskScore?: number,
   ): BehavioralRiskAssessment {
     return this.riskScoring.assess(tenantId, employeeId, anomalies, biometricRiskScore);
+  }
+
+  // ── Pipeline step 4b: Unified Risk Score (5 pillars) ────────
+
+  /**
+   * Unified risk: biometric + liveness + device + geo + behavior.
+   * Returns decision: allow / flag / challenge / require_manager_approval / block.
+   */
+  assessUnifiedRisk(
+    input: UnifiedRiskInput,
+    anomalyContext?: { count: number; types: AnomalyDetection['anomaly_type'][] },
+  ): UnifiedRiskAssessment {
+    return this.unifiedRisk.assess(input, anomalyContext);
   }
 
   // ── Pipeline step 5: Pattern matching ────────────────────────

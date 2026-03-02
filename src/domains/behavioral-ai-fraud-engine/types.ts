@@ -136,7 +136,44 @@ export interface AnomalyDetection {
   detected_at: string;
 }
 
-// ── Risk Score (Behavioral) ─────────────────────────────────────
+// ── Unified Risk Score ───────────────────────────────────────────
+
+export type UnifiedRiskLevel = 'low' | 'medium' | 'high' | 'critical';
+export type UnifiedRecommendedAction = 'allow' | 'flag' | 'challenge' | 'require_manager_approval' | 'block';
+
+/** Input pillars for the unified risk calculation */
+export interface UnifiedRiskInput {
+  biometric_score: number;     // 0-100 — facial match / liveness confidence
+  liveness_score: number;      // 0-100 — anti-spoofing liveness
+  device_score: number;        // 0-100 — device fingerprint trust
+  geo_score: number;           // 0-100 — geolocation conformity
+  behavior_score: number;      // 0-100 — behavioral anomaly score (from this engine)
+}
+
+export interface UnifiedRiskAssessment {
+  overall_score: number;       // 0-100
+  risk_level: UnifiedRiskLevel;
+  recommended_action: UnifiedRecommendedAction;
+  pillar_scores: UnifiedRiskInput;
+  pillar_weights: UnifiedRiskInput;
+  contributing_factors: UnifiedRiskFactor[];
+  requires_extra_validation: boolean;
+  requires_manager_approval: boolean;
+  registration_blocked: boolean;
+  anomaly_count: number;
+  anomaly_types: AnomalyType[];
+  assessed_at: string;
+}
+
+export interface UnifiedRiskFactor {
+  pillar: keyof UnifiedRiskInput;
+  score: number;
+  weight: number;
+  weighted_contribution: number;
+  description: string;
+}
+
+// ── Legacy Behavioral Risk (kept for backward compat) ───────────
 
 export interface BehavioralRiskAssessment {
   overall_score: number;      // 0-100
@@ -145,7 +182,7 @@ export interface BehavioralRiskAssessment {
   anomaly_types: AnomalyType[];
   recommended_action: 'allow' | 'flag' | 'challenge' | 'block' | 'escalate';
   contributing_factors: BehavioralRiskFactor[];
-  combined_biometric_score?: number;   // merged with BiometricTrustLayer
+  combined_biometric_score?: number;
   assessed_at: string;
 }
 
