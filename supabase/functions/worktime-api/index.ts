@@ -77,6 +77,28 @@ Deno.serve(async (req: Request) => {
         return json({ error: "Missing required fields: tenant_id, employee_id, event_type" }, 400);
       }
 
+      // ── Retroactive clock validation ──
+      // If recorded_at is in the past (> 5 min tolerance), require justification
+      const now = Date.now();
+      const requestedTime = entry.recorded_at ? new Date(entry.recorded_at).getTime() : now;
+      const diffMinutes = (now - requestedTime) / 60000;
+
+      if (diffMinutes > 5) {
+        // Retroactive: require justification
+        if (!entry.retroactive_justification || entry.retroactive_justification.trim().length < 10) {
+          return json({
+            error: "Registro retroativo requer justificativa com no mínimo 10 caracteres.",
+            code: "RETROACTIVE_JUSTIFICATION_REQUIRED",
+            diff_minutes: Math.round(diffMinutes),
+          }, 400);
+        }
+      }
+
+      // Future timestamps not allowed (> 1 min tolerance)
+      if (requestedTime > now + 60000) {
+        return json({ error: "Registro com horário futuro não é permitido.", code: "FUTURE_TIMESTAMP" }, 400);
+      }
+
       // Chain linkage — get previous hash
       const { data: lastEntry } = await supabase
         .from("worktime_ledger")
@@ -141,13 +163,22 @@ Deno.serve(async (req: Request) => {
       if (insertError) return json({ error: `Insert failed: ${insertError.message}` }, 500);
 
       // Audit trail
+      const auditDetails: Record<string, unknown> = {
+        event_type: entry.event_type,
+        source: entry.source || "manual",
+      };
+      if (entry.retroactive_justification) {
+        auditDetails.retroactive = true;
+        auditDetails.retroactive_justification = entry.retroactive_justification;
+        auditDetails.diff_minutes = Math.round((Date.now() - new Date(recordedAt).getTime()) / 60000);
+      }
       await supabase.from("worktime_audit_trail").insert({
         tenant_id: entry.tenant_id,
-        action: "clock_registered",
+        action: entry.retroactive_justification ? "clock_registered_retroactive" : "clock_registered",
         entity_type: "worktime_entry",
         entity_id: inserted.id,
         actor_id: userId,
-        details: { event_type: entry.event_type, source: entry.source || "manual" },
+        details: auditDetails,
       }).catch(() => {});
 
       return json({
