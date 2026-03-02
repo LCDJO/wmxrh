@@ -20,6 +20,8 @@ export { BiometricVault } from './biometric-vault';
 export { FaceMatchService } from './face-match-service';
 export { BiometricAuditLogger } from './biometric-audit-logger';
 export { RiskScoringEngine } from './risk-scoring-engine';
+export { AntiDeepfakeAnalyzer } from './anti-deepfake-analyzer';
+export type { DeepfakeAnalysisResult, DeepfakeSignal } from './anti-deepfake-analyzer';
 export { BiometricClockService } from './biometric-clock-service';
 export { BiometricFallbackService } from './biometric-fallback-service';
 export type { FallbackClockRequest, FallbackClockResult, FallbackReason, FallbackApprovalStatus, FallbackApprovalAction } from './biometric-fallback-service';

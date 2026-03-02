@@ -12,6 +12,7 @@
 
 import type { ChallengeType, LivenessCheckDTO, LivenessResult } from './types';
 import { supabase } from '@/integrations/supabase/client';
+import { AntiDeepfakeAnalyzer, type DeepfakeAnalysisResult, type DeepfakeSignal } from './anti-deepfake-analyzer';
 
 // ── Confidence weights per challenge type ──────────────────────
 
@@ -41,7 +42,8 @@ export type SpoofSignal =
   | 'edge_bezel_detected'
   | 'color_histogram_flat'
   | 'challenge_not_met'
-  | 'motion_inconsistency';
+  | 'motion_inconsistency'
+  | 'deepfake_detected';
 
 export interface LivenessDetailedResult extends LivenessResult {
   spoof_signals: SpoofSignal[];
@@ -50,9 +52,11 @@ export interface LivenessDetailedResult extends LivenessResult {
   screen_detection_score: number;
   is_screen: boolean;
   is_photo: boolean;
+  deepfake?: DeepfakeAnalysisResult;
 }
 
 export class LivenessDetectionService {
+  private readonly deepfake = new AntiDeepfakeAnalyzer();
   /**
    * Generate a random challenge for active liveness.
    */
@@ -122,17 +126,25 @@ export class LivenessDetectionService {
     const screenResult = this.detectScreenOrPhoto(dto.face_image_data);
     spoofSignals.push(...screenResult.signals);
 
+    // ── Layer 4: Anti-deepfake analysis ─────────────────────────
+    const deepfakeResult = this.deepfake.analyze(dto.face_image_data);
+    if (deepfakeResult.is_deepfake) {
+      spoofSignals.push('deepfake_detected');
+    }
+
     // ── Composite score calculation ────────────────────────────
     const baseConfidence = CHALLENGE_WEIGHTS[challengeType];
-    const passiveWeight = 0.35;
-    const activeWeight = challengeType !== 'passive' ? 0.35 : 0;
-    const screenWeight = 0.30;
-    const normalizer = passiveWeight + activeWeight + screenWeight;
+    const passiveWeight = 0.25;
+    const activeWeight = challengeType !== 'passive' ? 0.25 : 0;
+    const screenWeight = 0.25;
+    const deepfakeWeight = 0.25;
+    const normalizer = passiveWeight + activeWeight + screenWeight + deepfakeWeight;
 
     const compositeScore = (
       passiveResult.score * passiveWeight +
       activeResult.score * activeWeight +
-      (1 - screenResult.screenProbability) * screenWeight
+      (1 - screenResult.screenProbability) * screenWeight +
+      (1 - deepfakeResult.confidence) * deepfakeWeight
     ) / normalizer;
 
     const confidence_score = Math.min(0.99, baseConfidence * compositeScore);
@@ -143,7 +155,8 @@ export class LivenessDetectionService {
     const passed = confidence_score >= LIVENESS_PASS_THRESHOLD
       && spoof_probability < SPOOF_MAX_THRESHOLD
       && !isScreen
-      && !isPhoto;
+      && !isPhoto
+      && !deepfakeResult.is_deepfake;
 
     const processing_time_ms = Math.round(performance.now() - startTime);
 
@@ -175,6 +188,7 @@ export class LivenessDetectionService {
       screen_detection_score: Math.round(screenResult.screenProbability * 10000) / 10000,
       is_screen: isScreen,
       is_photo: isPhoto,
+      deepfake: deepfakeResult,
     };
   }
 
