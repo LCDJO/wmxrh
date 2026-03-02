@@ -13,6 +13,7 @@ import { ImmutableTimeLedger } from './immutable-time-ledger';
 import { TimeComplianceAuditor } from './time-compliance-auditor';
 import { TimeExportService } from './time-export-service';
 import { AntiFraudAnalyzer } from './anti-fraud-analyzer';
+import { BiometricClockService, type BiometricClockResult } from '@/domains/biometric-trust-layer/biometric-clock-service';
 import { incrementClockEntries, incrementGeoViolation, incrementFraudFlags, incrementDeviceIntegrityFailures } from '@/domains/observability/worktime-metrics';
 import type { WorkTimeEngineAPI, CreateTimeEntryDTO, WorkTimeLedgerEntry } from './types';
 
@@ -24,9 +25,10 @@ export class WorkTimeEngine implements WorkTimeEngineAPI {
   readonly compliance = new TimeComplianceAuditor();
   readonly export = new TimeExportService();
   readonly antiFraud = new AntiFraudAnalyzer();
+  readonly biometric = new BiometricClockService();
 
   /**
-   * Full pipeline: validate → persist → audit → anti-fraud
+   * Full pipeline: biometric → geofence → device → persist → audit → anti-fraud
    * This is the primary entry point for clock events.
    */
   async registerClockEvent(tenantId: string, dto: CreateTimeEntryDTO): Promise<{
@@ -34,7 +36,30 @@ export class WorkTimeEngine implements WorkTimeEngineAPI {
     geofence_ok: boolean;
     device_ok: boolean;
     fraud_signals: number;
+    biometric?: BiometricClockResult;
   }> {
+    // ── 0. Biometric verification (when source is biometric) ──
+    let biometricResult: BiometricClockResult | undefined;
+
+    if (dto.source === 'biometric' && dto.face_image_data) {
+      biometricResult = await this.biometric.verifyForClock({
+        tenant_id: tenantId,
+        employee_id: dto.employee_id,
+        face_image_data: dto.face_image_data,
+        device_fingerprint: dto.device_fingerprint,
+        ip_address: dto.ip_address,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+      });
+
+      // Rejected → block the clock event entirely
+      if (biometricResult.decision === 'rejected') {
+        throw new Error(
+          `[WorkTimeEngine] Registro biométrico rejeitado: ${biometricResult.rejection_reason ?? 'Score abaixo do threshold'}`,
+        );
+      }
+    }
+
     // 1. Geofence validation (with tolerance + enforcement)
     let geofenceOk = true;
     let geofenceSuggestedStatus: 'valid' | 'rejected' | 'flagged' = 'valid';
@@ -76,6 +101,11 @@ export class WorkTimeEngine implements WorkTimeEngineAPI {
       }
     }
 
+    // If biometric was flagged, propagate to entry status
+    if (biometricResult?.decision === 'flagged' && geofenceSuggestedStatus === 'valid') {
+      geofenceSuggestedStatus = 'flagged';
+    }
+
     // 3. Persist to immutable ledger
     const entry = await this.timeEntry.register(tenantId, dto);
     incrementClockEntries({ event_type: dto.event_type, source: dto.source ?? 'unknown' });
@@ -94,6 +124,7 @@ export class WorkTimeEngine implements WorkTimeEngineAPI {
       geofence_ok: geofenceOk,
       device_ok: deviceOk,
       fraud_signals: fraudLogs.length,
+      biometric: biometricResult,
     };
   }
 }

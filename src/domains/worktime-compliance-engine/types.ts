@@ -63,6 +63,8 @@ export interface CreateTimeEntryDTO {
   is_mock_location?: boolean;
   is_vpn_active?: boolean;
   network_type?: string;
+  // Biometric verification (facial recognition)
+  face_image_data?: string; // base64 — triggers biometric pipeline when source='biometric'
 }
 
 // ── Adjustments ──
