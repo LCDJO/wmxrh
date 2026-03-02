@@ -70,6 +70,7 @@ import ReferenceLetters from '@/pages/ReferenceLetters';
 import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
 import LgpdCompliance from '@/pages/LgpdCompliance';
 import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
+import EmployeeLiveDashboard from '@/pages/EmployeeLiveDashboard';
 
 import SsoSettings from '@/pages/SsoSettings';
 import ScimSettings from '@/pages/ScimSettings';
@@ -91,6 +92,7 @@ export const tenantRoutes: RouteObject[] = [
       // ── People ──
       { path: '/employees', element: pr('employees', <Employees />) },
       { path: '/employees/:id', element: pr('employees', <EmployeeDetail />) },
+      { path: '/employees/:id/live', element: pr('employees', <EmployeeLiveDashboard />) },
       { path: '/offboarding', element: pr('employees', <OffboardingDashboard />) },
       { path: '/terminated-employees', element: pr('employees', <TerminatedEmployees />) },
       { path: '/reference-letters', element: pr('employees', <ReferenceLetters />) },
