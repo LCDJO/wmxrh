@@ -43,4 +43,13 @@ export {
   REPCTechnicalLog, SystemIdentificationManager,
   InspectionExportService, REPVersionRegistry,
 } from './repc';
-export type * from './repc/types';
+export type {
+  AFDFile, AFDHeader, AFDDetail, AFDAdjustment, AFDTrailer, AFDRecord, AFDRecordType,
+  AEJFile, AEJJornada,
+  REPCLogEntry, REPCLogEventType,
+  REPCSystemIdentification,
+  REPVersion,
+  TimeSyncResult, TimeSyncConfig,
+  InspectionExportRequest, InspectionExportFile, InspectionExportFormat,
+  REPCComplianceLayerAPI,
+} from './repc/types';
