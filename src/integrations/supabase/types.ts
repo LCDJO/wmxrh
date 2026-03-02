@@ -843,6 +843,220 @@ export type Database = {
           },
         ]
       }
+      ats_candidates: {
+        Row: {
+          created_at: string
+          email: string
+          hired_at: string | null
+          id: string
+          interview_feedback: Json
+          name: string
+          notes: string | null
+          phone: string | null
+          rejected_at: string | null
+          rejection_reason: string | null
+          requisition_id: string
+          resume_url: string | null
+          score: number | null
+          source: string | null
+          stage: string
+          stage_history: Json
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          hired_at?: string | null
+          id?: string
+          interview_feedback?: Json
+          name: string
+          notes?: string | null
+          phone?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          requisition_id: string
+          resume_url?: string | null
+          score?: number | null
+          source?: string | null
+          stage?: string
+          stage_history?: Json
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          hired_at?: string | null
+          id?: string
+          interview_feedback?: Json
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          requisition_id?: string
+          resume_url?: string | null
+          score?: number | null
+          source?: string | null
+          stage?: string
+          stage_history?: Json
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ats_candidates_requisition_id_fkey"
+            columns: ["requisition_id"]
+            isOneToOne: false
+            referencedRelation: "ats_requisitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ats_candidates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ats_pipeline_stages: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_terminal: boolean
+          label: string
+          sort_order: number
+          stage_key: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_terminal?: boolean
+          label: string
+          sort_order?: number
+          stage_key: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_terminal?: boolean
+          label?: string
+          sort_order?: number
+          stage_key?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ats_pipeline_stages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ats_requisitions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string | null
+          created_at: string
+          department_id: string | null
+          description: string | null
+          headcount: number
+          id: string
+          position_id: string | null
+          priority: string
+          requested_by: string
+          requirements: string[]
+          salary_range_max: number | null
+          salary_range_min: number | null
+          status: string
+          target_start_date: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          description?: string | null
+          headcount?: number
+          id?: string
+          position_id?: string | null
+          priority?: string
+          requested_by: string
+          requirements?: string[]
+          salary_range_max?: number | null
+          salary_range_min?: number | null
+          status?: string
+          target_start_date?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          description?: string | null
+          headcount?: number
+          id?: string
+          position_id?: string | null
+          priority?: string
+          requested_by?: string
+          requirements?: string[]
+          salary_range_max?: number | null
+          salary_range_min?: number | null
+          status?: string
+          target_start_date?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ats_requisitions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ats_requisitions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ats_requisitions_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ats_requisitions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
