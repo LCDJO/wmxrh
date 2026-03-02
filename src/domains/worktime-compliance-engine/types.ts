@@ -78,6 +78,8 @@ export interface LedgerAdjustment {
   new_event_type: string | null;
   reason: string;
   legal_basis: string | null;
+  requested_by: string | null;
+  requested_at: string;
   approved_by: string | null;
   approved_at: string | null;
   approval_status: ApprovalStatus;
@@ -93,6 +95,7 @@ export interface CreateAdjustmentDTO {
   new_event_type?: string;
   reason: string;
   legal_basis?: string;
+  requested_by?: string;
 }
 
 // ── Geofence ──
@@ -262,6 +265,7 @@ export interface WorkTimeEngineAPI {
 export interface TimeEntryControllerAPI {
   register(tenantId: string, dto: CreateTimeEntryDTO): Promise<WorkTimeLedgerEntry>;
   adjust(tenantId: string, dto: CreateAdjustmentDTO): Promise<LedgerAdjustment>;
+  approveAdjustment(adjustmentId: string, approved: boolean): Promise<LedgerAdjustment>;
   getEntries(tenantId: string, employeeId: string, from: string, to: string): Promise<WorkTimeLedgerEntry[]>;
 }
 

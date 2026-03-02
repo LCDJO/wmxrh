@@ -87,6 +87,7 @@ export class TimeEntryController implements TimeEntryControllerAPI {
   /**
    * Register a formal adjustment (append-only, server-signed).
    * Original entry remains untouched in the ledger.
+   * Requires: motivo, solicitado_por. Aprovação é um passo separado.
    */
   async adjust(tenantId: string, dto: CreateAdjustmentDTO): Promise<LedgerAdjustment> {
     // Client-side pre-hash
@@ -108,11 +109,30 @@ export class TimeEntryController implements TimeEntryControllerAPI {
           new_event_type: dto.new_event_type ?? null,
           reason: dto.reason,
           legal_basis: dto.legal_basis ?? null,
+          requested_by: dto.requested_by ?? null,
         },
       },
     });
 
     if (error) throw new Error(`[TimeEntryController] Adjustment signing failed: ${error.message}`);
+    if (data?.error) throw new Error(`[TimeEntryController] ${data.error}`);
+
+    return data.adjustment as LedgerAdjustment;
+  }
+
+  /**
+   * Approve or reject an adjustment (manager action).
+   */
+  async approveAdjustment(adjustmentId: string, approved: boolean): Promise<LedgerAdjustment> {
+    const { data, error } = await supabase.functions.invoke('worktime-sign-entry', {
+      body: {
+        action: 'approve_adjustment',
+        adjustment_id: adjustmentId,
+        approved,
+      },
+    });
+
+    if (error) throw new Error(`[TimeEntryController] Approval failed: ${error.message}`);
     if (data?.error) throw new Error(`[TimeEntryController] ${data.error}`);
 
     return data.adjustment as LedgerAdjustment;

@@ -22076,6 +22076,8 @@ export type Database = {
           new_recorded_at: string | null
           original_entry_id: string
           reason: string
+          requested_at: string
+          requested_by: string | null
           server_signature: string | null
           tenant_id: string
         }
@@ -22092,6 +22094,8 @@ export type Database = {
           new_recorded_at?: string | null
           original_entry_id: string
           reason: string
+          requested_at?: string
+          requested_by?: string | null
           server_signature?: string | null
           tenant_id: string
         }
@@ -22108,6 +22112,8 @@ export type Database = {
           new_recorded_at?: string | null
           original_entry_id?: string
           reason?: string
+          requested_at?: string
+          requested_by?: string | null
           server_signature?: string | null
           tenant_id?: string
         }
