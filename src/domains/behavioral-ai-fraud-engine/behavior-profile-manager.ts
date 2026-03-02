@@ -17,11 +17,13 @@ const EMA_ALPHA = 0.15; // new sample weight
 
 const NUMERIC_FEATURE_KEYS: (keyof BehavioralFeatureVector)[] = [
   'avg_touch_duration_ms', 'touch_interval_stddev_ms', 'typing_speed_cpm',
+  'avg_touch_interval_ms',
   'avg_touch_pressure', 'pressure_variance', 'avg_swipe_velocity',
-  'session_duration_ms',
+  'motion_variance', 'session_duration_ms',
   'swipe_angle_consistency', 'device_tilt_mean_x', 'device_tilt_mean_y',
   'device_tilt_stddev', 'device_shake_events', 'screen_interaction_count',
   'time_to_clock_action_ms', 'hesitation_count', 'backtrack_count',
+  'habitual_hour_score', 'geolocation_pattern_score', 'biometric_variation_score',
 ];
 
 export class BehaviorProfileManager {
