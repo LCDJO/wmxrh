@@ -22,6 +22,12 @@ export { BiometricAuditLogger } from './biometric-audit-logger';
 export { RiskScoringEngine } from './risk-scoring-engine';
 export { AntiDeepfakeAnalyzer } from './anti-deepfake-analyzer';
 export type { DeepfakeAnalysisResult, DeepfakeSignal } from './anti-deepfake-analyzer';
+export { BIOMETRIC_EVENTS, emitBiometricEvent, onBiometricEvent, onAnyBiometricEvent } from './biometric-events';
+export type {
+  BiometricEventType, BiometricDomainEvent,
+  BiometricEnrollmentCompletedPayload, BiometricMatchSuccessPayload,
+  BiometricMatchFailedPayload, LivenessCheckFailedPayload, BiometricConsentRevokedPayload,
+} from './biometric-events';
 export { BiometricClockService } from './biometric-clock-service';
 export { BiometricFallbackService } from './biometric-fallback-service';
 export type { FallbackClockRequest, FallbackClockResult, FallbackReason, FallbackApprovalStatus, FallbackApprovalAction } from './biometric-fallback-service';

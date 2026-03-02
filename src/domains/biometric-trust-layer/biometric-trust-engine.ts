@@ -15,6 +15,7 @@ import { BiometricAuditLogger } from './biometric-audit-logger';
 import { RiskScoringEngine } from './risk-scoring-engine';
 import { BiometricLGPDManager, type FallbackResult } from './lgpd-compliance-manager';
 import { incrementBiometricEnrollments, incrementBiometricVerifications, incrementBiometricSpoofDetections, incrementBiometricLivenessFailures, incrementBiometricMatchSuccess, incrementLivenessFailures, incrementFraudBiometricFlags } from '@/domains/observability/biometric-metrics';
+import { emitBiometricEvent, BIOMETRIC_EVENTS } from './biometric-events';
 import type {
   BiometricTrustEngineAPI,
   BiometricEnrollment,
@@ -78,6 +79,14 @@ export class BiometricTrustEngine implements BiometricTrustEngineAPI {
     if (!livenessResult.passed) {
       incrementBiometricLivenessFailures({ stage: 'enrollment' });
       incrementLivenessFailures({ stage: 'enrollment', reason: 'liveness_check_failed' });
+      emitBiometricEvent({
+        type: BIOMETRIC_EVENTS.LivenessCheckFailed,
+        payload: {
+          tenant_id: dto.tenant_id, employee_id: dto.employee_id, stage: 'enrollment',
+          confidence_score: livenessResult.confidence_score, spoof_signals: [],
+          deepfake_detected: false, timestamp: new Date().toISOString(),
+        },
+      });
       throw new Error('[BiometricTrustEngine] Prova de vida falhou — enrollment rejeitado');
     }
 
@@ -90,6 +99,13 @@ export class BiometricTrustEngine implements BiometricTrustEngineAPI {
     // 6. Audit + metrics
     await this.audit.logEnrollment(dto.tenant_id, dto.employee_id, enrollment.id);
     incrementBiometricEnrollments({ method: dto.capture_method });
+    emitBiometricEvent({
+      type: BIOMETRIC_EVENTS.BiometricEnrollmentCompleted,
+      payload: {
+        tenant_id: dto.tenant_id, employee_id: dto.employee_id, enrollment_id: enrollment.id,
+        capture_method: dto.capture_method, quality_score: 1.0, timestamp: new Date().toISOString(),
+      },
+    });
 
     return enrollment;
   }
@@ -200,6 +216,29 @@ export class BiometricTrustEngine implements BiometricTrustEngineAPI {
     });
     incrementBiometricVerifications({ result: matchOutcome.result });
 
+    if (matchOutcome.result === 'match') {
+      emitBiometricEvent({
+        type: BIOMETRIC_EVENTS.BiometricMatchSuccess,
+        payload: {
+          tenant_id: dto.tenant_id, employee_id: dto.employee_id, match_log_id: matchLogId,
+          match_score: matchOutcome.score, liveness_score: livenessResult.confidence_score,
+          risk_score: riskAssessment.overall_score, device_fingerprint: dto.device_fingerprint,
+          ip_address: dto.ip_address, timestamp: new Date().toISOString(),
+        },
+      });
+    } else {
+      emitBiometricEvent({
+        type: BIOMETRIC_EVENTS.BiometricMatchFailed,
+        payload: {
+          tenant_id: dto.tenant_id, employee_id: dto.employee_id, match_log_id: matchLogId,
+          match_score: matchOutcome.score, match_result: matchOutcome.result,
+          liveness_score: livenessResult.confidence_score, risk_score: riskAssessment.overall_score,
+          auto_action: autoAction, device_fingerprint: dto.device_fingerprint,
+          ip_address: dto.ip_address, timestamp: new Date().toISOString(),
+        },
+      });
+    }
+
     return {
       match_log_id: matchLogId,
       match_result: matchOutcome.result,
@@ -234,6 +273,13 @@ export class BiometricTrustEngine implements BiometricTrustEngineAPI {
 
   async revokeConsent(tenantId: string, employeeId: string, consentType: ConsentType): Promise<void> {
     const result = await this.lgpd.revokeConsent(tenantId, employeeId, consentType, '', 'Revogação pelo titular');
+    emitBiometricEvent({
+      type: BIOMETRIC_EVENTS.BiometricConsentRevoked,
+      payload: {
+        tenant_id: tenantId, employee_id: employeeId, consent_type: consentType,
+        revoked_at: new Date().toISOString(), lgpd_article: 'Art. 18',
+      },
+    });
     if (result.fallback) {
       console.info(`[BiometricTrustEngine] Fallback ativado para ${employeeId}: ${result.fallback.method}`);
     }
