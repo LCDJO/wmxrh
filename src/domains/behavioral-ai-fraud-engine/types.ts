@@ -42,12 +42,14 @@ export interface BehavioralFeatureVector {
   avg_touch_duration_ms: number;
   touch_interval_stddev_ms: number;
   typing_speed_cpm: number;
+  avg_touch_interval_ms: number;
 
   // Pressure & motion
   avg_touch_pressure: number;
   pressure_variance: number;
   avg_swipe_velocity: number;
   swipe_angle_consistency: number;
+  motion_variance: number;
 
   // Accelerometer / gyroscope
   device_tilt_mean_x: number;
@@ -64,6 +66,11 @@ export interface BehavioralFeatureVector {
   // Session context
   session_duration_ms: number;
   habitual_time_window: HabitualTimeWindow;
+
+  // ── BehaviorVector (composite scores 0-1) ─────────────────
+  habitual_hour_score: number;
+  geolocation_pattern_score: number;
+  biometric_variation_score: number;
 
   extracted_at: string;
 }

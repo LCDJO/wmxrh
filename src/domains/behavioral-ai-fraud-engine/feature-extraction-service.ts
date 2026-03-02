@@ -9,11 +9,29 @@ import type { BehaviorCaptureSession, BehavioralFeatureVector, BehaviorSample, H
 
 export class FeatureExtractionService {
 
-  extract(session: BehaviorCaptureSession): BehavioralFeatureVector {
+  /**
+   * Optional context injected at extraction time for composite scoring.
+   * These come from external engines (GeoFence, BiometricTrustLayer).
+   */
+  extract(
+    session: BehaviorCaptureSession,
+    context?: {
+      employee_habitual_hours?: number[];   // e.g. [8,9,17,18] — typical clock hours
+      geolocation_distance_m?: number;      // distance from usual clock location
+      geolocation_usual_lat?: number;
+      geolocation_usual_lng?: number;
+      current_lat?: number;
+      current_lng?: number;
+      biometric_match_score?: number;       // from BiometricTrustLayer (0-1)
+      biometric_baseline_score?: number;    // historical average match score
+    },
+  ): BehavioralFeatureVector {
     const touches = session.samples.filter(s => s.source === 'touch');
     const keys = session.samples.filter(s => s.source === 'keyboard');
     const accel = session.samples.filter(s => s.source === 'accelerometer');
     const gyro = session.samples.filter(s => s.source === 'gyroscope');
+
+    const touchIntervals = this.intervals(touches);
 
     return {
       session_id: session.session_id,
@@ -22,14 +40,16 @@ export class FeatureExtractionService {
 
       // Timing
       avg_touch_duration_ms: this.mean(touches.map(t => t.data.duration_ms ?? 0)),
-      touch_interval_stddev_ms: this.stddev(this.intervals(touches)),
+      touch_interval_stddev_ms: this.stddev(touchIntervals),
       typing_speed_cpm: this.typingSpeedCPM(keys),
+      avg_touch_interval_ms: this.mean(touchIntervals),
 
       // Pressure & motion
       avg_touch_pressure: this.mean(touches.map(t => t.data.pressure ?? 0)),
       pressure_variance: this.variance(touches.map(t => t.data.pressure ?? 0)),
       avg_swipe_velocity: this.mean(touches.filter(t => t.data.type === 1).map(t => t.data.velocity ?? 0)),
       swipe_angle_consistency: this.angleConsistency(touches.filter(t => t.data.type === 1)),
+      motion_variance: this.computeMotionVariance(accel, gyro),
 
       // Accelerometer / gyroscope
       device_tilt_mean_x: this.mean(accel.map(s => s.data.x ?? 0)),
@@ -49,6 +69,13 @@ export class FeatureExtractionService {
       // Session context
       session_duration_ms: this.computeSessionDuration(session),
       habitual_time_window: this.classifyTimeWindow(session.started_at),
+
+      // ── BehaviorVector composite scores ───────────────────────
+      habitual_hour_score: this.computeHabitualHourScore(session.started_at, context?.employee_habitual_hours),
+      geolocation_pattern_score: this.computeGeolocationPatternScore(context?.geolocation_distance_m),
+      biometric_variation_score: this.computeBiometricVariationScore(
+        context?.biometric_match_score, context?.biometric_baseline_score,
+      ),
 
       extracted_at: new Date().toISOString(),
     };
@@ -151,5 +178,84 @@ export class FeatureExtractionService {
     if (hour >= 17 && hour < 21) return 'evening';
     if (hour >= 21 && hour < 24) return 'night';
     return 'late_night'; // 0-4
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // BehaviorVector — composite scores (0-1, higher = more anomalous)
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * motion_variance — Combined accelerometer + gyroscope variance.
+   * High variance = shaky/unusual handling; 0 = perfectly still (suspicious bot).
+   */
+  private computeMotionVariance(
+    accel: BehaviorSample[],
+    gyro: BehaviorSample[],
+  ): number {
+    const accelMags = accel.map(s =>
+      Math.sqrt((s.data.x ?? 0) ** 2 + (s.data.y ?? 0) ** 2 + (s.data.z ?? 0) ** 2),
+    );
+    const gyroMags = gyro.map(s =>
+      Math.sqrt((s.data.alpha ?? 0) ** 2 + (s.data.beta ?? 0) ** 2 + (s.data.gamma ?? 0) ** 2),
+    );
+    const allMags = [...accelMags, ...gyroMags];
+    return this.variance(allMags);
+  }
+
+  /**
+   * habitual_hour_score — How typical is the current clock hour?
+   * 0 = perfectly habitual, 1 = completely outside normal hours.
+   */
+  private computeHabitualHourScore(
+    startedAt: string,
+    habitualHours?: number[],
+  ): number {
+    const hour = new Date(startedAt).getHours();
+
+    if (!habitualHours || habitualHours.length === 0) {
+      // No history → neutral (slightly elevated)
+      return 0.3;
+    }
+
+    // Circular distance on 24h clock
+    const minDistance = Math.min(
+      ...habitualHours.map(h => {
+        const diff = Math.abs(hour - h);
+        return Math.min(diff, 24 - diff);
+      }),
+    );
+
+    // Normalize: 0h distance → 0 score; 12h distance → 1.0
+    return Math.min(1, minDistance / 12);
+  }
+
+  /**
+   * geolocation_pattern_score — How far from usual clock location?
+   * 0 = same place, 1 = extremely far.
+   */
+  private computeGeolocationPatternScore(
+    distanceMeters?: number,
+  ): number {
+    if (distanceMeters == null) return 0.2; // no data → slight elevation
+
+    // Sigmoid normalization: 0m→0, 500m→0.5, 2000m→0.88, 5000m→0.97
+    return 1 - 1 / (1 + distanceMeters / 500);
+  }
+
+  /**
+   * biometric_variation_score — How much does current biometric match
+   * deviate from the employee's historical average?
+   * 0 = consistent, 1 = extremely different.
+   */
+  private computeBiometricVariationScore(
+    currentScore?: number,
+    baselineScore?: number,
+  ): number {
+    if (currentScore == null || baselineScore == null) return 0.1; // no data
+
+    // Deviation from baseline, normalized
+    const deviation = Math.abs(currentScore - baselineScore);
+    // Max expected deviation is ~0.3 (0.95 baseline vs 0.65 current)
+    return Math.min(1, deviation / 0.3);
   }
 }
