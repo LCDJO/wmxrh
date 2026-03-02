@@ -13,6 +13,7 @@ import { ImmutableTimeLedger } from './immutable-time-ledger';
 import { TimeComplianceAuditor } from './time-compliance-auditor';
 import { TimeExportService } from './time-export-service';
 import { AntiFraudAnalyzer } from './anti-fraud-analyzer';
+import { incrementClockEntries, incrementGeoViolation, incrementFraudFlags, incrementDeviceIntegrityFailures } from '@/domains/observability/worktime-metrics';
 import type { WorkTimeEngineAPI, CreateTimeEntryDTO, WorkTimeLedgerEntry } from './types';
 
 export class WorkTimeEngine implements WorkTimeEngineAPI {
@@ -46,6 +47,7 @@ export class WorkTimeEngine implements WorkTimeEngineAPI {
       }
       // Block: reject registration entirely
       if (geoResult.suggested_status === 'rejected') {
+        incrementGeoViolation({ tenant_id: tenantId });
         throw new Error(`[WorkTimeEngine] Registro bloqueado por geofence: ${geoResult.reason}`);
       }
     }
@@ -64,6 +66,7 @@ export class WorkTimeEngine implements WorkTimeEngineAPI {
       deviceOk = devResult.is_valid;
 
       if (devResult.is_blocked) {
+        incrementDeviceIntegrityFailures({ reason: devResult.device?.blocked_reason ?? 'unknown' });
         throw new Error(`[WorkTimeEngine] Device blocked: ${devResult.device?.blocked_reason}`);
       }
 
@@ -75,12 +78,16 @@ export class WorkTimeEngine implements WorkTimeEngineAPI {
 
     // 3. Persist to immutable ledger
     const entry = await this.timeEntry.register(tenantId, dto);
+    incrementClockEntries({ event_type: dto.event_type, source: dto.source ?? 'unknown' });
 
     // 4. Anti-fraud analysis (async, non-blocking)
     const fraudLogs = await this.antiFraud.analyze(tenantId, entry).catch(err => {
       console.error('[WorkTimeEngine] Anti-fraud analysis failed:', err);
       return [];
     });
+    if (fraudLogs.length > 0) {
+      fraudLogs.forEach(l => incrementFraudFlags({ fraud_type: (l as any).fraud_type ?? 'unknown', severity: (l as any).severity ?? 'medium' }));
+    }
 
     return {
       entry,
