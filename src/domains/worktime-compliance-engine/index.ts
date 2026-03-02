@@ -52,4 +52,5 @@ export type {
   TimeSyncResult, TimeSyncConfig,
   InspectionExportRequest, InspectionExportFile, InspectionExportFormat,
   REPCComplianceLayerAPI,
+  REPComplianceReport,
 } from './repc/types';
