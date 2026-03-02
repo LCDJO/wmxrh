@@ -31,6 +31,11 @@ export class ObservabilityBridge {
     metrics.increment('geo_violation_total', {}, 0);
     metrics.increment('fraud_flags_total', {}, 0);
     metrics.increment('device_integrity_failures_total', {}, 0);
+    // Biometric baselines
+    metrics.increment('biometric_enrollments_total', {}, 0);
+    metrics.increment('biometric_verifications_total', {}, 0);
+    metrics.increment('biometric_spoof_detections_total', {}, 0);
+    metrics.increment('biometric_liveness_failures_total', {}, 0);
     // Workflow / Automation baselines
     metrics.increment('workflow_executions_total', {}, 0);
     metrics.increment('workflow_failures_total', {}, 0);

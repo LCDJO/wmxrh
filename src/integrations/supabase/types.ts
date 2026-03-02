@@ -1931,6 +1931,344 @@ export type Database = {
           },
         ]
       }
+      biometric_audit_trail: {
+        Row: {
+          action: string
+          action_category: string
+          actor_id: string | null
+          created_at: string
+          employee_id: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          lgpd_justification: string | null
+          metadata: Json | null
+          tenant_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          action_category?: string
+          actor_id?: string | null
+          created_at?: string
+          employee_id?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          lgpd_justification?: string | null
+          metadata?: Json | null
+          tenant_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          action_category?: string
+          actor_id?: string | null
+          created_at?: string
+          employee_id?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          lgpd_justification?: string | null
+          metadata?: Json | null
+          tenant_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biometric_audit_trail_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      biometric_consent_records: {
+        Row: {
+          consent_type: string
+          consent_version: string
+          created_at: string
+          employee_id: string
+          granted: boolean
+          granted_at: string | null
+          id: string
+          ip_address: string | null
+          legal_basis: string
+          policy_version_id: string | null
+          purpose_description: string
+          retention_period_days: number
+          revoked_at: string | null
+          tenant_id: string
+        }
+        Insert: {
+          consent_type?: string
+          consent_version?: string
+          created_at?: string
+          employee_id: string
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          ip_address?: string | null
+          legal_basis?: string
+          policy_version_id?: string | null
+          purpose_description?: string
+          retention_period_days?: number
+          revoked_at?: string | null
+          tenant_id: string
+        }
+        Update: {
+          consent_type?: string
+          consent_version?: string
+          created_at?: string
+          employee_id?: string
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          ip_address?: string | null
+          legal_basis?: string
+          policy_version_id?: string | null
+          purpose_description?: string
+          retention_period_days?: number
+          revoked_at?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biometric_consent_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      biometric_enrollments: {
+        Row: {
+          capture_device: string | null
+          capture_method: string
+          consent_granted: boolean
+          consent_granted_at: string | null
+          consent_ip_address: string | null
+          created_at: string
+          employee_id: string
+          enrollment_status: string
+          expires_at: string | null
+          id: string
+          lgpd_legal_basis: string
+          lgpd_retention_days: number
+          liveness_verified: boolean
+          quality_score: number
+          revoked_at: string | null
+          revoked_by: string | null
+          revoked_reason: string | null
+          template_hash: string
+          template_version: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          capture_device?: string | null
+          capture_method?: string
+          consent_granted?: boolean
+          consent_granted_at?: string | null
+          consent_ip_address?: string | null
+          created_at?: string
+          employee_id: string
+          enrollment_status?: string
+          expires_at?: string | null
+          id?: string
+          lgpd_legal_basis?: string
+          lgpd_retention_days?: number
+          liveness_verified?: boolean
+          quality_score?: number
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
+          template_hash: string
+          template_version?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          capture_device?: string | null
+          capture_method?: string
+          consent_granted?: boolean
+          consent_granted_at?: string | null
+          consent_ip_address?: string | null
+          created_at?: string
+          employee_id?: string
+          enrollment_status?: string
+          expires_at?: string | null
+          id?: string
+          lgpd_legal_basis?: string
+          lgpd_retention_days?: number
+          liveness_verified?: boolean
+          quality_score?: number
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
+          template_hash?: string
+          template_version?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biometric_enrollments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      biometric_liveness_challenges: {
+        Row: {
+          challenge_data: Json | null
+          challenge_type: string
+          completed_at: string | null
+          confidence_score: number | null
+          created_at: string
+          device_info: Json | null
+          employee_id: string
+          id: string
+          processing_time_ms: number | null
+          result: string
+          spoof_probability: number | null
+          tenant_id: string
+        }
+        Insert: {
+          challenge_data?: Json | null
+          challenge_type?: string
+          completed_at?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          device_info?: Json | null
+          employee_id: string
+          id?: string
+          processing_time_ms?: number | null
+          result?: string
+          spoof_probability?: number | null
+          tenant_id: string
+        }
+        Update: {
+          challenge_data?: Json | null
+          challenge_type?: string
+          completed_at?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          device_info?: Json | null
+          employee_id?: string
+          id?: string
+          processing_time_ms?: number | null
+          result?: string
+          spoof_probability?: number | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biometric_liveness_challenges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      biometric_match_logs: {
+        Row: {
+          auto_action: string | null
+          capture_quality: number | null
+          created_at: string
+          device_fingerprint: string | null
+          employee_id: string
+          enrollment_id: string | null
+          fraud_signals: Json | null
+          id: string
+          ip_address: string | null
+          latitude: number | null
+          liveness_method: string | null
+          liveness_passed: boolean
+          liveness_score: number | null
+          longitude: number | null
+          match_result: string
+          match_score: number
+          match_threshold: number
+          processing_time_ms: number | null
+          risk_factors: Json | null
+          risk_score: number
+          tenant_id: string
+          worktime_entry_id: string | null
+        }
+        Insert: {
+          auto_action?: string | null
+          capture_quality?: number | null
+          created_at?: string
+          device_fingerprint?: string | null
+          employee_id: string
+          enrollment_id?: string | null
+          fraud_signals?: Json | null
+          id?: string
+          ip_address?: string | null
+          latitude?: number | null
+          liveness_method?: string | null
+          liveness_passed?: boolean
+          liveness_score?: number | null
+          longitude?: number | null
+          match_result: string
+          match_score?: number
+          match_threshold?: number
+          processing_time_ms?: number | null
+          risk_factors?: Json | null
+          risk_score?: number
+          tenant_id: string
+          worktime_entry_id?: string | null
+        }
+        Update: {
+          auto_action?: string | null
+          capture_quality?: number | null
+          created_at?: string
+          device_fingerprint?: string | null
+          employee_id?: string
+          enrollment_id?: string | null
+          fraud_signals?: Json | null
+          id?: string
+          ip_address?: string | null
+          latitude?: number | null
+          liveness_method?: string | null
+          liveness_passed?: boolean
+          liveness_score?: number | null
+          longitude?: number | null
+          match_result?: string
+          match_score?: number
+          match_threshold?: number
+          processing_time_ms?: number | null
+          risk_factors?: Json | null
+          risk_score?: number
+          tenant_id?: string
+          worktime_entry_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biometric_match_logs_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "biometric_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "biometric_match_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blockchain_anchor_queue: {
         Row: {
           attempt_count: number
