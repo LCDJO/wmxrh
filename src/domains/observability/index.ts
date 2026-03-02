@@ -54,3 +54,7 @@ export {
   incrementBiometricMatchSuccess, incrementLivenessFailures,
   incrementFraudBiometricFlags, incrementDeepfakeSuspected,
 } from './biometric-metrics';
+export {
+  incrementBehaviorAnomalies, incrementHighRiskEntries,
+  incrementSharedDeviceSuspicions, setAIModelAccuracyScore,
+} from './behavioral-ai-metrics';

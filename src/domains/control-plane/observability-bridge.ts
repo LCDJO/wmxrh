@@ -36,6 +36,11 @@ export class ObservabilityBridge {
     metrics.increment('biometric_verifications_total', {}, 0);
     metrics.increment('biometric_spoof_detections_total', {}, 0);
     metrics.increment('biometric_liveness_failures_total', {}, 0);
+    // Behavioral AI baselines
+    metrics.increment('behavior_anomalies_total', {}, 0);
+    metrics.increment('high_risk_entries_total', {}, 0);
+    metrics.increment('shared_device_suspicions_total', {}, 0);
+    metrics.gauge('ai_model_accuracy_score', 0);
     // Workflow / Automation baselines
     metrics.increment('workflow_executions_total', {}, 0);
     metrics.increment('workflow_failures_total', {}, 0);
