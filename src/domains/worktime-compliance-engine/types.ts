@@ -6,6 +6,7 @@
 // ── Ledger ──
 export type WorkTimeEventType = 'clock_in' | 'clock_out' | 'break_start' | 'break_end';
 export type WorkTimeSource = 'manual' | 'biometric' | 'geofence' | 'app' | 'api';
+export type WorkTimeEntryStatus = 'valid' | 'rejected' | 'flagged';
 
 export interface WorkTimeLedgerEntry {
   id: string;
@@ -31,6 +32,7 @@ export interface WorkTimeLedgerEntry {
   previous_hash: string | null;
   is_offline_sync: boolean;
   offline_recorded_at: string | null;
+  status: WorkTimeEntryStatus;
   created_at: string;
 }
 

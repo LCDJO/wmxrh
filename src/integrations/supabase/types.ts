@@ -21918,6 +21918,7 @@ export type Database = {
           recorded_at: string
           server_timestamp: string
           source: string
+          status: string
           tenant_id: string
         }
         Insert: {
@@ -21944,6 +21945,7 @@ export type Database = {
           recorded_at?: string
           server_timestamp?: string
           source?: string
+          status?: string
           tenant_id: string
         }
         Update: {
@@ -21970,6 +21972,7 @@ export type Database = {
           recorded_at?: string
           server_timestamp?: string
           source?: string
+          status?: string
           tenant_id?: string
         }
         Relationships: [
