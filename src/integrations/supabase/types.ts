@@ -20212,6 +20212,68 @@ export type Database = {
           },
         ]
       }
+      tenant_branding_profiles: {
+        Row: {
+          accent_color: string | null
+          created_at: string
+          custom_login_background: string | null
+          favicon_url: string | null
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          primary_color: string | null
+          report_footer_text: string | null
+          report_header_logo: string | null
+          secondary_color: string | null
+          system_display_name: string | null
+          tenant_id: string
+          updated_at: string
+          version_id: number
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string
+          custom_login_background?: string | null
+          favicon_url?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          primary_color?: string | null
+          report_footer_text?: string | null
+          report_header_logo?: string | null
+          secondary_color?: string | null
+          system_display_name?: string | null
+          tenant_id: string
+          updated_at?: string
+          version_id?: number
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string
+          custom_login_background?: string | null
+          favicon_url?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          primary_color?: string | null
+          report_footer_text?: string | null
+          report_header_logo?: string | null
+          secondary_color?: string | null
+          system_display_name?: string | null
+          tenant_id?: string
+          updated_at?: string
+          version_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_branding_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_domains: {
         Row: {
           created_at: string
