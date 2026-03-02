@@ -21,6 +21,8 @@ export { FaceMatchService } from './face-match-service';
 export { BiometricAuditLogger } from './biometric-audit-logger';
 export { RiskScoringEngine } from './risk-scoring-engine';
 export { BiometricClockService } from './biometric-clock-service';
+export { BiometricFallbackService } from './biometric-fallback-service';
+export type { FallbackClockRequest, FallbackClockResult, FallbackReason, FallbackApprovalStatus, FallbackApprovalAction } from './biometric-fallback-service';
 export { BiometricLGPDManager, BIOMETRIC_CONSENT_PURPOSES } from './lgpd-compliance-manager';
 export type { ConsentPurpose, FallbackMethod, FallbackResult } from './lgpd-compliance-manager';
 export type { BiometricClockResult, BiometricClockDecision, BiometricClockInput } from './biometric-clock-service';
