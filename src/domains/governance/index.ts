@@ -30,6 +30,9 @@ export type { SanctionCreatedPayload, SanctionStatusChangePayload, SanctionEscal
 export { PolicyEngine, getPolicyEngine } from './services/policy-engine';
 export { POLICY_EVENTS, type PolicyEventType } from './events/policy-events';
 export type { AcceptanceRecordedPayload, VersionPublishedPayload, AcceptanceInvalidatedPayload } from './events/policy-events';
+export { EMPLOYEE_LIFECYCLE_EVENTS, type EmployeeLifecycleEventType } from './events/employee-lifecycle-events';
+export type { EmployeeHiredPayload, EmployeeWarnedPayload, EmployeeSuspendedPayload, EmployeeTerminatedPayload, PerformanceReviewPayload, EmployeePromotedPayload } from './events/employee-lifecycle-events';
+export { initOrganizationalIntelligenceEngine, OrganizationalIntelligenceQuery, getOrganizationalIntelligence } from './services/organizational-intelligence-engine';
 
 // ── Legacy services (read-only analytics) ──
 export { captureAuditSnapshot, fetchAuditSnapshots, compareSnapshots } from './visual-audit.service';
