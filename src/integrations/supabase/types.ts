@@ -21916,7 +21916,9 @@ export type Database = {
           photo_proof_url: string | null
           previous_hash: string | null
           recorded_at: string
+          server_signature: string | null
           server_timestamp: string
+          signature_algorithm: string | null
           source: string
           status: string
           tenant_id: string
@@ -21943,7 +21945,9 @@ export type Database = {
           photo_proof_url?: string | null
           previous_hash?: string | null
           recorded_at?: string
+          server_signature?: string | null
           server_timestamp?: string
+          signature_algorithm?: string | null
           source?: string
           status?: string
           tenant_id: string
@@ -21970,7 +21974,9 @@ export type Database = {
           photo_proof_url?: string | null
           previous_hash?: string | null
           recorded_at?: string
+          server_signature?: string | null
           server_timestamp?: string
+          signature_algorithm?: string | null
           source?: string
           status?: string
           tenant_id?: string
@@ -21999,6 +22005,7 @@ export type Database = {
           new_recorded_at: string | null
           original_entry_id: string
           reason: string
+          server_signature: string | null
           tenant_id: string
         }
         Insert: {
@@ -22014,6 +22021,7 @@ export type Database = {
           new_recorded_at?: string | null
           original_entry_id: string
           reason: string
+          server_signature?: string | null
           tenant_id: string
         }
         Update: {
@@ -22029,6 +22037,7 @@ export type Database = {
           new_recorded_at?: string | null
           original_entry_id?: string
           reason?: string
+          server_signature?: string | null
           tenant_id?: string
         }
         Relationships: [

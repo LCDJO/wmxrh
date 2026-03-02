@@ -30,6 +30,8 @@ export interface WorkTimeLedgerEntry {
   nsr_sequence: number | null;
   integrity_hash: string;
   previous_hash: string | null;
+  server_signature: string | null;
+  signature_algorithm: string | null;
   is_offline_sync: boolean;
   offline_recorded_at: string | null;
   status: WorkTimeEntryStatus;
@@ -71,6 +73,7 @@ export interface LedgerAdjustment {
   approved_at: string | null;
   approval_status: ApprovalStatus;
   integrity_hash: string;
+  server_signature: string | null;
   created_at: string;
 }
 
