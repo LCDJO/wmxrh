@@ -13,6 +13,7 @@
 import type { ChallengeType, LivenessCheckDTO, LivenessResult } from './types';
 import { supabase } from '@/integrations/supabase/client';
 import { AntiDeepfakeAnalyzer, type DeepfakeAnalysisResult, type DeepfakeSignal } from './anti-deepfake-analyzer';
+import { incrementDeepfakeSuspected, incrementLivenessFailures } from '@/domains/observability/biometric-metrics';
 
 // ── Confidence weights per challenge type ──────────────────────
 
@@ -130,6 +131,8 @@ export class LivenessDetectionService {
     const deepfakeResult = this.deepfake.analyze(dto.face_image_data);
     if (deepfakeResult.is_deepfake) {
       spoofSignals.push('deepfake_detected');
+      const bucket = deepfakeResult.confidence >= 0.9 ? '0.9+' : deepfakeResult.confidence >= 0.7 ? '0.7-0.9' : '0.55-0.7';
+      incrementDeepfakeSuspected({ confidence_bucket: bucket });
     }
 
     // ── Composite score calculation ────────────────────────────
@@ -162,6 +165,7 @@ export class LivenessDetectionService {
 
     // ── On failure: log suspicious attempt ─────────────────────
     if (!passed) {
+      incrementLivenessFailures({ stage: 'evaluate', reason: isScreen ? 'screen' : isPhoto ? 'photo' : deepfakeResult.is_deepfake ? 'deepfake' : 'low_score' });
       await this.logSuspiciousAttempt(dto, spoofSignals, {
         confidence_score,
         spoof_probability,

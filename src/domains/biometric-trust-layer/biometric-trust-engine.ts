@@ -14,7 +14,7 @@ import { FaceMatchService } from './face-match-service';
 import { BiometricAuditLogger } from './biometric-audit-logger';
 import { RiskScoringEngine } from './risk-scoring-engine';
 import { BiometricLGPDManager, type FallbackResult } from './lgpd-compliance-manager';
-import { incrementBiometricEnrollments, incrementBiometricVerifications, incrementBiometricSpoofDetections, incrementBiometricLivenessFailures } from '@/domains/observability/biometric-metrics';
+import { incrementBiometricEnrollments, incrementBiometricVerifications, incrementBiometricSpoofDetections, incrementBiometricLivenessFailures, incrementBiometricMatchSuccess, incrementLivenessFailures, incrementFraudBiometricFlags } from '@/domains/observability/biometric-metrics';
 import type {
   BiometricTrustEngineAPI,
   BiometricEnrollment,
@@ -77,6 +77,7 @@ export class BiometricTrustEngine implements BiometricTrustEngineAPI {
 
     if (!livenessResult.passed) {
       incrementBiometricLivenessFailures({ stage: 'enrollment' });
+      incrementLivenessFailures({ stage: 'enrollment', reason: 'liveness_check_failed' });
       throw new Error('[BiometricTrustEngine] Prova de vida falhou — enrollment rejeitado');
     }
 
@@ -163,8 +164,11 @@ export class BiometricTrustEngine implements BiometricTrustEngineAPI {
       autoAction = riskAssessment.recommended_action === 'block' ? 'block_entry' : 'flag_entry';
     }
 
-    if (matchOutcome.result !== 'match') {
+    if (matchOutcome.result === 'match') {
+      incrementBiometricMatchSuccess({ tenant_id: dto.tenant_id });
+    } else {
       incrementBiometricSpoofDetections({ result: matchOutcome.result });
+      incrementFraudBiometricFlags({ fraud_type: matchOutcome.result, severity: riskAssessment.risk_level });
     }
 
     // 7. Log & audit
