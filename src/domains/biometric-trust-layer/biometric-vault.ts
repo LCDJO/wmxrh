@@ -17,9 +17,18 @@ export class BiometricVault {
    * Store a new enrollment with template hash.
    */
   async storeEnrollment(dto: CreateEnrollmentDTO, template: FaceTemplate, livenessVerified: boolean): Promise<BiometricEnrollment> {
+    // LGPD: Consentimento explícito obrigatório
     if (!dto.consent_granted) {
       throw new Error('[BiometricVault] Consentimento LGPD obrigatório para armazenamento biométrico');
     }
+
+    // Política biométrica deve ter sido aceita (consent_version_id vincula ao aceite)
+    if (!dto.consent_version_id) {
+      throw new Error('[BiometricVault] Aceite da política biométrica obrigatório antes do enrollment');
+    }
+
+    // Encrypt template for at-rest storage (hash is used for matching)
+    const encryptedTemplate = await this.encryptTemplate(template.hash, dto.employee_id);
 
     const { data, error } = await supabase
       .from('biometric_enrollments' as any)
@@ -28,6 +37,7 @@ export class BiometricVault {
         employee_id: dto.employee_id,
         enrollment_status: 'active',
         template_hash: template.hash,
+        encrypted_template: encryptedTemplate,
         template_version: template.version,
         quality_score: template.quality_score,
         liveness_verified: livenessVerified,
@@ -36,6 +46,7 @@ export class BiometricVault {
         consent_granted: true,
         consent_granted_at: new Date().toISOString(),
         consent_ip_address: dto.consent_ip_address,
+        consent_version_id: dto.consent_version_id,
         lgpd_legal_basis: dto.lgpd_legal_basis ?? 'consent',
         expires_at: new Date(Date.now() + 730 * 86400000).toISOString(), // 2 years
       })
@@ -44,6 +55,21 @@ export class BiometricVault {
 
     if (error) throw new Error(`[BiometricVault] Failed to store enrollment: ${error.message}`);
     return data as unknown as BiometricEnrollment;
+  }
+
+  /**
+   * Encrypt template hash for at-rest storage (defense in depth).
+   */
+  private async encryptTemplate(templateHash: string, employeeId: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(`biometric_encryption_${employeeId}`);
+    const key = await crypto.subtle.importKey('raw', await crypto.subtle.digest('SHA-256', keyData), { name: 'AES-GCM' }, false, ['encrypt']);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoder.encode(templateHash));
+    const combined = new Uint8Array(iv.length + new Uint8Array(encrypted).length);
+    combined.set(iv);
+    combined.set(new Uint8Array(encrypted), iv.length);
+    return btoa(String.fromCharCode(...combined));
   }
 
   /**

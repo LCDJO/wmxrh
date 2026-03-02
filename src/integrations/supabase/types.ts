@@ -2053,8 +2053,10 @@ export type Database = {
           consent_granted: boolean
           consent_granted_at: string | null
           consent_ip_address: string | null
+          consent_version_id: string | null
           created_at: string
           employee_id: string
+          encrypted_template: string | null
           enrollment_status: string
           expires_at: string | null
           id: string
@@ -2076,8 +2078,10 @@ export type Database = {
           consent_granted?: boolean
           consent_granted_at?: string | null
           consent_ip_address?: string | null
+          consent_version_id?: string | null
           created_at?: string
           employee_id: string
+          encrypted_template?: string | null
           enrollment_status?: string
           expires_at?: string | null
           id?: string
@@ -2099,8 +2103,10 @@ export type Database = {
           consent_granted?: boolean
           consent_granted_at?: string | null
           consent_ip_address?: string | null
+          consent_version_id?: string | null
           created_at?: string
           employee_id?: string
+          encrypted_template?: string | null
           enrollment_status?: string
           expires_at?: string | null
           id?: string
@@ -2117,6 +2123,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "biometric_enrollments_consent_version_id_fkey"
+            columns: ["consent_version_id"]
+            isOneToOne: false
+            referencedRelation: "platform_policy_versions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "biometric_enrollments_tenant_id_fkey"
             columns: ["tenant_id"]

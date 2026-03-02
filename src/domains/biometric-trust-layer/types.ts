@@ -16,6 +16,7 @@ export interface BiometricEnrollment {
   employee_id: string;
   enrollment_status: EnrollmentStatus;
   template_hash: string;
+  encrypted_template?: string;
   template_version: number;
   quality_score: number;
   liveness_verified: boolean;
@@ -24,6 +25,7 @@ export interface BiometricEnrollment {
   consent_granted: boolean;
   consent_granted_at?: string;
   consent_ip_address?: string;
+  consent_version_id?: string;
   lgpd_legal_basis: LGPDLegalBasis;
   lgpd_retention_days: number;
   expires_at?: string;
@@ -42,6 +44,7 @@ export interface CreateEnrollmentDTO {
   capture_device?: string;
   consent_granted: boolean;
   consent_ip_address?: string;
+  consent_version_id?: string;
   lgpd_legal_basis?: LGPDLegalBasis;
 }
 
