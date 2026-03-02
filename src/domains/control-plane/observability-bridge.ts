@@ -26,6 +26,11 @@ export class ObservabilityBridge {
     metrics.increment('scim_users_updated_total', {}, 0);
     metrics.increment('scim_users_deactivated_total', {}, 0);
     metrics.increment('scim_errors_total', {}, 0);
+    // WorkTime baselines
+    metrics.increment('clock_entries_total', {}, 0);
+    metrics.increment('geo_violation_total', {}, 0);
+    metrics.increment('fraud_flags_total', {}, 0);
+    metrics.increment('device_integrity_failures_total', {}, 0);
     // Workflow / Automation baselines
     metrics.increment('workflow_executions_total', {}, 0);
     metrics.increment('workflow_failures_total', {}, 0);

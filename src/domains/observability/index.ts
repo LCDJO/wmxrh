@@ -44,3 +44,7 @@ export {
   incrementScimCreated, incrementScimUpdated,
   incrementScimDeactivated, incrementScimErrors,
 } from './scim-metrics';
+export {
+  incrementClockEntries, incrementGeoViolation,
+  incrementFraudFlags, incrementDeviceIntegrityFailures,
+} from './worktime-metrics';
