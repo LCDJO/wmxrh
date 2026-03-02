@@ -45,7 +45,7 @@ export class BehavioralAIEngine implements BehavioralAIEngineAPI {
 
   constructor() {
     this.anomalyModel = new AnomalyDetectionModel(this.profileManager);
-    this.adaptiveLearning = new AdaptiveLearningModule(this.fraudDB);
+    this.adaptiveLearning = new AdaptiveLearningModule(this.fraudDB, this.profileManager);
   }
 
   // ── Pipeline step 1: Capture ─────────────────────────────────
@@ -128,10 +128,18 @@ export class BehavioralAIEngine implements BehavioralAIEngineAPI {
     );
   }
 
-  // ── Pipeline step 6: Feedback ────────────────────────────────
+  // ── Pipeline step 6: Feedback & Adaptive Learning ────────────
 
   async submitFeedback(feedback: LearningFeedback): Promise<void> {
     this.adaptiveLearning.submitFeedback(feedback);
+  }
+
+  /**
+   * Manager approved a flagged registration → recalibrate baseline + reduce FP.
+   * Manager confirmed fraud → tighten tolerance.
+   */
+  processManagerApproval(feedback: import('./adaptive-learning-module').ManagerApprovalFeedback): void {
+    this.adaptiveLearning.processManagerApproval(feedback);
   }
 
   // ── Profile access ───────────────────────────────────────────
