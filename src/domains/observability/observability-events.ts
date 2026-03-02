@@ -50,6 +50,16 @@ export const OBSERVABILITY_KERNEL_EVENTS = {
   FraudClusterDetected: 'observability:fraud_cluster_detected',
   /** BehavioralAI: Adaptive model recalibrated from feedback */
   AdaptiveModelUpdated: 'observability:adaptive_model_updated',
+  /** REP-C: AFD file generated */
+  AFDGenerated: 'observability:afd_generated',
+  /** REP-C: AEJ file generated */
+  AEJGenerated: 'observability:aej_generated',
+  /** REP-C: REP version updated */
+  REPVersionUpdated: 'observability:rep_version_updated',
+  /** REP-C: NTP time sync failure detected */
+  TimeSyncFailureDetected: 'observability:time_sync_failure_detected',
+  /** REP-C: Inspection export requested by fiscal auditor */
+  InspectionExportRequested: 'observability:inspection_export_requested',
 } as const;
 
 export type ObservabilityKernelEvent = typeof OBSERVABILITY_KERNEL_EVENTS[keyof typeof OBSERVABILITY_KERNEL_EVENTS];
@@ -248,6 +258,50 @@ export interface AdaptiveModelUpdatedPayload {
   total_predictions: number;
 }
 
+// ── REP-C Compliance Events ──
+
+export interface AFDGeneratedPayload {
+  tenant_id: string;
+  period_start: string;
+  period_end: string;
+  record_count: number;
+  content_hash: string;
+}
+
+export interface AEJGeneratedPayload {
+  tenant_id: string;
+  period_start: string;
+  period_end: string;
+  employee_count: number;
+  format: 'text' | 'pdf';
+  content_hash: string;
+}
+
+export interface REPVersionUpdatedPayload {
+  previous_version: string;
+  new_version: string;
+  compliance_level: string;
+  content_hash: string;
+}
+
+export interface TimeSyncFailureDetectedPayload {
+  tenant_id: string;
+  ntp_server: string;
+  offset_ms: number;
+  round_trip_ms: number;
+  fallback_used: boolean;
+}
+
+export interface InspectionExportRequestedPayload {
+  tenant_id: string;
+  request_id: string;
+  inspector_cpf: string;
+  inspection_number?: string;
+  formats: string[];
+  period_start: string;
+  period_end: string;
+}
+
 export const __DOMAIN_CATALOG = {
   domain: 'Observability',
   color: 'hsl(35 90% 55%)',
@@ -274,5 +328,10 @@ export const __DOMAIN_CATALOG = {
     { name: 'HighRiskEntryBlocked', description: 'Registro de alto risco bloqueado pelo motor unificado' },
     { name: 'FraudClusterDetected', description: 'Cluster de anomalias de fraude correlacionadas detectado' },
     { name: 'AdaptiveModelUpdated', description: 'Modelo adaptativo recalibrado com feedback' },
+    { name: 'AFDGenerated', description: 'Arquivo Fonte de Dados (AFD) gerado para fiscalização' },
+    { name: 'AEJGenerated', description: 'Arquivo Espelho de Jornada (AEJ) gerado' },
+    { name: 'REPVersionUpdated', description: 'Versão do REP-C atualizada' },
+    { name: 'TimeSyncFailureDetected', description: 'Falha de sincronização NTP detectada' },
+    { name: 'InspectionExportRequested', description: 'Exportação para fiscalização solicitada' },
   ],
 };
