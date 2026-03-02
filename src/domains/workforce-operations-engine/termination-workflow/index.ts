@@ -1,7 +1,7 @@
 /**
  * WorkforceOperationsEngine — Termination Workflow Domain
  *
- * Facade over the existing automated-offboarding domain.
+ * Facade over the existing automated-offboarding domain + TerminationSimulator.
  */
 
 export {
@@ -22,3 +22,20 @@ export type {
   OffboardingDocumentType,
   GeneratedDocument,
 } from '@/domains/automated-offboarding';
+
+// ── Termination Simulator ──
+export {
+  simulateTermination,
+  TerminationSimulatorService,
+  getTerminationSimulatorService,
+} from './termination-simulator.service';
+
+export type {
+  TerminationSimulationInput,
+  TerminationSimulationResult,
+  TerminationScenario,
+  LegalRiskScore,
+  LegalRiskFactor,
+  RiskLevel,
+} from './termination-simulator.service';
+
