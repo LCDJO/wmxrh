@@ -155,11 +155,18 @@ export class BiometricClockService {
       capturedTemplate, enrollment, threshold,
     );
 
-    // ── 7. Risk assessment ─────────────────────────────────────
+    // ── 7. Risk assessment (4 pillars) ────────────────────────
     const riskAssessment: BiometricRiskAssessment = this.risk.assess({
       match_score: matchOutcome.score,
       liveness_score: livenessResult.confidence_score,
+      liveness_method: livenessResult.challenge_type,
       capture_quality: quality.estimated_quality,
+      is_new_device: undefined, // populated by WorkTimeEngine context
+      device_rooted: undefined,
+      vpn_active: undefined,
+      is_mock_location: undefined,
+      is_different_location: undefined,
+      is_offline: undefined,
     });
 
     const riskFactors = riskAssessment.factors.map(f => f.factor);
@@ -204,6 +211,16 @@ export class BiometricClockService {
 
     await this.audit.logVerification(input.tenant_id, input.employee_id, matchLogId, matchOutcome.result);
     incrementBiometricVerifications({ result: matchOutcome.result, decision });
+
+    // ── 10. Notify manager if risk is high/critical ────────────
+    if (riskAssessment.risk_level === 'high' || riskAssessment.risk_level === 'critical') {
+      await this.risk.notifyManagerIfHighRisk(
+        input.tenant_id,
+        input.employee_id,
+        riskAssessment,
+        { worktime_entry_id: input.worktime_entry_id, match_score: matchOutcome.score },
+      ).catch(err => console.error('[BiometricClockService] Manager notification failed:', err));
+    }
 
     return {
       decision,
