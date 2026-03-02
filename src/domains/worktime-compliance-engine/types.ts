@@ -88,6 +88,7 @@ export interface CreateAdjustmentDTO {
 
 // ── Geofence ──
 export type GeofenceType = 'work_site' | 'branch' | 'client_site' | 'restricted';
+export type GeofenceEnforcementMode = 'block' | 'flag';
 
 export interface WorkTimeGeofence {
   id: string;
@@ -97,6 +98,8 @@ export interface WorkTimeGeofence {
   latitude: number;
   longitude: number;
   radius_meters: number;
+  tolerance_meters: number;
+  enforcement_mode: GeofenceEnforcementMode;
   geofence_type: GeofenceType;
   is_active: boolean;
   allowed_clock_types: WorkTimeEventType[];
@@ -111,6 +114,8 @@ export interface CreateGeofenceDTO {
   latitude: number;
   longitude: number;
   radius_meters: number;
+  tolerance_meters?: number;
+  enforcement_mode?: GeofenceEnforcementMode;
   geofence_type?: GeofenceType;
   allowed_clock_types?: WorkTimeEventType[];
 }
@@ -238,6 +243,9 @@ export interface GeofenceValidationResult {
   matched_geofence: WorkTimeGeofence | null;
   distance_meters: number | null;
   allowed: boolean;
+  within_tolerance: boolean;
+  enforcement: GeofenceEnforcementMode | null;
+  suggested_status: WorkTimeEntryStatus;
   reason?: string;
 }
 
