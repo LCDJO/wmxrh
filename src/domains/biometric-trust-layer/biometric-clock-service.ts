@@ -122,7 +122,13 @@ export class BiometricClockService {
         },
       );
 
-      await this.audit.logVerification(input.tenant_id, input.employee_id, matchLogId, 'liveness_failed');
+      await this.audit.logVerification(input.tenant_id, input.employee_id, matchLogId, 'liveness_failed', {
+        match_score: 0,
+        liveness_score: livenessResult.confidence_score,
+        decision: 'rejected',
+        device_id: input.device_fingerprint,
+        ip_address: input.ip_address,
+      });
 
       return {
         decision: 'rejected',
@@ -209,7 +215,15 @@ export class BiometricClockService {
       },
     );
 
-    await this.audit.logVerification(input.tenant_id, input.employee_id, matchLogId, matchOutcome.result);
+    await this.audit.logVerification(input.tenant_id, input.employee_id, matchLogId, matchOutcome.result, {
+      match_score: matchOutcome.score,
+      liveness_score: livenessResult.confidence_score,
+      decision,
+      device_id: input.device_fingerprint,
+      risk_score: riskAssessment.overall_score,
+      risk_level: riskAssessment.risk_level,
+      ip_address: input.ip_address,
+    });
     incrementBiometricVerifications({ result: matchOutcome.result, decision });
 
     // ── 10. Notify manager if risk is high/critical ────────────
