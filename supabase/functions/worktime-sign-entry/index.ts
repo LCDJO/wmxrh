@@ -204,12 +204,27 @@ Deno.serve(async (req: Request) => {
     if (action === "sign_adjustment") {
       const { adjustment } = body;
 
+      // Verify original entry exists and is valid
+      const { data: originalEntry, error: origErr } = await supabase
+        .from("worktime_ledger")
+        .select("id, tenant_id, status")
+        .eq("id", adjustment.original_entry_id)
+        .single();
+
+      if (origErr || !originalEntry) {
+        return new Response(
+          JSON.stringify({ error: "Original entry not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const now = new Date().toISOString();
       const canonicalPayload = [
         adjustment.original_entry_id,
         adjustment.adjustment_type,
         adjustment.reason,
         adjustment.new_recorded_at ?? "",
-        new Date().toISOString(),
+        now,
       ].join("|");
 
       const integrityHash = await sha256(canonicalPayload);
@@ -225,6 +240,8 @@ Deno.serve(async (req: Request) => {
           new_event_type: adjustment.new_event_type ?? null,
           reason: adjustment.reason,
           legal_basis: adjustment.legal_basis ?? null,
+          requested_by: adjustment.requested_by ?? user.id,
+          requested_at: now,
           approval_status: "pending",
           integrity_hash: integrityHash,
           server_signature: serverSignature,
@@ -239,8 +256,85 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // Log to audit trail
+      await supabase.from("worktime_audit_trail").insert({
+        tenant_id: adjustment.tenant_id,
+        action: "adjustment_requested",
+        entity_type: "worktime_adjustment",
+        entity_id: inserted.id,
+        actor_id: user.id,
+        details: {
+          original_entry_id: adjustment.original_entry_id,
+          adjustment_type: adjustment.adjustment_type,
+          reason: adjustment.reason,
+        },
+      });
+
       return new Response(
         JSON.stringify({ adjustment: inserted, integrity_hash: integrityHash, server_signature: serverSignature }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Approve adjustment ──
+    if (action === "approve_adjustment") {
+      const { adjustment_id, approved } = body;
+
+      const { data: adj, error: fetchErr } = await supabase
+        .from("worktime_ledger_adjustments")
+        .select("*")
+        .eq("id", adjustment_id)
+        .single();
+
+      if (fetchErr || !adj) {
+        return new Response(
+          JSON.stringify({ error: "Adjustment not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (adj.approval_status !== "pending") {
+        return new Response(
+          JSON.stringify({ error: `Adjustment already ${adj.approval_status}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const newStatus = approved ? "approved" : "rejected";
+
+      const { data: updated, error: updateErr } = await supabase
+        .from("worktime_ledger_adjustments")
+        .update({
+          approval_status: newStatus,
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+        })
+        .eq("id", adjustment_id)
+        .select()
+        .single();
+
+      if (updateErr) {
+        return new Response(
+          JSON.stringify({ error: `Update failed: ${updateErr.message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Audit trail
+      await supabase.from("worktime_audit_trail").insert({
+        tenant_id: adj.tenant_id,
+        action: `adjustment_${newStatus}`,
+        entity_type: "worktime_adjustment",
+        entity_id: adjustment_id,
+        actor_id: user.id,
+        details: {
+          original_entry_id: adj.original_entry_id,
+          decision: newStatus,
+        },
+      });
+
+      return new Response(
+        JSON.stringify({ adjustment: updated, status: newStatus }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
