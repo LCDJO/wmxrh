@@ -22,6 +22,7 @@ import { UnifiedRiskScoringEngine } from './unified-risk-scoring-engine';
 import { FraudPatternDatabase } from './fraud-pattern-database';
 import { AdaptiveLearningModule } from './adaptive-learning-module';
 import { incrementFraudFlags } from '@/domains/observability/worktime-metrics';
+import { purgeRawSamples, sanitizeFeatureVector, anonymizeSession } from './behavior-data-sanitizer';
 
 import type {
   BehavioralAIEngineAPI, BehaviorCaptureSession, BehavioralFeatureVector,
@@ -51,14 +52,23 @@ export class BehavioralAIEngine implements BehavioralAIEngineAPI {
   // ── Pipeline step 1: Capture ─────────────────────────────────
 
   async captureBehavior(session: BehaviorCaptureSession): Promise<string> {
-    // Store session for later processing
-    const features = this.featureExtractor.extract(session);
+    // ── SECURITY: Anonymize device fingerprint (one-way hash) ──
+    const anonSession = await anonymizeSession(session);
 
-    // Update profile
-    this.profileManager.updateProfile(session.tenant_id, session.employee_id, features);
+    // Extract statistical features from raw samples
+    const rawFeatures = this.featureExtractor.extract(anonSession);
 
-    // Store in recent for replay detection
-    const key = `${session.tenant_id}::${session.employee_id}`;
+    // ── SECURITY: Sanitize — strip any accidental raw/PII fields ──
+    const features = sanitizeFeatureVector(rawFeatures);
+
+    // ── SECURITY: Purge raw samples — only vectors survive ──
+    purgeRawSamples(anonSession);
+
+    // Update profile with anonymized vector only
+    this.profileManager.updateProfile(anonSession.tenant_id, anonSession.employee_id, features);
+
+    // Store in recent for replay detection (vectors only, no raw data)
+    const key = `${anonSession.tenant_id}::${anonSession.employee_id}`;
     const recent = this.recentFeatures.get(key) ?? [];
     recent.push(features);
     if (recent.length > BehavioralAIEngine.MAX_RECENT) recent.shift();
@@ -171,12 +181,16 @@ export class BehavioralAIEngine implements BehavioralAIEngineAPI {
     behavior_flagged: boolean;
     anomaly_score: number;
   }> {
-    // 1. Capture + extract + update profile
-    const features = this.featureExtractor.extract(session);
-    this.profileManager.updateProfile(session.tenant_id, session.employee_id, features);
+    // ── SECURITY: Anonymize + extract + purge raw data ──
+    const anonSession = await anonymizeSession(session);
+    const rawFeatures = this.featureExtractor.extract(anonSession);
+    const features = sanitizeFeatureVector(rawFeatures);
+    purgeRawSamples(anonSession);
 
-    // Store recent
-    const key = `${session.tenant_id}::${session.employee_id}`;
+    this.profileManager.updateProfile(anonSession.tenant_id, anonSession.employee_id, features);
+
+    // Store recent vectors (no raw data)
+    const key = `${anonSession.tenant_id}::${anonSession.employee_id}`;
     const recent = this.recentFeatures.get(key) ?? [];
     recent.push(features);
     if (recent.length > BehavioralAIEngine.MAX_RECENT) recent.shift();

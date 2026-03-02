@@ -33,4 +33,5 @@ export { BehavioralRiskScoringEngine } from './behavioral-risk-scoring-engine';
 export { UnifiedRiskScoringEngine } from './unified-risk-scoring-engine';
 export { FraudPatternDatabase } from './fraud-pattern-database';
 export { AdaptiveLearningModule } from './adaptive-learning-module';
+export { purgeRawSamples, sanitizeFeatureVector, anonymizeSession, hashFingerprint } from './behavior-data-sanitizer';
 export type * from './types';
