@@ -13,6 +13,7 @@ import { BiometricVault } from './biometric-vault';
 import { FaceMatchService } from './face-match-service';
 import { BiometricAuditLogger } from './biometric-audit-logger';
 import { RiskScoringEngine } from './risk-scoring-engine';
+import { BiometricLGPDManager, type FallbackResult } from './lgpd-compliance-manager';
 import { incrementBiometricEnrollments, incrementBiometricVerifications, incrementBiometricSpoofDetections, incrementBiometricLivenessFailures } from '@/domains/observability/biometric-metrics';
 import type {
   BiometricTrustEngineAPI,
@@ -35,12 +36,22 @@ export class BiometricTrustEngine implements BiometricTrustEngineAPI {
   readonly matcher = new FaceMatchService();
   readonly audit = new BiometricAuditLogger();
   readonly risk = new RiskScoringEngine();
+  readonly lgpd = new BiometricLGPDManager();
 
   /**
    * Full enrollment pipeline: capture → quality → liveness → template → store → audit
    */
   async enroll(dto: CreateEnrollmentDTO): Promise<BiometricEnrollment> {
-    // 0. Enforce explicit consent + biometric policy acceptance
+    // 0. LGPD: verify all mandatory consents before enrollment
+    const consentCheck = await this.lgpd.verifyMandatoryConsents(dto.tenant_id, dto.employee_id);
+    if (!consentCheck.valid) {
+      throw new Error(
+        `[BiometricTrustEngine] Consentimentos LGPD pendentes: ${consentCheck.missing.join(', ')}. ` +
+        `Todos os consentimentos obrigatórios devem ser concedidos antes do enrollment (LGPD Art. 11).`
+      );
+    }
+
+    // 1. Enforce explicit consent flag + policy version
     if (!dto.consent_granted) {
       throw new Error('[BiometricTrustEngine] Consentimento explícito obrigatório para enrollment biométrico (LGPD Art. 11)');
     }
@@ -204,8 +215,33 @@ export class BiometricTrustEngine implements BiometricTrustEngineAPI {
   }
 
   async revokeConsent(tenantId: string, employeeId: string, consentType: ConsentType): Promise<void> {
-    await this.vault.recordConsent(tenantId, employeeId, consentType, false, '');
-    await this.audit.logConsent(tenantId, employeeId, consentType, false);
+    const result = await this.lgpd.revokeConsent(tenantId, employeeId, consentType, '', 'Revogação pelo titular');
+    if (result.fallback) {
+      console.info(`[BiometricTrustEngine] Fallback ativado para ${employeeId}: ${result.fallback.method}`);
+    }
+  }
+
+  /**
+   * Delete biometric template (LGPD Art. 18, IV — Right to erasure).
+   * Crypto-erases template and activates fallback clock method.
+   */
+  async deleteTemplate(tenantId: string, employeeId: string, reason: string): Promise<FallbackResult> {
+    await this.lgpd.deleteTemplate(tenantId, employeeId, reason);
+    return this.lgpd.activateFallback(tenantId, employeeId, 'template_deleted');
+  }
+
+  /**
+   * Revoke all consents and fully disable biometric for employee.
+   */
+  async revokeAllConsentsAndDisable(tenantId: string, employeeId: string, ipAddress: string, reason: string): Promise<FallbackResult> {
+    return this.lgpd.revokeAllConsents(tenantId, employeeId, ipAddress, reason);
+  }
+
+  /**
+   * Verify mandatory consents before any biometric operation.
+   */
+  async verifyConsents(tenantId: string, employeeId: string) {
+    return this.lgpd.verifyMandatoryConsents(tenantId, employeeId);
   }
 
   assessRisk(tenantId: string, employeeId: string, matchScore: number, livenessScore: number, context: Record<string, unknown>): BiometricRiskAssessment {
