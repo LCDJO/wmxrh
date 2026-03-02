@@ -8,9 +8,22 @@ export { GovernanceEventStore } from './repositories/governance-event-store';
 export { GovernanceProjectionStore } from './repositories/governance-projection-store';
 export type { ProjectionRecord } from './repositories/governance-projection-store';
 export { GovernanceAggregate } from './entities/governance-aggregate';
+export { EmployeeLegalTimelineAggregate } from './entities/employee-legal-timeline-aggregate';
+export type {
+  LegalEvent, LegalEventCategory, LegalEventSeverity,
+  Policy, PolicyScope, PolicyStatus,
+  PolicyVersion,
+  SanctionRecord, SanctionType, SanctionStatus,
+  RiskAssessment, RiskCategory, RiskFactor,
+  AdministrativeDecision, DecisionType, DecisionStatus,
+  EmployeeLegalTimeline, EmployeeLegalTimelineEntry, TimelineEntryType,
+} from './entities/governance-entities';
 export { createGovernanceEvent, type GovernanceDomainEvent, type GovernanceEventMetadata } from './events/governance-domain-event';
+export { DISCIPLINARY_EVENTS, type DisciplinaryEventType } from './events/disciplinary-events';
+export type { AdvertenciaPayload, SuspensaoPayload, AfastamentoPayload, DesligamentoPayload } from './events/disciplinary-events';
 export { onGovernanceEvent, onAnyGovernanceEvent, dispatchGovernanceEvents } from './events/governance-event-bus';
 export { registerProjector, initCoreProjectors } from './projections/governance-projector';
+export { DisciplinaryService } from './services/disciplinary-service';
 
 // ── Legacy services (read-only analytics) ──
 export { captureAuditSnapshot, fetchAuditSnapshots, compareSnapshots } from './visual-audit.service';
