@@ -54,6 +54,11 @@ export interface CreateTimeEntryDTO {
   photo_proof_url?: string;
   is_offline_sync?: boolean;
   offline_recorded_at?: string;
+  // Device integrity signals (sent from mobile app)
+  is_rooted?: boolean;
+  is_mock_location?: boolean;
+  is_vpn_active?: boolean;
+  network_type?: string;
 }
 
 // ── Adjustments ──
@@ -250,11 +255,26 @@ export interface GeofenceValidationResult {
 }
 
 export interface DeviceIntegrityValidatorAPI {
-  validate(tenantId: string, employeeId: string, fingerprint: string): Promise<DeviceValidationResult>;
+  validate(tenantId: string, employeeId: string, fingerprint: string, signals?: DeviceIntegritySignals): Promise<DeviceValidationResult>;
   listDevices(tenantId: string, employeeId: string): Promise<WorkTimeDevice[]>;
   trustDevice(deviceId: string, trustedBy: string): Promise<WorkTimeDevice>;
   blockDevice(deviceId: string, reason: string): Promise<WorkTimeDevice>;
 }
+
+/** Signals collected from the mobile app at clock time */
+export interface DeviceIntegritySignals {
+  is_rooted?: boolean;
+  is_mock_location?: boolean;
+  is_vpn_active?: boolean;
+  ip_address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  network_type?: string;
+}
+
+export type DeviceRiskFlag =
+  | 'unknown_device' | 'untrusted_device' | 'blocked_device'
+  | 'root_jailbreak' | 'mock_location' | 'vpn_detected' | 'ip_geo_mismatch';
 
 export interface DeviceValidationResult {
   is_valid: boolean;
@@ -262,7 +282,9 @@ export interface DeviceValidationResult {
   is_trusted: boolean;
   is_blocked: boolean;
   is_new: boolean;
-  risk_flags: string[];
+  risk_flags: DeviceRiskFlag[];
+  risk_score: number;
+  should_flag: boolean;
 }
 
 export interface ImmutableTimeLedgerAPI {
