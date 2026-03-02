@@ -10,6 +10,9 @@
 export type InputSource = 'touch' | 'mouse' | 'keyboard' | 'accelerometer' | 'gyroscope';
 export type CapturePhase = 'pre_clock' | 'during_clock' | 'post_clock';
 
+/** Habitual time window — classifies when the employee typically clocks */
+export type HabitualTimeWindow = 'early_morning' | 'morning' | 'afternoon' | 'evening' | 'night' | 'late_night';
+
 export interface BehaviorSample {
   timestamp: number;
   source: InputSource;
@@ -57,6 +60,10 @@ export interface BehavioralFeatureVector {
   time_to_clock_action_ms: number;
   hesitation_count: number;
   backtrack_count: number;
+
+  // Session context
+  session_duration_ms: number;
+  habitual_time_window: HabitualTimeWindow;
 
   extracted_at: string;
 }

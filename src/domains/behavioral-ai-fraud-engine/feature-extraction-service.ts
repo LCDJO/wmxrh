@@ -5,7 +5,7 @@
  * Statistical approach: mean, stddev, percentiles per signal type.
  */
 
-import type { BehaviorCaptureSession, BehavioralFeatureVector, BehaviorSample } from './types';
+import type { BehaviorCaptureSession, BehavioralFeatureVector, BehaviorSample, HabitualTimeWindow } from './types';
 
 export class FeatureExtractionService {
 
@@ -45,6 +45,10 @@ export class FeatureExtractionService {
       time_to_clock_action_ms: this.timeToClockAction(session.samples),
       hesitation_count: this.countHesitations(session.samples),
       backtrack_count: this.countBacktracks(session.samples),
+
+      // Session context
+      session_duration_ms: this.computeSessionDuration(session),
+      habitual_time_window: this.classifyTimeWindow(session.started_at),
 
       extracted_at: new Date().toISOString(),
     };
@@ -121,11 +125,31 @@ export class FeatureExtractionService {
   }
 
   private countBacktracks(samples: BehaviorSample[]): number {
-    // Phase going from during_clock back to pre_clock
     let count = 0;
     for (let i = 1; i < samples.length; i++) {
       if (samples[i].phase === 'pre_clock' && samples[i - 1].phase === 'during_clock') count++;
     }
     return count;
+  }
+
+  private computeSessionDuration(session: BehaviorCaptureSession): number {
+    // Prefer metadata if available (set by SDK)
+    if (session.metadata?.session_duration_ms) {
+      return session.metadata.session_duration_ms as number;
+    }
+    // Fallback: diff between first and last sample timestamps
+    if (session.samples.length < 2) return 0;
+    const sorted = session.samples.slice().sort((a, b) => a.timestamp - b.timestamp);
+    return sorted[sorted.length - 1].timestamp - sorted[0].timestamp;
+  }
+
+  private classifyTimeWindow(startedAt: string): HabitualTimeWindow {
+    const hour = new Date(startedAt).getHours();
+    if (hour >= 5 && hour < 8) return 'early_morning';
+    if (hour >= 8 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 21) return 'evening';
+    if (hour >= 21 && hour < 24) return 'night';
+    return 'late_night'; // 0-4
   }
 }
