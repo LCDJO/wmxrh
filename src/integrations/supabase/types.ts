@@ -2887,6 +2887,68 @@ export type Database = {
           },
         ]
       }
+      clock_events: {
+        Row: {
+          adjusted_from: string | null
+          adjustment_reason: string | null
+          approved_by: string | null
+          created_at: string
+          device_id: string | null
+          employee_id: string
+          event_type: string
+          id: string
+          is_adjusted: boolean
+          latitude: number | null
+          longitude: number | null
+          notes: string | null
+          source: string
+          tenant_id: string
+          timestamp: string
+        }
+        Insert: {
+          adjusted_from?: string | null
+          adjustment_reason?: string | null
+          approved_by?: string | null
+          created_at?: string
+          device_id?: string | null
+          employee_id: string
+          event_type: string
+          id?: string
+          is_adjusted?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          source?: string
+          tenant_id: string
+          timestamp?: string
+        }
+        Update: {
+          adjusted_from?: string | null
+          adjustment_reason?: string | null
+          approved_by?: string | null
+          created_at?: string
+          device_id?: string | null
+          employee_id?: string
+          event_type?: string
+          id?: string
+          is_adjusted?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          source?: string
+          tenant_id?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clock_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cnae_cbo_mappings: {
         Row: {
           approved: boolean
@@ -20418,6 +20480,225 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      time_bank_entries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          entry_type: string
+          expires_at: string | null
+          id: string
+          minutes: number
+          reason: string | null
+          reference_date: string
+          source_summary_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          entry_type: string
+          expires_at?: string | null
+          id?: string
+          minutes: number
+          reason?: string | null
+          reference_date: string
+          source_summary_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          entry_type?: string
+          expires_at?: string | null
+          id?: string
+          minutes?: number
+          reason?: string | null
+          reference_date?: string
+          source_summary_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_bank_entries_source_summary_id_fkey"
+            columns: ["source_summary_id"]
+            isOneToOne: false
+            referencedRelation: "time_daily_summaries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_bank_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_daily_summaries: {
+        Row: {
+          break_minutes: number
+          created_at: string
+          date: string
+          deficit_minutes: number
+          employee_id: string
+          expected_minutes: number
+          first_clock_in: string | null
+          id: string
+          is_nocturnal: boolean
+          last_clock_out: string | null
+          nocturnal_minutes: number
+          overtime_minutes: number
+          overtime_type: string | null
+          status: string
+          tenant_id: string
+          total_worked_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          break_minutes?: number
+          created_at?: string
+          date: string
+          deficit_minutes?: number
+          employee_id: string
+          expected_minutes?: number
+          first_clock_in?: string | null
+          id?: string
+          is_nocturnal?: boolean
+          last_clock_out?: string | null
+          nocturnal_minutes?: number
+          overtime_minutes?: number
+          overtime_type?: string | null
+          status?: string
+          tenant_id: string
+          total_worked_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          break_minutes?: number
+          created_at?: string
+          date?: string
+          deficit_minutes?: number
+          employee_id?: string
+          expected_minutes?: number
+          first_clock_in?: string | null
+          id?: string
+          is_nocturnal?: boolean
+          last_clock_out?: string | null
+          nocturnal_minutes?: number
+          overtime_minutes?: number
+          overtime_type?: string | null
+          status?: string
+          tenant_id?: string
+          total_worked_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_daily_summaries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_tracking_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          employee_id: string
+          id: string
+          is_resolved: boolean
+          message: string
+          metadata: Json | null
+          reference_date: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          tenant_id: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          is_resolved?: boolean
+          message: string
+          metadata?: Json | null
+          reference_date: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          is_resolved?: boolean
+          message?: string
+          metadata?: Json | null
+          reference_date?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_tracking_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_tracking_rules: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          rule_key: string
+          rule_value: Json
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          rule_key: string
+          rule_value?: Json
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          rule_key?: string
+          rule_value?: Json
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_tracking_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       traccar_device_cache: {
         Row: {
