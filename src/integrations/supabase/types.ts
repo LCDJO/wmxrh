@@ -14159,6 +14159,109 @@ export type Database = {
           },
         ]
       }
+      org_intelligence_jobs: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          job_type: string
+          max_attempts: number
+          payload: Json
+          priority: number
+          result: Json | null
+          scheduled_at: string
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type: string
+          max_attempts?: number
+          payload?: Json
+          priority?: number
+          result?: Json | null
+          scheduled_at?: string
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          max_attempts?: number
+          payload?: Json
+          priority?: number
+          result?: Json | null
+          scheduled_at?: string
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_intelligence_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_intelligence_snapshots: {
+        Row: {
+          computed_at: string
+          id: string
+          metadata: Json
+          metrics: Json
+          period_end: string
+          period_start: string
+          period_type: string
+          snapshot_type: string
+          tenant_id: string
+        }
+        Insert: {
+          computed_at?: string
+          id?: string
+          metadata?: Json
+          metrics?: Json
+          period_end: string
+          period_start: string
+          period_type?: string
+          snapshot_type: string
+          tenant_id: string
+        }
+        Update: {
+          computed_at?: string
+          id?: string
+          metadata?: Json
+          metrics?: Json
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          snapshot_type?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_intelligence_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_gateway_configs: {
         Row: {
           api_key_encrypted: string | null
