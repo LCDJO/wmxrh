@@ -22,6 +22,16 @@ export const OBSERVABILITY_KERNEL_EVENTS = {
   SCIMUserDeactivated: 'observability:scim_user_deactivated',
   /** SCIM: Group synced to internal roles */
   SCIMGroupSynced: 'observability:scim_group_synced',
+  /** WorkTime: Clock entry successfully recorded */
+  TimeEntryRecorded: 'observability:time_entry_recorded',
+  /** WorkTime: Clock entry rejected (geofence / device / retroactive) */
+  TimeEntryRejected: 'observability:time_entry_rejected',
+  /** WorkTime: Geofence violation detected */
+  GeoFenceViolation: 'observability:geofence_violation',
+  /** WorkTime: Time adjustment requested */
+  TimeAdjustmentRequested: 'observability:time_adjustment_requested',
+  /** WorkTime: Anti-fraud flag raised */
+  FraudFlagRaised: 'observability:fraud_flag_raised',
 } as const;
 
 export type ObservabilityKernelEvent = typeof OBSERVABILITY_KERNEL_EVENTS[keyof typeof OBSERVABILITY_KERNEL_EVENTS];
@@ -92,6 +102,52 @@ export interface SCIMGroupSyncedPayload {
   scim_client_id: string;
 }
 
+// ── WorkTime Payloads ───────────────────────────────────────────
+
+export interface TimeEntryRecordedPayload {
+  tenant_id: string;
+  employee_id: string;
+  event_type: string;
+  recorded_at: string;
+  source: string;
+  integrity_hash: string;
+  geofence_matched: boolean;
+}
+
+export interface TimeEntryRejectedPayload {
+  tenant_id: string;
+  employee_id: string;
+  event_type: string;
+  reason: string;
+  rejection_source: 'geofence' | 'device' | 'retroactive' | 'future' | 'other';
+}
+
+export interface GeoFenceViolationPayload {
+  tenant_id: string;
+  employee_id: string;
+  latitude: number;
+  longitude: number;
+  reason: string;
+  matched_geofence_id?: string;
+}
+
+export interface TimeAdjustmentRequestedPayload {
+  tenant_id: string;
+  employee_id: string;
+  entry_id: string;
+  justification: string;
+  requested_by: string;
+}
+
+export interface FraudFlagRaisedPayload {
+  tenant_id: string;
+  employee_id: string;
+  fraud_type: string;
+  severity: string;
+  confidence_score: number;
+  auto_action?: string;
+}
+
 export const __DOMAIN_CATALOG = {
   domain: 'Observability',
   color: 'hsl(35 90% 55%)',
@@ -104,5 +160,10 @@ export const __DOMAIN_CATALOG = {
     { name: 'SCIMUserUpdated', description: 'Usuário atualizado via SCIM' },
     { name: 'SCIMUserDeactivated', description: 'Usuário desativado via SCIM' },
     { name: 'SCIMGroupSynced', description: 'Grupo SCIM sincronizado com roles' },
+    { name: 'TimeEntryRecorded', description: 'Registro de ponto persistido com sucesso' },
+    { name: 'TimeEntryRejected', description: 'Registro de ponto rejeitado' },
+    { name: 'GeoFenceViolation', description: 'Violação de cerca geográfica detectada' },
+    { name: 'TimeAdjustmentRequested', description: 'Solicitação de ajuste de ponto' },
+    { name: 'FraudFlagRaised', description: 'Sinal de fraude detectado pelo anti-fraude' },
   ],
 };
