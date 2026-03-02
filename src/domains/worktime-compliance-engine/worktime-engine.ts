@@ -14,6 +14,7 @@ import { TimeComplianceAuditor } from './time-compliance-auditor';
 import { TimeExportService } from './time-export-service';
 import { AntiFraudAnalyzer } from './anti-fraud-analyzer';
 import { BiometricClockService, type BiometricClockResult } from '@/domains/biometric-trust-layer/biometric-clock-service';
+import { BiometricFallbackService } from '@/domains/biometric-trust-layer/biometric-fallback-service';
 import { incrementClockEntries, incrementGeoViolation, incrementFraudFlags, incrementDeviceIntegrityFailures } from '@/domains/observability/worktime-metrics';
 import type { WorkTimeEngineAPI, CreateTimeEntryDTO, WorkTimeLedgerEntry } from './types';
 
@@ -26,6 +27,7 @@ export class WorkTimeEngine implements WorkTimeEngineAPI {
   readonly export = new TimeExportService();
   readonly antiFraud = new AntiFraudAnalyzer();
   readonly biometric = new BiometricClockService();
+  readonly fallback = new BiometricFallbackService();
 
   /**
    * Full pipeline: biometric → geofence → device → persist → audit → anti-fraud
