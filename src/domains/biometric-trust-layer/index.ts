@@ -20,4 +20,6 @@ export { BiometricVault } from './biometric-vault';
 export { FaceMatchService } from './face-match-service';
 export { BiometricAuditLogger } from './biometric-audit-logger';
 export { RiskScoringEngine } from './risk-scoring-engine';
+export { BiometricClockService } from './biometric-clock-service';
+export type { BiometricClockResult, BiometricClockDecision, BiometricClockInput } from './biometric-clock-service';
 export type * from './types';
