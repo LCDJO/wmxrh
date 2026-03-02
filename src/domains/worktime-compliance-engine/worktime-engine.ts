@@ -50,13 +50,26 @@ export class WorkTimeEngine implements WorkTimeEngineAPI {
       }
     }
 
-    // 2. Device integrity validation
+    // 2. Device integrity validation (root, mock location, VPN, IP divergence)
     let deviceOk = true;
     if (dto.device_fingerprint) {
-      const devResult = await this.device.validate(tenantId, dto.employee_id, dto.device_fingerprint);
+      const devResult = await this.device.validate(tenantId, dto.employee_id, dto.device_fingerprint, {
+        is_rooted: dto.is_rooted,
+        is_mock_location: dto.is_mock_location,
+        is_vpn_active: dto.is_vpn_active,
+        ip_address: dto.ip_address,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+      });
       deviceOk = devResult.is_valid;
+
       if (devResult.is_blocked) {
         throw new Error(`[WorkTimeEngine] Device blocked: ${devResult.device?.blocked_reason}`);
+      }
+
+      // If device risk is high enough, flag the entry
+      if (devResult.should_flag && geofenceSuggestedStatus === 'valid') {
+        geofenceSuggestedStatus = 'flagged';
       }
     }
 
