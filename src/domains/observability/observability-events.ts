@@ -40,6 +40,16 @@ export const OBSERVABILITY_KERNEL_EVENTS = {
   BiometricSpoofDetected: 'observability:biometric_spoof_detected',
   /** Biometric: Consent granted or revoked */
   BiometricConsentChanged: 'observability:biometric_consent_changed',
+  /** BehavioralAI: New behavior profile created for employee */
+  BehaviorProfileCreated: 'observability:behavior_profile_created',
+  /** BehavioralAI: Behavioral anomaly detected during clock event */
+  BehaviorAnomalyDetected: 'observability:behavior_anomaly_detected',
+  /** BehavioralAI: High-risk entry blocked by unified risk engine */
+  HighRiskEntryBlocked: 'observability:high_risk_entry_blocked',
+  /** BehavioralAI: Cluster of correlated fraud anomalies detected */
+  FraudClusterDetected: 'observability:fraud_cluster_detected',
+  /** BehavioralAI: Adaptive model recalibrated from feedback */
+  AdaptiveModelUpdated: 'observability:adaptive_model_updated',
 } as const;
 
 export type ObservabilityKernelEvent = typeof OBSERVABILITY_KERNEL_EVENTS[keyof typeof OBSERVABILITY_KERNEL_EVENTS];
@@ -191,6 +201,53 @@ export interface BiometricConsentChangedPayload {
   granted: boolean;
 }
 
+export interface BehaviorProfileCreatedPayload {
+  tenant_id: string;
+  employee_id: string;
+  profile_id: string;
+  maturity: string;
+  sample_count: number;
+}
+
+export interface BehaviorAnomalyDetectedPayload {
+  tenant_id: string;
+  employee_id: string;
+  session_id: string;
+  anomaly_type: string;
+  severity: string;
+  deviation_score: number;
+  confidence: number;
+}
+
+export interface HighRiskEntryBlockedPayload {
+  tenant_id: string;
+  employee_id: string;
+  session_id: string;
+  overall_risk_score: number;
+  risk_level: string;
+  recommended_action: string;
+  contributing_pillars: string[];
+}
+
+export interface FraudClusterDetectedPayload {
+  tenant_id: string;
+  cluster_id: string;
+  cluster_type: string;
+  employee_ids: string[];
+  session_count: number;
+  severity: string;
+  confidence: number;
+}
+
+export interface AdaptiveModelUpdatedPayload {
+  tenant_id: string;
+  trigger: 'manager_approval' | 'feedback' | 'auto_recalibration';
+  precision: number;
+  recall: number;
+  f1_score: number;
+  total_predictions: number;
+}
+
 export const __DOMAIN_CATALOG = {
   domain: 'Observability',
   color: 'hsl(35 90% 55%)',
@@ -212,5 +269,10 @@ export const __DOMAIN_CATALOG = {
     { name: 'BiometricVerified', description: 'Verificação biométrica facial realizada' },
     { name: 'BiometricSpoofDetected', description: 'Tentativa de spoof/fraude biométrica detectada' },
     { name: 'BiometricConsentChanged', description: 'Consentimento biométrico concedido/revogado (LGPD)' },
+    { name: 'BehaviorProfileCreated', description: 'Perfil comportamental criado para colaborador' },
+    { name: 'BehaviorAnomalyDetected', description: 'Anomalia comportamental detectada em registro de ponto' },
+    { name: 'HighRiskEntryBlocked', description: 'Registro de alto risco bloqueado pelo motor unificado' },
+    { name: 'FraudClusterDetected', description: 'Cluster de anomalias de fraude correlacionadas detectado' },
+    { name: 'AdaptiveModelUpdated', description: 'Modelo adaptativo recalibrado com feedback' },
   ],
 };
