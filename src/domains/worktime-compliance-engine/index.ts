@@ -35,3 +35,12 @@ export { TimeExportService } from './time-export-service';
 export { AntiFraudAnalyzer } from './anti-fraud-analyzer';
 export { computeEntryHash, computeAdjustmentHash, computeEntryHashSHA256, computeAdjustmentHashSHA256, verifyHashChain } from './integrity';
 export type * from './types';
+
+// ── REP-C Compliance Layer (Portaria 671/2021) ──
+export {
+  REPCComplianceLayer, getREPCComplianceLayer,
+  AFDGenerator, AEJGenerator, OfficialTimeSyncService,
+  REPCTechnicalLog, SystemIdentificationManager,
+  InspectionExportService, REPVersionRegistry,
+} from './repc';
+export type * from './repc/types';
