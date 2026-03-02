@@ -79,14 +79,30 @@ export interface BehavioralFeatureVector {
 
 export type ProfileMaturity = 'nascent' | 'developing' | 'mature' | 'established';
 
+export interface AnomalyHistoryEntry {
+  anomaly_type: AnomalyType;
+  severity: AnomalySeverity;
+  deviation_score: number;
+  session_id: string;
+  detected_at: string;
+}
+
 export interface BehaviorProfile {
   id: string;
   tenant_id: string;
   employee_id: string;
   maturity: ProfileMaturity;
   sample_count: number;
+  /** Baseline vector (EMA-smoothed) — only reliable after 10 samples */
   baseline_features: BehavioralFeatureVector;
+  /** Per-feature running stddev for Z-score computation */
   feature_stddevs: Partial<BehavioralFeatureVector>;
+  /** Dynamic tolerance: starts high (permissive), tightens as profile matures */
+  tolerance_threshold: number;
+  /** Rolling anomaly history (last 50 entries) */
+  anomaly_history: AnomalyHistoryEntry[];
+  /** Whether the profile has been trained (≥10 valid samples) */
+  is_trained: boolean;
   last_updated_at: string;
   created_at: string;
 }

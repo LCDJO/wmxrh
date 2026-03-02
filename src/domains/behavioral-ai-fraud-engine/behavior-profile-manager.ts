@@ -11,9 +11,19 @@
  *   established (>100 sessions)
  */
 
-import type { BehaviorProfile, BehavioralFeatureVector, ProfileMaturity } from './types';
+import type { BehaviorProfile, BehavioralFeatureVector, ProfileMaturity, AnomalyHistoryEntry } from './types';
+import type { AnomalyDetection } from './types';
 
-const EMA_ALPHA = 0.15; // new sample weight
+const EMA_ALPHA = 0.15;
+const MIN_TRAINING_SAMPLES = 10;
+const MAX_ANOMALY_HISTORY = 50;
+
+const TOLERANCE_BY_MATURITY: Record<ProfileMaturity, number> = {
+  nascent: 4.0,
+  developing: 3.0,
+  mature: 2.5,
+  established: 2.0,
+};
 
 const NUMERIC_FEATURE_KEYS: (keyof BehavioralFeatureVector)[] = [
   'avg_touch_duration_ms', 'touch_interval_stddev_ms', 'typing_speed_cpm',
@@ -54,6 +64,9 @@ export class BehaviorProfileManager {
         sample_count: 1,
         baseline_features: { ...features },
         feature_stddevs: {},
+        tolerance_threshold: TOLERANCE_BY_MATURITY.nascent,
+        anomaly_history: [],
+        is_trained: false,
         last_updated_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
       };
@@ -83,15 +96,43 @@ export class BehaviorProfileManager {
     existing.sample_count += 1;
     existing.maturity = this.computeMaturity(existing.sample_count);
     existing.feature_stddevs = stddevs as any;
+    existing.tolerance_threshold = TOLERANCE_BY_MATURITY[existing.maturity];
+    existing.is_trained = existing.sample_count >= MIN_TRAINING_SAMPLES;
     existing.last_updated_at = new Date().toISOString();
 
     return existing;
   }
 
   /**
+   * Record anomalies into the profile's rolling history.
+   */
+  recordAnomalies(tenantId: string, employeeId: string, anomalies: AnomalyDetection[]): void {
+    const profile = this.getProfile(tenantId, employeeId);
+    if (!profile) return;
+
+    for (const a of anomalies) {
+      const entry: AnomalyHistoryEntry = {
+        anomaly_type: a.anomaly_type,
+        severity: a.severity,
+        deviation_score: a.deviation_score,
+        session_id: a.session_id,
+        detected_at: a.detected_at,
+      };
+      profile.anomaly_history.push(entry);
+    }
+
+    if (profile.anomaly_history.length > MAX_ANOMALY_HISTORY) {
+      profile.anomaly_history = profile.anomaly_history.slice(-MAX_ANOMALY_HISTORY);
+    }
+  }
+
+  /**
    * Compute Z-scores (deviation from baseline) for anomaly detection.
+   * Returns empty if profile is not trained (< 10 samples).
    */
   computeDeviations(profile: BehaviorProfile, features: BehavioralFeatureVector): Record<string, number> {
+    if (!profile.is_trained) return {};
+
     const deltas: Record<string, number> = {};
     const stddevs = profile.feature_stddevs as Record<string, number>;
 
@@ -102,20 +143,41 @@ export class BehaviorProfileManager {
 
       if (typeof current !== 'number' || typeof baseline !== 'number') continue;
       if (sd === 0) {
-        deltas[key] = current !== baseline ? 5 : 0; // max signal if stddev=0
+        deltas[key] = current !== baseline ? 5 : 0;
         continue;
       }
 
-      deltas[key] = (current - baseline) / sd; // Z-score
+      deltas[key] = (current - baseline) / sd;
     }
 
     return deltas;
   }
 
+  /**
+   * Check if profile is trained (≥10 valid samples).
+   */
+  isTrained(tenantId: string, employeeId: string): boolean {
+    const profile = this.getProfile(tenantId, employeeId);
+    return profile?.is_trained ?? false;
+  }
+
+  /**
+   * Get anomaly frequency for a given employee.
+   */
+  getAnomalyRate(tenantId: string, employeeId: string): { total: number; high_severity: number; rate_per_session: number } {
+    const profile = this.getProfile(tenantId, employeeId);
+    if (!profile || profile.sample_count === 0) {
+      return { total: 0, high_severity: 0, rate_per_session: 0 };
+    }
+    const total = profile.anomaly_history.length;
+    const high_severity = profile.anomaly_history.filter(a => a.severity === 'high' || a.severity === 'critical').length;
+    return { total, high_severity, rate_per_session: total / profile.sample_count };
+  }
+
   private computeMaturity(count: number): ProfileMaturity {
     if (count > 100) return 'established';
     if (count > 30) return 'mature';
-    if (count >= 10) return 'developing';
+    if (count >= MIN_TRAINING_SAMPLES) return 'developing';
     return 'nascent';
   }
 
