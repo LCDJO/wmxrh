@@ -11,7 +11,7 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Briefcase, TrendingUp, Building2,
-  ChevronLeft, ChevronRight, ChevronDown, LogOut, FileText, Heart,
+  ChevronLeft, ChevronRight, ChevronDown, LogOut, FileText, Heart, Clock,
   ShieldCheck, ClipboardCheck, ScrollText, Scale, Gavel, Landmark,
   Calculator, Brain, Sparkles, Send, Settings, Plug, UserCog, FileSignature,
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
@@ -91,8 +91,17 @@ const navSections: NavSection[] = [
     label: 'Pessoas',
     items: [
       { to: '/employees', icon: Users, label: 'Colaboradores', key: 'employees', moduleKey: 'employees' },
+      { to: '/time-tracking', icon: Clock, label: 'Controle de Ponto', key: 'employees', moduleKey: 'employees' },
       { to: '/agreements', icon: ScrollText, label: 'Termos e Acordos', key: 'employees', moduleKey: 'agreements' },
-      { to: '/offboarding', icon: UserMinus, label: 'Desligamento', key: 'employees', moduleKey: 'employees' },
+      {
+        to: '/offboarding', icon: UserMinus, label: 'Desligamento', key: 'employees', moduleKey: 'employees',
+        children: [
+          { to: '/offboarding', icon: UserMinus, label: 'Visão Geral', key: 'employees', moduleKey: 'employees' },
+          { to: '/termination-simulator', icon: Calculator, label: 'Simulador Rescisão', key: 'employees', moduleKey: 'employees' },
+          { to: '/terminated-employees', icon: Users, label: 'Desligados', key: 'employees', moduleKey: 'employees' },
+          { to: '/reference-letters', icon: FileSignature, label: 'Cartas de Referência', key: 'employees', moduleKey: 'employees' },
+        ],
+      },
       {
         to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation', moduleKey: 'compensation',
         children: [

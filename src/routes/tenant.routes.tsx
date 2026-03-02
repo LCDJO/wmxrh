@@ -67,6 +67,8 @@ import SupportLiveChat from '@/pages/support/SupportLiveChat';
 import OffboardingDashboard from '@/pages/OffboardingDashboard';
 import TerminatedEmployees from '@/pages/TerminatedEmployees';
 import ReferenceLetters from '@/pages/ReferenceLetters';
+import TimeTrackingPage from '@/pages/TimeTrackingPage';
+import TerminationSimulatorPage from '@/pages/TerminationSimulatorPage';
 import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
 import LgpdCompliance from '@/pages/LgpdCompliance';
 import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
@@ -96,6 +98,8 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/offboarding', element: pr('employees', <OffboardingDashboard />) },
       { path: '/terminated-employees', element: pr('employees', <TerminatedEmployees />) },
       { path: '/reference-letters', element: pr('employees', <ReferenceLetters />) },
+      { path: '/termination-simulator', element: pr('employees', <TerminationSimulatorPage />) },
+      { path: '/time-tracking', element: pr('employees', <TimeTrackingPage />) },
       { path: '/lgpd', element: pr('compliance', <LgpdCompliance />) },
       { path: '/companies', element: pr('companies', <Companies />) },
       { path: '/groups', element: pr('groups', <CompanyGroups />) },
