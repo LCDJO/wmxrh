@@ -5479,6 +5479,75 @@ export type Database = {
           },
         ]
       }
+      employee_goals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_value: number | null
+          cycle_id: string | null
+          description: string | null
+          due_date: string
+          employee_id: string
+          id: string
+          metric: string | null
+          status: string
+          target_value: number | null
+          tenant_id: string
+          title: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_value?: number | null
+          cycle_id?: string | null
+          description?: string | null
+          due_date: string
+          employee_id: string
+          id?: string
+          metric?: string | null
+          status?: string
+          target_value?: number | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_value?: number | null
+          cycle_id?: string | null
+          description?: string | null
+          due_date?: string
+          employee_id?: string
+          id?: string
+          metric?: string | null
+          status?: string
+          target_value?: number | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_goals_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "performance_review_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_goals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_health_exams: {
         Row: {
           cbo_code: string | null
@@ -5850,6 +5919,84 @@ export type Database = {
           },
           {
             foreignKeyName: "employee_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_reviews: {
+        Row: {
+          calibrated_score: number | null
+          competency_scores: Json
+          created_at: string
+          cycle_id: string
+          employee_id: string
+          feedback: string | null
+          goals_achieved: number
+          goals_total: number
+          id: string
+          improvement_areas: string[]
+          overall_score: number | null
+          review_type: string
+          reviewer_id: string
+          status: string
+          strengths: string[]
+          submitted_at: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          calibrated_score?: number | null
+          competency_scores?: Json
+          created_at?: string
+          cycle_id: string
+          employee_id: string
+          feedback?: string | null
+          goals_achieved?: number
+          goals_total?: number
+          id?: string
+          improvement_areas?: string[]
+          overall_score?: number | null
+          review_type: string
+          reviewer_id: string
+          status?: string
+          strengths?: string[]
+          submitted_at?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          calibrated_score?: number | null
+          competency_scores?: Json
+          created_at?: string
+          cycle_id?: string
+          employee_id?: string
+          feedback?: string | null
+          goals_achieved?: number
+          goals_total?: number
+          id?: string
+          improvement_areas?: string[]
+          overall_score?: number | null
+          review_type?: string
+          reviewer_id?: string
+          status?: string
+          strengths?: string[]
+          submitted_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_reviews_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "performance_review_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_reviews_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -15208,6 +15355,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "pdf_layout_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_review_cycles: {
+        Row: {
+          completed_count: number
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          participants_count: number
+          period_end: string
+          period_start: string
+          review_type: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_count?: number
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          participants_count?: number
+          period_end: string
+          period_start: string
+          review_type: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_count?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          participants_count?: number
+          period_end?: string
+          period_start?: string
+          review_type?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_review_cycles_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
