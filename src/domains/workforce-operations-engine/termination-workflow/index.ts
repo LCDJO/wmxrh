@@ -39,3 +39,17 @@ export type {
   RiskLevel,
 } from './termination-simulator.service';
 
+// ── Pre-Termination Report ──
+export {
+  generatePreTerminationReport,
+  PreTerminationReportService,
+  getPreTerminationReportService,
+} from './pre-termination-report.service';
+
+export type {
+  PreTerminationReport,
+  DisciplinaryRecord,
+  WarningRecord,
+  LaborExposure,
+  ComplianceGap,
+} from './pre-termination-report.service';
