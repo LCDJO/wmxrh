@@ -27,6 +27,9 @@ export { DisciplinaryService } from './services/disciplinary-service';
 export { SanctionEngine, getSanctionEngine } from './services/sanction-engine';
 export { SANCTION_EVENTS, type SanctionEventType, type SanctionAccountStatus } from './events/sanction-events';
 export type { SanctionCreatedPayload, SanctionStatusChangePayload, SanctionEscalatedPayload, SanctionContestedPayload, SanctionRevokedPayload } from './events/sanction-events';
+export { PolicyEngine, getPolicyEngine } from './services/policy-engine';
+export { POLICY_EVENTS, type PolicyEventType } from './events/policy-events';
+export type { AcceptanceRecordedPayload, VersionPublishedPayload, AcceptanceInvalidatedPayload } from './events/policy-events';
 
 // ── Legacy services (read-only analytics) ──
 export { captureAuditSnapshot, fetchAuditSnapshots, compareSnapshots } from './visual-audit.service';
