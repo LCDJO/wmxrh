@@ -76,6 +76,7 @@ import PlatformAIOperations from '@/pages/platform/PlatformAIOperations';
 import PlatformSupportAnalytics from '@/pages/platform/PlatformSupportAnalytics';
 import PlatformWorkTime from '@/pages/platform/PlatformWorkTime';
 import PlatformBiometrics from '@/pages/platform/PlatformBiometrics';
+import PlatformBehaviorAI from '@/pages/platform/PlatformBehaviorAI';
 import PlatformLogs from '@/pages/platform/PlatformLogs';
 import DocumentSignatureIntegrations from '@/pages/platform/PlatformDocumentSignature';
 import SettingsGamification from '@/pages/platform/PlatformSettingsGamification';
@@ -263,6 +264,7 @@ export const platformRoutes: RouteObject[] = [
       { path: 'incidents/*', element: <PlatformGuard allowedRoles={opsAdmin}><Suspense fallback={SuspenseFallback}><IncidentManagementDashboard /></Suspense></PlatformGuard> },
       { path: 'worktime', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformWorkTime /></PlatformGuard> },
       { path: 'worktime/biometrics', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformBiometrics /></PlatformGuard> },
+      { path: 'worktime/behavior-ai', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformBehaviorAI /></PlatformGuard> },
     ],
   },
 ];
