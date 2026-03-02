@@ -51,4 +51,6 @@ export {
 export {
   incrementBiometricEnrollments, incrementBiometricVerifications,
   incrementBiometricSpoofDetections, incrementBiometricLivenessFailures,
+  incrementBiometricMatchSuccess, incrementLivenessFailures,
+  incrementFraudBiometricFlags, incrementDeepfakeSuspected,
 } from './biometric-metrics';

@@ -19,6 +19,9 @@ import {
   incrementBiometricVerifications,
   incrementBiometricSpoofDetections,
   incrementBiometricLivenessFailures,
+  incrementBiometricMatchSuccess,
+  incrementLivenessFailures,
+  incrementFraudBiometricFlags,
 } from '@/domains/observability/biometric-metrics';
 import type { MatchResult, BiometricRiskAssessment } from './types';
 
@@ -105,6 +108,7 @@ export class BiometricClockService {
 
     if (!livenessResult.passed) {
       incrementBiometricLivenessFailures({ stage: 'clock_verification' });
+      incrementLivenessFailures({ stage: 'clock_verification', reason: 'liveness_check_failed' });
 
       // Log failed liveness to match logs
       const matchLogId = await this.matcher.logMatch(
@@ -188,6 +192,7 @@ export class BiometricClockService {
       autoAction = 'reject_clock';
       rejectionReason = `Score biométrico ${(matchOutcome.score * 100).toFixed(1)}% abaixo do threshold ${(threshold * 100).toFixed(1)}%`;
       incrementBiometricSpoofDetections({ result: matchOutcome.result });
+      incrementFraudBiometricFlags({ fraud_type: 'biometric_mismatch', severity: 'high' });
     } else if (riskAssessment.recommended_action === 'flag' || riskAssessment.recommended_action === 'require_liveness') {
       // Score OK but risk elevated → FLAG
       decision = 'flagged';
@@ -195,6 +200,7 @@ export class BiometricClockService {
     } else {
       // Everything OK → APPROVE
       decision = 'approved';
+      incrementBiometricMatchSuccess({ tenant_id: input.tenant_id });
     }
 
     // ── 9. Log to immutable audit trail ────────────────────────
