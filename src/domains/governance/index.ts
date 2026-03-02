@@ -36,6 +36,8 @@ export { initOrganizationalIntelligenceEngine, OrganizationalIntelligenceQuery, 
 export { OrgIntelligenceJobDispatcher, OrgIntelligenceSnapshotQuery, ORG_INTELLIGENCE_JOB_TYPES, type OrgIntelligenceJobType } from './services/organizational-intelligence-engine';
 export { StructuralIndicatorsEngine, getStructuralIndicatorsEngine, IndicatorConfigManager, getIndicatorConfigManager } from './services/structural-indicators-engine';
 export type { IndicatorType, IndicatorWeights, IndicatorThresholds, IndicatorConfig, IndicatorResult } from './services/structural-indicators-engine';
+export { AlertEngine, getAlertEngine, initAlertEngine } from './services/alert-engine';
+export type { AlertType, AlertSeverity, AlertStatus, TriggerFactor, ExecutiveAlert, AlertRuleConfig, AlertConditions } from './services/alert-engine';
 
 // ── Legacy services (read-only analytics) ──
 export { captureAuditSnapshot, fetchAuditSnapshots, compareSnapshots } from './visual-audit.service';
