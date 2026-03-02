@@ -33,6 +33,7 @@ export type { AcceptanceRecordedPayload, VersionPublishedPayload, AcceptanceInva
 export { EMPLOYEE_LIFECYCLE_EVENTS, type EmployeeLifecycleEventType } from './events/employee-lifecycle-events';
 export type { EmployeeHiredPayload, EmployeeWarnedPayload, EmployeeSuspendedPayload, EmployeeTerminatedPayload, PerformanceReviewPayload, EmployeePromotedPayload } from './events/employee-lifecycle-events';
 export { initOrganizationalIntelligenceEngine, OrganizationalIntelligenceQuery, getOrganizationalIntelligence } from './services/organizational-intelligence-engine';
+export { OrgIntelligenceJobDispatcher, OrgIntelligenceSnapshotQuery, ORG_INTELLIGENCE_JOB_TYPES, type OrgIntelligenceJobType } from './services/organizational-intelligence-engine';
 
 // ── Legacy services (read-only analytics) ──
 export { captureAuditSnapshot, fetchAuditSnapshots, compareSnapshots } from './visual-audit.service';
