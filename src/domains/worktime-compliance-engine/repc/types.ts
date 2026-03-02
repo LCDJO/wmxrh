@@ -336,3 +336,49 @@ export interface REPVersionRegistryAPI {
   getHistory(): REPVersion[];
   register(version: Omit<REPVersion, 'id' | 'is_current'>): REPVersion;
 }
+
+// ══════════════════════════════════════════════════════════════════
+// REP Compliance Report
+// ══════════════════════════════════════════════════════════════════
+
+export interface REPComplianceReport {
+  generated_at: string;
+  tenant_id: string;
+  /** Sincronização com hora oficial */
+  time_sync: {
+    status: 'synced' | 'fallback' | 'never_synced';
+    last_sync: TimeSyncResult | null;
+    offset_ms: number;
+    within_tolerance: boolean;
+  };
+  /** Integridade do ledger e log técnico */
+  integrity: {
+    technical_log_valid: boolean;
+    technical_log_broken_at?: string;
+    total_log_entries: number;
+  };
+  /** Versão do REP-C */
+  version: {
+    current: string;
+    compliance_level: string;
+    content_hash: string;
+    release_date: string;
+    total_versions: number;
+  };
+  /** Última geração de AFD */
+  last_afd: {
+    generated: boolean;
+    generated_at?: string;
+    record_count?: number;
+  };
+  /** Falhas registradas */
+  failures: {
+    total: number;
+    ntp_failures: number;
+    errors: number;
+    recent: Array<{ timestamp: string; event_type: string; description: string }>;
+  };
+  /** Status geral */
+  overall_status: 'compliant' | 'warning' | 'non_compliant';
+  findings: string[];
+}
