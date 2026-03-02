@@ -21603,6 +21603,448 @@ export type Database = {
           },
         ]
       }
+      worktime_compliance_audits: {
+        Row: {
+          audit_type: string
+          audited_by: string
+          compliance_score: number | null
+          created_at: string
+          employee_id: string | null
+          findings: Json
+          id: string
+          period_end: string
+          period_start: string
+          report_url: string | null
+          tenant_id: string
+          violations_count: number
+        }
+        Insert: {
+          audit_type: string
+          audited_by?: string
+          compliance_score?: number | null
+          created_at?: string
+          employee_id?: string | null
+          findings?: Json
+          id?: string
+          period_end: string
+          period_start: string
+          report_url?: string | null
+          tenant_id: string
+          violations_count?: number
+        }
+        Update: {
+          audit_type?: string
+          audited_by?: string
+          compliance_score?: number | null
+          created_at?: string
+          employee_id?: string | null
+          findings?: Json
+          id?: string
+          period_end?: string
+          period_start?: string
+          report_url?: string | null
+          tenant_id?: string
+          violations_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worktime_compliance_audits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worktime_devices: {
+        Row: {
+          blocked_reason: string | null
+          created_at: string
+          device_fingerprint: string
+          device_model: string | null
+          device_os: string | null
+          employee_id: string
+          id: string
+          is_blocked: boolean
+          is_trusted: boolean
+          last_used_at: string | null
+          tenant_id: string
+          trusted_at: string | null
+          trusted_by: string | null
+        }
+        Insert: {
+          blocked_reason?: string | null
+          created_at?: string
+          device_fingerprint: string
+          device_model?: string | null
+          device_os?: string | null
+          employee_id: string
+          id?: string
+          is_blocked?: boolean
+          is_trusted?: boolean
+          last_used_at?: string | null
+          tenant_id: string
+          trusted_at?: string | null
+          trusted_by?: string | null
+        }
+        Update: {
+          blocked_reason?: string | null
+          created_at?: string
+          device_fingerprint?: string
+          device_model?: string | null
+          device_os?: string | null
+          employee_id?: string
+          id?: string
+          is_blocked?: boolean
+          is_trusted?: boolean
+          last_used_at?: string | null
+          tenant_id?: string
+          trusted_at?: string | null
+          trusted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worktime_devices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worktime_exports: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          employee_ids: string[] | null
+          error_message: string | null
+          export_type: string
+          file_hash: string | null
+          file_url: string | null
+          id: string
+          period_end: string
+          period_start: string
+          record_count: number | null
+          requested_by: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          employee_ids?: string[] | null
+          error_message?: string | null
+          export_type: string
+          file_hash?: string | null
+          file_url?: string | null
+          id?: string
+          period_end: string
+          period_start: string
+          record_count?: number | null
+          requested_by?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          employee_ids?: string[] | null
+          error_message?: string | null
+          export_type?: string
+          file_hash?: string | null
+          file_url?: string | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          record_count?: number | null
+          requested_by?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worktime_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worktime_fraud_logs: {
+        Row: {
+          auto_action: string | null
+          confidence_score: number
+          created_at: string
+          employee_id: string
+          evidence: Json
+          fraud_type: string
+          id: string
+          ledger_entry_id: string | null
+          resolution_notes: string | null
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          tenant_id: string
+        }
+        Insert: {
+          auto_action?: string | null
+          confidence_score?: number
+          created_at?: string
+          employee_id: string
+          evidence?: Json
+          fraud_type: string
+          id?: string
+          ledger_entry_id?: string | null
+          resolution_notes?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id: string
+        }
+        Update: {
+          auto_action?: string | null
+          confidence_score?: number
+          created_at?: string
+          employee_id?: string
+          evidence?: Json
+          fraud_type?: string
+          id?: string
+          ledger_entry_id?: string | null
+          resolution_notes?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worktime_fraud_logs_ledger_entry_id_fkey"
+            columns: ["ledger_entry_id"]
+            isOneToOne: false
+            referencedRelation: "worktime_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worktime_fraud_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worktime_geofences: {
+        Row: {
+          allowed_clock_types: string[] | null
+          created_at: string
+          description: string | null
+          geofence_type: string
+          id: string
+          is_active: boolean
+          latitude: number
+          longitude: number
+          metadata: Json | null
+          name: string
+          radius_meters: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          allowed_clock_types?: string[] | null
+          created_at?: string
+          description?: string | null
+          geofence_type?: string
+          id?: string
+          is_active?: boolean
+          latitude: number
+          longitude: number
+          metadata?: Json | null
+          name: string
+          radius_meters?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          allowed_clock_types?: string[] | null
+          created_at?: string
+          description?: string | null
+          geofence_type?: string
+          id?: string
+          is_active?: boolean
+          latitude?: number
+          longitude?: number
+          metadata?: Json | null
+          name?: string
+          radius_meters?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worktime_geofences_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worktime_ledger: {
+        Row: {
+          accuracy_meters: number | null
+          app_version: string | null
+          created_at: string
+          device_fingerprint: string | null
+          device_model: string | null
+          device_os: string | null
+          employee_id: string
+          event_type: string
+          geofence_id: string | null
+          geofence_matched: boolean | null
+          id: string
+          integrity_hash: string
+          ip_address: string | null
+          is_offline_sync: boolean | null
+          latitude: number | null
+          longitude: number | null
+          nsr_sequence: number | null
+          offline_recorded_at: string | null
+          photo_proof_url: string | null
+          previous_hash: string | null
+          recorded_at: string
+          server_timestamp: string
+          source: string
+          tenant_id: string
+        }
+        Insert: {
+          accuracy_meters?: number | null
+          app_version?: string | null
+          created_at?: string
+          device_fingerprint?: string | null
+          device_model?: string | null
+          device_os?: string | null
+          employee_id: string
+          event_type: string
+          geofence_id?: string | null
+          geofence_matched?: boolean | null
+          id?: string
+          integrity_hash: string
+          ip_address?: string | null
+          is_offline_sync?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          nsr_sequence?: number | null
+          offline_recorded_at?: string | null
+          photo_proof_url?: string | null
+          previous_hash?: string | null
+          recorded_at?: string
+          server_timestamp?: string
+          source?: string
+          tenant_id: string
+        }
+        Update: {
+          accuracy_meters?: number | null
+          app_version?: string | null
+          created_at?: string
+          device_fingerprint?: string | null
+          device_model?: string | null
+          device_os?: string | null
+          employee_id?: string
+          event_type?: string
+          geofence_id?: string | null
+          geofence_matched?: boolean | null
+          id?: string
+          integrity_hash?: string
+          ip_address?: string | null
+          is_offline_sync?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          nsr_sequence?: number | null
+          offline_recorded_at?: string | null
+          photo_proof_url?: string | null
+          previous_hash?: string | null
+          recorded_at?: string
+          server_timestamp?: string
+          source?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worktime_ledger_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worktime_ledger_adjustments: {
+        Row: {
+          adjustment_type: string
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          integrity_hash: string
+          legal_basis: string | null
+          new_event_type: string | null
+          new_recorded_at: string | null
+          original_entry_id: string
+          reason: string
+          tenant_id: string
+        }
+        Insert: {
+          adjustment_type: string
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          integrity_hash: string
+          legal_basis?: string | null
+          new_event_type?: string | null
+          new_recorded_at?: string | null
+          original_entry_id: string
+          reason: string
+          tenant_id: string
+        }
+        Update: {
+          adjustment_type?: string
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          integrity_hash?: string
+          legal_basis?: string | null
+          new_event_type?: string | null
+          new_recorded_at?: string | null
+          original_entry_id?: string
+          reason?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worktime_ledger_adjustments_original_entry_id_fkey"
+            columns: ["original_entry_id"]
+            isOneToOne: false
+            referencedRelation: "worktime_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worktime_ledger_adjustments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       pcmso_exam_alerts: {
