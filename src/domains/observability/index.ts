@@ -48,3 +48,7 @@ export {
   incrementClockEntries, incrementGeoViolation,
   incrementFraudFlags, incrementDeviceIntegrityFailures,
 } from './worktime-metrics';
+export {
+  incrementBiometricEnrollments, incrementBiometricVerifications,
+  incrementBiometricSpoofDetections, incrementBiometricLivenessFailures,
+} from './biometric-metrics';

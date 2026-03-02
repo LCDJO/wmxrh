@@ -32,6 +32,14 @@ export const OBSERVABILITY_KERNEL_EVENTS = {
   TimeAdjustmentRequested: 'observability:time_adjustment_requested',
   /** WorkTime: Anti-fraud flag raised */
   FraudFlagRaised: 'observability:fraud_flag_raised',
+  /** Biometric: Face enrollment completed */
+  BiometricEnrolled: 'observability:biometric_enrolled',
+  /** Biometric: Face verification completed */
+  BiometricVerified: 'observability:biometric_verified',
+  /** Biometric: Spoof/liveness failure detected */
+  BiometricSpoofDetected: 'observability:biometric_spoof_detected',
+  /** Biometric: Consent granted or revoked */
+  BiometricConsentChanged: 'observability:biometric_consent_changed',
 } as const;
 
 export type ObservabilityKernelEvent = typeof OBSERVABILITY_KERNEL_EVENTS[keyof typeof OBSERVABILITY_KERNEL_EVENTS];
@@ -148,6 +156,41 @@ export interface FraudFlagRaisedPayload {
   auto_action?: string;
 }
 
+// ── Biometric Payloads ──────────────────────────────────────────
+
+export interface BiometricEnrolledPayload {
+  tenant_id: string;
+  employee_id: string;
+  enrollment_id: string;
+  capture_method: string;
+  quality_score: number;
+}
+
+export interface BiometricVerifiedPayload {
+  tenant_id: string;
+  employee_id: string;
+  match_result: string;
+  match_score: number;
+  liveness_passed: boolean;
+  risk_score: number;
+  worktime_entry_id?: string;
+}
+
+export interface BiometricSpoofDetectedPayload {
+  tenant_id: string;
+  employee_id: string;
+  detection_type: 'no_match' | 'spoof_detected' | 'liveness_failed';
+  confidence_score: number;
+  auto_action?: string;
+}
+
+export interface BiometricConsentChangedPayload {
+  tenant_id: string;
+  employee_id: string;
+  consent_type: string;
+  granted: boolean;
+}
+
 export const __DOMAIN_CATALOG = {
   domain: 'Observability',
   color: 'hsl(35 90% 55%)',
@@ -165,5 +208,9 @@ export const __DOMAIN_CATALOG = {
     { name: 'GeoFenceViolation', description: 'Violação de cerca geográfica detectada' },
     { name: 'TimeAdjustmentRequested', description: 'Solicitação de ajuste de ponto' },
     { name: 'FraudFlagRaised', description: 'Sinal de fraude detectado pelo anti-fraude' },
+    { name: 'BiometricEnrolled', description: 'Enrollment biométrico facial concluído' },
+    { name: 'BiometricVerified', description: 'Verificação biométrica facial realizada' },
+    { name: 'BiometricSpoofDetected', description: 'Tentativa de spoof/fraude biométrica detectada' },
+    { name: 'BiometricConsentChanged', description: 'Consentimento biométrico concedido/revogado (LGPD)' },
   ],
 };
