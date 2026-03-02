@@ -126,7 +126,13 @@ export class BiometricTrustEngine implements BiometricTrustEngineAPI {
         { worktime_entry_id: dto.worktime_entry_id, device_fingerprint: dto.device_fingerprint, ip_address: dto.ip_address, latitude: dto.latitude, longitude: dto.longitude },
       );
 
-      await this.audit.logVerification(dto.tenant_id, dto.employee_id, matchLogId, 'liveness_failed');
+      await this.audit.logVerification(dto.tenant_id, dto.employee_id, matchLogId, 'liveness_failed', {
+        match_score: 0,
+        liveness_score: livenessResult.confidence_score,
+        decision: 'rejected',
+        device_id: dto.device_fingerprint,
+        ip_address: dto.ip_address,
+      });
 
       return {
         match_log_id: matchLogId,
@@ -179,7 +185,15 @@ export class BiometricTrustEngine implements BiometricTrustEngineAPI {
       },
     );
 
-    await this.audit.logVerification(dto.tenant_id, dto.employee_id, matchLogId, matchOutcome.result);
+    await this.audit.logVerification(dto.tenant_id, dto.employee_id, matchLogId, matchOutcome.result, {
+      match_score: matchOutcome.score,
+      liveness_score: livenessResult.confidence_score,
+      decision: autoAction ?? 'approved',
+      device_id: dto.device_fingerprint,
+      risk_score: riskAssessment.overall_score,
+      risk_level: riskAssessment.risk_level,
+      ip_address: dto.ip_address,
+    });
     incrementBiometricVerifications({ result: matchOutcome.result });
 
     return {

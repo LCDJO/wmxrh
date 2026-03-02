@@ -58,15 +58,33 @@ export class BiometricAuditLogger {
     });
   }
 
-  /** Convenience: verification audit */
-  async logVerification(tenantId: string, employeeId: string, matchLogId: string, result: string): Promise<void> {
+  /** Convenience: verification audit with full biometric context */
+  async logVerification(tenantId: string, employeeId: string, matchLogId: string, result: string, context?: {
+    match_score?: number;
+    liveness_score?: number;
+    decision?: string;
+    device_id?: string;
+    risk_score?: number;
+    risk_level?: string;
+    ip_address?: string;
+  }): Promise<void> {
     return this.log({
       tenant_id: tenantId,
       employee_id: employeeId,
       action: `biometric_verification_${result}`,
       action_category: 'verification',
       entity_id: matchLogId,
-      metadata: { match_result: result },
+      ip_address: context?.ip_address,
+      metadata: {
+        match_result: result,
+        match_score: context?.match_score,
+        liveness_score: context?.liveness_score,
+        decision: context?.decision,
+        device_id: context?.device_id,
+        risk_score: context?.risk_score,
+        risk_level: context?.risk_level,
+        timestamp: new Date().toISOString(),
+      },
     });
   }
 
