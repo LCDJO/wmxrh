@@ -33,5 +33,5 @@ export { ImmutableTimeLedger } from './immutable-time-ledger';
 export { TimeComplianceAuditor } from './time-compliance-auditor';
 export { TimeExportService } from './time-export-service';
 export { AntiFraudAnalyzer } from './anti-fraud-analyzer';
-export { computeEntryHash, computeAdjustmentHash, verifyHashChain } from './integrity';
+export { computeEntryHash, computeAdjustmentHash, computeEntryHashSHA256, computeAdjustmentHashSHA256, verifyHashChain } from './integrity';
 export type * from './types';
