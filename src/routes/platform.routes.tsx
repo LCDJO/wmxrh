@@ -74,6 +74,7 @@ import PlatformAppsReview from '@/pages/platform/PlatformAppsReview';
 import PlatformIntegrationAutomation from '@/pages/platform/PlatformIntegrationAutomation';
 import PlatformAIOperations from '@/pages/platform/PlatformAIOperations';
 import PlatformSupportAnalytics from '@/pages/platform/PlatformSupportAnalytics';
+import PlatformWorkTime from '@/pages/platform/PlatformWorkTime';
 import PlatformLogs from '@/pages/platform/PlatformLogs';
 import DocumentSignatureIntegrations from '@/pages/platform/PlatformDocumentSignature';
 import SettingsGamification from '@/pages/platform/PlatformSettingsGamification';
@@ -259,6 +260,7 @@ export const platformRoutes: RouteObject[] = [
       { path: 'document-signature', element: <PlatformGuard allowedRoles={opsAdmin}><DocumentSignatureIntegrations /></PlatformGuard> },
       { path: 'integration-health', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformIntegrationHealth /></PlatformGuard> },
       { path: 'incidents/*', element: <PlatformGuard allowedRoles={opsAdmin}><Suspense fallback={SuspenseFallback}><IncidentManagementDashboard /></Suspense></PlatformGuard> },
+      { path: 'worktime', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformWorkTime /></PlatformGuard> },
     ],
   },
 ];
