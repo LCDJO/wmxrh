@@ -24,6 +24,9 @@ export type { AdvertenciaPayload, SuspensaoPayload, AfastamentoPayload, Desligam
 export { onGovernanceEvent, onAnyGovernanceEvent, dispatchGovernanceEvents } from './events/governance-event-bus';
 export { registerProjector, initCoreProjectors } from './projections/governance-projector';
 export { DisciplinaryService } from './services/disciplinary-service';
+export { SanctionEngine, getSanctionEngine } from './services/sanction-engine';
+export { SANCTION_EVENTS, type SanctionEventType, type SanctionAccountStatus } from './events/sanction-events';
+export type { SanctionCreatedPayload, SanctionStatusChangePayload, SanctionEscalatedPayload, SanctionContestedPayload, SanctionRevokedPayload } from './events/sanction-events';
 
 // ── Legacy services (read-only analytics) ──
 export { captureAuditSnapshot, fetchAuditSnapshots, compareSnapshots } from './visual-audit.service';
