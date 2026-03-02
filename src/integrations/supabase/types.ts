@@ -14159,6 +14159,97 @@ export type Database = {
           },
         ]
       }
+      org_indicator_configs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          indicator_type: string
+          is_active: boolean
+          tenant_id: string
+          thresholds: Json
+          updated_at: string
+          weights: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          indicator_type: string
+          is_active?: boolean
+          tenant_id: string
+          thresholds?: Json
+          updated_at?: string
+          weights?: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          indicator_type?: string
+          is_active?: boolean
+          tenant_id?: string
+          thresholds?: Json
+          updated_at?: string
+          weights?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_indicator_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_indicator_snapshots: {
+        Row: {
+          components: Json
+          computed_at: string
+          computed_by: string | null
+          id: string
+          indicator_type: string
+          period_end: string
+          period_start: string
+          risk_level: string
+          score: number
+          tenant_id: string
+        }
+        Insert: {
+          components?: Json
+          computed_at?: string
+          computed_by?: string | null
+          id?: string
+          indicator_type: string
+          period_end: string
+          period_start: string
+          risk_level?: string
+          score?: number
+          tenant_id: string
+        }
+        Update: {
+          components?: Json
+          computed_at?: string
+          computed_by?: string | null
+          id?: string
+          indicator_type?: string
+          period_end?: string
+          period_start?: string
+          risk_level?: string
+          score?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_indicator_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_intelligence_jobs: {
         Row: {
           attempts: number

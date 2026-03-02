@@ -34,6 +34,8 @@ export { EMPLOYEE_LIFECYCLE_EVENTS, type EmployeeLifecycleEventType } from './ev
 export type { EmployeeHiredPayload, EmployeeWarnedPayload, EmployeeSuspendedPayload, EmployeeTerminatedPayload, PerformanceReviewPayload, EmployeePromotedPayload } from './events/employee-lifecycle-events';
 export { initOrganizationalIntelligenceEngine, OrganizationalIntelligenceQuery, getOrganizationalIntelligence } from './services/organizational-intelligence-engine';
 export { OrgIntelligenceJobDispatcher, OrgIntelligenceSnapshotQuery, ORG_INTELLIGENCE_JOB_TYPES, type OrgIntelligenceJobType } from './services/organizational-intelligence-engine';
+export { StructuralIndicatorsEngine, getStructuralIndicatorsEngine, IndicatorConfigManager, getIndicatorConfigManager } from './services/structural-indicators-engine';
+export type { IndicatorType, IndicatorWeights, IndicatorThresholds, IndicatorConfig, IndicatorResult } from './services/structural-indicators-engine';
 
 // ── Legacy services (read-only analytics) ──
 export { captureAuditSnapshot, fetchAuditSnapshots, compareSnapshots } from './visual-audit.service';
