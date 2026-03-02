@@ -40,6 +40,14 @@ export class BiometricTrustEngine implements BiometricTrustEngineAPI {
    * Full enrollment pipeline: capture → quality → liveness → template → store → audit
    */
   async enroll(dto: CreateEnrollmentDTO): Promise<BiometricEnrollment> {
+    // 0. Enforce explicit consent + biometric policy acceptance
+    if (!dto.consent_granted) {
+      throw new Error('[BiometricTrustEngine] Consentimento explícito obrigatório para enrollment biométrico (LGPD Art. 11)');
+    }
+    if (!dto.consent_version_id) {
+      throw new Error('[BiometricTrustEngine] Aceite da política biométrica obrigatório — vincule consent_version_id ao enrollment');
+    }
+
     // 1. Validate capture quality
     const quality = this.capture.validateCaptureQuality(dto.face_image_data);
     if (!quality.acceptable) {
