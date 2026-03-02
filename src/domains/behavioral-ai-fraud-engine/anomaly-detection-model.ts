@@ -33,14 +33,20 @@ const REPLAY_DISTANCE_THRESHOLD = 0.5;
 export class AnomalyDetectionModel {
   constructor(private profileManager: BehaviorProfileManager) {}
 
+  /**
+   * Main entry: compares current vector against baseline.
+   * Returns anomalies + a summary with behavior_flagged status.
+   */
   detect(
     tenantId: string,
     employeeId: string,
     features: BehavioralFeatureVector,
     recentFeatures?: BehavioralFeatureVector[],
-  ): AnomalyDetection[] {
+  ): { anomalies: AnomalyDetection[]; behavior_flagged: boolean; anomaly_score: number } {
     const profile = this.profileManager.getProfile(tenantId, employeeId);
-    if (!profile || profile.maturity === 'nascent') return []; // not enough data
+    if (!profile || !profile.is_trained) {
+      return { anomalies: [], behavior_flagged: false, anomaly_score: 0 };
+    }
 
     const deviations = this.profileManager.computeDeviations(profile, features);
     const anomalies: AnomalyDetection[] = [];
@@ -98,7 +104,38 @@ export class AnomalyDetectionModel {
       });
     }
 
-    return anomalies;
+    // ── Composite anomaly score ─────────────────────────────────
+    const anomaly_score = this.computeAnomalyScore(anomalies);
+    const behavior_flagged = anomaly_score > profile.tolerance_threshold;
+
+    // Record anomalies in profile history
+    if (anomalies.length > 0) {
+      this.profileManager.recordAnomalies(tenantId, employeeId, anomalies);
+    }
+
+    return { anomalies, behavior_flagged, anomaly_score };
+  }
+
+  /**
+   * Composite anomaly score: weighted average of all detected anomaly deviation scores.
+   * Higher = more suspicious.
+   */
+  private computeAnomalyScore(anomalies: AnomalyDetection[]): number {
+    if (anomalies.length === 0) return 0;
+
+    const severityWeight: Record<AnomalySeverity, number> = {
+      info: 0.1, low: 0.3, medium: 0.5, high: 0.8, critical: 1.0,
+    };
+
+    let weightedSum = 0;
+    let totalWeight = 0;
+    for (const a of anomalies) {
+      const w = severityWeight[a.severity];
+      weightedSum += a.deviation_score * w;
+      totalWeight += w;
+    }
+
+    return totalWeight > 0 ? weightedSum / totalWeight : 0;
   }
 
   // ── Helpers ──────────────────────────────────────────────────

@@ -82,7 +82,8 @@ export class BehavioralAIEngine implements BehavioralAIEngineAPI {
     const key = `${tenantId}::${employeeId}`;
     const recent = this.recentFeatures.get(key)?.filter(f => f.session_id !== features.session_id) ?? [];
 
-    return this.anomalyModel.detect(tenantId, employeeId, features, recent);
+    const result = this.anomalyModel.detect(tenantId, employeeId, features, recent);
+    return result.anomalies;
   }
 
   // ── Pipeline step 4: Risk assessment ─────────────────────────
@@ -136,6 +137,8 @@ export class BehavioralAIEngine implements BehavioralAIEngineAPI {
     anomalies: AnomalyDetection[];
     risk: BehavioralRiskAssessment;
     incidents: FraudIncident[];
+    behavior_flagged: boolean;
+    anomaly_score: number;
   }> {
     // 1. Capture + extract + update profile
     const features = this.featureExtractor.extract(session);
@@ -149,10 +152,12 @@ export class BehavioralAIEngine implements BehavioralAIEngineAPI {
     this.recentFeatures.set(key, recent);
 
     // 2. Anomaly detection
-    const anomalies = this.anomalyModel.detect(
+    const detectResult = this.anomalyModel.detect(
       session.tenant_id, session.employee_id, features,
       recent.filter(f => f.session_id !== features.session_id),
     );
+    const anomalies = detectResult.anomalies;
+    const behavior_flagged = detectResult.behavior_flagged;
 
     // 3. Risk scoring (merged with biometric)
     const risk = this.riskScoring.assess(
@@ -177,7 +182,7 @@ export class BehavioralAIEngine implements BehavioralAIEngineAPI {
       );
     }
 
-    return { features, anomalies, risk, incidents };
+    return { features, anomalies, risk, incidents, behavior_flagged, anomaly_score: detectResult.anomaly_score };
   }
 }
 
