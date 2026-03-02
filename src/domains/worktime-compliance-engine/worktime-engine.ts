@@ -34,13 +34,19 @@ export class WorkTimeEngine implements WorkTimeEngineAPI {
     device_ok: boolean;
     fraud_signals: number;
   }> {
-    // 1. Geofence validation
+    // 1. Geofence validation (with tolerance + enforcement)
     let geofenceOk = true;
+    let geofenceSuggestedStatus: 'valid' | 'rejected' | 'flagged' = 'valid';
     if (dto.latitude != null && dto.longitude != null) {
       const geoResult = await this.geoFence.validate(tenantId, dto.latitude, dto.longitude, dto.event_type);
       geofenceOk = geoResult.allowed;
+      geofenceSuggestedStatus = geoResult.suggested_status;
       if (geoResult.matched_geofence) {
         dto.geofence_id = geoResult.matched_geofence.id;
+      }
+      // Block: reject registration entirely
+      if (geoResult.suggested_status === 'rejected') {
+        throw new Error(`[WorkTimeEngine] Registro bloqueado por geofence: ${geoResult.reason}`);
       }
     }
 

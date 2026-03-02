@@ -21842,6 +21842,7 @@ export type Database = {
           allowed_clock_types: string[] | null
           created_at: string
           description: string | null
+          enforcement_mode: string
           geofence_type: string
           id: string
           is_active: boolean
@@ -21851,12 +21852,14 @@ export type Database = {
           name: string
           radius_meters: number
           tenant_id: string
+          tolerance_meters: number
           updated_at: string
         }
         Insert: {
           allowed_clock_types?: string[] | null
           created_at?: string
           description?: string | null
+          enforcement_mode?: string
           geofence_type?: string
           id?: string
           is_active?: boolean
@@ -21866,12 +21869,14 @@ export type Database = {
           name: string
           radius_meters?: number
           tenant_id: string
+          tolerance_meters?: number
           updated_at?: string
         }
         Update: {
           allowed_clock_types?: string[] | null
           created_at?: string
           description?: string | null
+          enforcement_mode?: string
           geofence_type?: string
           id?: string
           is_active?: boolean
@@ -21881,6 +21886,7 @@ export type Database = {
           name?: string
           radius_meters?: number
           tenant_id?: string
+          tolerance_meters?: number
           updated_at?: string
         }
         Relationships: [
