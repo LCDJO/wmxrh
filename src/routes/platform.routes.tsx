@@ -93,6 +93,7 @@ import PlatformScim from '@/pages/platform/security/PlatformScim';
 import ArchitectureLayout from '@/pages/platform/architecture/ArchitectureLayout';
 import ArchitectureSaasCore from '@/pages/platform/architecture/ArchitectureSaasCore';
 import ArchitectureTenantModules from '@/pages/platform/architecture/ArchitectureTenantModules';
+import DependencyGraphVisualizer from '@/pages/platform/architecture/DependencyGraphVisualizer';
 
 const IncidentManagementDashboard = lazy(() => import('@/modules/incident-management/ui/IncidentManagementDashboard'));
 const GovernancePolicies = lazy(() => import('@/pages/platform/governance/GovernancePolicies'));
@@ -223,6 +224,7 @@ export const platformRoutes: RouteObject[] = [
             { index: true, element: <Navigate to="/platform/structure/architecture/saas-core" replace /> },
             { path: 'saas-core', element: <ArchitectureSaasCore /> },
             { path: 'tenant-modules', element: <ArchitectureTenantModules /> },
+            { path: 'dependency-graph', element: <DependencyGraphVisualizer /> },
           ],
         },
       ]),
