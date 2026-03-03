@@ -89,8 +89,21 @@ export interface RefactorSuggestion {
 }
 
 export interface CircularDependencyCycle {
-  cycle: string[];        // module keys forming the cycle
+  cycle: string[];            // module keys forming the cycle
+  cycle_labels: string[];     // human-readable labels
   severity: RiskLevel;
+  /** Number of modules in the cycle (excluding repeated start node) */
+  depth: number;
+  /** Whether any edge in the cycle is mandatory */
+  has_mandatory_edge: boolean;
+  /** Whether this cycle crosses SaaS↔Tenant boundary */
+  is_cross_domain: boolean;
+  /** Domains involved */
+  domains_involved: ('saas' | 'tenant')[];
+  /** Whether this cycle should block architectural changes */
+  is_blocking: boolean;
+  /** Reason why this cycle is blocking (or not) */
+  blocking_reason: string;
 }
 
 export interface BidirectionalDependency {
@@ -407,14 +420,31 @@ function analyzeCoupling(
 
 // ── 3. CircularDependencyDetector (DFS) ──
 
-function detectCircularDependencies(edges: DependencyEdge[]): CircularDependencyCycle[] {
+function detectCircularDependencies(
+  edges: DependencyEdge[],
+  modules?: ArchModuleInfo[],
+): CircularDependencyCycle[] {
   const graph = new Map<string, string[]>();
   for (const e of edges) {
     if (!graph.has(e.from)) graph.set(e.from, []);
     graph.get(e.from)!.push(e.to);
   }
 
-  const cycles: string[][] = [];
+  const edgeMap = new Map<string, DependencyEdge>();
+  for (const e of edges) {
+    edgeMap.set(`${e.from}→${e.to}`, e);
+  }
+
+  const domainMap = new Map<string, 'saas' | 'tenant'>();
+  const labelMap = new Map<string, string>();
+  if (modules) {
+    for (const m of modules) {
+      domainMap.set(m.key, m.domain);
+      labelMap.set(m.key, m.label);
+    }
+  }
+
+  const rawCycles: string[][] = [];
   const visited = new Set<string>();
   const stack = new Set<string>();
   const path: string[] = [];
@@ -423,7 +453,7 @@ function detectCircularDependencies(edges: DependencyEdge[]): CircularDependency
     if (stack.has(node)) {
       const cycleStart = path.indexOf(node);
       if (cycleStart >= 0) {
-        cycles.push(path.slice(cycleStart).concat(node));
+        rawCycles.push(path.slice(cycleStart).concat(node));
       }
       return;
     }
@@ -445,16 +475,61 @@ function detectCircularDependencies(edges: DependencyEdge[]): CircularDependency
     dfs(node);
   }
 
-  // Deduplicate cycles
+  // Deduplicate and enrich cycles
   const seen = new Set<string>();
-  return cycles
+  return rawCycles
     .map(c => {
       const sorted = [...c].sort().join('→');
       if (seen.has(sorted)) return null;
       seen.add(sorted);
+
+      const uniqueNodes = c.slice(0, -1); // remove repeated start node
+      const depth = uniqueNodes.length;
+
+      // Check edges in the cycle for mandatory status
+      let hasMandatoryEdge = false;
+      for (let i = 0; i < c.length - 1; i++) {
+        const edge = edgeMap.get(`${c[i]}→${c[i + 1]}`);
+        if (edge?.is_mandatory) {
+          hasMandatoryEdge = true;
+          break;
+        }
+      }
+
+      // Check cross-domain
+      const domainsInvolved = [...new Set(uniqueNodes.map(k => domainMap.get(k)).filter(Boolean))] as ('saas' | 'tenant')[];
+      const isCrossDomain = domainsInvolved.length > 1;
+
+      // Determine severity
+      let severity: RiskLevel;
+      if (isCrossDomain && hasMandatoryEdge) severity = 'critical';
+      else if (hasMandatoryEdge || depth >= 4) severity = 'critical';
+      else if (isCrossDomain || depth >= 3) severity = 'high';
+      else severity = 'medium';
+
+      // Determine blocking status
+      const isBlocking = severity === 'critical' || (hasMandatoryEdge && isCrossDomain);
+      let blockingReason: string;
+      if (isBlocking && isCrossDomain && hasMandatoryEdge) {
+        blockingReason = `Ciclo crítico com dependência mandatória cruzando camadas SaaS↔Tenant — BLOQUEANTE: viola isolamento arquitetural`;
+      } else if (isBlocking && hasMandatoryEdge) {
+        blockingReason = `Ciclo com dependência mandatória de ${depth} módulos — BLOQUEANTE: falha em qualquer nó propaga para todo o ciclo`;
+      } else if (isBlocking) {
+        blockingReason = `Ciclo crítico de ${depth} módulos — BLOQUEANTE: risco estrutural alto`;
+      } else {
+        blockingReason = `Ciclo de ${depth} módulos — monitorar, não bloqueante no momento`;
+      }
+
       return {
         cycle: c,
-        severity: c.length >= 4 ? 'critical' as RiskLevel : c.length >= 3 ? 'high' as RiskLevel : 'medium' as RiskLevel,
+        cycle_labels: c.map(k => labelMap.get(k) ?? k),
+        severity,
+        depth,
+        has_mandatory_edge: hasMandatoryEdge,
+        is_cross_domain: isCrossDomain,
+        domains_involved: domainsInvolved,
+        is_blocking: isBlocking,
+        blocking_reason: blockingReason,
       };
     })
     .filter(Boolean) as CircularDependencyCycle[];
@@ -649,7 +724,7 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
   const totalModules = modules.length;
 
   // Pre-compute shared analyses
-  const cycles = detectCircularDependencies(edges);
+  const cycles = detectCircularDependencies(edges, modules);
   const modulesInCycles = new Set<string>();
   for (const c of cycles) {
     for (const k of c.cycle) modulesInCycles.add(k);

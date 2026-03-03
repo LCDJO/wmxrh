@@ -489,6 +489,9 @@ function CouplingTable({ metrics, profiles, biDirDeps, crossViolations }: {
   );
 }
 function CircularDependenciesView({ cycles, profiles }: { cycles: CircularDependencyCycle[]; profiles: ModuleRiskProfile[] }) {
+  const blockingCycles = cycles.filter(c => c.is_blocking);
+  const nonBlockingCycles = cycles.filter(c => !c.is_blocking);
+
   if (cycles.length === 0) {
     return (
       <Card>
@@ -502,35 +505,121 @@ function CircularDependenciesView({ cycles, profiles }: { cycles: CircularDepend
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <RotateCcw className="h-4 w-4 text-red-400" />
-          Dependências Circulares ({cycles.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {cycles.map((c, i) => (
-          <div key={i} className="p-3 rounded-lg border border-red-500/20 bg-red-500/5 space-y-2">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className={RISK_COLORS[c.severity]}>{c.severity}</Badge>
-              <span className="text-xs text-muted-foreground">Ciclo de {c.cycle.length - 1} módulos</span>
+    <div className="space-y-4">
+      {/* KPI row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <RotateCcw className="h-4 w-4 text-destructive" />
+              <span className="text-xs">Total de Ciclos</span>
             </div>
-            <div className="flex items-center gap-1 flex-wrap">
-              {c.cycle.map((k, j) => {
-                const p = profiles.find(pr => pr.module_key === k);
-                return (
-                  <span key={j} className="flex items-center gap-1">
-                    <Badge variant="secondary" className="text-[10px]">{p?.module_label ?? k}</Badge>
-                    {j < c.cycle.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground" />}
-                  </span>
-                );
-              })}
+            <span className="text-2xl font-bold text-foreground">{cycles.length}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <span className="text-xs">Bloqueantes</span>
             </div>
-          </div>
+            <span className="text-2xl font-bold text-foreground">{blockingCycles.length}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${blockingCycles.length > 0 ? RISK_COLORS.critical : RISK_COLORS.none}`}>
+              {blockingCycles.length > 0 ? 'ação necessária' : 'ok'}
+            </Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Zap className="h-4 w-4 text-orange-400" />
+              <span className="text-xs">Com Edge Mandatória</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{cycles.filter(c => c.has_mandatory_edge).length}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <GitBranch className="h-4 w-4 text-primary" />
+              <span className="text-xs">Cross-Domain</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{cycles.filter(c => c.is_cross_domain).length}</span>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Blocking cycles */}
+      {blockingCycles.length > 0 && (
+        <Card className="border-destructive/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              Ciclos Bloqueantes ({blockingCycles.length})
+              <Badge variant="outline" className={`text-[10px] ml-auto ${RISK_COLORS.critical}`}>BLOQUEADO</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {blockingCycles.map((c, i) => (
+              <CycleCard key={i} cycle={c} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Non-blocking cycles */}
+      {nonBlockingCycles.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <RotateCcw className="h-4 w-4 text-primary" />
+              Ciclos Monitorados ({nonBlockingCycles.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {nonBlockingCycles.map((c, i) => (
+              <CycleCard key={i} cycle={c} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function CycleCard({ cycle: c }: { cycle: CircularDependencyCycle }) {
+  return (
+    <div className={`p-3 rounded-lg border space-y-2 ${c.is_blocking ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-muted/20'}`}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Badge variant="outline" className={RISK_COLORS[c.severity]}>{c.severity}</Badge>
+        <span className="text-xs text-muted-foreground">Ciclo de {c.depth} módulos</span>
+        {c.has_mandatory_edge && (
+          <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.high}`}>mandatória</Badge>
+        )}
+        {c.is_cross_domain && (
+          <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.critical}`}>cross-domain</Badge>
+        )}
+        {c.is_blocking && (
+          <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.critical}`}>⛔ BLOQUEANTE</Badge>
+        )}
+        <div className="ml-auto flex gap-1">
+          {c.domains_involved.map(d => (
+            <Badge key={d} variant="secondary" className="text-[10px]">
+              {d === 'saas' ? '🔵 SaaS' : '🟢 Tenant'}
+            </Badge>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 flex-wrap">
+        {c.cycle_labels.map((label, j) => (
+          <span key={j} className="flex items-center gap-1">
+            <Badge variant="secondary" className="text-[10px]">{label}</Badge>
+            {j < c.cycle_labels.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground" />}
+          </span>
         ))}
-      </CardContent>
-    </Card>
+      </div>
+      <p className="text-[11px] text-muted-foreground">{c.blocking_reason}</p>
+    </div>
   );
 }
 
