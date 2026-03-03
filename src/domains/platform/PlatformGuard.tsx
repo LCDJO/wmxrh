@@ -24,7 +24,8 @@ export type PlatformRoleType =
   // ── Future roles (prepared, not yet active) ──
   | 'platform_delegated_support'
   | 'platform_marketplace_admin'
-  | 'platform_compliance';
+  | 'platform_compliance'
+  | 'platform_architect';
 
 interface PlatformIdentity {
   id: string;
