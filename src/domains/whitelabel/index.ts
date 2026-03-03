@@ -29,5 +29,7 @@ export type {
   BrandingVersionManagerAPI,
   DefaultFallbackResolverAPI,
   PlanGateAPI,
+  BrandingArchitectureVersion,
+  ArchitectureVersionRegistryAPI,
   TenantBrandingEngineAPI,
 } from './types';

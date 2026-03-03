@@ -130,6 +130,23 @@ export interface PlanGateAPI {
   canCustomDomain(tenantId: string): boolean;
 }
 
+// ── Architecture Versioning ──
+
+export interface BrandingArchitectureVersion {
+  version_tag: string;
+  date: string;
+  structural_changes: string[];
+  impacted_modules: string[];
+  author?: string;
+}
+
+export interface ArchitectureVersionRegistryAPI {
+  register(version: BrandingArchitectureVersion): void;
+  list(): BrandingArchitectureVersion[];
+  current(): BrandingArchitectureVersion | null;
+  getByTag(tag: string): BrandingArchitectureVersion | null;
+}
+
 export interface TenantBrandingEngineAPI {
   profiles: BrandingProfileManagerAPI;
   theme: ThemeGeneratorAPI;
@@ -138,4 +155,5 @@ export interface TenantBrandingEngineAPI {
   versioning: BrandingVersionManagerAPI;
   fallback: DefaultFallbackResolverAPI;
   planGate: PlanGateAPI;
+  architectureVersions: ArchitectureVersionRegistryAPI;
 }

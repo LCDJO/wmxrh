@@ -18,6 +18,7 @@ import type {
   ReportBrandingContext,
   BrandingValidationResult,
   WhiteLabelPlanLimits,
+  BrandingArchitectureVersion,
   BrandingProfileManagerAPI,
   ThemeGeneratorAPI,
   ReportTemplateCustomizerAPI,
@@ -25,6 +26,7 @@ import type {
   BrandingVersionManagerAPI,
   DefaultFallbackResolverAPI,
   PlanGateAPI,
+  ArchitectureVersionRegistryAPI,
   TenantBrandingEngineAPI,
 } from './types';
 
@@ -266,6 +268,38 @@ function createPlanGate(): PlanGateAPI {
   };
 }
 
+// ── Architecture Version Registry ──
+
+function createArchitectureVersionRegistry(): ArchitectureVersionRegistryAPI {
+  const versions: BrandingArchitectureVersion[] = [
+    {
+      version_tag: '1.0.0',
+      date: '2026-03-03',
+      structural_changes: [
+        'BrandingProfileManager criado',
+        'ThemeGenerator com HSL + dark mode',
+        'ReportTemplateCustomizer com fallback logo-only',
+        'PlanGate para habilitação por plano',
+        'DefaultFallbackResolver com modelo padrão',
+      ],
+      impacted_modules: [
+        'whitelabel',
+        'report-engine',
+        'plan-lifecycle',
+        'module-access-resolver',
+        'control-plane',
+      ],
+    },
+  ];
+
+  return {
+    register: (v) => versions.push(v),
+    list: () => [...versions],
+    current: () => versions[versions.length - 1] ?? null,
+    getByTag: (tag) => versions.find((v) => v.version_tag === tag) ?? null,
+  };
+}
+
 // ── Aggregate Factory ──
 
 export function createTenantBrandingEngine(): TenantBrandingEngineAPI {
@@ -276,6 +310,7 @@ export function createTenantBrandingEngine(): TenantBrandingEngineAPI {
   const validator = createWhiteLabelValidator();
   const versioning = createBrandingVersionManager(profiles);
   const planGate = createPlanGate();
+  const architectureVersions = createArchitectureVersionRegistry();
 
-  return { profiles, theme, reports, validator, versioning, fallback, planGate };
+  return { profiles, theme, reports, validator, versioning, fallback, planGate, architectureVersions };
 }
