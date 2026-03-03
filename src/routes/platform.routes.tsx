@@ -246,6 +246,9 @@ export const platformRoutes: RouteObject[] = [
         { path: 'footer', element: <PlatformGuard allowedRoles={['platform_super_admin']}><PlatformFooterDefaults /></PlatformGuard> },
       ]),
 
+      // ── Shortcut: /platform/architecture/risk ──
+      { path: 'architecture/risk', element: <PlatformGuard allowedRoles={architectureAdmin}><ArchitectureRiskDashboard /></PlatformGuard> },
+
       // ── Standalone guarded routes ──
       { path: 'tenants', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformTenants /></PlatformGuard> },
       { path: 'tenants/:tenantId/branding', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformTenantBranding /></PlatformGuard> },
