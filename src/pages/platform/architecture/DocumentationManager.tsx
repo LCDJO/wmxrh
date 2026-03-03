@@ -401,27 +401,97 @@ function ArchitecturalDecisions({ module, docs, onAdd }: { module: ArchModuleInf
 }
 
 function DeliverableManager({ deliverables, moduleKey, onUpdate }: { deliverables: ArchDeliverable[]; moduleKey: string; onUpdate: (id: string, status: DeliverableStatus) => void }) {
-  const [localUpdates, setLocalUpdates] = useState<Record<string, DeliverableStatus>>({});
+  const [localUpdates, setLocalUpdates] = useState<Record<string, Partial<ArchDeliverable>>>({});
+  const [localDeliverables, setLocalDeliverables] = useState<ArchDeliverable[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [newOwner, setNewOwner] = useState('');
+  const [newDueDate, setNewDueDate] = useState('');
+
+  const allItems = [...deliverables, ...localDeliverables];
 
   const handleStatusChange = (id: string, newStatus: DeliverableStatus) => {
-    setLocalUpdates(prev => ({ ...prev, [id]: newStatus }));
+    setLocalUpdates(prev => ({ ...prev, [id]: { ...prev[id], status: newStatus } }));
     onUpdate(id, newStatus);
+  };
+
+  const handleOwnerChange = (id: string, owner: string) => {
+    setLocalUpdates(prev => ({ ...prev, [id]: { ...prev[id], owner } }));
+  };
+
+  const handleDueDateChange = (id: string, due_date: string) => {
+    setLocalUpdates(prev => ({ ...prev, [id]: { ...prev[id], due_date } }));
+  };
+
+  const handleAddDeliverable = () => {
+    if (!newTitle.trim()) return;
+    const d: ArchDeliverable = {
+      id: `d-${crypto.randomUUID().slice(0, 8)}`,
+      title: newTitle,
+      description: newDesc || undefined,
+      status: 'planned',
+      module_key: moduleKey,
+      owner: newOwner || undefined,
+      due_date: newDueDate || undefined,
+    };
+    setLocalDeliverables(prev => [...prev, d]);
+    onUpdate(d.id, 'planned');
+    setNewTitle('');
+    setNewDesc('');
+    setNewOwner('');
+    setNewDueDate('');
+    setAddOpen(false);
+    toast.success('Entregável adicionado');
   };
 
   const allStatuses: DeliverableStatus[] = ['planned', 'in_progress', 'done', 'blocked'];
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-medium text-foreground">Entregáveis do Módulo</h3>
-      {deliverables.length === 0 ? (
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-foreground">Entregáveis do Módulo</h3>
+        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="outline"><PlusCircle className="h-4 w-4 mr-1" /> Novo Entregável</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Adicionar Entregável</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <Input placeholder="Título do entregável" value={newTitle} onChange={e => setNewTitle(e.target.value)} />
+              <Textarea placeholder="Descrição (opcional)" value={newDesc} onChange={e => setNewDesc(e.target.value)} rows={3} />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Responsável</label>
+                  <Input placeholder="ex: security-team" value={newOwner} onChange={e => setNewOwner(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Data Prevista</label>
+                  <Input type="date" value={newDueDate} onChange={e => setNewDueDate(e.target.value)} />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setAddOpen(false)}>Cancelar</Button>
+              <Button onClick={handleAddDeliverable} disabled={!newTitle.trim()}>Adicionar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+      {allItems.length === 0 ? (
         <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">Nenhum entregável cadastrado</CardContent></Card>
       ) : (
         <div className="space-y-3">
-          {deliverables.map(d => {
-            const currentStatus = localUpdates[d.id] ?? d.status;
+          {allItems.map(d => {
+            const updates = localUpdates[d.id] ?? {};
+            const currentStatus = (updates.status as DeliverableStatus) ?? d.status;
+            const currentOwner = updates.owner ?? d.owner ?? '';
+            const currentDueDate = updates.due_date ?? d.due_date ?? '';
+            const isOverdue = currentDueDate && currentStatus !== 'done' && new Date(currentDueDate) < new Date();
+
             return (
-              <Card key={d.id}>
-                <CardContent className="py-4">
+              <Card key={d.id} className={isOverdue ? 'border-destructive/40' : ''}>
+                <CardContent className="py-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <CheckCircle className={`h-4 w-4 ${currentStatus === 'done' ? 'text-emerald-400' : 'text-muted-foreground'}`} />
@@ -442,6 +512,27 @@ function DeliverableManager({ deliverables, moduleKey, onUpdate }: { deliverable
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="flex items-center gap-4 pl-7">
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">Responsável:</span>
+                      <Input
+                        value={currentOwner}
+                        onChange={e => handleOwnerChange(d.id, e.target.value)}
+                        placeholder="Definir responsável"
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">Prazo:</span>
+                      <Input
+                        type="date"
+                        value={currentDueDate}
+                        onChange={e => handleDueDateChange(d.id, e.target.value)}
+                        className="h-7 text-xs w-[140px]"
+                      />
+                      {isOverdue && <Badge variant="destructive" className="text-[10px]">Atrasado</Badge>}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
