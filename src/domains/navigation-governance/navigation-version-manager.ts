@@ -3,7 +3,10 @@
  *
  * Manages versioned snapshots of the navigation tree,
  * computes diffs between versions, and supports rollback.
+ * Persists to `navigation_versions` table in the database.
  */
+
+import { supabase } from '@/integrations/supabase/client';
 
 import type { MenuHierarchy, MenuNode } from './menu-hierarchy-builder';
 import { flattenHierarchy } from './menu-hierarchy-builder';
@@ -42,6 +45,7 @@ export function createNavigationVersion(
   snapshot: MenuHierarchy,
   createdBy: string,
   description?: string,
+  context: 'saas' | 'tenant' = 'tenant',
 ): NavigationVersion {
   currentVersion++;
   const version: NavigationVersion = {
@@ -59,6 +63,17 @@ export function createNavigationVersion(
   if (versions.length > MAX_VERSIONS) {
     versions.splice(0, versions.length - MAX_VERSIONS);
   }
+
+  // Persist to database (fire-and-forget)
+  supabase.from('navigation_versions').insert({
+    version_number: currentVersion,
+    context,
+    tree_snapshot: snapshot as any,
+    description,
+    created_by: createdBy,
+  } as any).then(({ error }) => {
+    if (error) console.warn('[NavigationVersionManager] Failed to persist version:', error.message);
+  });
 
   return version;
 }

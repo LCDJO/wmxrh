@@ -14077,6 +14077,36 @@ export type Database = {
         }
         Relationships: []
       }
+      navigation_versions: {
+        Row: {
+          context: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          tree_snapshot: Json
+          version_number: number
+        }
+        Insert: {
+          context: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          tree_snapshot?: Json
+          version_number?: number
+        }
+        Update: {
+          context?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          tree_snapshot?: Json
+          version_number?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           action_command: string | null
