@@ -55,32 +55,32 @@ serve(async (req) => {
         downgradeScheduledRes,
         planLimitExceededRes,
         fraudFlagsRes,
+        // ── Navigation Governance metrics ──
+        navVersionsRes,
+        navRefactorsRes,
+        navRollbacksRes,
       ] = await Promise.all([
         sb.from("platform_financial_entries").select("entry_type, description, amount"),
         sb.from("coupon_redemptions").select("coupon_id, discount_applied_brl, coupons(code)"),
         sb.from("platform_financial_entries").select("amount, description").eq("entry_type", "coupon_discount"),
         sb.from("platform_financial_entries").select("amount").eq("entry_type", "usage_overage"),
-        // support: active chat sessions (total)
         sb.from("support_chat_sessions").select("id", { count: "exact", head: true }).eq("status", "active"),
-        // support: messages in the last hour for rate calc
         sb.from("support_chat_messages").select("id", { count: "exact", head: true }).gte("created_at", new Date(Date.now() - 3600_000).toISOString()),
-        // support: closed sessions for response time calc
         sb.from("support_chat_sessions").select("id").eq("status", "closed").limit(100).order("created_at", { ascending: false }),
-        // support_agent_active_sessions: active sessions grouped by agent
         sb.from("support_chat_sessions").select("agent_id").eq("status", "active").not("agent_id", "is", null),
-        // support_unresolved_total: open/in_progress tickets
         sb.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress"]),
-        // support_alert_triggered_total: notes flagged as alerts
         sb.from("support_chat_notes").select("id", { count: "exact", head: true }).eq("note_type", "alert"),
-        // ── Integration Automation Engine metrics ──
         sb.from("integration_workflow_executions").select("tenant_id, status, duration_ms"),
         sb.from("integration_workflows").select("tenant_id, status").eq("status", "active"),
-        // ── Subscription Health ──
         sb.from("tenant_plans").select("id", { count: "exact", head: true }).eq("status", "active"),
         sb.from("tenant_plans").select("id", { count: "exact", head: true }).eq("status", "past_due"),
         sb.from("tenant_plans").select("id", { count: "exact", head: true }).eq("downgrade_scheduled", true),
         sb.from("audit_logs").select("id", { count: "exact", head: true }).eq("action", "plan_limit_exceeded"),
         sb.from("tenant_plans").select("id", { count: "exact", head: true }).eq("review_required", true),
+        // Navigation Governance
+        sb.from("navigation_versions").select("id, context", { count: "exact" }),
+        sb.from("navigation_versions").select("id", { count: "exact", head: true }).like("description", "%Refatoração aprovada%"),
+        sb.from("navigation_versions").select("id", { count: "exact", head: true }).like("description", "%Rollback%"),
       ]);
 
       const lines: string[] = [];
@@ -355,6 +355,31 @@ serve(async (req) => {
       lines.push("# HELP critical_dependency_count Modules with breaking changes (critical dependencies)");
       lines.push("# TYPE critical_dependency_count gauge");
       lines.push(`critical_dependency_count ${criticalModuleIds.size} ${ts}`);
+
+      // ── navigation_versions_total ─────────────────────────────
+      lines.push("# HELP navigation_versions_total Total navigation versions by context");
+      lines.push("# TYPE navigation_versions_total counter");
+      const navByContext = new Map<string, number>();
+      for (const row of navVersionsRes.data ?? []) {
+        const ctx = (row as any).context ?? "unknown";
+        navByContext.set(ctx, (navByContext.get(ctx) ?? 0) + 1);
+      }
+      for (const [ctx, count] of navByContext) {
+        lines.push(`navigation_versions_total{context="${esc(ctx)}"} ${count} ${ts}`);
+      }
+      if (navByContext.size === 0) {
+        lines.push(`navigation_versions_total ${navVersionsRes.count ?? 0} ${ts}`);
+      }
+
+      // ── navigation_refactors_total ────────────────────────────
+      lines.push("# HELP navigation_refactors_total Total applied navigation refactors");
+      lines.push("# TYPE navigation_refactors_total counter");
+      lines.push(`navigation_refactors_total ${navRefactorsRes.count ?? 0} ${ts}`);
+
+      // ── navigation_rollbacks_total ────────────────────────────
+      lines.push("# HELP navigation_rollbacks_total Total navigation rollbacks executed");
+      lines.push("# TYPE navigation_rollbacks_total counter");
+      lines.push(`navigation_rollbacks_total ${navRollbacksRes.count ?? 0} ${ts}`);
 
       return new Response(lines.join("\n") + "\n", {
         headers: {
