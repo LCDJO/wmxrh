@@ -126,6 +126,7 @@ const ENTERPRISE_ROLES: BootstrapRole[] = [
 const TIER_REASONS: Record<PlanTier, string> = {
   free: 'Papéis básicos: RH operacional e Gestor de equipe.',
   starter: 'Papéis básicos para equipe pequena com gestão departamental.',
+  pro: 'Papéis com separação entre gestão de RH e financeiro.',
   professional: 'Papéis com separação entre gestão de RH e financeiro.',
   enterprise: 'Papéis com governança completa: HR Admin, Finance Admin e Operations.',
   custom: 'Papéis customizados conforme contrato.',

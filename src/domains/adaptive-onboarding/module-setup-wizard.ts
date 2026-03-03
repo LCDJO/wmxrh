@@ -30,6 +30,7 @@ const ALL_MODULES: (ModuleSetupOption & { min_tier: PlanTier })[] = [
 const TIER_ORDER: Record<PlanTier, number> = {
   free: 0,
   starter: 1,
+  pro: 2,
   professional: 2,
   enterprise: 3,
   custom: 4,

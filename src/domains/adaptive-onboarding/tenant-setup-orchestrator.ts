@@ -29,6 +29,7 @@ const INDUSTRY_DEPARTMENTS: Record<string, string[]> = {
 const PLAN_COMPLIANCE: Record<PlanTier, string[]> = {
   free: ['Cadastro de empresa obrigatório'],
   starter: ['Cadastro de empresa', 'eSocial básico'],
+  pro: ['eSocial completo', 'PCMSO', 'PGR', 'NRs aplicáveis'],
   professional: ['eSocial completo', 'PCMSO', 'PGR', 'NRs aplicáveis'],
   enterprise: ['eSocial completo', 'PCMSO', 'PGR', 'NRs', 'LGPD', 'Auditoria'],
   custom: ['Customizado por contrato'],
@@ -56,7 +57,7 @@ const DASHBOARD_WIDGETS: (DashboardWidget & { min_tier: PlanTier })[] = [
   { key: 'audit_recent', title: 'Auditoria Recente', type: 'list', module: 'audit', min_tier: 'enterprise' },
 ];
 
-const TIER_ORDER: Record<PlanTier, number> = { free: 0, starter: 1, professional: 2, enterprise: 3, custom: 4 };
+const TIER_ORDER: Record<PlanTier, number> = { free: 0, starter: 1, pro: 2, professional: 2, enterprise: 3, custom: 4 };
 
 // ── Extended result type ─────────────────────────────────────────
 
