@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.payment-gateway]
 verify_jwt = false
+
+[functions.agreement-signature]
+verify_jwt = false
