@@ -40,7 +40,7 @@ export {
   diffVersions,
   rollbackToVersion,
 } from './navigation-version-manager';
-export type { NavigationVersion, NavigationDiff, RollbackResult } from './navigation-version-manager';
+export type { NavigationVersion, NavigationDiff, DiffChange, RollbackResult } from './navigation-version-manager';
 
 // Engine
 export {

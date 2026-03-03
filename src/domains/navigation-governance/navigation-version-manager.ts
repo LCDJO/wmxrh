@@ -22,10 +22,21 @@ export interface NavigationVersion {
   description?: string;
 }
 
+export interface DiffChange {
+  key: string;
+  label: string;
+  type: 'added' | 'removed' | 'moved';
+  from_group?: string;
+  to_group?: string;
+  description: string;
+}
+
 export interface NavigationDiff {
   added: string[];
   removed: string[];
-  moved: string[];        // modules that changed domain group
+  moved: string[];
+  changes: DiffChange[];
+  summary: string[];
   version_from: number;
   version_to: number;
   computed_at: number;
@@ -92,11 +103,20 @@ export function listVersions(): NavigationVersion[] {
 
 // ── Diff Analyzer ────────────────────────────────────────────
 
-function extractIds(tree: MenuNode[]): Map<string, string> {
-  const map = new Map<string, string>(); // id → domain
-  for (const node of flattenHierarchy(tree)) {
-    if (node.moduleKey) {
-      map.set(node.moduleKey, node.domain);
+/** Extract module key → { domain, label, parentGroup } */
+function extractNodeInfo(tree: MenuNode[]): Map<string, { domain: string; label: string; parentGroup: string }> {
+  const map = new Map<string, { domain: string; label: string; parentGroup: string }>();
+  for (const group of tree) {
+    const groupLabel = group.label;
+    // Direct module on group
+    if (group.moduleKey) {
+      map.set(group.moduleKey, { domain: group.domain, label: group.label, parentGroup: groupLabel });
+    }
+    // Children
+    for (const child of flattenHierarchy(group.children)) {
+      if (child.moduleKey) {
+        map.set(child.moduleKey, { domain: child.domain, label: child.label, parentGroup: groupLabel });
+      }
     }
   }
   return map;
@@ -109,36 +129,64 @@ export function computeNavigationDiff(
   toVersion: number,
 ): NavigationDiff {
   const allFrom = new Map([
-    ...extractIds(from.platform),
-    ...extractIds(from.tenant),
+    ...extractNodeInfo(from.platform),
+    ...extractNodeInfo(from.tenant),
   ]);
   const allTo = new Map([
-    ...extractIds(to.platform),
-    ...extractIds(to.tenant),
+    ...extractNodeInfo(to.platform),
+    ...extractNodeInfo(to.tenant),
   ]);
 
   const added: string[] = [];
   const removed: string[] = [];
   const moved: string[] = [];
+  const changes: DiffChange[] = [];
 
-  for (const [key, domain] of allTo) {
-    if (!allFrom.has(key)) {
+  for (const [key, info] of allTo) {
+    const prev = allFrom.get(key);
+    if (!prev) {
       added.push(key);
-    } else if (allFrom.get(key) !== domain) {
+      changes.push({
+        key,
+        label: info.label,
+        type: 'added',
+        to_group: info.parentGroup,
+        description: `"${info.label}" adicionado em "${info.parentGroup}"`,
+      });
+    } else if (prev.parentGroup !== info.parentGroup) {
       moved.push(key);
+      changes.push({
+        key,
+        label: info.label,
+        type: 'moved',
+        from_group: prev.parentGroup,
+        to_group: info.parentGroup,
+        description: `"${info.label}" movido de "${prev.parentGroup}" para "${info.parentGroup}"`,
+      });
     }
   }
 
-  for (const key of allFrom.keys()) {
+  for (const [key, info] of allFrom) {
     if (!allTo.has(key)) {
       removed.push(key);
+      changes.push({
+        key,
+        label: info.label,
+        type: 'removed',
+        from_group: info.parentGroup,
+        description: `"${info.label}" removido de "${info.parentGroup}"`,
+      });
     }
   }
+
+  const summary = changes.map(c => c.description);
 
   return {
     added,
     removed,
     moved,
+    changes,
+    summary,
     version_from: fromVersion,
     version_to: toVersion,
     computed_at: Date.now(),
