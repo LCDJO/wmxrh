@@ -390,6 +390,7 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/settings/gamification', label: 'Gamificação' },
           { to: '/platform/settings/versioning', label: 'Versionamento' },
           { to: '/platform/settings/footer', label: 'Rodapé (Footer)' },
+          { to: '/platform/tenants', label: 'Personalização / WhiteLabel' },
           { to: '---separator-estrutura---', label: '---' },
           {
             to: '/platform/structure',
