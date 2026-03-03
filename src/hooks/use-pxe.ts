@@ -158,6 +158,8 @@ export function usePXE() {
   }, [tenantId, engine, refreshTrigger]);
 
   const refreshPlan = useCallback(() => {
+    // Reset seed cache so plans are re-fetched from DB
+    seedPromise = null;
     setRefreshTrigger(prev => prev + 1);
   }, []);
 

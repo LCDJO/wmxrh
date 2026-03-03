@@ -259,23 +259,11 @@ export function AppSidebar() {
 
   const isVisible = (item: NavItem) => {
     if (loading) return true;
-    if (item.featureFlag && !isFeatureEnabled(item.featureFlag)) {
-      console.debug('[Sidebar] HIDDEN by featureFlag:', item.label, item.featureFlag);
-      return false;
-    }
-    if (!canNav(item.key)) {
-      console.debug('[Sidebar] HIDDEN by canNav:', item.label, item.key);
-      return false;
-    }
-    if (!isPathVisible(item.to)) {
-      console.debug('[Sidebar] HIDDEN by isPathVisible:', item.label, item.to);
-      return false;
-    }
+    if (item.featureFlag && !isFeatureEnabled(item.featureFlag)) return false;
+    if (!canNav(item.key)) return false;
+    if (!isPathVisible(item.to)) return false;
     // Plan-based module gating: hide items whose module is not in the tenant's plan
-    if (item.moduleKey && pxeReady && !isModuleAccessible(item.moduleKey)) {
-      console.debug('[Sidebar] HIDDEN by moduleAccess:', item.label, item.moduleKey, { pxeReady });
-      return false;
-    }
+    if (item.moduleKey && pxeReady && !isModuleAccessible(item.moduleKey)) return false;
     return true;
   };
 
