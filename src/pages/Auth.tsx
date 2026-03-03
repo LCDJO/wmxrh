@@ -378,6 +378,34 @@ export default function Auth() {
                 )}
               </Button>
 
+              {/* SSO Divider */}
+              <div className="relative py-1">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">ou</span>
+                </div>
+              </div>
+
+              {/* SSO Login */}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 gap-2 font-medium"
+                onClick={() => {
+                  const domain = email.split('@')[1];
+                  if (!domain) {
+                    toast({ title: 'Informe seu email', description: 'Digite seu email corporativo acima para login via SSO.', variant: 'destructive' });
+                    return;
+                  }
+                  navigate(`/auth/sso?domain=${encodeURIComponent(domain)}`);
+                }}
+              >
+                <Shield className="h-4 w-4" />
+                Entrar com SSO Corporativo
+              </Button>
+
               <div className="text-center pt-2">
                 <span className="text-sm text-muted-foreground">Não tem conta? </span>
                 <button
