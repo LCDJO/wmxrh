@@ -11,7 +11,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { createArchitectureIntelligenceEngine } from '@/domains/architecture-intelligence';
 import { ChangeLogger } from '@/domains/platform-versioning/change-logger';
-import type { ArchModuleInfo, ArchDeliverable, ArchDocEntry, DeliverableStatus } from '@/domains/architecture-intelligence/types';
+import type { ArchModuleInfo, ArchDeliverable, ArchDocEntry, ArchVersionEntry, DeliverableStatus } from '@/domains/architecture-intelligence/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 import {
   FileText, Edit3, CheckCircle, PlusCircle, BookOpen,
   Lightbulb, ClipboardList, Save, Search, Clock,
-  RefreshCw, Tag, ArrowUpCircle, Pencil,
+  RefreshCw, Tag, ArrowUpCircle, Pencil, History, GitBranch,
 } from 'lucide-react';
 
 const STATUS_COLORS: Record<DeliverableStatus, string> = {
@@ -51,6 +51,7 @@ export default function DocumentationManager() {
   const modules = engine.getModules();
   const allDocs = engine.getDocs();
   const allDeliverables = engine.getDeliverables();
+  const allVersions = engine.getVersionHistory();
 
   const [selectedModule, setSelectedModule] = useState<string>(modules[0]?.key ?? '');
   const [searchQuery, setSearchQuery] = useState('');
@@ -188,7 +189,7 @@ export default function DocumentationManager() {
         <div className="col-span-9">
           {currentModule ? (
             <Tabs defaultValue="description" className="space-y-4">
-              <TabsList className="grid grid-cols-4 w-full">
+              <TabsList className="grid grid-cols-5 w-full">
                 <TabsTrigger value="description" className="gap-1.5">
                   <Edit3 className="h-3.5 w-3.5" /> Descrição
                 </TabsTrigger>
@@ -200,6 +201,9 @@ export default function DocumentationManager() {
                 </TabsTrigger>
                 <TabsTrigger value="notes" className="gap-1.5">
                   <FileText className="h-3.5 w-3.5" /> Notas
+                </TabsTrigger>
+                <TabsTrigger value="versions" className="gap-1.5">
+                  <History className="h-3.5 w-3.5" /> Versões
                 </TabsTrigger>
               </TabsList>
 
@@ -234,6 +238,16 @@ export default function DocumentationManager() {
                 <TechnicalNotes
                   module={currentModule}
                   onAdd={(title) => addToChangelog('note_added', currentModule.key, `Nota técnica: ${title}`)}
+                />
+              </TabsContent>
+
+              {/* ── Tab: Architecture Versions ── */}
+              <TabsContent value="versions">
+                <ArchitectureVersionTracker
+                  versions={allVersions}
+                  modules={modules}
+                  currentModuleKey={currentModule.key}
+                  onAdd={(tag) => addToChangelog('version_created', currentModule.key, `Nova versão arquitetural: ${tag}`)}
                 />
               </TabsContent>
             </Tabs>
@@ -817,4 +831,155 @@ function bumpPatch(tag: string): string {
   const match = tag.match(/^v?(\d+)\.(\d+)\.(\d+)/);
   if (!match) return tag;
   return `v${match[1]}.${match[2]}.${Number(match[3]) + 1}`;
+}
+
+// ── Architecture Version Tracker ──
+
+function ArchitectureVersionTracker({
+  versions,
+  modules,
+  currentModuleKey,
+  onAdd,
+}: {
+  versions: ArchVersionEntry[];
+  modules: ArchModuleInfo[];
+  currentModuleKey: string;
+  onAdd: (tag: string) => void;
+}) {
+  const [localVersions, setLocalVersions] = useState<ArchVersionEntry[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [versionTag, setVersionTag] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [changes, setChanges] = useState('');
+  const [impactedKeys, setImpactedKeys] = useState<Set<string>>(new Set([currentModuleKey]));
+
+  // Show versions that impact the current module first, then all
+  const relevantVersions = [...localVersions, ...versions].filter(
+    v => v.impacted_modules.includes(currentModuleKey)
+  );
+  const otherVersions = [...localVersions, ...versions].filter(
+    v => !v.impacted_modules.includes(currentModuleKey)
+  );
+
+  const toggleImpacted = (key: string) => {
+    setImpactedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const handleAdd = () => {
+    if (!versionTag.trim() || !changes.trim()) return;
+    const entry: ArchVersionEntry = {
+      version_tag: versionTag,
+      date,
+      structural_changes: changes.split('\n').filter(Boolean),
+      impacted_modules: Array.from(impactedKeys),
+    };
+    setLocalVersions(prev => [entry, ...prev]);
+    onAdd(versionTag);
+    setVersionTag('');
+    setDate(new Date().toISOString().slice(0, 10));
+    setChanges('');
+    setImpactedKeys(new Set([currentModuleKey]));
+    setAddOpen(false);
+  };
+
+  const renderVersionCard = (v: ArchVersionEntry, idx: number) => (
+    <Card key={`${v.version_tag}-${idx}`}>
+      <CardContent className="py-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Tag className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-sm text-foreground">{v.version_tag}</span>
+          </div>
+          <span className="text-xs text-muted-foreground">{new Date(v.date).toLocaleDateString('pt-BR')}</span>
+        </div>
+        <div className="space-y-1 pl-6">
+          <span className="text-xs font-medium text-muted-foreground">Alterações Estruturais:</span>
+          <ul className="list-disc list-inside text-xs text-foreground space-y-0.5">
+            {v.structural_changes.map((c, i) => <li key={i}>{c}</li>)}
+          </ul>
+        </div>
+        <div className="flex flex-wrap gap-1.5 pl-6">
+          <span className="text-xs text-muted-foreground mr-1">Módulos impactados:</span>
+          {v.impacted_modules.map(k => {
+            const mod = modules.find(m => m.key === k);
+            return (
+              <Badge key={k} variant="outline" className="text-[10px]">
+                {mod?.label ?? k}
+              </Badge>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-foreground">Histórico de Versões Arquiteturais</h3>
+        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="outline"><PlusCircle className="h-4 w-4 mr-1" /> Nova Versão</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader><DialogTitle>Registrar Versão Arquitetural</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Version Tag</label>
+                  <Input placeholder="ex: v6.0.0" value={versionTag} onChange={e => setVersionTag(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Data</label>
+                  <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Alterações Estruturais (uma por linha)</label>
+                <Textarea placeholder="Nova API Gateway&#10;Migração do IAM para v3&#10;Refactor Billing Engine" value={changes} onChange={e => setChanges(e.target.value)} rows={4} className="font-mono text-sm" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Módulos Impactados</label>
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                  {modules.map(m => (
+                    <label key={m.key} className="flex items-center gap-1.5 cursor-pointer">
+                      <Checkbox checked={impactedKeys.has(m.key)} onCheckedChange={() => toggleImpacted(m.key)} />
+                      <span className="text-xs text-foreground">{m.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setAddOpen(false)}>Cancelar</Button>
+              <Button onClick={handleAdd} disabled={!versionTag.trim() || !changes.trim()}>Registrar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {relevantVersions.length > 0 && (
+        <div className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Versões deste módulo</span>
+          {relevantVersions.map(renderVersionCard)}
+        </div>
+      )}
+
+      {otherVersions.length > 0 && (
+        <div className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Outras versões da plataforma</span>
+          {otherVersions.map(renderVersionCard)}
+        </div>
+      )}
+
+      {relevantVersions.length === 0 && otherVersions.length === 0 && (
+        <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">Nenhuma versão registrada</CardContent></Card>
+      )}
+    </div>
+  );
 }
