@@ -241,28 +241,29 @@ export function AppSidebar() {
   const { announcements } = useAnnouncements();
   const hasCriticalAnnouncement = announcements.some(a => a.severity === 'critical');
   const { isPathVisible, isPathLocked, profile: expProfile } = useExperienceProfile();
-  const { isModuleAccessible, ready: pxeReady } = usePXE();
+  const { isModuleAccessible, getModuleAccess, getUpgradePrompt, ready: pxeReady } = usePXE();
   const { isOnboarding, completionPct: onboardingPct } = useOnboardingStatus();
   const onboardingComplete = !isOnboarding;
 
-  const isVisible = (item: NavItem) => {
-    if (loading) return true;
-    if (item.featureFlag && !isFeatureEnabled(item.featureFlag)) return false;
-    if (!canNav(item.key)) return false;
-    if (!isPathVisible(item.to)) return false;
-    // Plan-based module gating: hide items whose module is not in the tenant's plan
-    if (item.moduleKey && pxeReady && !isModuleAccessible(item.moduleKey)) return false;
-    return true;
+  /** Visibility: returns 'visible' | 'gated' (show with CTA) | 'hidden' */
+  const getItemVisibility = (item: NavItem): 'visible' | 'gated' | 'hidden' => {
+    if (loading) return 'visible';
+    if (item.featureFlag && !isFeatureEnabled(item.featureFlag)) return 'hidden';
+    if (!canNav(item.key)) return 'hidden';
+    if (!isPathVisible(item.to)) return 'hidden';
+    // Plan-based: show as gated (upgrade CTA) instead of fully hiding
+    if (item.moduleKey && pxeReady && !isModuleAccessible(item.moduleKey)) return 'gated';
+    return 'visible';
   };
 
   const isActive = (to: string) =>
     location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
 
-  // Filter sections to only show those with visible items
+  // Filter sections: keep items that are visible OR gated (for CTA)
   const visibleSections = navSections
     .map(section => ({
       ...section,
-      items: section.items.filter(isVisible),
+      items: section.items.filter(item => getItemVisibility(item) !== 'hidden'),
     }))
     .filter(section => section.items.length > 0);
 
@@ -272,6 +273,45 @@ export function AppSidebar() {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedNav === item.to || (hasChildren && item.children!.some(c => isActive(c.to)));
     const isCriticalHighlight = item.to === '/announcements' && hasCriticalAnnouncement;
+    const visibility = getItemVisibility(item);
+
+    // Gated by plan: show item dimmed with upgrade CTA
+    if (visibility === 'gated') {
+      const upgradePrompt = item.moduleKey ? getUpgradePrompt(item.moduleKey) : null;
+      return (
+        <div
+          key={item.to}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer group relative",
+            collapsed ? "justify-center" : "",
+            "text-sidebar-foreground/30 hover:text-sidebar-foreground/40"
+          )}
+          onClick={() => navigate('/plans')}
+          title={upgradePrompt ? `Upgrade necessário` : 'Módulo não disponível no seu plano'}
+        >
+          <item.icon className="h-4 w-4 shrink-0" />
+          {!collapsed && (
+            <>
+              <span className="truncate flex-1">{item.label}</span>
+              <span className="shrink-0 text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                Upgrade
+              </span>
+            </>
+          )}
+          {!collapsed && (
+            <div className="absolute left-full ml-2 top-0 z-50 hidden group-hover:block">
+              <div className="bg-popover text-popover-foreground text-xs rounded-lg shadow-lg border border-border p-3 w-52">
+                <p className="font-semibold mb-1">⚡ Módulo não incluído</p>
+                <p className="text-muted-foreground mb-2">
+                  Este recurso não está disponível no seu plano atual.
+                </p>
+                <p className="text-primary font-medium text-[11px]">Clique para ver planos →</p>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
 
     // Locked item
     if (lockInfo.locked) {
@@ -340,7 +380,7 @@ export function AppSidebar() {
           {/* Sub-items with border-left indicator */}
           {isExpanded && !collapsed && (
             <div className="ml-6 mt-0.5 space-y-0.5 border-l border-sidebar-border pl-3">
-              {item.children!.filter(isVisible).map(child => {
+              {item.children!.filter(c => getItemVisibility(c) !== 'hidden').map(child => {
                 const childActive = isActive(child.to);
                 return (
                   <NavLink
