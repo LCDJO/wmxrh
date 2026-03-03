@@ -12,4 +12,6 @@ export {
   type PlatformRiskSummary,
   type RiskLevel,
   type DependencyRiskScore,
+  type BidirectionalDependency,
+  type CrossDomainViolation,
 } from './engine';

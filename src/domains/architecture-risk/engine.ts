@@ -93,12 +93,39 @@ export interface CircularDependencyCycle {
   severity: RiskLevel;
 }
 
+export interface BidirectionalDependency {
+  module_a: string;
+  module_b: string;
+  a_to_b_mandatory: boolean;
+  b_to_a_mandatory: boolean;
+}
+
+export interface CrossDomainViolation {
+  from_module: string;
+  from_domain: 'saas' | 'tenant';
+  to_module: string;
+  to_domain: 'saas' | 'tenant';
+  is_mandatory: boolean;
+  direction: 'saas→tenant' | 'tenant→saas';
+  violation_type: 'mutation' | 'direct_dependency';
+  description: string;
+}
+
 export interface CouplingMetrics {
   module_key: string;
   afferent_coupling: number;  // Ca — modules that depend on this
   efferent_coupling: number;  // Ce — modules this depends on
   instability: number;        // Ce / (Ca + Ce), 0=stable, 1=unstable
   abstractness: number;       // proxy: event count / total events
+  distance_from_main_seq: number;
+  /** Bidirectional deps this module participates in */
+  bidirectional_count: number;
+  /** Cross-domain violations this module participates in */
+  cross_domain_violation_count: number;
+  /** Whether module is excessively connected (Ca+Ce >= threshold) */
+  is_excessively_connected: boolean;
+  /** Zone classification */
+  zone: 'main_sequence' | 'zone_of_pain' | 'zone_of_uselessness' | 'balanced';
 }
 
 export interface PlatformRiskSummary {
@@ -229,10 +256,78 @@ function scanDependencyRisk(
 
 // ── 2. CouplingAnalyzer ──
 
+/** Detect all bidirectional dependencies in the graph */
+function detectBidirectionalDeps(edges: DependencyEdge[]): BidirectionalDependency[] {
+  const pairs = new Map<string, BidirectionalDependency>();
+  for (const e of edges) {
+    const reverse = edges.find(r => r.from === e.to && r.to === e.from);
+    if (reverse) {
+      const key = [e.from, e.to].sort().join('↔');
+      if (!pairs.has(key)) {
+        pairs.set(key, {
+          module_a: e.from,
+          module_b: e.to,
+          a_to_b_mandatory: e.is_mandatory,
+          b_to_a_mandatory: reverse.is_mandatory,
+        });
+      }
+    }
+  }
+  return Array.from(pairs.values());
+}
+
+/** Detect cross-domain (SaaS↔Tenant) dependency violations */
+function detectCrossDomainViolations(
+  edges: DependencyEdge[],
+  modules: ArchModuleInfo[],
+): CrossDomainViolation[] {
+  const domainMap = new Map(modules.map(m => [m.key, m.domain]));
+  const violations: CrossDomainViolation[] = [];
+
+  for (const e of edges) {
+    const fromDomain = domainMap.get(e.from);
+    const toDomain = domainMap.get(e.to);
+    if (!fromDomain || !toDomain || fromDomain === toDomain) continue;
+
+    // SaaS → Tenant direct dependency is a violation (should use events only)
+    if (fromDomain === 'saas' && toDomain === 'tenant') {
+      violations.push({
+        from_module: e.from,
+        from_domain: 'saas',
+        to_module: e.to,
+        to_domain: 'tenant',
+        is_mandatory: e.is_mandatory,
+        direction: 'saas→tenant',
+        violation_type: 'direct_dependency',
+        description: `Platform "${e.from}" depende diretamente de Tenant "${e.to}" — deveria usar eventos normalizados`,
+      });
+    }
+
+    // Tenant → SaaS mutation dependency (tenant should only read from platform)
+    if (fromDomain === 'tenant' && toDomain === 'saas' && e.is_mandatory) {
+      violations.push({
+        from_module: e.from,
+        from_domain: 'tenant',
+        to_module: e.to,
+        to_domain: 'saas',
+        is_mandatory: e.is_mandatory,
+        direction: 'tenant→saas',
+        violation_type: 'mutation',
+        description: `Tenant "${e.from}" tem dependência mandatória de Platform "${e.to}" — verificar se é apenas leitura`,
+      });
+    }
+  }
+  return violations;
+}
+
+const EXCESSIVE_CONNECTION_THRESHOLD = 6;
+
 function analyzeCoupling(
   moduleKey: string,
   edges: DependencyEdge[],
   modules: ArchModuleInfo[],
+  bidirectionalDeps: BidirectionalDependency[],
+  crossDomainViolations: CrossDomainViolation[],
 ): { metrics: CouplingMetrics; score: number; factors: RiskFactor[] } {
   const ca = edges.filter(e => e.to === moduleKey).length;
   const ce = edges.filter(e => e.from === moduleKey).length;
@@ -241,28 +336,70 @@ function analyzeCoupling(
   const mod = modules.find(m => m.key === moduleKey);
   const totalEvents = modules.reduce((s, m) => s + m.emits_events.length, 0) || 1;
   const abstractness = (mod?.emits_events.length ?? 0) / totalEvents;
+  const distance = Math.abs(instability + abstractness - 1);
+
+  const biDirCount = bidirectionalDeps.filter(b => b.module_a === moduleKey || b.module_b === moduleKey).length;
+  const crossViolCount = crossDomainViolations.filter(v => v.from_module === moduleKey || v.to_module === moduleKey).length;
+  const isExcessive = (ca + ce) >= EXCESSIVE_CONNECTION_THRESHOLD;
+
+  // Zone classification
+  let zone: CouplingMetrics['zone'] = 'balanced';
+  if (distance <= 0.2) zone = 'main_sequence';
+  else if (instability < 0.3 && abstractness < 0.3) zone = 'zone_of_pain';
+  else if (instability > 0.7 && abstractness > 0.7) zone = 'zone_of_uselessness';
 
   const factors: RiskFactor[] = [];
   let score = 0;
 
-  // Zone of Pain: high stability (low instability) + low abstractness
-  // Zone of Uselessness: high instability + high abstractness
-  const distance = Math.abs(instability + abstractness - 1); // distance from main sequence
+  // Distance from main sequence
   if (distance > 0.7) {
-    score += 30;
-    factors.push({ category: 'coupling', severity: 'high', description: `Distância da main sequence: ${distance.toFixed(2)} (zona de dor/inutilidade)`, metric_value: distance });
+    score += 25;
+    factors.push({ category: 'coupling', severity: 'high', description: `Distância da main sequence: ${distance.toFixed(2)} (${zone === 'zone_of_pain' ? 'zona de dor' : 'zona de inutilidade'})`, metric_value: distance });
   } else if (distance > 0.4) {
-    score += 15;
+    score += 12;
     factors.push({ category: 'coupling', severity: 'medium', description: `Distância da main sequence: ${distance.toFixed(2)}`, metric_value: distance });
   }
 
+  // Instability
   if (instability > 0.8 && ce >= 3) {
-    score += 20;
+    score += 15;
     factors.push({ category: 'coupling', severity: 'high', description: `Instabilidade alta (${instability.toFixed(2)}): muito dependente de outros`, metric_value: instability });
   }
 
+  // Bidirectional dependencies
+  if (biDirCount >= 2) {
+    score += 20;
+    factors.push({ category: 'coupling', severity: 'critical', description: `${biDirCount} dependências bidirecionais — acoplamento mútuo alto`, metric_value: biDirCount });
+  } else if (biDirCount === 1) {
+    score += 10;
+    factors.push({ category: 'coupling', severity: 'medium', description: `1 dependência bidirecional detectada`, metric_value: 1 });
+  }
+
+  // Cross-domain violations
+  if (crossViolCount > 0) {
+    score += 20;
+    factors.push({ category: 'coupling', severity: 'critical', description: `${crossViolCount} violação(ões) de isolamento SaaS↔Tenant`, metric_value: crossViolCount });
+  }
+
+  // Excessively connected
+  if (isExcessive) {
+    score += 10;
+    factors.push({ category: 'coupling', severity: 'high', description: `Módulo excessivamente conectado: ${ca + ce} conexões diretas (limiar: ${EXCESSIVE_CONNECTION_THRESHOLD})`, metric_value: ca + ce });
+  }
+
   return {
-    metrics: { module_key: moduleKey, afferent_coupling: ca, efferent_coupling: ce, instability, abstractness },
+    metrics: {
+      module_key: moduleKey,
+      afferent_coupling: ca,
+      efferent_coupling: ce,
+      instability,
+      abstractness,
+      distance_from_main_seq: distance,
+      bidirectional_count: biDirCount,
+      cross_domain_violation_count: crossViolCount,
+      is_excessively_connected: isExcessive,
+      zone,
+    },
     score: clamp(score),
     factors,
   };
@@ -500,8 +637,9 @@ export interface ArchitectureRiskAnalyzerAPI {
   getAllProfiles(): ModuleRiskProfile[];
   getCouplingMetrics(): CouplingMetrics[];
   getCircularDependencies(): CircularDependencyCycle[];
-  /** Dedicated dependency risk scores for all modules */
   getDependencyRiskScores(): DependencyRiskScore[];
+  getBidirectionalDependencies(): BidirectionalDependency[];
+  getCrossDomainViolations(): CrossDomainViolation[];
 }
 
 export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
@@ -510,17 +648,19 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
   const edges = engine.getDependencyEdges();
   const totalModules = modules.length;
 
-  // Pre-compute circular dependencies
+  // Pre-compute shared analyses
   const cycles = detectCircularDependencies(edges);
   const modulesInCycles = new Set<string>();
   for (const c of cycles) {
     for (const k of c.cycle) modulesInCycles.add(k);
   }
+  const bidirectionalDeps = detectBidirectionalDeps(edges);
+  const crossDomainViolations = detectCrossDomainViolations(edges, modules);
 
   // Build all profiles
   const profiles: ModuleRiskProfile[] = modules.map(mod => {
     const dep = scanDependencyRisk(mod.key, mod, edges, totalModules);
-    const coup = analyzeCoupling(mod.key, edges, modules);
+    const coup = analyzeCoupling(mod.key, edges, modules, bidirectionalDeps, crossDomainViolations);
     const circularScore = modulesInCycles.has(mod.key) ? 100 : 0;
     const crit = identifyCriticality(mod, dep.fanIn);
     const impact = predictChangeImpact(mod.key, edges);
@@ -559,22 +699,19 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
     };
 
     profileBase.suggestions = generateSuggestions(profileBase);
-
     return profileBase;
   });
 
-  // Sort by risk descending
   profiles.sort((a, b) => b.risk_score - a.risk_score);
 
-  // Coupling metrics
-  const couplingMetrics = modules.map(mod => analyzeCoupling(mod.key, edges, modules).metrics);
+  const couplingMetrics = modules.map(mod =>
+    analyzeCoupling(mod.key, edges, modules, bidirectionalDeps, crossDomainViolations).metrics
+  );
 
-  // Dependency risk scores (sorted by score desc)
   const depScores = profiles
     .map(p => p.dependency_risk_detail)
     .sort((a, b) => b.dependency_risk_score - a.dependency_risk_score);
 
-  // Aggregate suggestions
   const allSuggestions = profiles.flatMap(p => p.suggestions);
   const uniqueSuggestions = Array.from(new Map(allSuggestions.map(s => [s.id, s])).values());
   uniqueSuggestions.sort((a, b) => {
@@ -613,5 +750,7 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
     getCouplingMetrics: () => couplingMetrics,
     getCircularDependencies: () => cycles,
     getDependencyRiskScores: () => depScores,
+    getBidirectionalDependencies: () => bidirectionalDeps,
+    getCrossDomainViolations: () => crossDomainViolations,
   };
 }
