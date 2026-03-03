@@ -2,6 +2,11 @@
  * Architecture Intelligence — Barrel Export
  */
 export { createArchitectureIntelligenceEngine } from './engine';
+export {
+  architectureIntelligenceEvents,
+  emitArchitectureEvent,
+  onArchitectureEvent,
+} from './architecture-intelligence.events';
 export type {
   ArchitectureIntelligenceEngineAPI,
   ArchModuleInfo,
