@@ -29,10 +29,13 @@ import {
   getDraft,
   buildMenuHierarchy,
   flattenHierarchy,
+  validateNavigationRules,
+  NAVIGATION_RULES,
   type NavigationDraft,
   type DraftStatus,
   type NavigationVersion,
   type DiffChange,
+  type ValidationResult,
 } from '@/domains/navigation-governance';
 
 // ── Status helpers ───────────────────────────────────────────
@@ -97,9 +100,13 @@ export default function PlatformNavigationRefactor() {
   };
 
   const handleSubmitForApproval = (draftId: string) => {
-    submitDraftForApproval(draftId);
+    const result = submitDraftForApproval(draftId);
     setDrafts(listDrafts());
-    toast.info('Draft submetido para aprovação');
+    if (result.blocked) {
+      toast.error(result.reason ?? 'Validação falhou — corrija as violações antes de submeter');
+    } else {
+      toast.info('Draft submetido para aprovação');
+    }
   };
 
   const handleApprove = (draftId: string) => {
@@ -309,6 +316,22 @@ export default function PlatformNavigationRefactor() {
                       <span className="text-muted-foreground">Movidos</span>
                       <span className="font-medium text-amber-600">{selectedDraft.diff?.moved.length ?? 0}</span>
                     </div>
+                    {/* Validation Status */}
+                    {selectedDraft.validation && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Validação</span>
+                        {selectedDraft.validation.valid ? (
+                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Passou
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-destructive/15 text-destructive">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            {selectedDraft.validation.violations.filter(v => v.severity === 'error').length} erro(s)
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                     <Separator />
                     <div className="flex gap-2 pt-1">
                       {selectedDraft.status === 'draft' && (
@@ -539,6 +562,60 @@ export default function PlatformNavigationRefactor() {
                 <p className="text-sm text-muted-foreground py-4 text-center">
                   Selecione um draft para analisar impacto nos planos
                 </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Structural Rules */}
+          <Card className="border-border/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4" /> Regras Estruturais
+              </CardTitle>
+              <CardDescription>Regras obrigatórias validadas antes da submissão</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {NAVIGATION_RULES.map(rule => {
+                  const violation = selectedDraft?.validation?.violations.find(v => v.rule === rule.id);
+                  return (
+                    <div
+                      key={rule.id}
+                      className="flex items-center justify-between px-3 py-2.5 rounded-md bg-muted/30"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{rule.label}</p>
+                        <p className="text-xs text-muted-foreground">{rule.description}</p>
+                      </div>
+                      {selectedDraft?.validation ? (
+                        violation ? (
+                          <Badge className="bg-destructive/15 text-destructive">
+                            <XCircle className="h-3 w-3 mr-1" /> Violação
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> OK
+                          </Badge>
+                        )
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">—</Badge>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Validation violations detail */}
+              {selectedDraft?.validation && !selectedDraft.validation.valid && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-xs font-medium text-destructive uppercase tracking-wider">Violações Detalhadas</p>
+                  {selectedDraft.validation.violations.map((v, i) => (
+                    <div key={i} className="text-sm px-3 py-2 rounded-md bg-destructive/5 border border-destructive/20">
+                      <p className="font-medium text-foreground">{v.message}</p>
+                      {v.details && <p className="text-xs text-muted-foreground mt-0.5">{v.details}</p>}
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>

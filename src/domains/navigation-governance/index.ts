@@ -66,6 +66,17 @@ export type {
   ApplyResult,
 } from './navigation-controlled-execution';
 
+// Rule Validator
+export {
+  validateNavigationRules,
+  NAVIGATION_RULES,
+} from './navigation-rule-validator';
+export type {
+  RuleViolation,
+  RuleSeverity,
+  ValidationResult,
+} from './navigation-rule-validator';
+
 // Engine
 export {
   createNavigationRefactorEngine,
