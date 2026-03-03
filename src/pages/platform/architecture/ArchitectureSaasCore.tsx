@@ -13,6 +13,7 @@ import {
   History, Search, ArrowRight, Circle, Server,
 } from 'lucide-react';
 import { ModuleCard, SummaryCard, statusColor, deliverableVariant } from './shared';
+import ModuleDetailView from './ModuleDetailView';
 
 export default function ArchitectureSaasCore() {
   const engine = useMemo(() => createArchitectureIntelligenceEngine(), []);
@@ -63,7 +64,7 @@ export default function ArchitectureSaasCore() {
               <ModuleCard key={m.key} mod={m} onClick={() => setSelectedModule(m)} />
             ))}
           </div>
-          {selectedModule && <ModuleDetail mod={selectedModule} onClose={() => setSelectedModule(null)} />}
+          {selectedModule && <ModuleDetailView mod={selectedModule} allModules={allModules} onClose={() => setSelectedModule(null)} />}
         </TabsContent>
 
         {/* Dependencies */}
@@ -219,44 +220,5 @@ export default function ArchitectureSaasCore() {
         </TabsContent>
       </Tabs>
     </div>
-  );
-}
-
-function ModuleDetail({ mod, onClose }: { mod: ArchModuleInfo; onClose: () => void }) {
-  return (
-    <Card className="border-primary/20">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">{mod.label}</CardTitle>
-          <button onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground">Fechar</button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
-        <p>{mod.description}</p>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline">{mod.version_tag}</Badge>
-          <Badge variant="secondary">{mod.category}</Badge>
-          <Badge className={`${statusColor[mod.status]} text-white`}>{mod.status}</Badge>
-        </div>
-        {mod.dependencies.length > 0 && (
-          <div>
-            <span className="font-medium">Dependências:</span>
-            <ul className="mt-1 space-y-1">
-              {mod.dependencies.map((d, i) => (
-                <li key={i} className="flex items-center gap-2 text-muted-foreground">
-                  <ArrowRight className="h-3 w-3" /> {d.required_module_id} ≥ v{d.required_version.major}.{d.required_version.minor}.{d.required_version.patch}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {mod.changelog_summary && (
-          <div>
-            <span className="font-medium">Changelog:</span>
-            <p className="text-muted-foreground mt-1">{mod.changelog_summary}</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
   );
 }

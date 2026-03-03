@@ -20,6 +20,16 @@ export interface ModuleMonitoringMetric {
   description: string;
 }
 
+// ── SLA / RTO / RPO ──
+
+export interface ModuleSLA {
+  uptime_target: string;        // e.g. '99.95%'
+  response_time_p95_ms: number;
+  rto_minutes?: number;
+  rpo_minutes?: number;
+  tier: 'critical' | 'high' | 'standard' | 'low';
+}
+
 // ── Module Info (canonical PlatformModule model) ──
 
 export interface ArchModuleInfo {
@@ -43,6 +53,8 @@ export interface ArchModuleInfo {
   owner: string;
   last_updated: string;
   changelog_summary: string;
+  sla: ModuleSLA;
+  architecture_description: string;
 
   // ── Compat aliases (used by UI) ──
   /** @deprecated use domain */

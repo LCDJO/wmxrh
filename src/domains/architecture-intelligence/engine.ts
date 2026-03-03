@@ -34,7 +34,42 @@ import type {
   ArchVersionEntry,
   DependencyEdge,
   ModuleMonitoringMetric,
+  ModuleSLA,
 } from './types';
+
+// ── Default SLA ──
+
+const DEFAULT_SLA: ModuleSLA = { uptime_target: '99.9%', response_time_p95_ms: 500, tier: 'standard' };
+
+const MODULE_SLA: Record<string, ModuleSLA> = {
+  iam:            { uptime_target: '99.99%', response_time_p95_ms: 100, rto_minutes: 5,  rpo_minutes: 0,  tier: 'critical' },
+  billing:        { uptime_target: '99.95%', response_time_p95_ms: 300, rto_minutes: 15, rpo_minutes: 5,  tier: 'critical' },
+  observability:  { uptime_target: '99.95%', response_time_p95_ms: 200, rto_minutes: 10, rpo_minutes: 1,  tier: 'critical' },
+  core_hr:        { uptime_target: '99.9%',  response_time_p95_ms: 400, rto_minutes: 30, rpo_minutes: 15, tier: 'high' },
+  esocial:        { uptime_target: '99.9%',  response_time_p95_ms: 500, rto_minutes: 60, rpo_minutes: 30, tier: 'high' },
+  compliance:     { uptime_target: '99.9%',  response_time_p95_ms: 400, rto_minutes: 30, rpo_minutes: 15, tier: 'high' },
+  automation:     { uptime_target: '99.95%', response_time_p95_ms: 250, rto_minutes: 15, rpo_minutes: 5,  tier: 'critical' },
+  tenant_admin:   { uptime_target: '99.9%',  response_time_p95_ms: 300, rto_minutes: 30, rpo_minutes: 15, tier: 'high' },
+  support_module: { uptime_target: '99.9%',  response_time_p95_ms: 400, rto_minutes: 30, rpo_minutes: 15, tier: 'high' },
+};
+
+// ── Architecture Descriptions ──
+
+const MODULE_ARCHITECTURE: Record<string, string> = {
+  iam: 'Security Kernel com pipeline de 7 camadas (RequestID → Identity → Auth → ScopeGuard → RateLimit → Audit → Validation). RBAC + ABAC híbrido com O(1) Access Graph, federation SAML/OIDC e rotação automática de chaves.',
+  billing: 'Engine de faturamento com subscription lifecycle, usage-based metering, invoice generation, coupon engine e integração fiscal. Suporta planos compostos com módulos ativáveis por feature flag.',
+  observability: 'ObservabilityCore com MetricsCollector (Prometheus), HealthMonitor, ErrorTracker, PerformanceProfiler, LogStreamAdapter e GrafanaIntegrationAdapter (Prometheus + Loki + Tempo). Inclui BCDR, Incident Management e Chaos Engineering.',
+  core_hr: 'Gestão hierárquica de colaboradores, cargos, departamentos e organograma. Integração com admissão, movimentação e desligamento. Dados isolados por tenant com RLS.',
+  esocial: 'Motor de geração e transmissão de eventos eSocial (S-2200, S-2206, S-2299, etc.) com validação de layout, certificado digital e governança de conformidade por tenant.',
+  compliance: 'Framework de compliance trabalhista com governança de termos (event sourcing), WorkTime engine (clock entries, geolocalização, biometria, fraude) e auditoria contínua.',
+  automation: 'Integration Automation Engine com workflow DAG, triggers baseados em eventos, connectors modulares e execução assíncrona com retry e dead-letter queue.',
+  tenant_admin: 'Administração multi-tenant com convites, papéis, configurações e toggles de módulos. Inclui WhiteLabel Branding Engine com versionamento, fallback e controle por plano.',
+  support_module: 'Módulo versionado v2 com duas camadas: Tenant App (chat, wiki, FAQ) e Platform Console (analytics, SLA, routing). LiveSupportEngine com WebSocket e ConversationAnalytics.',
+  growth: 'Growth Engine com A/B testing, conversion tracking, FAB Builder, Landing Page Builder com versionamento e AI Designer para geração de templates.',
+  fleet_traccar: 'Integração Traccar para rastreamento GPS, geofencing, compliance de frota e políticas disciplinares. Camada Platform fornece catálogo regulatório; Tenant armazena dados operacionais.',
+  analytics: 'Pipeline de analytics com dashboards, relatórios, detecção de anomalias e exportação. Métricas agregadas por tenant com projeções de workforce intelligence.',
+};
+
 
 // ── Module Owners ──
 
@@ -228,6 +263,8 @@ export function createArchitectureIntelligenceEngine(): ArchitectureIntelligence
         owner: MODULE_OWNERS[mod.key] ?? 'platform-team',
         last_updated: '2026-03-03',
         changelog_summary: catalogEntry?.changelog_summary ?? '',
+        sla: MODULE_SLA[mod.key] ?? DEFAULT_SLA,
+        architecture_description: MODULE_ARCHITECTURE[mod.key] ?? `Módulo ${mod.label} — implementação padrão com isolamento por tenant e RLS.`,
 
         // ── Compat aliases ──
         category: mod.category,
