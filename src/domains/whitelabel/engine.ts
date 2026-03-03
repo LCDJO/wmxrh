@@ -193,26 +193,90 @@ function createReportTemplateCustomizer(
   };
 }
 
+// ── Allowed image extensions & max URL length ──
+const SAFE_IMAGE_EXTENSIONS = /\.(png|jpg|jpeg|gif|webp|svg|ico)(\?.*)?$/i;
+const MAX_URL_LENGTH = 2048;
+const DANGEROUS_URL_PATTERNS = [
+  /javascript:/i,
+  /data:/i,
+  /vbscript:/i,
+  /<script/i,
+  /on\w+\s*=/i,
+  /&#/i,
+  /%3Cscript/i,
+];
+
+function isImageUrlSafe(url: string): { safe: boolean; reason?: string } {
+  if (!url) return { safe: true };
+  if (url.length > MAX_URL_LENGTH) return { safe: false, reason: `URL exceeds ${MAX_URL_LENGTH} chars` };
+  if (!URL_PATTERN.test(url)) return { safe: false, reason: 'Must be a valid https:// URL' };
+  for (const pattern of DANGEROUS_URL_PATTERNS) {
+    if (pattern.test(url)) return { safe: false, reason: 'URL contains potentially malicious content' };
+  }
+  if (!SAFE_IMAGE_EXTENSIONS.test(url.split('?')[0])) {
+    return { safe: false, reason: 'URL must point to an image file (png, jpg, gif, webp, svg, ico)' };
+  }
+  return { safe: true };
+}
+
+function isColorSafe(color: string): { safe: boolean; reason?: string } {
+  if (!color) return { safe: true };
+  if (!HEX_COLOR.test(color)) return { safe: false, reason: 'Must be a valid hex color (#RGB or #RRGGBB)' };
+  // Block CSS injection via color values
+  const lower = color.toLowerCase();
+  if (lower.includes('expression') || lower.includes('url') || lower.includes('<') || lower.includes('>')) {
+    return { safe: false, reason: 'Color contains potentially malicious content' };
+  }
+  return { safe: true };
+}
+
 function createWhiteLabelValidator(): WhiteLabelValidatorAPI {
   return {
     validate(profile) {
       const errors: string[] = [];
       const warnings: string[] = [];
 
-      if (profile.primary_color && !HEX_COLOR.test(profile.primary_color))
-        errors.push('primary_color must be a valid hex color');
-      if (profile.secondary_color && !HEX_COLOR.test(profile.secondary_color))
-        errors.push('secondary_color must be a valid hex color');
-      if (profile.accent_color && !HEX_COLOR.test(profile.accent_color))
-        errors.push('accent_color must be a valid hex color');
+      // ── Color validation (safe hex only) ──
+      for (const [key, value] of [
+        ['primary_color', profile.primary_color],
+        ['secondary_color', profile.secondary_color],
+        ['accent_color', profile.accent_color],
+      ] as const) {
+        if (value) {
+          const check = isColorSafe(value);
+          if (!check.safe) errors.push(`${key}: ${check.reason}`);
+        }
+      }
 
-      if (profile.logo_url && !URL_PATTERN.test(profile.logo_url))
-        errors.push('logo_url must be a valid URL');
-      if (profile.favicon_url && !URL_PATTERN.test(profile.favicon_url))
-        errors.push('favicon_url must be a valid URL');
+      // ── Image URL validation (block malicious uploads) ──
+      for (const [key, value] of [
+        ['logo_url', profile.logo_url],
+        ['favicon_url', profile.favicon_url],
+        ['custom_login_background', profile.custom_login_background],
+        ['report_header_logo', profile.report_header_logo],
+      ] as const) {
+        if (value) {
+          const check = isImageUrlSafe(value);
+          if (!check.safe) errors.push(`${key}: ${check.reason}`);
+        }
+      }
 
-      if (!profile.system_display_name)
+      // ── Text field sanitization ──
+      if (profile.system_display_name) {
+        if (profile.system_display_name.length > 100)
+          errors.push('system_display_name must be under 100 characters');
+        if (/<|>|&lt;|&gt;|script/i.test(profile.system_display_name))
+          errors.push('system_display_name contains potentially malicious content');
+      } else {
         warnings.push('system_display_name not set — platform default will be used');
+      }
+
+      if (profile.report_footer_text) {
+        if (profile.report_footer_text.length > 500)
+          errors.push('report_footer_text must be under 500 characters');
+        if (/<script|javascript:|on\w+=/i.test(profile.report_footer_text))
+          errors.push('report_footer_text contains potentially malicious content');
+      }
 
       return { valid: errors.length === 0, errors, warnings };
     },
