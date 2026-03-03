@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 import type { MenuHierarchy, MenuNode } from './menu-hierarchy-builder';
 import { flattenHierarchy } from './menu-hierarchy-builder';
+import { emitNavigationEvent } from './navigation-event-emitter';
+import { NAVIGATION_GOVERNANCE_EVENTS } from './navigation-governance-events';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -86,9 +88,16 @@ export function createNavigationVersion(
     if (error) console.warn('[NavigationVersionManager] Failed to persist version:', error.message);
   });
 
+  // Emit NavigationVersionCreated event
+  emitNavigationEvent(NAVIGATION_GOVERNANCE_EVENTS.NavigationVersionCreated, {
+    version_id: version.id,
+    version_number: version.version,
+    snapshot_hash: `sha_${Date.now()}`,
+    created_by: createdBy,
+  });
+
   return version;
 }
-
 export function getLatestVersion(): NavigationVersion | undefined {
   return versions[versions.length - 1];
 }
@@ -270,6 +279,15 @@ export function rollbackToVersion(
     `Nova versão criada: v${newVersion.version}`,
     ...(diff?.summary ?? []),
   ];
+
+  // Emit NavigationRollbackExecuted event
+  emitNavigationEvent(NAVIGATION_GOVERNANCE_EVENTS.NavigationRollbackExecuted, {
+    rollback_id: newVersion.id,
+    from_version: latest?.version ?? 0,
+    to_version: targetVersion,
+    rolled_back_by: executedBy,
+    reason: `Rollback to v${targetVersion}`,
+  });
 
   return {
     success: true,

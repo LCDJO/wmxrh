@@ -19,6 +19,8 @@ import {
   createNavigationVersion,
 } from './navigation-version-manager';
 import { validateNavigationRules, type ValidationResult } from './navigation-rule-validator';
+import { emitNavigationEvent } from './navigation-event-emitter';
+import { NAVIGATION_GOVERNANCE_EVENTS } from './navigation-governance-events';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -118,6 +120,15 @@ export function createNavigationDraft(input: CreateDraftInput): NavigationDraft 
     if (error) console.warn('[ControlledExecution] Failed to persist draft:', error.message);
   });
 
+  // Emit NavigationRefactorProposed
+  emitNavigationEvent(NAVIGATION_GOVERNANCE_EVENTS.NavigationRefactorProposed, {
+    refactor_id: draft.id,
+    proposed_by,
+    scope: context === 'saas' ? 'platform' : 'tenant',
+    affected_routes: draft.diff?.changes.map(c => c.key) ?? [],
+    reason,
+  });
+
   return draft;
 }
 
@@ -181,6 +192,13 @@ export function approveDraft(
     notes,
   };
 
+  // Emit NavigationDraftApproved
+  emitNavigationEvent(NAVIGATION_GOVERNANCE_EVENTS.NavigationDraftApproved, {
+    draft_id: draftId,
+    approved_by: approvedBy,
+    context: draft.context,
+  });
+
   return draft;
 }
 
@@ -196,6 +214,13 @@ export function rejectDraft(
   if (!draft || draft.status !== 'pending_approval') return null;
 
   draft.status = 'rejected';
+
+  // Emit NavigationDraftRejected
+  emitNavigationEvent(NAVIGATION_GOVERNANCE_EVENTS.NavigationDraftRejected, {
+    draft_id: draftId,
+    rejected_by: rejectedBy,
+    reason,
+  });
   return draft;
 }
 
@@ -250,6 +275,16 @@ export function applyApprovedDraft(draftId: string): ApplyResult {
     `Motivo: ${draft.reason}`,
     ...(draft.diff?.summary ?? []),
   ];
+
+  // Emit NavigationRefactorApplied
+  emitNavigationEvent(NAVIGATION_GOVERNANCE_EVENTS.NavigationRefactorApplied, {
+    refactor_id: draft.id,
+    version_id: newVersion.id,
+    applied_by: draft.approval.approved_by,
+    routes_added: draft.diff?.added.length ?? 0,
+    routes_removed: draft.diff?.removed.length ?? 0,
+    routes_moved: draft.diff?.moved.length ?? 0,
+  });
 
   return {
     success: true,

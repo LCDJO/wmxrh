@@ -14,6 +14,9 @@ export type {
   NavigationDraftRejectedPayload,
 } from './navigation-governance-events';
 
+// Event Emitter
+export { emitNavigationEvent, onNavigationEvent } from './navigation-event-emitter';
+
 // Classification
 export {
   MODULE_DOMAINS,
