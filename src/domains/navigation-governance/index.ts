@@ -52,3 +52,12 @@ export type {
   ResolveOptions,
   ResolvedNavigation,
 } from './navigation-refactor-engine';
+
+// Panel Context (isolated SaaS vs Tenant)
+export {
+  NavigationPanelProvider,
+  useNavigationPanel,
+  useCurrentPanelNavigation,
+  usePanelGuard,
+} from './navigation-panel-context';
+export type { PanelScope, PanelNavigationState } from './navigation-panel-context';
