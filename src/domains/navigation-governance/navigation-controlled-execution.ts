@@ -18,6 +18,7 @@ import {
   computeNavigationDiff,
   createNavigationVersion,
 } from './navigation-version-manager';
+import { validateNavigationRules, type ValidationResult } from './navigation-rule-validator';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -30,6 +31,7 @@ export interface NavigationDraft {
   proposed_snapshot: MenuHierarchy;
   current_snapshot: MenuHierarchy | null;
   diff: NavigationDiff | null;
+  validation: ValidationResult | null;
   proposed_by: string;
   proposed_at: number;
   reason: string;
@@ -87,6 +89,9 @@ export function createNavigationDraft(input: CreateDraftInput): NavigationDraft 
     ? computeNavigationDiff(currentSnapshot, proposed_snapshot, current!.version, 0)
     : null;
 
+  // Validate against structural rules
+  const validation = validateNavigationRules(proposed_snapshot);
+
   const draft: NavigationDraft = {
     id: generateDraftId(),
     status: 'draft',
@@ -94,6 +99,7 @@ export function createNavigationDraft(input: CreateDraftInput): NavigationDraft 
     proposed_snapshot,
     current_snapshot: currentSnapshot,
     diff,
+    validation,
     proposed_by,
     proposed_at: Date.now(),
     reason,
@@ -138,12 +144,22 @@ export function listDrafts(statusFilter?: DraftStatus): NavigationDraft[] {
 /**
  * Marks a draft as pending approval from PlatformSuperAdmin.
  */
-export function submitDraftForApproval(draftId: string): NavigationDraft | null {
+export function submitDraftForApproval(draftId: string): { draft: NavigationDraft | null; blocked: boolean; reason?: string } {
   const draft = drafts.get(draftId);
-  if (!draft || draft.status !== 'draft') return null;
+  if (!draft || draft.status !== 'draft') return { draft: null, blocked: false };
+
+  // Block submission if validation has errors
+  if (draft.validation && !draft.validation.valid) {
+    const errorCount = draft.validation.violations.filter(v => v.severity === 'error').length;
+    return {
+      draft,
+      blocked: true,
+      reason: `${errorCount} violação(ões) de regra impedem a submissão`,
+    };
+  }
 
   draft.status = 'pending_approval';
-  return draft;
+  return { draft, blocked: false };
 }
 
 /**

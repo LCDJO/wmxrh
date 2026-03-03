@@ -78,7 +78,7 @@ export interface NavigationRefactorEngineAPI {
   createDraft: (input: CreateDraftInput) => NavigationDraft;
   previewDraft: (draftId: string) => NavigationDraft | null;
   listDrafts: (status?: DraftStatus) => NavigationDraft[];
-  submitForApproval: (draftId: string) => NavigationDraft | null;
+  submitForApproval: (draftId: string) => { draft: NavigationDraft | null; blocked: boolean; reason?: string };
   approveDraft: (draftId: string, approvedBy: string, notes?: string) => NavigationDraft | null;
   rejectDraft: (draftId: string, rejectedBy: string, reason: string) => NavigationDraft | null;
   applyDraft: (draftId: string) => ApplyResult;
