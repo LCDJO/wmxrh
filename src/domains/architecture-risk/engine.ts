@@ -23,6 +23,39 @@ import type { ArchModuleInfo, DependencyEdge } from '@/domains/architecture-inte
 
 export type RiskLevel = 'critical' | 'high' | 'medium' | 'low' | 'none';
 
+// ── Dependency Risk Score (dedicated per-module output) ──
+
+export interface DependencyRiskScore {
+  module_key: string;
+  module_label: string;
+  domain: 'saas' | 'tenant';
+  /** Overall dependency risk 0–100 */
+  dependency_risk_score: number;
+  risk_level: RiskLevel;
+  /** Direct incoming dependencies (modules that depend on this) */
+  fan_in: number;
+  /** Direct outgoing dependencies (modules this depends on) */
+  fan_out: number;
+  /** Mandatory incoming dependencies */
+  mandatory_fan_in: number;
+  /** Mandatory outgoing dependencies */
+  mandatory_fan_out: number;
+  /** Total direct connections (fan_in + fan_out) */
+  total_direct_dependencies: number;
+  /** Betweenness centrality proxy 0–1 */
+  centrality_index: number;
+  /** Whether this is a single point of failure */
+  is_single_point_of_failure: boolean;
+  /** Whether this has excessive outgoing deps */
+  is_fragile: boolean;
+  /** Modules that directly depend on this one */
+  dependents: string[];
+  /** Modules this directly depends on */
+  dependencies: string[];
+  /** Breakdown factors */
+  factors: RiskFactor[];
+}
+
 export interface ModuleRiskProfile {
   module_key: string;
   module_label: string;
@@ -34,6 +67,7 @@ export interface ModuleRiskProfile {
   circular_risk: number;      // 0–100 (100 if in a cycle)
   criticality_score: number;  // 0–100
   change_impact_radius: number; // count of transitively affected modules
+  dependency_risk_detail: DependencyRiskScore;
   factors: RiskFactor[];
   suggestions: RefactorSuggestion[];
 }
@@ -97,43 +131,100 @@ function clamp(v: number, min = 0, max = 100): number {
 
 // ── 1. DependencyRiskScanner ──
 
-function scanDependencyRisk(
+function computeCentralityIndex(
   moduleKey: string,
   edges: DependencyEdge[],
-): { score: number; factors: RiskFactor[]; fanIn: number; fanOut: number } {
+  totalModules: number,
+): number {
+  // Betweenness centrality proxy: how many shortest paths pass through this node
+  // Simplified: (fan_in * fan_out) / max_possible_connections
+  const fanIn = edges.filter(e => e.to === moduleKey).length;
+  const fanOut = edges.filter(e => e.from === moduleKey).length;
+  const maxConnections = Math.max(1, (totalModules - 1) * (totalModules - 1));
+  return Math.min(1, (fanIn * fanOut) / maxConnections);
+}
+
+function scanDependencyRisk(
+  moduleKey: string,
+  mod: ArchModuleInfo,
+  edges: DependencyEdge[],
+  totalModules: number,
+): { detail: DependencyRiskScore; score: number; factors: RiskFactor[]; fanIn: number; fanOut: number } {
   const fanIn = edges.filter(e => e.to === moduleKey).length;
   const fanOut = edges.filter(e => e.from === moduleKey).length;
   const mandatoryIn = edges.filter(e => e.to === moduleKey && e.is_mandatory).length;
   const mandatoryOut = edges.filter(e => e.from === moduleKey && e.is_mandatory).length;
+  const dependents = edges.filter(e => e.to === moduleKey).map(e => e.from);
+  const dependencies = edges.filter(e => e.from === moduleKey).map(e => e.to);
+  const totalDirect = fanIn + fanOut;
+  const centralityIndex = computeCentralityIndex(moduleKey, edges, totalModules);
 
   const factors: RiskFactor[] = [];
   let score = 0;
 
-  // High fan-in = single point of failure risk
+  // ── Fan-in scoring (single point of failure) ──
+  const isSPOF = mandatoryIn >= 3 || fanIn >= 5;
   if (fanIn >= 5) {
     score += 35;
-    factors.push({ category: 'dependency', severity: 'critical', description: `Alto fan-in: ${fanIn} módulos dependem deste`, metric_value: fanIn });
+    factors.push({ category: 'dependency', severity: 'critical', description: `Alto fan-in: ${fanIn} módulos dependem deste (ponto único de falha)`, metric_value: fanIn });
   } else if (fanIn >= 3) {
     score += 20;
     factors.push({ category: 'dependency', severity: 'high', description: `Fan-in elevado: ${fanIn} dependentes`, metric_value: fanIn });
+  } else if (fanIn >= 1) {
+    factors.push({ category: 'dependency', severity: 'low', description: `Fan-in: ${fanIn} dependente(s)`, metric_value: fanIn });
   }
 
-  // High fan-out = fragility risk
+  // ── Fan-out scoring (fragility) ──
+  const isFragile = fanOut >= 5;
   if (fanOut >= 5) {
     score += 25;
-    factors.push({ category: 'dependency', severity: 'high', description: `Alto fan-out: depende de ${fanOut} módulos`, metric_value: fanOut });
+    factors.push({ category: 'dependency', severity: 'high', description: `Alto fan-out: depende de ${fanOut} módulos (módulo frágil)`, metric_value: fanOut });
   } else if (fanOut >= 3) {
     score += 15;
     factors.push({ category: 'dependency', severity: 'medium', description: `Fan-out moderado: depende de ${fanOut} módulos`, metric_value: fanOut });
   }
 
-  // Mandatory dependencies amplify risk
+  // ── Mandatory dependencies amplify risk ──
   if (mandatoryIn >= 3) {
     score += 15;
-    factors.push({ category: 'dependency', severity: 'high', description: `${mandatoryIn} dependências mandatórias de entrada`, metric_value: mandatoryIn });
+    factors.push({ category: 'dependency', severity: 'high', description: `${mandatoryIn} dependências mandatórias de entrada — falha propaga obrigatoriamente`, metric_value: mandatoryIn });
+  }
+  if (mandatoryOut >= 3) {
+    score += 10;
+    factors.push({ category: 'dependency', severity: 'medium', description: `${mandatoryOut} dependências mandatórias de saída — startup bloqueado se falhar`, metric_value: mandatoryOut });
   }
 
-  return { score: clamp(score), factors, fanIn, fanOut };
+  // ── Centrality bonus ──
+  if (centralityIndex >= 0.15) {
+    score += 15;
+    factors.push({ category: 'dependency', severity: 'critical', description: `Centralidade alta (${(centralityIndex * 100).toFixed(1)}%) — módulo é hub central da arquitetura`, metric_value: centralityIndex });
+  } else if (centralityIndex >= 0.05) {
+    score += 8;
+    factors.push({ category: 'dependency', severity: 'medium', description: `Centralidade moderada (${(centralityIndex * 100).toFixed(1)}%)`, metric_value: centralityIndex });
+  }
+
+  const finalScore = clamp(score);
+
+  const detail: DependencyRiskScore = {
+    module_key: moduleKey,
+    module_label: mod.label,
+    domain: mod.domain,
+    dependency_risk_score: finalScore,
+    risk_level: riskLevel(finalScore),
+    fan_in: fanIn,
+    fan_out: fanOut,
+    mandatory_fan_in: mandatoryIn,
+    mandatory_fan_out: mandatoryOut,
+    total_direct_dependencies: totalDirect,
+    centrality_index: centralityIndex,
+    is_single_point_of_failure: isSPOF,
+    is_fragile: isFragile,
+    dependents,
+    dependencies,
+    factors,
+  };
+
+  return { detail, score: finalScore, factors, fanIn, fanOut };
 }
 
 // ── 2. CouplingAnalyzer ──
@@ -409,12 +500,15 @@ export interface ArchitectureRiskAnalyzerAPI {
   getAllProfiles(): ModuleRiskProfile[];
   getCouplingMetrics(): CouplingMetrics[];
   getCircularDependencies(): CircularDependencyCycle[];
+  /** Dedicated dependency risk scores for all modules */
+  getDependencyRiskScores(): DependencyRiskScore[];
 }
 
 export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
   const engine = createArchitectureIntelligenceEngine();
   const modules = engine.getModules();
   const edges = engine.getDependencyEdges();
+  const totalModules = modules.length;
 
   // Pre-compute circular dependencies
   const cycles = detectCircularDependencies(edges);
@@ -425,7 +519,7 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
 
   // Build all profiles
   const profiles: ModuleRiskProfile[] = modules.map(mod => {
-    const dep = scanDependencyRisk(mod.key, edges);
+    const dep = scanDependencyRisk(mod.key, mod, edges, totalModules);
     const coup = analyzeCoupling(mod.key, edges, modules);
     const circularScore = modulesInCycles.has(mod.key) ? 100 : 0;
     const crit = identifyCriticality(mod, dep.fanIn);
@@ -448,7 +542,7 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
       ...impact.factors,
     ];
 
-    const profileBase = {
+    const profileBase: ModuleRiskProfile = {
       module_key: mod.key,
       module_label: mod.label,
       domain: mod.domain,
@@ -459,6 +553,7 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
       circular_risk: circularScore,
       criticality_score: crit.score,
       change_impact_radius: impact.radius,
+      dependency_risk_detail: dep.detail,
       factors: allFactors,
       suggestions: [] as RefactorSuggestion[],
     };
@@ -474,9 +569,13 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
   // Coupling metrics
   const couplingMetrics = modules.map(mod => analyzeCoupling(mod.key, edges, modules).metrics);
 
+  // Dependency risk scores (sorted by score desc)
+  const depScores = profiles
+    .map(p => p.dependency_risk_detail)
+    .sort((a, b) => b.dependency_risk_score - a.dependency_risk_score);
+
   // Aggregate suggestions
   const allSuggestions = profiles.flatMap(p => p.suggestions);
-  // Deduplicate by id
   const uniqueSuggestions = Array.from(new Map(allSuggestions.map(s => [s.id, s])).values());
   uniqueSuggestions.sort((a, b) => {
     const order = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -513,5 +612,6 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
     getAllProfiles: () => profiles,
     getCouplingMetrics: () => couplingMetrics,
     getCircularDependencies: () => cycles,
+    getDependencyRiskScores: () => depScores,
   };
 }

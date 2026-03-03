@@ -3,7 +3,7 @@
  */
 import { useMemo, useState } from 'react';
 import { createArchitectureRiskAnalyzer } from '@/domains/architecture-risk';
-import type { ModuleRiskProfile, RiskLevel, CircularDependencyCycle, RefactorSuggestion, CouplingMetrics } from '@/domains/architecture-risk';
+import type { ModuleRiskProfile, RiskLevel, CircularDependencyCycle, RefactorSuggestion, CouplingMetrics, DependencyRiskScore } from '@/domains/architecture-risk';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -43,6 +43,7 @@ export default function ArchitectureRiskDashboard() {
   const profiles = useMemo(() => analyzer.getAllProfiles(), [analyzer]);
   const couplingMetrics = useMemo(() => analyzer.getCouplingMetrics(), [analyzer]);
   const cycles = useMemo(() => analyzer.getCircularDependencies(), [analyzer]);
+  const depScores = useMemo(() => analyzer.getDependencyRiskScores(), [analyzer]);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
 
   const selectedProfile = selectedModule ? profiles.find(p => p.module_key === selectedModule) : null;
@@ -91,13 +92,19 @@ export default function ArchitectureRiskDashboard() {
         />
       </div>
 
-      <Tabs defaultValue="ranking" className="space-y-4">
+      <Tabs defaultValue="dependency-risk" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="dependency-risk" className="gap-1.5"><GitBranch className="h-3.5 w-3.5" />Dependency Risk</TabsTrigger>
           <TabsTrigger value="ranking" className="gap-1.5"><Target className="h-3.5 w-3.5" />Risk Ranking</TabsTrigger>
           <TabsTrigger value="coupling" className="gap-1.5"><GitBranch className="h-3.5 w-3.5" />Coupling</TabsTrigger>
           <TabsTrigger value="cycles" className="gap-1.5"><RotateCcw className="h-3.5 w-3.5" />Ciclos</TabsTrigger>
           <TabsTrigger value="suggestions" className="gap-1.5"><Lightbulb className="h-3.5 w-3.5" />Refactoring</TabsTrigger>
         </TabsList>
+
+        {/* ── Dependency Risk Scanner ── */}
+        <TabsContent value="dependency-risk">
+          <DependencyRiskView scores={depScores} />
+        </TabsContent>
 
         {/* ── Risk Ranking ── */}
         <TabsContent value="ranking">
@@ -412,6 +419,248 @@ function SuggestionsView({ suggestions }: { suggestions: RefactorSuggestion[] })
             <p className="text-xs text-muted-foreground">{s.description}</p>
           </div>
         ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Dependency Risk Scanner View ──
+
+function DependencyRiskView({ scores }: { scores: DependencyRiskScore[] }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const selectedScore = selected ? scores.find(s => s.module_key === selected) : null;
+
+  const spofCount = scores.filter(s => s.is_single_point_of_failure).length;
+  const fragileCount = scores.filter(s => s.is_fragile).length;
+  const highCentrality = scores.filter(s => s.centrality_index >= 0.05).length;
+
+  return (
+    <div className="space-y-4">
+      {/* KPI summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <span className="text-xs">Pontos Únicos de Falha</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{spofCount}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${spofCount > 0 ? RISK_COLORS.critical : RISK_COLORS.none}`}>
+              {spofCount > 0 ? 'atenção' : 'ok'}
+            </Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Zap className="h-4 w-4 text-orange-400" />
+              <span className="text-xs">Módulos Frágeis</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{fragileCount}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${fragileCount > 0 ? RISK_COLORS.high : RISK_COLORS.none}`}>
+              {fragileCount > 0 ? 'fan-out alto' : 'ok'}
+            </Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Target className="h-4 w-4 text-primary" />
+              <span className="text-xs">Hub Central</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{highCentrality}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${RISK_COLORS.medium}`}>centralidade ≥ 5%</Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Shield className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs">Módulos Seguros</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{scores.filter(s => s.risk_level === 'none' || s.risk_level === 'low').length}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${RISK_COLORS.none}`}>risco baixo</Badge>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Table + Detail */}
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-7">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <GitBranch className="h-4 w-4 text-primary" />
+                Dependency Risk Scanner
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-muted-foreground border-b border-border">
+                      <th className="text-left py-2 px-2">Módulo</th>
+                      <th className="text-center py-2 px-2">Score</th>
+                      <th className="text-center py-2 px-2">Fan-In</th>
+                      <th className="text-center py-2 px-2">Fan-Out</th>
+                      <th className="text-center py-2 px-2">Central.</th>
+                      <th className="text-center py-2 px-2">SPOF</th>
+                      <th className="text-center py-2 px-2">Frágil</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scores.map(s => (
+                      <tr
+                        key={s.module_key}
+                        className={`border-b border-border/50 cursor-pointer transition-colors ${selected === s.module_key ? 'bg-primary/5' : 'hover:bg-muted/30'}`}
+                        onClick={() => setSelected(prev => prev === s.module_key ? null : s.module_key)}
+                      >
+                        <td className="py-2 px-2 font-medium text-foreground flex items-center gap-1.5">
+                          {s.domain === 'saas'
+                            ? <Server className="h-3 w-3 text-blue-400 shrink-0" />
+                            : <Briefcase className="h-3 w-3 text-emerald-400 shrink-0" />}
+                          {s.module_label}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          <Badge variant="outline" className={`text-[10px] ${RISK_COLORS[s.risk_level]}`}>
+                            {s.dependency_risk_score}
+                          </Badge>
+                        </td>
+                        <td className="py-2 px-2 text-center font-mono">{s.fan_in}</td>
+                        <td className="py-2 px-2 text-center font-mono">{s.fan_out}</td>
+                        <td className="py-2 px-2 text-center font-mono">{(s.centrality_index * 100).toFixed(1)}%</td>
+                        <td className="py-2 px-2 text-center">
+                          {s.is_single_point_of_failure
+                            ? <AlertTriangle className="h-3.5 w-3.5 text-destructive mx-auto" />
+                            : <span className="text-muted-foreground">—</span>}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {s.is_fragile
+                            ? <Zap className="h-3.5 w-3.5 text-orange-400 mx-auto" />
+                            : <span className="text-muted-foreground">—</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="col-span-5">
+          {selectedScore ? (
+            <DependencyRiskDetail score={selectedScore} />
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <GitBranch className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                <p className="text-sm text-muted-foreground">Selecione um módulo para ver o detalhamento de dependency risk</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DependencyRiskDetail({ score }: { score: DependencyRiskScore }) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Activity className="h-4 w-4 text-primary" />
+          {score.module_label}
+          <Badge variant="outline" className={`text-[10px] ml-auto ${RISK_COLORS[score.risk_level]}`}>
+            dependency_risk_score: {score.dependency_risk_score}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Metrics grid */}
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="p-2 rounded bg-muted/30">
+            <span className="text-muted-foreground">Fan-In (Ca)</span>
+            <p className="text-lg font-bold text-foreground">{score.fan_in}</p>
+            <span className="text-[10px] text-muted-foreground">({score.mandatory_fan_in} mandatórias)</span>
+          </div>
+          <div className="p-2 rounded bg-muted/30">
+            <span className="text-muted-foreground">Fan-Out (Ce)</span>
+            <p className="text-lg font-bold text-foreground">{score.fan_out}</p>
+            <span className="text-[10px] text-muted-foreground">({score.mandatory_fan_out} mandatórias)</span>
+          </div>
+          <div className="p-2 rounded bg-muted/30">
+            <span className="text-muted-foreground">Centralidade</span>
+            <p className="text-lg font-bold text-foreground">{(score.centrality_index * 100).toFixed(1)}%</p>
+          </div>
+          <div className="p-2 rounded bg-muted/30">
+            <span className="text-muted-foreground">Total Diretas</span>
+            <p className="text-lg font-bold text-foreground">{score.total_direct_dependencies}</p>
+          </div>
+        </div>
+
+        {/* Flags */}
+        <div className="flex gap-2 flex-wrap">
+          {score.is_single_point_of_failure && (
+            <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.critical}`}>
+              ⚠ Ponto Único de Falha
+            </Badge>
+          )}
+          {score.is_fragile && (
+            <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.high}`}>
+              ⚡ Módulo Frágil
+            </Badge>
+          )}
+          {score.centrality_index >= 0.05 && (
+            <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.medium}`}>
+              🎯 Hub Central
+            </Badge>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Dependents */}
+        {score.dependents.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dependentes ({score.dependents.length})</p>
+            <div className="flex flex-wrap gap-1">
+              {score.dependents.map(d => (
+                <Badge key={d} variant="secondary" className="text-[10px]">{d}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Dependencies */}
+        {score.dependencies.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Depende de ({score.dependencies.length})</p>
+            <div className="flex flex-wrap gap-1">
+              {score.dependencies.map(d => (
+                <Badge key={d} variant="secondary" className="text-[10px]">{d}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <Separator />
+
+        {/* Risk Factors */}
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fatores de Risco</p>
+          {score.factors.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum fator de risco de dependência ✓</p>
+          ) : (
+            score.factors.map((f, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs">
+                <Badge variant="outline" className={`text-[9px] shrink-0 ${RISK_COLORS[f.severity]}`}>{f.severity}</Badge>
+                <span className="text-muted-foreground">{f.description}</span>
+              </div>
+            ))
+          )}
+        </div>
       </CardContent>
     </Card>
   );
