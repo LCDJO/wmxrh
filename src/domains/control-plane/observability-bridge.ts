@@ -63,6 +63,10 @@ export class ObservabilityBridge {
     metrics.gauge('downgrades_scheduled_total', 0);
     metrics.increment('plan_limit_exceeded_total', {}, 0);
     metrics.gauge('fraud_flags_total', 0);
+    // WhiteLabel baselines
+    metrics.gauge('tenants_whitelabel_enabled_total', 0);
+    metrics.increment('branding_updates_total', {}, 0);
+    metrics.gauge('custom_domain_active_total', 0);
   }
 
   /** Update gauges from current state */

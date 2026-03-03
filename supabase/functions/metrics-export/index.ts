@@ -279,6 +279,42 @@ serve(async (req) => {
       lines.push("# HELP fraud_flags_total Total tenants flagged for fraud review");
       lines.push("# TYPE fraud_flags_total gauge");
       lines.push(`fraud_flags_total ${fraudFlagsRes.count ?? 0} ${ts}`);
+
+      // ══════════════════════════════════════════════════════════
+      // WhiteLabel / Branding Metrics
+      // ══════════════════════════════════════════════════════════
+
+      const [
+        wlEnabledRes,
+        brandingUpdatesRes,
+        customDomainRes,
+      ] = await Promise.all([
+        // tenants with whitelabel enabled (plan allows it)
+        sb.from("tenant_plans").select("id", { count: "exact", head: true })
+          .contains("plan_limits", { can_white_label: true } as any),
+        // total branding version updates
+        sb.from("tenant_branding_versions").select("id", { count: "exact", head: true }),
+        // tenants with custom domain active
+        sb.from("tenant_plans").select("id", { count: "exact", head: true })
+          .contains("plan_limits", { custom_domain: true } as any),
+      ]);
+
+      // ── tenants_whitelabel_enabled_total ───────────────────────
+      lines.push("# HELP tenants_whitelabel_enabled_total Total tenants with whitelabel enabled");
+      lines.push("# TYPE tenants_whitelabel_enabled_total gauge");
+      lines.push(`tenants_whitelabel_enabled_total ${wlEnabledRes.count ?? 0} ${ts}`);
+
+      // ── branding_updates_total ─────────────────────────────────
+      lines.push("# HELP branding_updates_total Total branding version updates across all tenants");
+      lines.push("# TYPE branding_updates_total counter");
+      lines.push(`branding_updates_total ${brandingUpdatesRes.count ?? 0} ${ts}`);
+
+      // ── custom_domain_active_total ─────────────────────────────
+      lines.push("# HELP custom_domain_active_total Total tenants with custom domain active");
+      lines.push("# TYPE custom_domain_active_total gauge");
+      lines.push(`custom_domain_active_total ${customDomainRes.count ?? 0} ${ts}`);
+
+      return new Response(lines.join("\n") + "\n", {
         headers: {
           ...corsHeaders,
           "Content-Type": "text/plain; version=0.0.4; charset=utf-8",
