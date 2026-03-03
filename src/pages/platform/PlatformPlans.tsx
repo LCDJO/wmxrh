@@ -24,7 +24,7 @@ import {
 import {
   Package, Plus, Pencil, Trash2, CreditCard, Puzzle, Flag,
   AlertTriangle, Check, X, DollarSign, ToggleLeft, Users,
-  Link2, Info,
+  Link2, Info, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -55,20 +55,32 @@ interface ModuleTreeGroup {
 
 const MODULE_TREE_GROUPS: ModuleTreeGroup[] = [
   {
+    label: 'Organização',
+    trees: [
+      { key: 'companies', children: [] },
+      { key: 'groups', children: [] },
+      { key: 'departments', children: [] },
+      { key: 'positions', children: [] },
+    ],
+  },
+  {
     label: 'Gestão de Pessoas',
     trees: [
       {
-        key: 'core_hr', // depends on agreements (cross-group, handled separately)
+        key: 'core_hr',
         children: [
+          { key: 'employees', children: [] },
           { key: 'compensation', children: [
             { key: 'compensation_engine', children: [] },
             { key: 'payroll_sim', children: [] },
+            { key: 'payroll_simulation', children: [] },
           ]},
           { key: 'benefits', children: [] },
           { key: 'health', children: [
             { key: 'nr_training', children: [] },
           ]},
           { key: 'workforce_intel', children: [] },
+          { key: 'workforce_intelligence', children: [] },
         ],
       },
     ],
@@ -77,16 +89,20 @@ const MODULE_TREE_GROUPS: ModuleTreeGroup[] = [
     label: 'Compliance & Legal',
     trees: [
       {
-        key: 'agreements', // root — no deps
+        key: 'agreements',
         children: [
           { key: 'compliance', children: [
             { key: 'labor_rules', children: [] },
+            { key: 'labor_compliance', children: [] },
           ]},
-          { key: 'fleet_traccar', children: [] },
+          { key: 'audit', children: [] },
+          { key: 'fleet', children: [
+            { key: 'fleet_traccar', children: [] },
+          ]},
         ],
       },
       {
-        key: 'esocial', // depends on core_hr + compliance (cross-tree)
+        key: 'esocial',
         children: [
           { key: 'esocial_governance', children: [] },
         ],
@@ -102,7 +118,7 @@ const MODULE_TREE_GROUPS: ModuleTreeGroup[] = [
       { key: 'automation', children: [] },
       { key: 'observability', children: [] },
       { key: 'analytics', children: [] },
-      { key: 'autonomous_ops', children: [] }, // deps: observability + analytics
+      { key: 'autonomous_ops', children: [] },
       { key: 'support_module', children: [] },
     ],
   },
@@ -138,6 +154,9 @@ const CROSS_TREE_DEPS: Record<string, string[]> = {
   esocial: ['core_hr', 'compliance'],
   autonomous_ops: ['observability', 'analytics'],
   health: ['agreements'],
+  employees: ['core_hr'],
+  labor_compliance: ['labor_rules'],
+  fleet_traccar: ['fleet'],
 };
 
 const ALL_PAYMENT_METHODS = [
@@ -201,10 +220,12 @@ export default function PlatformPlans() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SaasPlan | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<SaasPlan | null>(null);
   const [form, setForm] = useState<PlanFormData>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const fetchPlans = useCallback(async () => {
     setLoading(true);
@@ -365,7 +386,64 @@ export default function PlatformPlans() {
     }));
   };
 
+  // ── Sync Modules: detect missing modules in each plan ──
+  const getMissingModulesPerPlan = () => {
+    return plans.map(plan => {
+      const existing = new Set(plan.allowed_modules ?? []);
+      const missing = ALL_MODULES.filter(m => !existing.has(m));
+      return { plan, missing };
+    });
+  };
+
+  const handleSyncModules = async (planId: string, modulesToAdd: string[]) => {
+    setSyncing(true);
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) { setSyncing(false); return; }
+    
+    const newModules = [...new Set([...(plan.allowed_modules ?? []), ...modulesToAdd])];
+    const { error } = await supabase
+      .from('saas_plans')
+      .update({ allowed_modules: newModules })
+      .eq('id', planId);
+    
+    if (error) {
+      toast.error('Erro ao atualizar módulos');
+      logger.error('Erro ao sincronizar módulos', { error });
+    } else {
+      toast.success(`${modulesToAdd.length} módulo(s) adicionado(s) ao plano ${plan.name}`);
+    }
+    setSyncing(false);
+    fetchPlans();
+  };
+
+  const handleSyncAllPlans = async () => {
+    setSyncing(true);
+    const perPlan = getMissingModulesPerPlan();
+    let totalAdded = 0;
+
+    for (const { plan, missing } of perPlan) {
+      if (missing.length === 0) continue;
+      const newModules = [...new Set([...(plan.allowed_modules ?? []), ...missing])];
+      const { error } = await supabase
+        .from('saas_plans')
+        .update({ allowed_modules: newModules })
+        .eq('id', plan.id);
+      if (!error) totalAdded += missing.length;
+    }
+
+    if (totalAdded > 0) {
+      toast.success(`${totalAdded} módulo(s) adicionado(s) em todos os planos`);
+    } else {
+      toast.info('Todos os planos já possuem todos os módulos');
+    }
+    setSyncing(false);
+    fetchPlans();
+  };
+
   if (loading) return <PlansSkeleton />;
+
+  const syncData = getMissingModulesPerPlan();
+  const totalMissing = syncData.reduce((s, d) => s + d.missing.length, 0);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -377,9 +455,19 @@ export default function PlatformPlans() {
             Crie, edite e configure planos SaaS, módulos, meios de pagamento e feature flags.
           </p>
         </div>
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="h-4 w-4" /> Novo Plano
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setSyncDialogOpen(true)} className="gap-2 relative">
+            <RefreshCw className="h-4 w-4" /> Atualizar Módulos
+            {totalMissing > 0 && (
+              <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] bg-amber-500 text-white border-0">
+                {totalMissing}
+              </Badge>
+            )}
+          </Button>
+          <Button onClick={openCreate} className="gap-2">
+            <Plus className="h-4 w-4" /> Novo Plano
+          </Button>
+        </div>
       </div>
 
       {/* Plan cards grid */}
@@ -713,6 +801,126 @@ export default function PlatformPlans() {
             <Button variant="destructive" onClick={handleDelete} className="gap-2">
               <Trash2 className="h-3.5 w-3.5" /> Excluir
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ Sync Modules Dialog ═══ */}
+      <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-primary" /> Atualizar Módulos dos Planos
+            </DialogTitle>
+            <DialogDescription>
+              Visualize todos os módulos desenvolvidos e sincronize com os planos. Módulos faltantes são destacados para fácil identificação.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-2">
+            {/* Summary */}
+            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
+              <div className="text-sm">
+                <span className="font-medium text-foreground">{ALL_MODULES.length}</span>{' '}
+                <span className="text-muted-foreground">módulos registrados</span>
+                {totalMissing > 0 && (
+                  <>
+                    {' · '}
+                    <span className="font-medium text-amber-500">{totalMissing}</span>{' '}
+                    <span className="text-muted-foreground">pendentes de sincronização</span>
+                  </>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant="default"
+                className="gap-2"
+                disabled={totalMissing === 0 || syncing}
+                onClick={handleSyncAllPlans}
+              >
+                <RefreshCw className={cn('h-3.5 w-3.5', syncing && 'animate-spin')} />
+                Liberar Todos
+              </Button>
+            </div>
+
+            {/* Per-plan breakdown */}
+            {syncData.map(({ plan, missing }) => (
+              <div key={plan.id} className="rounded-xl border border-border overflow-hidden">
+                {/* Plan header */}
+                <div className="flex items-center justify-between bg-muted/50 px-4 py-3 border-b border-border">
+                  <div className="flex items-center gap-3">
+                    <Package className="h-4 w-4 text-primary" />
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{plan.name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        R$ {plan.price.toFixed(2).replace('.', ',')} / {plan.billing_cycle === 'monthly' ? 'mês' : 'ano'}
+                        {' · '}
+                        {(plan.allowed_modules ?? []).length} módulos ativos
+                      </p>
+                    </div>
+                  </div>
+                  {missing.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 text-xs"
+                      disabled={syncing}
+                      onClick={() => handleSyncModules(plan.id, missing)}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Adicionar {missing.length} módulo(s)
+                    </Button>
+                  )}
+                  {missing.length === 0 && (
+                    <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-300 bg-emerald-50">
+                      <Check className="h-3 w-3 mr-1" /> Completo
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Module grid */}
+                <div className="p-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {ALL_MODULES.map(moduleKey => {
+                      const isIncluded = (plan.allowed_modules ?? []).includes(moduleKey);
+                      const isMissing = missing.includes(moduleKey);
+                      return (
+                        <div
+                          key={moduleKey}
+                          className={cn(
+                            'flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-all',
+                            isIncluded
+                              ? 'border-primary/30 bg-primary/5 text-foreground'
+                              : 'border-amber-300 bg-amber-50 text-amber-700',
+                          )}
+                        >
+                          {isIncluded
+                            ? <Check className="h-3 w-3 text-primary shrink-0" />
+                            : <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                          }
+                          <span className="truncate">{MODULE_LABEL_MAP[moduleKey] ?? moduleKey}</span>
+                          {isMissing && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-5 w-5 ml-auto shrink-0"
+                              disabled={syncing}
+                              onClick={() => handleSyncModules(plan.id, [moduleKey])}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSyncDialogOpen(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
