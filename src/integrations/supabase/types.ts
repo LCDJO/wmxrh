@@ -20283,6 +20283,41 @@ export type Database = {
           },
         ]
       }
+      tenant_branding_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          snapshot_config: Json
+          tenant_id: string
+          version_id: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          snapshot_config: Json
+          tenant_id: string
+          version_id: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          snapshot_config?: Json
+          tenant_id?: string
+          version_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_branding_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_domains: {
         Row: {
           created_at: string
