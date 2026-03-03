@@ -1021,60 +1021,177 @@ function computeCompositeScore(
 
 // ── 7. RefactorSuggestionEngine ──
 
-function generateSuggestions(profile: Omit<ModuleRiskProfile, 'suggestions'>): RefactorSuggestion[] {
+function generateSuggestions(
+  profile: Omit<ModuleRiskProfile, 'suggestions'>,
+  couplingMetrics?: CouplingMetrics,
+  bidirectionalDeps?: BidirectionalDependency[],
+  crossDomainViolations?: CrossDomainViolation[],
+): RefactorSuggestion[] {
   const suggestions: RefactorSuggestion[] = [];
   const mk = profile.module_key;
+  const ml = profile.module_label;
+
+  // ── 1. Desacoplamento ──
 
   if (profile.circular_risk > 0) {
     suggestions.push({
       id: `refactor-circular-${mk}`,
       priority: 'critical',
-      title: `Eliminar dependência circular em ${profile.module_label}`,
-      description: 'Introduzir uma interface/contrato de eventos para quebrar o ciclo. Considere Dependency Inversion Principle ou mediator pattern.',
+      title: `Quebrar ciclo circular de ${ml}`,
+      description: 'Introduzir event bus ou mediator pattern para eliminar dependência circular. Aplique Dependency Inversion: ambos os módulos dependem de uma abstração compartilhada, nunca um do outro diretamente.',
       affected_modules: [mk],
       effort_estimate: 'large',
     });
   }
 
-  if (profile.dependency_risk >= 60) {
+  if (profile.dependency_risk >= 61) {
     suggestions.push({
-      id: `refactor-fanin-${mk}`,
+      id: `refactor-decouple-fanin-${mk}`,
       priority: 'high',
-      title: `Reduzir fan-in de ${profile.module_label}`,
-      description: 'Extrair interfaces estáveis (abstrações) para reduzir acoplamento direto. Módulos devem depender de contratos, não de implementações.',
+      title: `Desacoplar dependentes de ${ml}`,
+      description: `Fan-in elevado indica que muitos módulos dependem diretamente. Extraia interfaces estáveis (ports/adapters) para que dependentes usem contratos, não a implementação concreta. Considere facade pattern para agrupar operações.`,
       affected_modules: [mk],
       effort_estimate: 'medium',
     });
   }
 
-  if (profile.coupling_risk >= 50) {
+  if (profile.dependency_risk_detail.is_fragile) {
     suggestions.push({
-      id: `refactor-coupling-${mk}`,
+      id: `refactor-decouple-fanout-${mk}`,
       priority: 'high',
-      title: `Melhorar estabilidade de ${profile.module_label}`,
-      description: 'Módulo está na zona de dor (alta estabilidade + baixa abstração) ou zona de inutilidade. Reestruturar para aproximar da main sequence.',
+      title: `Reduzir dependências de ${ml}`,
+      description: `Módulo frágil com fan-out de ${profile.dependency_risk_detail.fan_out}. Cada dependência é um ponto de falha. Agrupe dependências atrás de um gateway/agregador ou substitua chamadas diretas por eventos assíncronos.`,
       affected_modules: [mk],
       effort_estimate: 'medium',
     });
+  }
+
+  // ── 2. Separação de Domínio ──
+
+  const moduleViolations = crossDomainViolations?.filter(v => v.from_module === mk || v.to_module === mk) ?? [];
+  if (moduleViolations.length > 0) {
+    const saasToTenant = moduleViolations.filter(v => v.direction === 'saas→tenant');
+    const tenantToSaas = moduleViolations.filter(v => v.direction === 'tenant→saas');
+
+    if (saasToTenant.length > 0) {
+      suggestions.push({
+        id: `refactor-domain-isolation-s2t-${mk}`,
+        priority: 'critical',
+        title: `Isolar ${ml} da camada Tenant`,
+        description: `Platform/SaaS não deve depender diretamente de módulos Tenant (${saasToTenant.map(v => v.to_module).join(', ')}). Substitua por eventos normalizados (domain events) que o Tenant subscreve. O SaaS emite, Tenant reage — nunca o contrário.`,
+        affected_modules: [mk, ...saasToTenant.map(v => v.to_module)],
+        effort_estimate: 'large',
+      });
+    }
+
+    if (tenantToSaas.length > 0 && tenantToSaas.some(v => v.is_mandatory)) {
+      suggestions.push({
+        id: `refactor-domain-isolation-t2s-${mk}`,
+        priority: 'high',
+        title: `Converter dependência mandatória de ${ml} para leitura`,
+        description: `Tenant tem dependência mandatória em Platform (${tenantToSaas.map(v => v.to_module).join(', ')}). Refatore para que Tenant apenas consulte catálogos/configurações via interface de leitura (query), sem mutações diretas na camada Platform.`,
+        affected_modules: [mk, ...tenantToSaas.map(v => v.to_module)],
+        effort_estimate: 'medium',
+      });
+    }
+  }
+
+  // ── 3. Divisão de Módulo ──
+
+  const totalConnections = profile.dependency_risk_detail.total_direct_dependencies;
+  const eventSurface = profile.criticality_detail.event_surface;
+
+  if (totalConnections >= 8 || (totalConnections >= 6 && eventSurface >= 6)) {
+    suggestions.push({
+      id: `refactor-split-${mk}`,
+      priority: 'high',
+      title: `Dividir ${ml} em sub-módulos`,
+      description: `Módulo excessivamente conectado (${totalConnections} conexões diretas, ${eventSurface} eventos). Indício de God Module. Identifique responsabilidades distintas e extraia sub-módulos coesos com Single Responsibility Principle. Ex: separar lógica de negócio, integração e apresentação.`,
+      affected_modules: [mk],
+      effort_estimate: 'large',
+    });
+  }
+
+  if (profile.criticality_score >= 61 && profile.dependency_risk >= 41) {
+    suggestions.push({
+      id: `refactor-split-critical-${mk}`,
+      priority: 'critical',
+      title: `Decompor módulo crítico ${ml}`,
+      description: `Módulo é simultaneamente crítico (score ${profile.criticality_score}) e com alto risco de dependência (${profile.dependency_risk}). Separe o core estável (API pública + contratos) de partes voláteis (regras de negócio, integrações). O core permanece imutável enquanto as partes voláteis evoluem independentemente.`,
+      affected_modules: [mk],
+      effort_estimate: 'large',
+    });
+  }
+
+  // ── 4. Event-Driven ao invés de chamada direta ──
+
+  const moduleBiDirs = bidirectionalDeps?.filter(b => b.module_a === mk || b.module_b === mk) ?? [];
+  if (moduleBiDirs.length > 0) {
+    const peers = moduleBiDirs.map(b => b.module_a === mk ? b.module_b : b.module_a);
+    suggestions.push({
+      id: `refactor-eventdriven-bidir-${mk}`,
+      priority: 'critical',
+      title: `Converter ${ml} ↔ ${peers.join(', ')} para event-driven`,
+      description: `Dependência bidirecional detectada. Substitua chamadas diretas por domain events: ${ml} emite eventos que ${peers.join(', ')} consome(m) e vice-versa. Use um event bus central (PlatformEventBus) para desacoplar completamente. Padrão: emit → subscribe → handle.`,
+      affected_modules: [mk, ...peers],
+      effort_estimate: 'large',
+    });
+  }
+
+  if (profile.coupling_risk >= 31 && couplingMetrics) {
+    if (couplingMetrics.instability > 0.7 && couplingMetrics.efferent_coupling >= 3) {
+      suggestions.push({
+        id: `refactor-eventdriven-unstable-${mk}`,
+        priority: 'high',
+        title: `Substituir chamadas diretas de ${ml} por eventos`,
+        description: `Módulo instável (I=${couplingMetrics.instability.toFixed(2)}) com ${couplingMetrics.efferent_coupling} dependências de saída. Converta chamadas síncronas em eventos assíncronos: ao invés de \`moduleB.doAction()\`, emita \`${mk}.action_requested\` e deixe o módulo alvo reagir. Reduz acoplamento temporal e permite retry/replay.`,
+        affected_modules: [mk],
+        effort_estimate: 'medium',
+      });
+    }
+
+    if (couplingMetrics.zone === 'zone_of_pain') {
+      suggestions.push({
+        id: `refactor-abstract-${mk}`,
+        priority: 'high',
+        title: `Aumentar abstração de ${ml}`,
+        description: `Módulo na Zona de Dor (alta estabilidade + baixa abstração). Introduza interfaces/contratos que outros módulos consumam. Exponha capabilities via eventos em vez de API direta. Isso permite evolução sem quebrar dependentes.`,
+        affected_modules: [mk],
+        effort_estimate: 'medium',
+      });
+    }
+
+    if (couplingMetrics.zone === 'zone_of_uselessness') {
+      suggestions.push({
+        id: `refactor-consolidate-${mk}`,
+        priority: 'medium',
+        title: `Consolidar ou remover ${ml}`,
+        description: `Módulo na Zona de Inutilidade (alta instabilidade + alta abstração). Abstrações sem uso real. Considere consolidar com outro módulo ou remover se não há consumidores reais dos contratos expostos.`,
+        affected_modules: [mk],
+        effort_estimate: 'small',
+      });
+    }
   }
 
   if (profile.change_impact_radius >= 5) {
     suggestions.push({
-      id: `refactor-blast-${mk}`,
+      id: `refactor-blast-eventdriven-${mk}`,
       priority: 'high',
-      title: `Reduzir blast radius de ${profile.module_label}`,
-      description: `Mudanças impactam ${profile.change_impact_radius} módulos. Considere versionamento semântico estrito e contratos de interface para limitar propagação.`,
+      title: `Limitar propagação de mudanças de ${ml}`,
+      description: `Blast radius de ${profile.change_impact_radius} módulos. Use versionamento semântico estrito nos contratos + eventos versionados (v1, v2) para permitir evolução sem forçar atualização simultânea de todos os dependentes. Implemente anti-corruption layers nos consumidores.`,
       affected_modules: [mk],
       effort_estimate: 'large',
     });
   }
 
-  if (profile.criticality_score >= 60 && profile.dependency_risk >= 40) {
+  // ── 5. Resiliência (para módulos críticos) ──
+
+  if (profile.criticality_score >= 61 && profile.dependency_risk >= 31) {
     suggestions.push({
       id: `refactor-resilience-${mk}`,
       priority: 'critical',
-      title: `Aumentar resiliência de ${profile.module_label}`,
-      description: 'Módulo crítico com alta exposição a dependências. Implementar circuit breakers, fallbacks e degradação graceful.',
+      title: `Implementar resiliência em ${ml}`,
+      description: 'Módulo crítico com exposição a dependências. Implementar: circuit breakers para chamadas externas, fallbacks com degradação graceful, bulkheads para isolamento de falhas, e health checks ativos. Priorizar operações idempotentes e retry com backoff.',
       affected_modules: [mk],
       effort_estimate: 'medium',
     });
@@ -1156,7 +1273,10 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
       suggestions: [] as RefactorSuggestion[],
     };
 
-    profileBase.suggestions = generateSuggestions(profileBase);
+    const modCoupling = analyzeCoupling(mod.key, edges, modules, bidirectionalDeps, crossDomainViolations).metrics;
+    const modBiDirs = bidirectionalDeps.filter(b => b.module_a === mod.key || b.module_b === mod.key);
+    const modViolations = crossDomainViolations.filter(v => v.from_module === mod.key || v.to_module === mod.key);
+    profileBase.suggestions = generateSuggestions(profileBase, modCoupling, modBiDirs, modViolations);
     return profileBase;
   });
 
