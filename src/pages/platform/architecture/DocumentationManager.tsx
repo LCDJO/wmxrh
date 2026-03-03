@@ -8,7 +8,7 @@
  * - Add technical notes
  * - All changes generate ArchitectureChangeLog entries
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { createArchitectureIntelligenceEngine } from '@/domains/architecture-intelligence';
 import { ChangeLogger } from '@/domains/platform-versioning/change-logger';
 import type { ArchModuleInfo, ArchDeliverable, ArchDocEntry, DeliverableStatus } from '@/domains/architecture-intelligence/types';
@@ -20,10 +20,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import {
   FileText, Edit3, CheckCircle, PlusCircle, BookOpen,
   Lightbulb, ClipboardList, Save, Search, Clock,
+  RefreshCw, Tag, ArrowUpCircle, Pencil,
 } from 'lucide-react';
 
 const STATUS_COLORS: Record<DeliverableStatus, string> = {
@@ -62,6 +65,32 @@ export default function DocumentationManager() {
     m.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.key.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // ── Batch update handler (from "Atualizar Documentação" button) ──
+  const handleBatchUpdate = useCallback(async (update: {
+    completedDeliverables: string[];
+    progressNote: string;
+    newVersionTag: string;
+    moduleKey: string;
+  }) => {
+    const mod = modules.find(m => m.key === update.moduleKey);
+    const modLabel = mod?.label ?? update.moduleKey;
+
+    for (const dId of update.completedDeliverables) {
+      const d = allDeliverables.find(x => x.id === dId);
+      await addToChangelog('deliverable_completed', update.moduleKey, `Entregável "${d?.title ?? dId}" marcado como concluído`);
+    }
+
+    if (update.progressNote.trim()) {
+      await addToChangelog('progress_registered', update.moduleKey, `Progresso: ${update.progressNote}`);
+    }
+
+    if (update.newVersionTag.trim()) {
+      await addToChangelog('version_updated', update.moduleKey, `Versão arquitetural atualizada para ${update.newVersionTag} — ${modLabel}`);
+    }
+
+    toast.success(`Documentação de ${modLabel} atualizada com sucesso`);
+  }, [modules, allDeliverables]);
 
   // ── Changelog helper ──
   const addToChangelog = async (type: string, moduleKey: string, description: string) => {
@@ -107,10 +136,18 @@ export default function DocumentationManager() {
             </p>
           </div>
         </div>
-        <Badge variant="outline" className="gap-1">
-          <Clock className="h-3 w-3" />
-          {localChangelog.length} alterações na sessão
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="gap-1">
+            <Clock className="h-3 w-3" />
+            {localChangelog.length} alterações na sessão
+          </Badge>
+          <UpdateDocumentationDialog
+            modules={modules}
+            allDeliverables={allDeliverables}
+            selectedModule={selectedModule}
+            onApply={handleBatchUpdate}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-12 gap-6">
@@ -479,4 +516,214 @@ function TechnicalNotes({ module, onAdd }: { module: ArchModuleInfo; onAdd: (tit
       )}
     </div>
   );
+}
+
+// ── "Atualizar Documentação" structured editor dialog ──
+
+interface UpdateDialogProps {
+  modules: ArchModuleInfo[];
+  allDeliverables: ArchDeliverable[];
+  selectedModule: string;
+  onApply: (update: {
+    completedDeliverables: string[];
+    progressNote: string;
+    newVersionTag: string;
+    moduleKey: string;
+  }) => void;
+}
+
+function UpdateDocumentationDialog({ modules, allDeliverables, selectedModule, onApply }: UpdateDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [moduleKey, setModuleKey] = useState(selectedModule);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [progressNote, setProgressNote] = useState('');
+  const [newVersion, setNewVersion] = useState('');
+
+  const moduleDeliverables = allDeliverables.filter(d => d.module_key === moduleKey);
+  const pendingDeliverables = moduleDeliverables.filter(d => d.status !== 'done');
+  const currentModule = modules.find(m => m.key === moduleKey);
+
+  const handleOpen = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) {
+      setModuleKey(selectedModule);
+      setCompletedIds(new Set());
+      setProgressNote('');
+      setNewVersion(currentModule?.version_tag ? bumpPatch(currentModule.version_tag) : '');
+    }
+  };
+
+  const toggleDeliverable = (id: string) => {
+    setCompletedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleApply = () => {
+    onApply({
+      completedDeliverables: Array.from(completedIds),
+      progressNote,
+      newVersionTag: newVersion,
+      moduleKey,
+    });
+    setOpen(false);
+  };
+
+  const hasChanges = completedIds.size > 0 || progressNote.trim() || newVersion.trim();
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Atualizar Documentação
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="h-5 w-5 text-primary" />
+            Atualizar Documentação do Módulo
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 py-2">
+          {/* Module selector */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Módulo</label>
+            <Select value={moduleKey} onValueChange={setModuleKey}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {modules.map(m => (
+                  <SelectItem key={m.key} value={m.key}>
+                    <div className="flex items-center gap-2">
+                      <span>{m.label}</span>
+                      <Badge variant="outline" className="text-[10px]">{m.domain}</Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Separator />
+
+          {/* Section 1: Mark deliverables as done */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Marcar Entregáveis como Concluídos</h3>
+            </div>
+            {pendingDeliverables.length === 0 ? (
+              <p className="text-xs text-muted-foreground pl-6">Todos os entregáveis já estão concluídos ✓</p>
+            ) : (
+              <div className="space-y-2 pl-6">
+                {pendingDeliverables.map(d => (
+                  <label
+                    key={d.id}
+                    className="flex items-start gap-3 p-2 rounded-lg hover:bg-accent/30 cursor-pointer transition-colors"
+                  >
+                    <Checkbox
+                      checked={completedIds.has(d.id)}
+                      onCheckedChange={() => toggleDeliverable(d.id)}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-foreground">{d.title}</span>
+                      {d.description && <p className="text-xs text-muted-foreground">{d.description}</p>}
+                      <Badge variant="outline" className="text-[10px] mt-1">{d.status}</Badge>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Section 2: Register progress */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Registrar Progresso</h3>
+            </div>
+            <Textarea
+              placeholder="Descreva o progresso realizado, decisões tomadas ou observações relevantes..."
+              value={progressNote}
+              onChange={e => setProgressNote(e.target.value)}
+              rows={4}
+              className="ml-6"
+            />
+          </div>
+
+          <Separator />
+
+          {/* Section 3: Update architectural version */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <ArrowUpCircle className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Atualizar Versão Arquitetural</h3>
+            </div>
+            <div className="flex items-center gap-3 pl-6">
+              <div className="flex items-center gap-2 text-sm">
+                <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">Atual:</span>
+                <Badge variant="outline">{currentModule?.version_tag ?? '—'}</Badge>
+              </div>
+              <span className="text-muted-foreground">→</span>
+              <Input
+                placeholder="ex: v1.1.0"
+                value={newVersion}
+                onChange={e => setNewVersion(e.target.value)}
+                className="w-32"
+              />
+            </div>
+          </div>
+
+          {/* Summary */}
+          {hasChanges && (
+            <>
+              <Separator />
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="py-3">
+                  <h4 className="text-xs font-semibold text-primary mb-2">Resumo das Alterações</h4>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    {completedIds.size > 0 && (
+                      <li>• {completedIds.size} entregável(is) marcado(s) como concluído(s)</li>
+                    )}
+                    {progressNote.trim() && <li>• Nota de progresso registrada</li>}
+                    {newVersion.trim() && (
+                      <li>• Versão atualizada: {currentModule?.version_tag ?? '—'} → {newVersion}</li>
+                    )}
+                  </ul>
+                  <p className="text-xs text-muted-foreground mt-2 italic">
+                    Todas as alterações serão registradas no ArchitectureChangeLog
+                  </p>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button onClick={handleApply} disabled={!hasChanges} className="gap-2">
+            <Save className="h-4 w-4" />
+            Aplicar Alterações
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function bumpPatch(tag: string): string {
+  const match = tag.match(/^v?(\d+)\.(\d+)\.(\d+)/);
+  if (!match) return tag;
+  return `v${match[1]}.${match[2]}.${Number(match[3]) + 1}`;
 }
