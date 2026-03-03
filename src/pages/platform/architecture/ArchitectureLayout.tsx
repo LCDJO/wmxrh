@@ -3,9 +3,10 @@
  */
 import { Outlet, useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
-import { Boxes, Server, Shield, Briefcase, GitBranch, Activity, BookOpen } from 'lucide-react';
+import { Boxes, Server, Shield, Briefcase, GitBranch, Activity, BookOpen, LayoutDashboard } from 'lucide-react';
 
 const NAV_ITEMS = [
+  { label: 'Dashboard', path: '/platform/structure/architecture/dashboard', icon: LayoutDashboard, description: 'Visão geral da arquitetura' },
   { label: 'SaaS Core', path: '/platform/structure/architecture/saas-core', icon: Server, description: 'Módulos de infraestrutura SaaS' },
   { label: 'Tenant Modules', path: '/platform/structure/architecture/tenant-modules', icon: Briefcase, description: 'Módulos de domínio RH' },
   { label: 'Dependency Graph', path: '/platform/structure/architecture/dependency-graph', icon: GitBranch, description: 'Grafo de dependências entre módulos' },
