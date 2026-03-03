@@ -90,7 +90,9 @@ import FederationOAuthClients from '@/pages/platform/federation/FederationOAuthC
 import FederationTokenSettings from '@/pages/platform/federation/FederationTokenSettings';
 import FederationAuditLogs from '@/pages/platform/federation/FederationAuditLogs';
 import PlatformScim from '@/pages/platform/security/PlatformScim';
-import PlatformArchitectureIntelligence from '@/pages/platform/PlatformArchitectureIntelligence';
+import ArchitectureLayout from '@/pages/platform/architecture/ArchitectureLayout';
+import ArchitectureSaasCore from '@/pages/platform/architecture/ArchitectureSaasCore';
+import ArchitectureTenantModules from '@/pages/platform/architecture/ArchitectureTenantModules';
 
 const IncidentManagementDashboard = lazy(() => import('@/modules/incident-management/ui/IncidentManagementDashboard'));
 const GovernancePolicies = lazy(() => import('@/pages/platform/governance/GovernancePolicies'));
@@ -214,7 +216,15 @@ export const platformRoutes: RouteObject[] = [
         { path: 'events', element: <PlatformEvents /> },
         { path: 'menus', element: <PlatformMenuStructure /> },
         { path: 'modules', element: <PlatformModulesCatalog /> },
-        { path: 'architecture', element: <PlatformArchitectureIntelligence /> },
+        {
+          path: 'architecture',
+          element: <ArchitectureLayout />,
+          children: [
+            { index: true, element: <Navigate to="/platform/structure/architecture/saas-core" replace /> },
+            { path: 'saas-core', element: <ArchitectureSaasCore /> },
+            { path: 'tenant-modules', element: <ArchitectureTenantModules /> },
+          ],
+        },
       ]),
 
       // ── Settings ── (shared opsAdmin guard)
