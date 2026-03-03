@@ -12,6 +12,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { createPlatformExperienceEngine, type ExtendedPlatformExperienceEngineAPI } from '@/domains/platform-experience/platform-experience-engine';
+import { inferPlanTier } from '@/domains/platform-experience/infer-plan-tier';
 import type {
   PlanDefinition,
   TenantPlanSnapshot,
@@ -48,7 +49,7 @@ function ensureSeeded(engine: ExtendedPlatformExperienceEngineAPI): Promise<void
       const def: PlanDefinition = {
         id: row.id,
         name: row.name,
-        tier: inferTier(row.price, idx),
+        tier: inferPlanTier(row.name, row.price),
         description: row.description ?? '',
         included_modules: row.allowed_modules ?? [],
         addon_modules: [],
@@ -214,12 +215,4 @@ export function usePXE() {
   };
 }
 
-// ── Helpers ──
-
-function inferTier(price: number, index: number): 'free' | 'starter' | 'professional' | 'enterprise' | 'custom' {
-  if (price === 0) return 'free';
-  if (index <= 1) return 'starter';
-  if (index === 2) return 'professional';
-  if (index >= 3) return 'enterprise';
-  return 'custom';
-}
+// inferPlanTier is now imported from @/domains/platform-experience/infer-plan-tier

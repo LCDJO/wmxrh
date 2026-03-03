@@ -336,6 +336,13 @@ const USAGE_BILLING_RULES: Record<PlanTier, UsageBillingRules> = {
     overageCostPer1k_brl: 2.50,
     autoUpgradeOnOverage: false,
   },
+  pro: {
+    hardLimitPerDay: 20_000,
+    softLimitPerDay: 15_000,
+    overageBillable: true,
+    overageCostPer1k_brl: 1.50,
+    autoUpgradeOnOverage: false,
+  },
   professional: {
     hardLimitPerDay: 20_000,
     softLimitPerDay: 15_000,
@@ -363,6 +370,7 @@ const USAGE_BILLING_RULES: Record<PlanTier, UsageBillingRules> = {
 const PLAN_RATE_LIMITS: Record<PlanTier, { perMinute: number; perHour: number; burst: number; concurrent: number }> = {
   free:         { perMinute: 10,  perHour: 100,   burst: 3,  concurrent: 2 },
   starter:      { perMinute: 30,  perHour: 500,   burst: 5,  concurrent: 3 },
+  pro:          { perMinute: 60,  perHour: 2000,  burst: 10, concurrent: 5 },
   professional: { perMinute: 60,  perHour: 2000,  burst: 10, concurrent: 5 },
   enterprise:   { perMinute: 300, perHour: 10000, burst: 50, concurrent: 20 },
   custom:       { perMinute: 600, perHour: 30000, burst: 100, concurrent: 50 },

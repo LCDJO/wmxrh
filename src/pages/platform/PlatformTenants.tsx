@@ -2,6 +2,7 @@
  * /platform/tenants — Full tenant management page with CRUD + detailed analytics
  */
 import { useState, useEffect, useCallback } from 'react';
+import { inferPlanTier } from '@/domains/platform-experience/infer-plan-tier';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { useAuth } from '@/contexts/AuthContext';
@@ -213,7 +214,7 @@ export default function PlatformTenants() {
       map[row.tenant_id] = {
         planId: row.plan_id,
         planName: name,
-        tier: price === 0 ? 'free' : price <= 199 ? 'starter' : price <= 499 ? 'pro' : 'enterprise',
+        tier: inferPlanTier(name, price),
         status: row.status,
         billingCycle: row.billing_cycle,
       };

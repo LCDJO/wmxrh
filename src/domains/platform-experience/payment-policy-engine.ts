@@ -11,6 +11,17 @@ import type {
   PlanRegistryAPI,
 } from './types';
 
+const _proProfessionalPolicy = {
+  plan_tier: 'pro' as PlanTier,
+  allowed_methods: ['credit_card', 'pix', 'boleto', 'bank_transfer'] as any[],
+  requires_contract: false,
+  min_commitment_months: 1,
+  allow_installments: true,
+  max_installments: 12,
+  late_payment_grace_days: 7,
+  auto_suspend_after_days: 20,
+  auto_cancel_after_days: 45,
+};
 const DEFAULT_POLICIES: Record<PlanTier, PaymentPolicy> = {
   free: {
     plan_tier: 'free',
@@ -34,17 +45,8 @@ const DEFAULT_POLICIES: Record<PlanTier, PaymentPolicy> = {
     auto_suspend_after_days: 15,
     auto_cancel_after_days: 30,
   },
-  professional: {
-    plan_tier: 'professional',
-    allowed_methods: ['credit_card', 'pix', 'boleto', 'bank_transfer'],
-    requires_contract: false,
-    min_commitment_months: 1,
-    allow_installments: true,
-    max_installments: 12,
-    late_payment_grace_days: 7,
-    auto_suspend_after_days: 20,
-    auto_cancel_after_days: 45,
-  },
+  pro: _proProfessionalPolicy,
+  professional: { ..._proProfessionalPolicy, plan_tier: 'professional' },
   enterprise: {
     plan_tier: 'enterprise',
     allowed_methods: ['credit_card', 'pix', 'boleto', 'bank_transfer', 'invoice'],

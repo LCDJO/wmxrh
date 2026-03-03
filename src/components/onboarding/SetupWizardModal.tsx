@@ -54,6 +54,7 @@ const WIZARD_STEPS: { key: WizardStep; label: string; icon: typeof Sparkles }[] 
 const PLAN_LABELS: Record<PlanTier, { label: string; color: string }> = {
   free: { label: 'Free', color: 'bg-muted text-muted-foreground' },
   starter: { label: 'Starter', color: 'bg-info/10 text-info' },
+  pro: { label: 'Pro', color: 'bg-primary/10 text-primary' },
   professional: { label: 'Professional', color: 'bg-primary/10 text-primary' },
   enterprise: { label: 'Enterprise', color: 'bg-warning/10 text-warning' },
   custom: { label: 'Custom', color: 'bg-accent text-accent-foreground' },

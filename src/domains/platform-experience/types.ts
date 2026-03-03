@@ -23,7 +23,7 @@ import type { ModuleKey } from '@/domains/platform/platform-modules';
 // Plan Registry
 // ══════════════════════════════════════════════════════════════════
 
-export type PlanTier = 'free' | 'starter' | 'professional' | 'enterprise' | 'custom';
+export type PlanTier = 'free' | 'starter' | 'pro' | 'professional' | 'enterprise' | 'custom';
 export type PlanStatus = 'active' | 'suspended' | 'cancelled' | 'trial' | 'past_due';
 export type BillingCycle = 'monthly' | 'quarterly' | 'annual' | 'custom';
 
