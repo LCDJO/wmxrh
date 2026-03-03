@@ -15,6 +15,7 @@ import type { TenantRole } from '@/domains/shared/types';
 import type { MenuHierarchy, MenuNode } from './menu-hierarchy-builder';
 import type { NavigationVersion, NavigationDiff, RollbackResult } from './navigation-version-manager';
 import type { ModuleDomain, DomainClassification } from './menu-domain-classifier';
+import type { NavigationDraft, CreateDraftInput, ApplyResult, DraftStatus } from './navigation-controlled-execution';
 
 import {
   classifyModule,
@@ -36,6 +37,16 @@ import {
   rollbackToVersion,
 } from './navigation-version-manager';
 import { NAVIGATION_GOVERNANCE_EVENTS } from './navigation-governance-events';
+import {
+  createNavigationDraft,
+  previewDraft,
+  listDrafts,
+  submitDraftForApproval,
+  approveDraft,
+  rejectDraft,
+  applyApprovedDraft,
+  getDraft,
+} from './navigation-controlled-execution';
 
 // ── Public API ───────────────────────────────────────────────
 
@@ -62,6 +73,16 @@ export interface NavigationRefactorEngineAPI {
   listVersions: () => NavigationVersion[];
   diffVersions: (from: number, to: number) => NavigationDiff | null;
   rollback: (targetVersion: number, by: string) => RollbackResult;
+
+  // Controlled Execution (Draft → Approve → Apply)
+  createDraft: (input: CreateDraftInput) => NavigationDraft;
+  previewDraft: (draftId: string) => NavigationDraft | null;
+  listDrafts: (status?: DraftStatus) => NavigationDraft[];
+  submitForApproval: (draftId: string) => NavigationDraft | null;
+  approveDraft: (draftId: string, approvedBy: string, notes?: string) => NavigationDraft | null;
+  rejectDraft: (draftId: string, rejectedBy: string, reason: string) => NavigationDraft | null;
+  applyDraft: (draftId: string) => ApplyResult;
+  getDraft: (draftId: string) => NavigationDraft | null;
 
   // Events
   events: typeof NAVIGATION_GOVERNANCE_EVENTS;
@@ -137,6 +158,15 @@ export function createNavigationRefactorEngine(): NavigationRefactorEngineAPI {
     listVersions,
     diffVersions,
     rollback: rollbackToVersion,
+
+    createDraft: createNavigationDraft,
+    previewDraft,
+    listDrafts,
+    submitForApproval: submitDraftForApproval,
+    approveDraft,
+    rejectDraft,
+    applyDraft: applyApprovedDraft,
+    getDraft,
 
     events: NAVIGATION_GOVERNANCE_EVENTS,
   };
