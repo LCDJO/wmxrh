@@ -114,6 +114,7 @@ const financeAdmin: PlatformRoleType[] = ['platform_super_admin', 'platform_oper
 const marketingRoles: PlatformRoleType[] = ['platform_super_admin', 'platform_operations', 'platform_marketing', 'platform_marketing_director', 'platform_marketing_team'];
 const supportRoles: PlatformRoleType[] = ['platform_super_admin', 'platform_operations', 'platform_support', 'platform_support_agent', 'platform_support_manager', 'platform_support_coordinator'];
 const marketplaceAdmin: PlatformRoleType[] = ['platform_super_admin', 'platform_operations', 'platform_marketplace_admin'];
+const architectureAdmin: PlatformRoleType[] = ['platform_super_admin', 'platform_operations', 'platform_architect'];
 
 /**
  * Creates a parent route that applies a shared PlatformGuard for all children.
@@ -222,7 +223,7 @@ export const platformRoutes: RouteObject[] = [
         { path: 'modules', element: <PlatformModulesCatalog /> },
         {
           path: 'architecture',
-          element: <ArchitectureLayout />,
+          element: <PlatformGuard allowedRoles={architectureAdmin}><ArchitectureLayout /></PlatformGuard>,
           children: [
             { index: true, element: <Navigate to="/platform/structure/architecture/dashboard" replace /> },
             { path: 'dashboard', element: <ArchitectureDashboard /> },

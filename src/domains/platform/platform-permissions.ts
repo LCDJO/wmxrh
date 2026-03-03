@@ -306,6 +306,16 @@ const PLATFORM_PERMISSION_MATRIX: Record<PlatformRoleType, readonly PlatformPerm
     'audit.view',
     'platform_user.view',
   ],
+
+  platform_architect: [
+    'module.view',
+    'module.enable',
+    'module.disable',
+    'audit.view',
+    'versioning.view',
+    'versioning.view',
+    'platform_user.view',
+  ],
 };
 
 // ═══════════════════════════════════
