@@ -51,9 +51,14 @@ export interface UpdateBrandingProfileDTO {
 
 export interface GeneratedTheme {
   cssVariables: Record<string, string>;
+  darkCssVariables: Record<string, string>;
   tailwindOverrides: Record<string, string>;
   source: 'tenant' | 'default';
   version_id: number;
+  /** Sanitized CSS text for light mode injection */
+  cssText: string;
+  /** Sanitized CSS text for dark mode injection */
+  darkCssText: string;
 }
 
 // ── Report Customization ──
