@@ -17501,6 +17501,9 @@ export type Database = {
       }
       saas_plans: {
         Row: {
+          allow_custom_domain: boolean
+          allow_custom_reports: boolean
+          allow_whitelabel: boolean
           allowed_modules: string[]
           allowed_payment_methods: string[]
           annual_discount_pct: number | null
@@ -17523,6 +17526,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allow_custom_domain?: boolean
+          allow_custom_reports?: boolean
+          allow_whitelabel?: boolean
           allowed_modules?: string[]
           allowed_payment_methods?: string[]
           annual_discount_pct?: number | null
@@ -17545,6 +17551,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allow_custom_domain?: boolean
+          allow_custom_reports?: boolean
+          allow_whitelabel?: boolean
           allowed_modules?: string[]
           allowed_payment_methods?: string[]
           annual_discount_pct?: number | null

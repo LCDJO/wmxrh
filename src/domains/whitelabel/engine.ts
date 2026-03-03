@@ -17,12 +17,14 @@ import type {
   GeneratedTheme,
   ReportBrandingContext,
   BrandingValidationResult,
+  WhiteLabelPlanLimits,
   BrandingProfileManagerAPI,
   ThemeGeneratorAPI,
   ReportTemplateCustomizerAPI,
   WhiteLabelValidatorAPI,
   BrandingVersionManagerAPI,
   DefaultFallbackResolverAPI,
+  PlanGateAPI,
   TenantBrandingEngineAPI,
 } from './types';
 
@@ -159,6 +161,25 @@ function createDefaultFallbackResolver(
   };
 }
 
+// ── Plan Gate ──
+
+const DEFAULT_LIMITS: WhiteLabelPlanLimits = {
+  allow_whitelabel: false,
+  allow_custom_reports: false,
+  allow_custom_domain: false,
+};
+
+function createPlanGate(): PlanGateAPI {
+  const limitsMap = new Map<string, WhiteLabelPlanLimits>();
+  return {
+    setLimits: (tid, l) => limitsMap.set(tid, l),
+    getLimits: (tid) => limitsMap.get(tid) ?? { ...DEFAULT_LIMITS },
+    canWhiteLabel: (tid) => (limitsMap.get(tid)?.allow_whitelabel ?? false),
+    canCustomReports: (tid) => (limitsMap.get(tid)?.allow_custom_reports ?? false),
+    canCustomDomain: (tid) => (limitsMap.get(tid)?.allow_custom_domain ?? false),
+  };
+}
+
 // ── Aggregate Factory ──
 
 export function createTenantBrandingEngine(): TenantBrandingEngineAPI {
@@ -168,6 +189,7 @@ export function createTenantBrandingEngine(): TenantBrandingEngineAPI {
   const reports = createReportTemplateCustomizer(fallback);
   const validator = createWhiteLabelValidator();
   const versioning = createBrandingVersionManager(profiles);
+  const planGate = createPlanGate();
 
-  return { profiles, theme, reports, validator, versioning, fallback };
+  return { profiles, theme, reports, validator, versioning, fallback, planGate };
 }
