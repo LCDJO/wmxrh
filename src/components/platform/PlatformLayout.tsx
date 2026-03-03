@@ -88,8 +88,11 @@ interface NavSection {
 }
 
 const NAV_SECTIONS: NavSection[] = [
+  // ══════════════════════════════════════════════
+  // 1. PLATAFORMA
+  // ══════════════════════════════════════════════
   {
-    label: 'Overview',
+    label: 'Plataforma',
     items: [
       { to: '/platform/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       {
@@ -103,151 +106,38 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/control-plane/chaos', label: 'Chaos Engineering' },
         ],
       },
-      { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'security.view' },
-    ],
-  },
-  {
-    label: 'Gestão',
-    items: [
-      { to: '/platform/tenants', label: 'Clientes', icon: Building2, requiredPermission: 'tenant.view' },
       { to: '/platform/modules', label: 'Módulos', icon: Puzzle, requiredPermission: 'module.view' },
       { to: '/platform/plans', label: 'Planos', icon: Package, requiredPermission: 'plan.manage' },
+      { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
+      {
+        to: '/platform/support',
+        label: 'Suporte',
+        icon: Headphones,
+        children: [
+          { to: '/platform/support/console', label: 'Console de Suporte' },
+          { to: '/platform/support/analytics', label: 'Analytics' },
+        ],
+      },
     ],
   },
+
+  // ══════════════════════════════════════════════
+  // 2. CLIENTES
+  // ══════════════════════════════════════════════
   {
-    label: 'Usuários e Permissões',
+    label: 'Clientes',
     items: [
-      { to: '/platform/users/dashboard', label: 'Visão Geral', icon: BarChart3, requiredPermission: 'platform_user.view' },
+      { to: '/platform/tenants', label: 'Clientes', icon: Building2, requiredPermission: 'tenant.view' },
+      { to: '/platform/users/dashboard', label: 'Visão Geral Usuários', icon: BarChart3, requiredPermission: 'platform_user.view' },
       { to: '/platform/users', label: 'Usuários', icon: Users, requiredPermission: 'platform_user.view' },
-      { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
-      {
-        to: '/platform/security',
-        label: 'Cargos e Permissões',
-        icon: ShieldCheck,
-        requiredPermission: 'security.view',
-        children: [
-          { to: '/platform/security/dashboard', label: 'Visão Geral' },
-          { to: '/platform/security/roles', label: 'Cargos' },
-          { to: '/platform/security/permissions', label: 'Permissões' },
-          { to: '/platform/security/access-graph', label: 'Access Graph' },
-          { to: '/platform/security/unified-graph', label: 'Unified Graph' },
-        ],
-      },
     ],
   },
+
+  // ══════════════════════════════════════════════
+  // 3. RECEITA & BILLING
+  // ══════════════════════════════════════════════
   {
-    label: 'Segurança',
-    items: [
-      { to: '/platform/governance', label: 'Governance Dashboard', icon: BarChart3, requiredPermission: 'security.view' },
-      {
-        to: '/platform/governance/policies',
-        label: 'Policy Governance',
-        icon: FileText,
-        requiredPermission: 'security.view',
-        children: [
-          { to: '/platform/governance/policies', label: 'Políticas' },
-          { to: '/platform/governance/enforcement', label: 'Enforcement' },
-          { to: '/platform/governance/appeals', label: 'Appeals' },
-        ],
-      },
-      {
-        to: '/platform/security/governance',
-        label: 'Governança',
-        icon: Shield,
-        requiredPermission: 'security.view',
-        children: [
-          { to: '/platform/security/governance', label: 'Governança' },
-          { to: '/platform/security/governance-ai', label: 'Governance AI' },
-        ],
-      },
-      {
-        to: '/platform/security/federation',
-        label: 'Federation',
-        icon: Globe,
-        requiredPermission: 'security.view',
-        children: [
-          { to: '/platform/security/federation', label: 'Visão Geral' },
-          { to: '/platform/security/federation/identity-providers', label: 'Identity Providers' },
-          { to: '/platform/security/federation/saml-config', label: 'SAML Config' },
-          { to: '/platform/security/federation/oauth-clients', label: 'OAuth Clients' },
-          { to: '/platform/security/federation/token-settings', label: 'Token Settings' },
-          { to: '/platform/security/federation/audit-logs', label: 'Audit Logs' },
-        ],
-      },
-      {
-        to: '/platform/security/scim',
-        label: 'SCIM Provisioning',
-        icon: Shield,
-        requiredPermission: 'security.view',
-        children: [
-          { to: '/platform/security/scim', label: 'Configurations' },
-          { to: '/platform/security/scim?tab=logs', label: 'Provisioning Logs' },
-          { to: '/platform/security/scim?tab=role-mapping', label: 'Role Mapping' },
-        ],
-      },
-      { to: '/platform/logs', label: 'Logs do Sistema', icon: FileText, requiredRole: 'platform_super_admin' },
-      {
-        to: '/platform/incidents',
-        label: 'Incident Management',
-        icon: Shield,
-        requiredPermission: 'security.view',
-        children: [
-          { to: '/platform/incidents', label: 'Incidentes' },
-          { to: '/platform/incidents?tab=sla', label: 'SLA' },
-          { to: '/platform/incidents?tab=postmortems', label: 'Postmortems' },
-          { to: '/platform/incidents?tab=availability', label: 'Disponibilidade' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Operações',
-    items: [
-      {
-        to: '/platform/monitoring',
-        label: 'Monitoramento',
-        icon: Monitor,
-        requiredPermission: 'security.view',
-        children: [
-          { to: '/platform/monitoring', label: 'Status' },
-          { to: '/platform/monitoring/modules', label: 'Módulos' },
-          { to: '/platform/monitoring/errors', label: 'Erros' },
-          { to: '/platform/monitoring/performance', label: 'Performance' },
-          { to: '/platform/monitoring/incidents', label: 'Incidentes' },
-        ],
-      },
-      { to: '/platform/observability', label: 'Observabilidade', icon: Eye, requiredPermission: 'security.view' },
-      { to: '/platform/automation', label: 'Automação', icon: Zap, requiredPermission: 'security.manage' },
-      {
-        to: '/platform/integration-automation',
-        label: 'iPaaS Workflows',
-        icon: Workflow,
-        requiredPermission: 'security.manage',
-        children: [
-          { to: '/platform/integration-automation', label: 'Workflows' },
-          { to: '/platform/integration-automation/templates', label: 'Templates' },
-          { to: '/platform/integration-automation/executions', label: 'Execution Logs' },
-          { to: '/platform/integration-automation/sandbox', label: 'Sandbox Tests' },
-        ],
-      },
-      { to: '/platform/ai-operations', label: 'AI Operations', icon: Brain, requiredPermission: 'security.manage' },
-      { to: '/platform/integration-health', label: 'Integration Health', icon: Activity, requiredPermission: 'security.manage' },
-      {
-        to: '/platform/worktime',
-        label: 'Ponto & Jornada',
-        icon: Activity,
-        requiredPermission: 'security.manage',
-        children: [
-          { to: '/platform/worktime', label: 'Jornada de Trabalho' },
-          { to: '/platform/worktime/biometrics', label: 'Biometria' },
-          { to: '/platform/worktime/behavior-ai', label: 'Behavior AI' },
-          { to: '/platform/worktime/inspection', label: 'Fiscalização & Exportação' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Financeiro',
+    label: 'Receita & Billing',
     items: [
       {
         to: '/platform/billing',
@@ -271,12 +161,6 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/revenue/intelligence', label: 'Intelligence' },
         ],
       },
-      // Fiscal: aguardando implementação da página
-    ],
-  },
-  {
-    label: 'Growth & Marketing',
-    items: [
       {
         to: '/platform/growth',
         label: 'Growth AI',
@@ -327,17 +211,85 @@ const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
+
+  // ══════════════════════════════════════════════
+  // 4. SEGURANÇA
+  // ══════════════════════════════════════════════
   {
-    label: 'Canais',
+    label: 'Segurança',
     items: [
-      { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
+      { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
+      {
+        to: '/platform/security',
+        label: 'Cargos e Permissões',
+        icon: ShieldCheck,
+        requiredPermission: 'security.view',
+        children: [
+          { to: '/platform/security/dashboard', label: 'Visão Geral' },
+          { to: '/platform/security/roles', label: 'Cargos' },
+          { to: '/platform/security/permissions', label: 'Permissões' },
+          { to: '/platform/security/access-graph', label: 'Access Graph' },
+          { to: '/platform/security/unified-graph', label: 'Unified Graph' },
+        ],
+      },
+      { to: '/platform/governance', label: 'Governance Dashboard', icon: BarChart3, requiredPermission: 'security.view' },
+      {
+        to: '/platform/governance/policies',
+        label: 'Policy Governance',
+        icon: FileText,
+        requiredPermission: 'security.view',
+        children: [
+          { to: '/platform/governance/policies', label: 'Políticas' },
+          { to: '/platform/governance/enforcement', label: 'Enforcement' },
+          { to: '/platform/governance/appeals', label: 'Appeals' },
+        ],
+      },
+      {
+        to: '/platform/security/governance',
+        label: 'Governança',
+        icon: Shield,
+        requiredPermission: 'security.view',
+        children: [
+          { to: '/platform/security/governance', label: 'Governança' },
+          { to: '/platform/security/governance-ai', label: 'Governance AI' },
+        ],
+      },
+      {
+        to: '/platform/security/federation',
+        label: 'Federation',
+        icon: Globe,
+        requiredPermission: 'security.view',
+        children: [
+          { to: '/platform/security/federation', label: 'Visão Geral' },
+          { to: '/platform/security/federation/identity-providers', label: 'Identity Providers' },
+          { to: '/platform/security/federation/saml-config', label: 'SAML Config' },
+          { to: '/platform/security/federation/oauth-clients', label: 'OAuth Clients' },
+          { to: '/platform/security/federation/token-settings', label: 'Token Settings' },
+          { to: '/platform/security/federation/audit-logs', label: 'Audit Logs' },
+        ],
+      },
+      {
+        to: '/platform/security/scim',
+        label: 'SCIM Provisioning',
+        icon: Shield,
+        requiredPermission: 'security.view',
+        children: [
+          { to: '/platform/security/scim', label: 'Configurations' },
+          { to: '/platform/security/scim?tab=logs', label: 'Provisioning Logs' },
+          { to: '/platform/security/scim?tab=role-mapping', label: 'Role Mapping' },
+        ],
+      },
+      { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'security.view' },
+      { to: '/platform/logs', label: 'Logs do Sistema', icon: FileText, requiredRole: 'platform_super_admin' },
     ],
   },
+
+  // ══════════════════════════════════════════════
+  // 5. APIs & INTEGRAÇÕES
+  // ══════════════════════════════════════════════
   {
-    label: 'Integrações & Developers',
+    label: 'APIs & Integrações',
     items: [
-      { to: '/platform/document-signature', label: 'Assinatura Digital', icon: FileSignature, requiredPermission: 'security.manage' },
-      { to: '/platform/integration-health', label: 'Integration Health', icon: Activity, requiredPermission: 'security.manage' },
       {
         to: '/platform/apis',
         label: 'APIs',
@@ -362,25 +314,58 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/apps-review', label: 'Revisão de Apps' },
         ],
       },
+      { to: '/platform/document-signature', label: 'Assinatura Digital', icon: FileSignature, requiredPermission: 'security.manage' },
+      { to: '/platform/integration-health', label: 'Integration Health', icon: Activity, requiredPermission: 'security.manage' },
     ],
   },
+
+  // ══════════════════════════════════════════════
+  // 6. AUTOMAÇÃO & IA
+  // ══════════════════════════════════════════════
   {
-    label: 'Suporte',
+    label: 'Automação & IA',
     items: [
+      { to: '/platform/automation', label: 'Automação', icon: Zap, requiredPermission: 'security.manage' },
       {
-        to: '/platform/support',
-        label: 'Suporte',
-        icon: Headphones,
+        to: '/platform/integration-automation',
+        label: 'iPaaS Workflows',
+        icon: Workflow,
+        requiredPermission: 'security.manage',
         children: [
-          { to: '/platform/support/console', label: 'Console de Suporte' },
-          { to: '/platform/support/analytics', label: 'Analytics' },
+          { to: '/platform/integration-automation', label: 'Workflows' },
+          { to: '/platform/integration-automation/templates', label: 'Templates' },
+          { to: '/platform/integration-automation/executions', label: 'Execution Logs' },
+          { to: '/platform/integration-automation/sandbox', label: 'Sandbox Tests' },
         ],
       },
+      { to: '/platform/ai-operations', label: 'AI Operations', icon: Brain, requiredPermission: 'security.manage' },
     ],
   },
+
+  // ══════════════════════════════════════════════
+  // 7. ARQUITETURA
+  // ══════════════════════════════════════════════
   {
-    label: 'Sistema',
+    label: 'Arquitetura',
     items: [
+      {
+        to: '/platform/structure/architecture',
+        label: 'Architecture Intelligence',
+        icon: GitBranch,
+        requiredPermission: 'security.manage',
+        children: [
+          { to: '/platform/structure/architecture/dashboard', label: 'Dashboard' },
+          { to: '/platform/structure/architecture/risk-analyzer', label: 'Risk Analyzer' },
+          { to: '/platform/structure/architecture/saas-core', label: 'SaaS Core' },
+          { to: '/platform/structure/architecture/tenant-modules', label: 'Tenant Modules' },
+          { to: '/platform/structure/architecture/dependency-graph', label: 'Dependency Graph' },
+          { to: '/platform/structure/architecture/health-monitor', label: 'Health Monitor' },
+          { to: '/platform/structure/architecture/documentation', label: 'Documentação' },
+        ],
+      },
+      { to: '/platform/structure/events', label: 'Eventos', icon: Zap, requiredPermission: 'security.manage' },
+      { to: '/platform/structure/menus', label: 'Menus', icon: FileEdit, requiredPermission: 'security.manage' },
+      { to: '/platform/structure/modules', label: 'Módulos', icon: Puzzle, requiredPermission: 'security.manage' },
       {
         to: '/platform/settings',
         label: 'Settings',
@@ -391,47 +376,62 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/settings/versioning', label: 'Versionamento' },
           { to: '/platform/settings/footer', label: 'Rodapé (Footer)' },
           { to: '/platform/tenants', label: 'Personalização / WhiteLabel' },
-          { to: '---separator-estrutura---', label: '---' },
-          {
-            to: '/platform/structure',
-            label: 'Estrutura',
-            children: [
-              { to: '/platform/structure/events', label: 'Eventos' },
-              { to: '/platform/structure/menus', label: 'Menus' },
-              { to: '/platform/structure/modules', label: 'Módulos' },
-              {
-                to: '/platform/structure/architecture',
-                label: 'Architecture Intelligence',
-                children: [
-                  { to: '/platform/structure/architecture/dashboard', label: 'Dashboard' },
-                  { to: '/platform/structure/architecture/risk-analyzer', label: 'Risk Analyzer' },
-                  { to: '/platform/structure/architecture/saas-core', label: 'SaaS Core' },
-                  { to: '/platform/structure/architecture/tenant-modules', label: 'Tenant Modules' },
-                  { to: '/platform/structure/architecture/dependency-graph', label: 'Dependency Graph' },
-                  { to: '/platform/structure/architecture/health-monitor', label: 'Health Monitor' },
-                  { to: '/platform/structure/architecture/documentation', label: 'Documentação' },
-                ],
-              },
-              {
-                to: '/platform/structure/dashboards',
-                label: 'Dashboards',
-                children: [
-                  { to: '/platform/dashboard', label: 'Platform Dashboard' },
-                  { to: '/dashboard', label: 'Cliente Dashboard' },
-                  { to: '/platform/website', label: 'Website Dashboard' },
-                  { to: '/platform/monitoring', label: 'Monitoramento Status' },
-                  { to: '/platform/billing', label: 'Financeiro Overview' },
-                  { to: '/platform/revenue', label: 'Revenue Overview' },
-                  { to: '/platform/growth', label: 'Growth AI Overview' },
-                  { to: '/platform/marketing/analytics', label: 'Marketing Analytics' },
-                  { to: '/platform/settings/gamification', label: 'Gamificação' },
-                  { to: '/labor-dashboard', label: 'Labor Compliance' },
-                  { to: '/workforce-intelligence', label: 'Workforce Intelligence' },
-                  { to: '/strategic-intelligence', label: 'Strategic Intelligence' },
-                ],
-              },
-            ],
-          },
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════
+  // 8. CONTINUIDADE
+  // ══════════════════════════════════════════════
+  {
+    label: 'Continuidade',
+    items: [
+      {
+        to: '/platform/incidents',
+        label: 'Incident Management',
+        icon: Shield,
+        requiredPermission: 'security.view',
+        children: [
+          { to: '/platform/incidents', label: 'Incidentes' },
+          { to: '/platform/incidents?tab=sla', label: 'SLA' },
+          { to: '/platform/incidents?tab=postmortems', label: 'Postmortems' },
+          { to: '/platform/incidents?tab=availability', label: 'Disponibilidade' },
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════
+  // 9. MONITORAMENTO
+  // ══════════════════════════════════════════════
+  {
+    label: 'Monitoramento',
+    items: [
+      {
+        to: '/platform/monitoring',
+        label: 'Monitoramento',
+        icon: Monitor,
+        requiredPermission: 'security.view',
+        children: [
+          { to: '/platform/monitoring', label: 'Status' },
+          { to: '/platform/monitoring/modules', label: 'Módulos' },
+          { to: '/platform/monitoring/errors', label: 'Erros' },
+          { to: '/platform/monitoring/performance', label: 'Performance' },
+          { to: '/platform/monitoring/incidents', label: 'Incidentes' },
+        ],
+      },
+      { to: '/platform/observability', label: 'Observabilidade', icon: Eye, requiredPermission: 'security.view' },
+      {
+        to: '/platform/worktime',
+        label: 'Ponto & Jornada',
+        icon: Activity,
+        requiredPermission: 'security.manage',
+        children: [
+          { to: '/platform/worktime', label: 'Jornada de Trabalho' },
+          { to: '/platform/worktime/biometrics', label: 'Biometria' },
+          { to: '/platform/worktime/behavior-ai', label: 'Behavior AI' },
+          { to: '/platform/worktime/inspection', label: 'Fiscalização & Exportação' },
         ],
       },
     ],
