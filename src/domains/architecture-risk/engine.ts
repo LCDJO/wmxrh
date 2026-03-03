@@ -18,6 +18,7 @@
 
 import { createArchitectureIntelligenceEngine } from '@/domains/architecture-intelligence';
 import type { ArchModuleInfo, DependencyEdge } from '@/domains/architecture-intelligence/types';
+import { emitArchitectureRiskEvent } from './architecture-risk.events';
 
 // ── Risk Levels ──
 
@@ -1281,6 +1282,53 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
   });
 
   profiles.sort((a, b) => b.risk_score - a.risk_score);
+
+  // ── Emit domain events ──
+  const now = Date.now();
+  for (const p of profiles) {
+    emitArchitectureRiskEvent({
+      type: 'ArchitectureRiskCalculated',
+      timestamp: now,
+      module_key: p.module_key,
+      risk_score: p.risk_score,
+      risk_level: p.risk_level,
+      factors: p.factors.map(f => ({ factor: f.description, weight: 1, score: f.metric_value })),
+    });
+
+    if (p.risk_level === 'critical' || p.risk_level === 'high') {
+      emitArchitectureRiskEvent({
+        type: 'CriticalDependencyDetected',
+        timestamp: now,
+        from_module: p.module_key,
+        to_module: p.dependency_risk_detail.module_key,
+        dependency_risk_score: p.dependency_risk,
+        is_blocking: p.risk_level === 'critical',
+        reason: `Risco ${p.risk_level}: score ${p.risk_score}`,
+      });
+    }
+
+    for (const s of p.suggestions) {
+      emitArchitectureRiskEvent({
+        type: 'RefactorSuggestionGenerated',
+        timestamp: now,
+        module_key: p.module_key,
+        category: s.id,
+        title: s.title,
+        priority: s.priority,
+        estimated_effort: s.effort_estimate,
+      });
+    }
+  }
+
+  for (const c of cycles) {
+    emitArchitectureRiskEvent({
+      type: 'CircularDependencyBlocked',
+      timestamp: now,
+      cycle: c.cycle,
+      severity: c.is_blocking ? 'critical' : 'warning',
+      blocking_edges: [],
+    });
+  }
 
   const couplingMetrics = modules.map(mod =>
     analyzeCoupling(mod.key, edges, modules, bidirectionalDeps, crossDomainViolations).metrics

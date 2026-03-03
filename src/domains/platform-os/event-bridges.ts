@@ -28,6 +28,7 @@ import { onWorkforceEvent } from '@/domains/workforce-intelligence/workforce-int
 import { occupationalEvents } from '@/domains/occupational-intelligence/occupational-compliance.events';
 import { onAgreementEvent } from '@/domains/employee-agreement/events';
 import { installSelfHealingIncidentBridge } from '@/domains/incident-management/self-healing-incident-bridge';
+import { onArchitectureRiskEvent } from '@/domains/architecture-risk';
 
 // ── Security Kernel Event Buses ───────────────────────────────
 import {
@@ -146,6 +147,17 @@ export function installEventBridges(events: GlobalEventKernelAPI): () => void {
   // ── 11. Self-Healing ↔ Incident Management Bridge ────────────
   disposers.push(
     installSelfHealingIncidentBridge(events),
+  );
+
+  // ── 12. Architecture Risk Events ─────────────────────────────
+  disposers.push(
+    onArchitectureRiskEvent((evt) => {
+      const priority: EventPriority =
+        evt.type === 'CircularDependencyBlocked' || evt.type === 'CriticalDependencyDetected'
+          ? 'high'
+          : 'normal';
+      events.emit(`arch-risk:${evt.type}`, 'ArchitectureRiskBridge', evt, { priority });
+    }),
   );
 
   // ── Teardown ──────────────────────────────────────────────

@@ -21,3 +21,17 @@ export {
   type AffectedWorkflow,
   type PreflightCheck,
 } from './engine';
+
+export {
+  onArchitectureRiskEvent,
+  onArchitectureRiskEventType,
+  emitArchitectureRiskEvent,
+  getArchitectureRiskEventLog,
+  clearArchitectureRiskEventLog,
+  type ArchitectureRiskEventType,
+  type ArchitectureRiskDomainEvent,
+  type ArchitectureRiskCalculatedPayload,
+  type CriticalDependencyDetectedPayload,
+  type CircularDependencyBlockedPayload,
+  type RefactorSuggestionGeneratedPayload,
+} from './architecture-risk.events';
