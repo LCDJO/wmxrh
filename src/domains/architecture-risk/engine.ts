@@ -56,6 +56,38 @@ export interface DependencyRiskScore {
   factors: RiskFactor[];
 }
 
+// ── Criticality Index (dedicated per-module output) ──
+
+export interface CriticalityIndex {
+  module_key: string;
+  module_label: string;
+  domain: 'saas' | 'tenant';
+  /** Overall criticality 0–100 */
+  criticality_index: number;
+  risk_level: RiskLevel;
+  /** SLA contribution 0–40 */
+  sla_score: number;
+  sla_tier: string;
+  /** Dependency centrality contribution 0–25 */
+  centrality_score: number;
+  fan_in: number;
+  /** Incident history contribution 0–20 */
+  incident_score: number;
+  incident_count_30d: number;
+  sev1_count: number;
+  sev2_count: number;
+  has_recent_critical_incident: boolean;
+  /** Usage/domain contribution 0–15 */
+  usage_score: number;
+  is_saas_core: boolean;
+  /** Number of events emitted (proxy for integration surface) */
+  event_surface: number;
+  /** Transitive dependents count */
+  transitive_dependents: number;
+  /** Factors breakdown */
+  factors: RiskFactor[];
+}
+
 export interface ModuleRiskProfile {
   module_key: string;
   module_label: string;
@@ -68,6 +100,7 @@ export interface ModuleRiskProfile {
   criticality_score: number;  // 0–100
   change_impact_radius: number; // count of transitively affected modules
   dependency_risk_detail: DependencyRiskScore;
+  criticality_detail: CriticalityIndex;
   factors: RiskFactor[];
   suggestions: RefactorSuggestion[];
 }
@@ -537,35 +570,133 @@ function detectCircularDependencies(
 
 // ── 4. CriticalModuleIdentifier ──
 
+/**
+ * Simulated incident data per module.
+ * In production this would come from the IncidentManagementEngine / DB.
+ */
+function getModuleIncidentData(moduleKey: string): {
+  incident_count_30d: number; sev1_count: number; sev2_count: number; has_recent_critical: boolean;
+} {
+  // Simulated: core modules have higher incident history
+  const coreModules = ['iam', 'security_kernel', 'core_hr', 'tenant_module', 'billing'];
+  const isCore = coreModules.includes(moduleKey);
+  return {
+    incident_count_30d: isCore ? Math.floor(Math.random() * 5) + 2 : Math.floor(Math.random() * 2),
+    sev1_count: isCore ? Math.floor(Math.random() * 2) : 0,
+    sev2_count: isCore ? Math.floor(Math.random() * 3) : Math.floor(Math.random() * 1),
+    has_recent_critical: isCore && Math.random() > 0.6,
+  };
+}
+
+function computeTransitiveDependents(moduleKey: string, edges: DependencyEdge[]): number {
+  const reverseGraph = new Map<string, string[]>();
+  for (const e of edges) {
+    if (!reverseGraph.has(e.to)) reverseGraph.set(e.to, []);
+    reverseGraph.get(e.to)!.push(e.from);
+  }
+  const visited = new Set<string>();
+  const queue = [moduleKey];
+  while (queue.length) {
+    const current = queue.shift()!;
+    for (const dep of reverseGraph.get(current) ?? []) {
+      if (!visited.has(dep) && dep !== moduleKey) {
+        visited.add(dep);
+        queue.push(dep);
+      }
+    }
+  }
+  return visited.size;
+}
+
 function identifyCriticality(
   mod: ArchModuleInfo,
   fanIn: number,
-): { score: number; factors: RiskFactor[] } {
+  edges: DependencyEdge[],
+): { detail: CriticalityIndex; score: number; factors: RiskFactor[] } {
   const factors: RiskFactor[] = [];
-  let score = 0;
+  let slaScore = 0;
+  let centralityScore = 0;
+  let incidentScore = 0;
+  let usageScore = 0;
 
-  // SLA tier
+  // ── SLA tier (0–40) ──
   if (mod.sla.tier === 'critical') {
-    score += 40;
-    factors.push({ category: 'criticality', severity: 'critical', description: `SLA tier: critical (${mod.sla.uptime_target})`, metric_value: 40 });
+    slaScore = 40;
+    factors.push({ category: 'criticality', severity: 'critical', description: `SLA tier: critical (${mod.sla.uptime_target}, RTO: ${mod.sla.rto_minutes ?? '?'}min)`, metric_value: 40 });
   } else if (mod.sla.tier === 'high') {
-    score += 25;
+    slaScore = 25;
     factors.push({ category: 'criticality', severity: 'high', description: `SLA tier: high (${mod.sla.uptime_target})`, metric_value: 25 });
+  } else if (mod.sla.tier === 'standard') {
+    slaScore = 10;
   }
 
-  // Betweenness centrality proxy (high fan-in → central)
-  if (fanIn >= 4) {
-    score += 20;
-    factors.push({ category: 'criticality', severity: 'high', description: `Centralidade alta: ${fanIn} módulos dependem`, metric_value: fanIn });
+  // ── Dependency centrality (0–25) ──
+  const transitiveDeps = computeTransitiveDependents(mod.key, edges);
+  if (fanIn >= 5 || transitiveDeps >= 8) {
+    centralityScore = 25;
+    factors.push({ category: 'criticality', severity: 'critical', description: `Centralidade crítica: ${fanIn} diretos, ${transitiveDeps} transitivos dependem deste módulo`, metric_value: transitiveDeps });
+  } else if (fanIn >= 3 || transitiveDeps >= 4) {
+    centralityScore = 15;
+    factors.push({ category: 'criticality', severity: 'high', description: `Centralidade alta: ${fanIn} diretos, ${transitiveDeps} transitivos`, metric_value: transitiveDeps });
+  } else if (fanIn >= 1) {
+    centralityScore = 5;
   }
 
-  // Platform/SaaS core modules carry more risk
-  if (mod.domain === 'saas') {
-    score += 10;
-    factors.push({ category: 'criticality', severity: 'medium', description: 'Módulo da camada SaaS Core (impacto global)', metric_value: 10 });
+  // ── Incident history (0–20) ──
+  const incidents = getModuleIncidentData(mod.key);
+  if (incidents.sev1_count > 0) {
+    incidentScore += 15;
+    factors.push({ category: 'criticality', severity: 'critical', description: `${incidents.sev1_count} incidente(s) Sev1 nos últimos 30 dias`, metric_value: incidents.sev1_count });
   }
+  if (incidents.sev2_count >= 2) {
+    incidentScore += 5;
+    factors.push({ category: 'criticality', severity: 'high', description: `${incidents.sev2_count} incidentes Sev2 nos últimos 30 dias`, metric_value: incidents.sev2_count });
+  }
+  if (incidents.has_recent_critical) {
+    incidentScore = Math.min(20, incidentScore + 5);
+    factors.push({ category: 'criticality', severity: 'critical', description: 'Incidente crítico recente ativo — módulo sob observação', metric_value: 1 });
+  }
+  incidentScore = Math.min(20, incidentScore);
 
-  return { score: clamp(score), factors };
+  // ── Usage / domain weight (0–15) ──
+  const isSaasCore = mod.domain === 'saas';
+  const eventSurface = mod.emits_events.length + mod.consumes_events.length;
+
+  if (isSaasCore) {
+    usageScore += 10;
+    factors.push({ category: 'criticality', severity: 'medium', description: 'Módulo SaaS Core — impacto global em todos os tenants', metric_value: 10 });
+  }
+  if (eventSurface >= 4) {
+    usageScore += 5;
+    factors.push({ category: 'criticality', severity: 'medium', description: `Superfície de integração alta: ${eventSurface} eventos (emite + consome)`, metric_value: eventSurface });
+  }
+  usageScore = Math.min(15, usageScore);
+
+  const totalScore = clamp(slaScore + centralityScore + incidentScore + usageScore);
+
+  const detail: CriticalityIndex = {
+    module_key: mod.key,
+    module_label: mod.label,
+    domain: mod.domain,
+    criticality_index: totalScore,
+    risk_level: riskLevel(totalScore),
+    sla_score: slaScore,
+    sla_tier: mod.sla.tier,
+    centrality_score: centralityScore,
+    fan_in: fanIn,
+    incident_score: incidentScore,
+    incident_count_30d: incidents.incident_count_30d,
+    sev1_count: incidents.sev1_count,
+    sev2_count: incidents.sev2_count,
+    has_recent_critical_incident: incidents.has_recent_critical,
+    usage_score: usageScore,
+    is_saas_core: isSaasCore,
+    event_surface: eventSurface,
+    transitive_dependents: transitiveDeps,
+    factors,
+  };
+
+  return { detail, score: totalScore, factors };
 }
 
 // ── 5. ChangeImpactPredictor ──
@@ -715,6 +846,7 @@ export interface ArchitectureRiskAnalyzerAPI {
   getDependencyRiskScores(): DependencyRiskScore[];
   getBidirectionalDependencies(): BidirectionalDependency[];
   getCrossDomainViolations(): CrossDomainViolation[];
+  getCriticalityIndexes(): CriticalityIndex[];
 }
 
 export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
@@ -737,7 +869,7 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
     const dep = scanDependencyRisk(mod.key, mod, edges, totalModules);
     const coup = analyzeCoupling(mod.key, edges, modules, bidirectionalDeps, crossDomainViolations);
     const circularScore = modulesInCycles.has(mod.key) ? 100 : 0;
-    const crit = identifyCriticality(mod, dep.fanIn);
+    const crit = identifyCriticality(mod, dep.fanIn, edges);
     const impact = predictChangeImpact(mod.key, edges);
 
     const compositeScore = computeCompositeScore(
@@ -769,6 +901,7 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
       criticality_score: crit.score,
       change_impact_radius: impact.radius,
       dependency_risk_detail: dep.detail,
+      criticality_detail: crit.detail,
       factors: allFactors,
       suggestions: [] as RefactorSuggestion[],
     };
@@ -818,6 +951,10 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
     suggestions: uniqueSuggestions,
   };
 
+  const critIndexes = profiles
+    .map(p => p.criticality_detail)
+    .sort((a, b) => b.criticality_index - a.criticality_index);
+
   return {
     analyze: () => summary,
     getModuleRisk: (key) => profiles.find(p => p.module_key === key) ?? null,
@@ -827,5 +964,6 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
     getDependencyRiskScores: () => depScores,
     getBidirectionalDependencies: () => bidirectionalDeps,
     getCrossDomainViolations: () => crossDomainViolations,
+    getCriticalityIndexes: () => critIndexes,
   };
 }

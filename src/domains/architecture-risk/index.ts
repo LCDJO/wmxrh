@@ -14,4 +14,5 @@ export {
   type DependencyRiskScore,
   type BidirectionalDependency,
   type CrossDomainViolation,
+  type CriticalityIndex,
 } from './engine';

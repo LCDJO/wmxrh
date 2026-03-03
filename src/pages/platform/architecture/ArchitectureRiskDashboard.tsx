@@ -3,7 +3,7 @@
  */
 import { useMemo, useState } from 'react';
 import { createArchitectureRiskAnalyzer } from '@/domains/architecture-risk';
-import type { ModuleRiskProfile, RiskLevel, CircularDependencyCycle, RefactorSuggestion, CouplingMetrics, DependencyRiskScore, BidirectionalDependency, CrossDomainViolation } from '@/domains/architecture-risk';
+import type { ModuleRiskProfile, RiskLevel, CircularDependencyCycle, RefactorSuggestion, CouplingMetrics, DependencyRiskScore, BidirectionalDependency, CrossDomainViolation, CriticalityIndex } from '@/domains/architecture-risk';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -46,6 +46,7 @@ export default function ArchitectureRiskDashboard() {
   const depScores = useMemo(() => analyzer.getDependencyRiskScores(), [analyzer]);
   const biDirDeps = useMemo(() => analyzer.getBidirectionalDependencies(), [analyzer]);
   const crossViolations = useMemo(() => analyzer.getCrossDomainViolations(), [analyzer]);
+  const critIndexes = useMemo(() => analyzer.getCriticalityIndexes(), [analyzer]);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
 
   const selectedProfile = selectedModule ? profiles.find(p => p.module_key === selectedModule) : null;
@@ -100,6 +101,7 @@ export default function ArchitectureRiskDashboard() {
           <TabsTrigger value="ranking" className="gap-1.5"><Target className="h-3.5 w-3.5" />Risk Ranking</TabsTrigger>
           <TabsTrigger value="coupling" className="gap-1.5"><GitBranch className="h-3.5 w-3.5" />Coupling</TabsTrigger>
           <TabsTrigger value="cycles" className="gap-1.5"><RotateCcw className="h-3.5 w-3.5" />Ciclos</TabsTrigger>
+          <TabsTrigger value="criticality" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Criticality</TabsTrigger>
           <TabsTrigger value="suggestions" className="gap-1.5"><Lightbulb className="h-3.5 w-3.5" />Refactoring</TabsTrigger>
         </TabsList>
 
@@ -144,6 +146,11 @@ export default function ArchitectureRiskDashboard() {
         {/* ── Circular Dependencies ── */}
         <TabsContent value="cycles">
           <CircularDependenciesView cycles={cycles} profiles={profiles} />
+        </TabsContent>
+
+        {/* ── Criticality Index ── */}
+        <TabsContent value="criticality">
+          <CriticalityView indexes={critIndexes} />
         </TabsContent>
 
         {/* ── Refactor Suggestions ── */}
@@ -890,6 +897,218 @@ function DependencyRiskDetail({ score }: { score: DependencyRiskScore }) {
             <p className="text-xs text-muted-foreground">Nenhum fator de risco de dependência ✓</p>
           ) : (
             score.factors.map((f, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs">
+                <Badge variant="outline" className={`text-[9px] shrink-0 ${RISK_COLORS[f.severity]}`}>{f.severity}</Badge>
+                <span className="text-muted-foreground">{f.description}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Criticality Index View ──
+
+function CriticalityView({ indexes }: { indexes: CriticalityIndex[] }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const selectedIdx = selected ? indexes.find(i => i.module_key === selected) : null;
+
+  const criticalModules = indexes.filter(i => i.risk_level === 'critical' || i.risk_level === 'high');
+  const withIncidents = indexes.filter(i => i.incident_count_30d > 0);
+  const spofModules = indexes.filter(i => i.transitive_dependents >= 4);
+
+  return (
+    <div className="space-y-4">
+      {/* KPI row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Shield className="h-4 w-4 text-destructive" />
+              <span className="text-xs">Módulos Críticos</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{criticalModules.length}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${criticalModules.length > 0 ? RISK_COLORS.critical : RISK_COLORS.none}`}>
+              criticality ≥ high
+            </Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <AlertTriangle className="h-4 w-4 text-orange-400" />
+              <span className="text-xs">Com Incidentes (30d)</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{withIncidents.length}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Zap className="h-4 w-4 text-primary" />
+              <span className="text-xs">Alto Impacto (≥4 dep.)</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{spofModules.length}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs">Sev1 Total (30d)</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{indexes.reduce((s, i) => s + i.sev1_count, 0)}</span>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Table + Detail */}
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-7">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                Criticality Index
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-muted-foreground border-b border-border">
+                      <th className="text-left py-2 px-2">Módulo</th>
+                      <th className="text-center py-2 px-2">Index</th>
+                      <th className="text-center py-2 px-2">SLA</th>
+                      <th className="text-center py-2 px-2">Central.</th>
+                      <th className="text-center py-2 px-2">Incid.</th>
+                      <th className="text-center py-2 px-2">Uso</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {indexes.map(idx => (
+                      <tr
+                        key={idx.module_key}
+                        className={`border-b border-border/50 cursor-pointer transition-colors ${selected === idx.module_key ? 'bg-primary/5' : 'hover:bg-muted/30'}`}
+                        onClick={() => setSelected(prev => prev === idx.module_key ? null : idx.module_key)}
+                      >
+                        <td className="py-2 px-2 font-medium text-foreground flex items-center gap-1.5">
+                          {idx.domain === 'saas'
+                            ? <Server className="h-3 w-3 text-blue-400 shrink-0" />
+                            : <Briefcase className="h-3 w-3 text-emerald-400 shrink-0" />}
+                          {idx.module_label}
+                          {idx.has_recent_critical_incident && <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          <Badge variant="outline" className={`text-[10px] ${RISK_COLORS[idx.risk_level]}`}>
+                            {idx.criticality_index}
+                          </Badge>
+                        </td>
+                        <td className="py-2 px-2 text-center font-mono">{idx.sla_score}</td>
+                        <td className="py-2 px-2 text-center font-mono">{idx.centrality_score}</td>
+                        <td className="py-2 px-2 text-center font-mono">{idx.incident_score}</td>
+                        <td className="py-2 px-2 text-center font-mono">{idx.usage_score}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="col-span-5">
+          {selectedIdx ? (
+            <CriticalityDetail idx={selectedIdx} />
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Shield className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                <p className="text-sm text-muted-foreground">Selecione um módulo para ver o criticality_index detalhado</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CriticalityDetail({ idx }: { idx: CriticalityIndex }) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Activity className="h-4 w-4 text-primary" />
+          {idx.module_label}
+          <Badge variant="outline" className={`text-[10px] ml-auto ${RISK_COLORS[idx.risk_level]}`}>
+            criticality_index: {idx.criticality_index}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Score breakdown bars */}
+        <div className="space-y-2">
+          <RiskBar label="SLA (0–40)" value={idx.sla_score * 2.5} />
+          <RiskBar label="Centralidade (0–25)" value={idx.centrality_score * 4} />
+          <RiskBar label="Incidentes (0–20)" value={idx.incident_score * 5} />
+          <RiskBar label="Uso/Domain (0–15)" value={idx.usage_score * 6.67} />
+        </div>
+
+        <Separator />
+
+        {/* Metrics grid */}
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="p-2 rounded bg-muted/30">
+            <span className="text-muted-foreground">SLA Tier</span>
+            <p className="text-sm font-bold text-foreground uppercase">{idx.sla_tier}</p>
+          </div>
+          <div className="p-2 rounded bg-muted/30">
+            <span className="text-muted-foreground">Fan-In Direto</span>
+            <p className="text-sm font-bold text-foreground">{idx.fan_in}</p>
+          </div>
+          <div className="p-2 rounded bg-muted/30">
+            <span className="text-muted-foreground">Dep. Transitivos</span>
+            <p className="text-sm font-bold text-foreground">{idx.transitive_dependents}</p>
+          </div>
+          <div className="p-2 rounded bg-muted/30">
+            <span className="text-muted-foreground">Event Surface</span>
+            <p className="text-sm font-bold text-foreground">{idx.event_surface} eventos</p>
+          </div>
+          <div className="p-2 rounded bg-muted/30">
+            <span className="text-muted-foreground">Incidentes (30d)</span>
+            <p className="text-sm font-bold text-foreground">{idx.incident_count_30d}</p>
+          </div>
+          <div className="p-2 rounded bg-muted/30">
+            <span className="text-muted-foreground">Sev1 / Sev2</span>
+            <p className="text-sm font-bold text-foreground">{idx.sev1_count} / {idx.sev2_count}</p>
+          </div>
+        </div>
+
+        {/* Flags */}
+        <div className="flex gap-2 flex-wrap">
+          {idx.is_saas_core && (
+            <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.medium}`}>🔵 SaaS Core</Badge>
+          )}
+          {idx.has_recent_critical_incident && (
+            <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.critical}`}>🔥 Incidente Crítico Recente</Badge>
+          )}
+          {idx.transitive_dependents >= 4 && (
+            <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.high}`}>⚠ Alto Impacto Transitivo</Badge>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Risk Factors */}
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fatores de Criticidade</p>
+          {idx.factors.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum fator de criticidade elevado ✓</p>
+          ) : (
+            idx.factors.map((f, i) => (
               <div key={i} className="flex items-start gap-2 text-xs">
                 <Badge variant="outline" className={`text-[9px] shrink-0 ${RISK_COLORS[f.severity]}`}>{f.severity}</Badge>
                 <span className="text-muted-foreground">{f.description}</span>
