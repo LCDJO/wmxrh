@@ -1,9 +1,12 @@
 /**
  * Architecture Risk Dashboard — Visual risk analysis for platform architecture
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { createArchitectureRiskAnalyzer } from '@/domains/architecture-risk';
 import type { ModuleRiskProfile, RiskLevel, CircularDependencyCycle, RefactorSuggestion, CouplingMetrics, DependencyRiskScore, BidirectionalDependency, CrossDomainViolation, CriticalityIndex, ChangeImpactPrediction } from '@/domains/architecture-risk';
+import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
+import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -657,7 +660,35 @@ function CycleCard({ cycle: c }: { cycle: CircularDependencyCycle }) {
   );
 }
 
+const SUGGESTION_ADMIN_ROLES: PlatformRoleType[] = ['platform_super_admin', 'platform_architect'];
+
 function SuggestionsView({ suggestions }: { suggestions: RefactorSuggestion[] }) {
+  const { identity } = usePlatformIdentity();
+  const canManage = identity?.role ? SUGGESTION_ADMIN_ROLES.includes(identity.role) : false;
+
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [accepted, setAccepted] = useState<Set<string>>(new Set());
+
+  const handleAccept = useCallback((id: string, title: string) => {
+    if (!canManage) {
+      toast.error('Acesso negado — requer PlatformArchitect ou PlatformSuperAdmin');
+      return;
+    }
+    setAccepted(prev => new Set(prev).add(id));
+    setDismissed(prev => { const n = new Set(prev); n.delete(id); return n; });
+    toast.success(`Sugestão aceita: ${title}`);
+  }, [canManage]);
+
+  const handleDismiss = useCallback((id: string, title: string) => {
+    if (!canManage) {
+      toast.error('Acesso negado — requer PlatformArchitect ou PlatformSuperAdmin');
+      return;
+    }
+    setDismissed(prev => new Set(prev).add(id));
+    setAccepted(prev => { const n = new Set(prev); n.delete(id); return n; });
+    toast.info(`Sugestão ignorada: ${title}`);
+  }, [canManage]);
+
   if (suggestions.length === 0) {
     return (
       <Card>
@@ -670,27 +701,106 @@ function SuggestionsView({ suggestions }: { suggestions: RefactorSuggestion[] })
     );
   }
 
+  const pending = suggestions.filter(s => !accepted.has(s.id) && !dismissed.has(s.id));
+  const acceptedList = suggestions.filter(s => accepted.has(s.id));
+  const dismissedList = suggestions.filter(s => dismissed.has(s.id));
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <Lightbulb className="h-4 w-4 text-primary" />
           Sugestões de Refactoring ({suggestions.length})
+          {!canManage && (
+            <Badge variant="outline" className="ml-auto text-[10px] text-muted-foreground">
+              <Shield className="h-3 w-3 mr-1" /> Somente leitura
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {suggestions.map(s => (
-          <div key={s.id} className="p-3 rounded-lg border border-border bg-muted/20 space-y-2">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className={`text-[10px] ${PRIORITY_COLORS[s.priority]}`}>{s.priority}</Badge>
-              <span className="text-sm font-medium text-foreground">{s.title}</span>
-              <Badge variant="outline" className="text-[10px] ml-auto">{s.effort_estimate}</Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">{s.description}</p>
+      <CardContent className="space-y-4">
+        {/* Pending */}
+        {pending.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pendentes ({pending.length})</p>
+            {pending.map(s => (
+              <SuggestionCard key={s.id} suggestion={s} canManage={canManage} onAccept={handleAccept} onDismiss={handleDismiss} status="pending" />
+            ))}
           </div>
-        ))}
+        )}
+
+        {/* Accepted */}
+        {acceptedList.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Aceitas ({acceptedList.length})</p>
+            {acceptedList.map(s => (
+              <SuggestionCard key={s.id} suggestion={s} canManage={false} onAccept={handleAccept} onDismiss={handleDismiss} status="accepted" />
+            ))}
+          </div>
+        )}
+
+        {/* Dismissed */}
+        {dismissedList.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ignoradas ({dismissedList.length})</p>
+            {dismissedList.map(s => (
+              <SuggestionCard key={s.id} suggestion={s} canManage={false} onAccept={handleAccept} onDismiss={handleDismiss} status="dismissed" />
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+function SuggestionCard({
+  suggestion: s,
+  canManage,
+  onAccept,
+  onDismiss,
+  status,
+}: {
+  suggestion: RefactorSuggestion;
+  canManage: boolean;
+  onAccept: (id: string, title: string) => void;
+  onDismiss: (id: string, title: string) => void;
+  status: 'pending' | 'accepted' | 'dismissed';
+}) {
+  return (
+    <div className={`p-3 rounded-lg border space-y-2 ${
+      status === 'accepted' ? 'border-emerald-500/30 bg-emerald-500/5' :
+      status === 'dismissed' ? 'border-muted bg-muted/10 opacity-60' :
+      'border-border bg-muted/20'
+    }`}>
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className={`text-[10px] ${PRIORITY_COLORS[s.priority]}`}>{s.priority}</Badge>
+        <span className="text-sm font-medium text-foreground">{s.title}</span>
+        <Badge variant="outline" className="text-[10px] ml-auto">{s.effort_estimate}</Badge>
+      </div>
+      <p className="text-xs text-muted-foreground">{s.description}</p>
+      {status === 'pending' && canManage && (
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            onClick={() => onAccept(s.id, s.title)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+          >
+            <CheckCircle2 className="h-3 w-3" /> Aceitar
+          </button>
+          <button
+            onClick={() => onDismiss(s.id, s.title)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
+          >
+            <XCircle className="h-3 w-3" /> Ignorar
+          </button>
+        </div>
+      )}
+      {status === 'accepted' && (
+        <p className="text-[11px] text-emerald-400 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Aceita</p>
+      )}
+      {status === 'dismissed' && (
+        <p className="text-[11px] text-muted-foreground flex items-center gap-1"><XCircle className="h-3 w-3" /> Ignorada</p>
+      )}
+    </div>
   );
 }
 
