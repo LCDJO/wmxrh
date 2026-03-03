@@ -33,3 +33,12 @@ export type {
   ArchitectureVersionRegistryAPI,
   TenantBrandingEngineAPI,
 } from './types';
+
+export { WHITELABEL_KERNEL_EVENTS } from './whitelabel-events';
+export type {
+  WhiteLabelKernelEvent,
+  BrandingUpdatedPayload,
+  BrandingVersionCreatedPayload,
+  CustomDomainConfiguredPayload,
+  WhiteLabelActivatedPayload,
+} from './whitelabel-events';
