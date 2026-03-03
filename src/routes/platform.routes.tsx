@@ -34,6 +34,7 @@ import PlatformGovernanceDashboard from '@/pages/platform/PlatformGovernanceDash
 import PlatformObservability from '@/pages/platform/PlatformObservability';
 import PlatformMonitoring from '@/pages/platform/PlatformMonitoring';
 import PlatformControlPlane from '@/pages/platform/PlatformControlPlane';
+import PlatformTenantBranding from '@/pages/platform/PlatformTenantBranding';
 import PlatformDRTests from '@/pages/platform/PlatformDRTests';
 import PlatformChaosEngineering from '@/pages/platform/PlatformChaosEngineering';
 import ChaosLayout from '@/pages/platform/chaos/ChaosLayout';
@@ -224,6 +225,7 @@ export const platformRoutes: RouteObject[] = [
 
       // ── Standalone guarded routes ──
       { path: 'tenants', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformTenants /></PlatformGuard> },
+      { path: 'tenants/:tenantId/branding', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformTenantBranding /></PlatformGuard> },
       { path: 'modules', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformModules /></PlatformGuard> },
       { path: 'plans', element: <PlatformGuard allowedRoles={financeAdmin}><PlatformPlans /></PlatformGuard> },
       { path: 'audit', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformAudit /></PlatformGuard> },
