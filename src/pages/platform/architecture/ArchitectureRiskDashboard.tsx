@@ -3,7 +3,7 @@
  */
 import { useMemo, useState } from 'react';
 import { createArchitectureRiskAnalyzer } from '@/domains/architecture-risk';
-import type { ModuleRiskProfile, RiskLevel, CircularDependencyCycle, RefactorSuggestion, CouplingMetrics, DependencyRiskScore } from '@/domains/architecture-risk';
+import type { ModuleRiskProfile, RiskLevel, CircularDependencyCycle, RefactorSuggestion, CouplingMetrics, DependencyRiskScore, BidirectionalDependency, CrossDomainViolation } from '@/domains/architecture-risk';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -44,6 +44,8 @@ export default function ArchitectureRiskDashboard() {
   const couplingMetrics = useMemo(() => analyzer.getCouplingMetrics(), [analyzer]);
   const cycles = useMemo(() => analyzer.getCircularDependencies(), [analyzer]);
   const depScores = useMemo(() => analyzer.getDependencyRiskScores(), [analyzer]);
+  const biDirDeps = useMemo(() => analyzer.getBidirectionalDependencies(), [analyzer]);
+  const crossViolations = useMemo(() => analyzer.getCrossDomainViolations(), [analyzer]);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
 
   const selectedProfile = selectedModule ? profiles.find(p => p.module_key === selectedModule) : null;
@@ -136,7 +138,7 @@ export default function ArchitectureRiskDashboard() {
 
         {/* ── Coupling Analysis ── */}
         <TabsContent value="coupling">
-          <CouplingTable metrics={couplingMetrics} profiles={profiles} />
+          <CouplingTable metrics={couplingMetrics} profiles={profiles} biDirDeps={biDirDeps} crossViolations={crossViolations} />
         </TabsContent>
 
         {/* ── Circular Dependencies ── */}
@@ -287,60 +289,205 @@ function RiskBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-function CouplingTable({ metrics, profiles }: { metrics: CouplingMetrics[]; profiles: ModuleRiskProfile[] }) {
+function CouplingTable({ metrics, profiles, biDirDeps, crossViolations }: {
+  metrics: CouplingMetrics[]; profiles: ModuleRiskProfile[];
+  biDirDeps: BidirectionalDependency[]; crossViolations: CrossDomainViolation[];
+}) {
   const sorted = [...metrics].sort((a, b) => b.instability - a.instability);
+  const excessiveCount = metrics.filter(m => m.is_excessively_connected).length;
+
+  const ZONE_LABELS: Record<string, string> = {
+    main_sequence: 'Main Seq.',
+    zone_of_pain: 'Zona de Dor',
+    zone_of_uselessness: 'Zona de Inutilidade',
+    balanced: 'Balanceado',
+  };
+  const ZONE_COLORS: Record<string, string> = {
+    main_sequence: RISK_COLORS.none,
+    zone_of_pain: RISK_COLORS.critical,
+    zone_of_uselessness: RISK_COLORS.high,
+    balanced: RISK_COLORS.low,
+  };
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <GitBranch className="h-4 w-4 text-primary" />
-          Análise de Acoplamento (Robert C. Martin)
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-muted-foreground border-b border-border">
-                <th className="text-left py-2 px-2">Módulo</th>
-                <th className="text-center py-2 px-2">Ca (Aferente)</th>
-                <th className="text-center py-2 px-2">Ce (Eferente)</th>
-                <th className="text-center py-2 px-2">Instabilidade</th>
-                <th className="text-center py-2 px-2">Abstração</th>
-                <th className="text-center py-2 px-2">Dist. Main Seq.</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map(m => {
-                const profile = profiles.find(p => p.module_key === m.module_key);
-                const distance = Math.abs(m.instability + m.abstractness - 1);
-                return (
-                  <tr key={m.module_key} className="border-b border-border/50 hover:bg-muted/30">
-                    <td className="py-2 px-2 font-medium text-foreground">{profile?.module_label ?? m.module_key}</td>
-                    <td className="py-2 px-2 text-center">{m.afferent_coupling}</td>
-                    <td className="py-2 px-2 text-center">{m.efferent_coupling}</td>
-                    <td className="py-2 px-2 text-center">
-                      <Badge variant="outline" className={`text-[10px] ${m.instability > 0.7 ? RISK_COLORS.high : m.instability > 0.4 ? RISK_COLORS.medium : RISK_COLORS.none}`}>
-                        {m.instability.toFixed(2)}
-                      </Badge>
-                    </td>
-                    <td className="py-2 px-2 text-center">{m.abstractness.toFixed(3)}</td>
-                    <td className="py-2 px-2 text-center">
-                      <Badge variant="outline" className={`text-[10px] ${distance > 0.7 ? RISK_COLORS.high : distance > 0.4 ? RISK_COLORS.medium : RISK_COLORS.none}`}>
-                        {distance.toFixed(2)}
-                      </Badge>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      {/* KPI row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <GitBranch className="h-4 w-4 text-primary" />
+              <span className="text-xs">Bidirecionais</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{biDirDeps.length}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${biDirDeps.length > 0 ? RISK_COLORS.critical : RISK_COLORS.none}`}>
+              {biDirDeps.length > 0 ? 'acoplamento mútuo' : 'ok'}
+            </Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <span className="text-xs">Violações SaaS↔Tenant</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{crossViolations.length}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${crossViolations.length > 0 ? RISK_COLORS.critical : RISK_COLORS.none}`}>
+              {crossViolations.length > 0 ? 'isolamento quebrado' : 'ok'}
+            </Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Zap className="h-4 w-4 text-orange-400" />
+              <span className="text-xs">Excessivamente Conectados</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{excessiveCount}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${excessiveCount > 0 ? RISK_COLORS.high : RISK_COLORS.none}`}>
+              {excessiveCount > 0 ? '≥6 conexões' : 'ok'}
+            </Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Shield className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs">Na Main Sequence</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{metrics.filter(m => m.zone === 'main_sequence').length}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${RISK_COLORS.none}`}>ideal</Badge>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main coupling table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <GitBranch className="h-4 w-4 text-primary" />
+            Análise de Acoplamento (Robert C. Martin)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-left py-2 px-2">Módulo</th>
+                  <th className="text-center py-2 px-2">Ca</th>
+                  <th className="text-center py-2 px-2">Ce</th>
+                  <th className="text-center py-2 px-2">I</th>
+                  <th className="text-center py-2 px-2">A</th>
+                  <th className="text-center py-2 px-2">D</th>
+                  <th className="text-center py-2 px-2">Zona</th>
+                  <th className="text-center py-2 px-2">BiDir</th>
+                  <th className="text-center py-2 px-2">X-Dom</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map(m => {
+                  const profile = profiles.find(p => p.module_key === m.module_key);
+                  return (
+                    <tr key={m.module_key} className="border-b border-border/50 hover:bg-muted/30">
+                      <td className="py-2 px-2 font-medium text-foreground flex items-center gap-1.5">
+                        {profile?.domain === 'saas'
+                          ? <Server className="h-3 w-3 text-blue-400 shrink-0" />
+                          : <Briefcase className="h-3 w-3 text-emerald-400 shrink-0" />}
+                        {profile?.module_label ?? m.module_key}
+                        {m.is_excessively_connected && <Zap className="h-3 w-3 text-orange-400 shrink-0" />}
+                      </td>
+                      <td className="py-2 px-2 text-center font-mono">{m.afferent_coupling}</td>
+                      <td className="py-2 px-2 text-center font-mono">{m.efferent_coupling}</td>
+                      <td className="py-2 px-2 text-center">
+                        <Badge variant="outline" className={`text-[10px] ${m.instability > 0.7 ? RISK_COLORS.high : m.instability > 0.4 ? RISK_COLORS.medium : RISK_COLORS.none}`}>
+                          {m.instability.toFixed(2)}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2 text-center font-mono">{m.abstractness.toFixed(3)}</td>
+                      <td className="py-2 px-2 text-center">
+                        <Badge variant="outline" className={`text-[10px] ${m.distance_from_main_seq > 0.7 ? RISK_COLORS.high : m.distance_from_main_seq > 0.4 ? RISK_COLORS.medium : RISK_COLORS.none}`}>
+                          {m.distance_from_main_seq.toFixed(2)}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <Badge variant="outline" className={`text-[10px] ${ZONE_COLORS[m.zone]}`}>
+                          {ZONE_LABELS[m.zone]}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2 text-center font-mono">
+                        {m.bidirectional_count > 0
+                          ? <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.critical}`}>{m.bidirectional_count}</Badge>
+                          : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="py-2 px-2 text-center font-mono">
+                        {m.cross_domain_violation_count > 0
+                          ? <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.critical}`}>{m.cross_domain_violation_count}</Badge>
+                          : <span className="text-muted-foreground">—</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bidirectional dependencies */}
+      {biDirDeps.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <RotateCcw className="h-4 w-4 text-destructive" />
+              Dependências Bidirecionais ({biDirDeps.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {biDirDeps.map((b, i) => {
+              const labelA = profiles.find(p => p.module_key === b.module_a)?.module_label ?? b.module_a;
+              const labelB = profiles.find(p => p.module_key === b.module_b)?.module_label ?? b.module_b;
+              return (
+                <div key={i} className="flex items-center gap-2 p-2 rounded-lg border border-destructive/20 bg-destructive/5 text-xs">
+                  <Badge variant="secondary" className="text-[10px]">{labelA}</Badge>
+                  <span className="text-muted-foreground">↔</span>
+                  <Badge variant="secondary" className="text-[10px]">{labelB}</Badge>
+                  <span className="ml-auto text-muted-foreground">
+                    {b.a_to_b_mandatory && b.b_to_a_mandatory ? 'ambas mandatórias' : 'parcialmente mandatória'}
+                  </span>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cross-domain violations */}
+      {crossViolations.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              Violações de Isolamento SaaS ↔ Tenant ({crossViolations.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {crossViolations.map((v, i) => (
+              <div key={i} className="p-3 rounded-lg border border-destructive/20 bg-destructive/5 space-y-1">
+                <div className="flex items-center gap-2 text-xs">
+                  <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.critical}`}>{v.direction}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{v.violation_type}</Badge>
+                  {v.is_mandatory && <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.high}`}>mandatória</Badge>}
+                </div>
+                <p className="text-xs text-muted-foreground">{v.description}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
-
 function CircularDependenciesView({ cycles, profiles }: { cycles: CircularDependencyCycle[]; profiles: ModuleRiskProfile[] }) {
   if (cycles.length === 0) {
     return (
