@@ -178,9 +178,14 @@ function createReportTemplateCustomizer(
       const p = fallback.resolve(tenantId);
       return {
         header_logo_url: p.report_header_logo ?? p.logo_url,
+        company_name: p.system_display_name ?? PLATFORM_DEFAULTS.system_display_name!,
         footer_text: p.report_footer_text,
         primary_color: p.primary_color,
+        table_header_color: p.primary_color,
+        table_border_color: p.secondary_color,
+        institutional_signature: p.report_footer_text,
         system_name: p.system_display_name ?? PLATFORM_DEFAULTS.system_display_name!,
+        full_customization: true,
       };
     },
   };

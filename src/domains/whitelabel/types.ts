@@ -65,9 +65,15 @@ export interface GeneratedTheme {
 
 export interface ReportBrandingContext {
   header_logo_url: string | null;
+  company_name: string;
   footer_text: string | null;
   primary_color: string;
+  table_header_color: string;
+  table_border_color: string;
+  institutional_signature: string | null;
   system_name: string;
+  /** Whether full customization is active or logo-only fallback */
+  full_customization: boolean;
 }
 
 // ── Plan Limits (WhiteLabel enablement) ──
