@@ -66,6 +66,7 @@ import LandingDrafts from '@/pages/platform/landing/LandingDrafts';
 import LandingReview from '@/pages/platform/landing/LandingReview';
 import LandingPublished from '@/pages/platform/landing/LandingPublished';
 import PlatformVersioning from '@/pages/platform/PlatformVersioning';
+import PlatformNavigationRefactor from '@/pages/platform/PlatformNavigationRefactor';
 import PlatformSaasSettings from '@/pages/platform/PlatformSaasSettings';
 import PlatformFooterDefaults from '@/pages/platform/PlatformFooterDefaults';
 import PlatformApiManagement from '@/pages/platform/PlatformApiManagement';
@@ -244,6 +245,11 @@ export const platformRoutes: RouteObject[] = [
         { path: 'saas', element: <PlatformSaasSettings /> },
         { path: 'gamification', element: <SettingsGamification /> },
         { path: 'footer', element: <PlatformGuard allowedRoles={['platform_super_admin']}><PlatformFooterDefaults /></PlatformGuard> },
+      ]),
+
+      // ── Navigation Refactor ──
+      sectionGuard('navigation', opsAdmin, [
+        { path: 'refactor', element: <PlatformNavigationRefactor /> },
       ]),
 
       // ── Shortcut: /platform/architecture/risk ──
