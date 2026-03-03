@@ -1,23 +1,58 @@
 /**
  * Architecture Intelligence Engine — Types
+ *
+ * PlatformModule model (canonical):
+ *   module_id, module_name, domain, description, status, version,
+ *   dependencies[], emits_events[], consumes_events[], monitoring_metrics[],
+ *   expected_deliverables[], owner, last_updated
  */
 import type { ModuleDependency, SemanticVersion } from '@/domains/platform-versioning/types';
 
-// ── Module Info ──
+// ── Module Status ──
+
+export type ModuleLifecycleStatus = 'planning' | 'development' | 'stable' | 'deprecated';
+
+// ── Monitoring Metric ──
+
+export interface ModuleMonitoringMetric {
+  metric_name: string;
+  type: 'counter' | 'gauge' | 'histogram';
+  description: string;
+}
+
+// ── Module Info (canonical PlatformModule model) ──
 
 export interface ArchModuleInfo {
+  /** module_id */
   key: string;
+  /** module_name */
   label: string;
+  /** domain: saas | tenant */
+  domain: 'saas' | 'tenant';
   description: string;
-  category: 'platform' | 'domain';
+  /** planning | development | stable | deprecated */
+  lifecycle_status: ModuleLifecycleStatus;
   version: SemanticVersion;
   version_tag: string;
-  status: 'healthy' | 'degraded' | 'down' | 'unknown';
   dependencies: ModuleDependency[];
-  events: ArchEventMapping[];
-  deliverables: ArchDeliverable[];
+  emits_events: ArchEventMapping[];
+  consumes_events: ArchEventMapping[];
+  monitoring_metrics: ModuleMonitoringMetric[];
+  expected_deliverables: ArchDeliverable[];
   docs: ArchDocEntry[];
+  owner: string;
+  last_updated: string;
   changelog_summary: string;
+
+  // ── Compat aliases (used by UI) ──
+  /** @deprecated use domain */
+  category: 'platform' | 'domain';
+  /** @deprecated use lifecycle_status */
+  status: 'healthy' | 'degraded' | 'down' | 'unknown';
+  /** @deprecated use emits_events */
+  events: ArchEventMapping[];
+  /** @deprecated use expected_deliverables */
+  deliverables: ArchDeliverable[];
 }
 
 // ── Event Mapping ──

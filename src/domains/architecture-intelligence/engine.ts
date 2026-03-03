@@ -33,7 +33,49 @@ import type {
   ArchDocEntry,
   ArchVersionEntry,
   DependencyEdge,
+  ModuleMonitoringMetric,
 } from './types';
+
+// ── Module Owners ──
+
+const MODULE_OWNERS: Record<string, string> = {
+  iam: 'security-team',
+  billing: 'finance-team',
+  observability: 'sre-team',
+  automation: 'platform-team',
+  core_hr: 'hr-product-team',
+  esocial: 'compliance-team',
+  compliance: 'compliance-team',
+  support_module: 'cx-team',
+  growth: 'growth-team',
+  landing_engine: 'growth-team',
+  website_engine: 'growth-team',
+  fleet_traccar: 'ops-team',
+  tenant_admin: 'platform-team',
+  analytics: 'data-team',
+  ads: 'marketing-team',
+};
+
+// ── Module Monitoring Metrics ──
+
+const MODULE_METRICS: Record<string, ModuleMonitoringMetric[]> = {
+  iam: [
+    { metric_name: 'iam_auth_requests_total', type: 'counter', description: 'Total de requisições de autenticação' },
+    { metric_name: 'iam_active_sessions', type: 'gauge', description: 'Sessões ativas no momento' },
+  ],
+  billing: [
+    { metric_name: 'billing_invoices_generated_total', type: 'counter', description: 'Faturas geradas' },
+    { metric_name: 'billing_mrr_brl', type: 'gauge', description: 'MRR atual em BRL' },
+  ],
+  observability: [
+    { metric_name: 'obs_health_checks_total', type: 'counter', description: 'Health checks executados' },
+    { metric_name: 'obs_error_rate', type: 'gauge', description: 'Taxa de erros atual' },
+  ],
+  core_hr: [
+    { metric_name: 'corehr_employees_active', type: 'gauge', description: 'Colaboradores ativos' },
+    { metric_name: 'corehr_admissions_total', type: 'counter', description: 'Admissões processadas' },
+  ],
+};
 
 // ── Event Registry (all kernel events flattened) ──
 
@@ -161,22 +203,37 @@ export function createArchitectureIntelligenceEngine(): ArchitectureIntelligence
     return PLATFORM_MODULES.map((mod) => {
       const catalogEntry = MODULE_CATALOG.find(c => c.module_id === mod.key);
       const healthStatus = healthSummary.modules?.find((m: any) => m.id === mod.key);
+      const modEvents = eventMap.filter(e => e.domain === mod.key || e.event_name.startsWith(mod.key));
+      const modDeliverables = PLATFORM_DELIVERABLES.filter(d => d.module_key === mod.key);
+      const modDocs = LIVING_DOCS.filter(d => d.module_key === mod.key);
+      const domainMapped: 'saas' | 'tenant' = mod.category === 'platform' ? 'saas' : 'tenant';
 
       return {
+        // ── Canonical PlatformModule fields ──
         key: mod.key,
         label: mod.label,
+        domain: domainMapped,
         description: mod.description,
-        category: mod.category,
+        lifecycle_status: 'stable' as const,
         version: catalogEntry?.initial_version ?? { major: 1, minor: 0, patch: 0 },
         version_tag: catalogEntry
           ? `v${catalogEntry.initial_version.major}.${catalogEntry.initial_version.minor}.${catalogEntry.initial_version.patch}`
           : 'v1.0.0',
-        status: healthStatus?.status ?? 'unknown',
         dependencies: catalogEntry?.dependencies ?? [],
-        events: eventMap.filter(e => e.domain === mod.key || e.event_name.startsWith(mod.key)),
-        deliverables: PLATFORM_DELIVERABLES.filter(d => d.module_key === mod.key),
-        docs: LIVING_DOCS.filter(d => d.module_key === mod.key),
+        emits_events: modEvents,
+        consumes_events: [] as ArchEventMapping[],
+        monitoring_metrics: MODULE_METRICS[mod.key] ?? [],
+        expected_deliverables: modDeliverables,
+        docs: modDocs,
+        owner: MODULE_OWNERS[mod.key] ?? 'platform-team',
+        last_updated: '2026-03-03',
         changelog_summary: catalogEntry?.changelog_summary ?? '',
+
+        // ── Compat aliases ──
+        category: mod.category,
+        status: healthStatus?.status ?? 'unknown',
+        events: modEvents,
+        deliverables: modDeliverables,
       };
     });
   };
