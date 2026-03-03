@@ -90,6 +90,7 @@ import FederationOAuthClients from '@/pages/platform/federation/FederationOAuthC
 import FederationTokenSettings from '@/pages/platform/federation/FederationTokenSettings';
 import FederationAuditLogs from '@/pages/platform/federation/FederationAuditLogs';
 import PlatformScim from '@/pages/platform/security/PlatformScim';
+import PlatformArchitectureIntelligence from '@/pages/platform/PlatformArchitectureIntelligence';
 
 const IncidentManagementDashboard = lazy(() => import('@/modules/incident-management/ui/IncidentManagementDashboard'));
 const GovernancePolicies = lazy(() => import('@/pages/platform/governance/GovernancePolicies'));
@@ -213,6 +214,7 @@ export const platformRoutes: RouteObject[] = [
         { path: 'events', element: <PlatformEvents /> },
         { path: 'menus', element: <PlatformMenuStructure /> },
         { path: 'modules', element: <PlatformModulesCatalog /> },
+        { path: 'architecture', element: <PlatformArchitectureIntelligence /> },
       ]),
 
       // ── Settings ── (shared opsAdmin guard)
