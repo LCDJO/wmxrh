@@ -9,6 +9,9 @@ export type {
   NavigationVersionCreatedPayload,
   NavigationRefactorAppliedPayload,
   NavigationRollbackExecutedPayload,
+  NavigationDraftCreatedPayload,
+  NavigationDraftApprovedPayload,
+  NavigationDraftRejectedPayload,
 } from './navigation-governance-events';
 
 // Classification
@@ -41,6 +44,27 @@ export {
   rollbackToVersion,
 } from './navigation-version-manager';
 export type { NavigationVersion, NavigationDiff, DiffChange, RollbackResult } from './navigation-version-manager';
+
+// Controlled Execution (Draft → Preview → Approve → Apply)
+export {
+  createNavigationDraft,
+  previewDraft,
+  listDrafts,
+  submitDraftForApproval,
+  approveDraft,
+  rejectDraft,
+  applyApprovedDraft,
+  getDraft,
+  expireOldDrafts,
+} from './navigation-controlled-execution';
+export type {
+  NavigationDraft,
+  DraftStatus,
+  DraftApproval,
+  DraftRejection,
+  CreateDraftInput,
+  ApplyResult,
+} from './navigation-controlled-execution';
 
 // Engine
 export {
