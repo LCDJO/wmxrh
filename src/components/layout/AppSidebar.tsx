@@ -162,6 +162,9 @@ const navSections: NavSection[] = [
       { to: '/legal-dashboard', icon: Landmark, label: 'Dashboard Legal', key: 'legal_dashboard', moduleKey: 'labor_compliance' },
       { to: '/regulatory-dashboard', icon: Activity, label: 'Regulatório', key: 'legal_dashboard', moduleKey: 'labor_compliance' },
       { to: '/legal-intelligence', icon: Scale, label: 'Inteligência Jurídica', key: 'legal_dashboard', moduleKey: 'labor_compliance' },
+      { to: '/agreement-compliance', icon: ClipboardCheck, label: 'Compliance de Acordos', key: 'legal_dashboard', moduleKey: 'labor_compliance' },
+      { to: '/document-validation', icon: FileText, label: 'Validação de Documentos', key: 'audit', moduleKey: 'compliance' },
+      { to: '/lgpd', icon: ShieldCheck, label: 'LGPD', key: 'compliance', moduleKey: 'compliance' },
       { to: '/compliance', icon: FileText, label: 'Rubricas', key: 'compliance', moduleKey: 'compliance' },
       { to: '/audit', icon: ScrollText, label: 'Auditoria', key: 'audit', moduleKey: 'audit' },
     ],
@@ -173,6 +176,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/workforce-intelligence', icon: Brain, label: 'Inteligência RH', key: 'intelligence', moduleKey: 'workforce_intelligence' },
       { to: '/strategic-intelligence', icon: Sparkles, label: 'IA Estratégica', key: 'intelligence', moduleKey: 'workforce_intelligence' },
+      { to: '/executive-dashboard', icon: TrendingUp, label: 'Dashboard Executivo', key: 'intelligence', moduleKey: 'workforce_intelligence' },
     ],
   },
 
@@ -185,6 +189,14 @@ const navSections: NavSection[] = [
       { to: '/integrations/traccar', icon: Car, label: 'Traccar (GPS)', key: 'integrations' as NavKey, moduleKey: 'fleet' },
       { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' as NavKey, moduleKey: 'esocial' },
       { to: '/esocial-governance', icon: ShieldCheck, label: 'eSocial Governance', key: 'esocial' as NavKey, moduleKey: 'esocial' },
+    ],
+  },
+
+  // ── COMUNICAÇÃO ──
+  {
+    label: 'Comunicação',
+    items: [
+      { to: '/communication-center', icon: Send, label: 'Central de Comunicação', key: 'dashboard' },
     ],
   },
 
@@ -212,6 +224,7 @@ const navSections: NavSection[] = [
     label: 'Configurações',
     items: [
       { to: '/plans', icon: Crown, label: 'Meu Plano', key: 'iam_users' },
+      { to: '/settings/personalization', icon: Sparkles, label: 'Personalização', key: 'iam_users' },
       { to: '/settings/users', icon: Users, label: 'Usuários', key: 'iam_users' },
       { to: '/settings/roles', icon: ShieldCheck, label: 'Cargos & Permissões', key: 'iam_roles' },
       { to: '/settings/pdf-layout', icon: FileText, label: 'Layout do PDF', key: 'iam_users' },
