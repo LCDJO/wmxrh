@@ -208,40 +208,98 @@ export function diffVersions(fromVersion: number, toVersion: number): Navigation
 export interface RollbackResult {
   success: boolean;
   rolled_back_to: number;
+  new_version: number;
   diff: NavigationDiff | null;
   restored_snapshot: MenuHierarchy | null;
+  summary: string[];
 }
 
 /**
  * Rollback to a previous navigation version.
- * Creates a new version entry with the restored snapshot.
+ *
+ * ⚠️ SAFE: Only affects navigation tree structure.
+ * Does NOT touch operational data (employees, billing, etc.).
+ *
+ * Creates a NEW version entry with the restored snapshot,
+ * preserving full history for auditability.
  */
 export function rollbackToVersion(
   targetVersion: number,
   executedBy: string,
+  context: 'saas' | 'tenant' = 'tenant',
 ): RollbackResult {
   const target = getVersion(targetVersion);
   const latest = getLatestVersion();
 
   if (!target) {
-    return { success: false, rolled_back_to: targetVersion, diff: null, restored_snapshot: null };
+    return {
+      success: false,
+      rolled_back_to: targetVersion,
+      new_version: currentVersion,
+      diff: null,
+      restored_snapshot: null,
+      summary: [`Versão ${targetVersion} não encontrada`],
+    };
   }
 
   const diff = latest
     ? computeNavigationDiff(latest.snapshot, target.snapshot, latest.version, targetVersion)
     : null;
 
-  // Create a new version entry with the restored snapshot
-  createNavigationVersion(
+  // Create a new version entry with the restored snapshot (append-only)
+  const newVersion = createNavigationVersion(
     target.snapshot,
     executedBy,
     `Rollback to v${targetVersion}`,
+    context,
   );
+
+  // Persist rollback event to DB audit
+  supabase.from('navigation_versions').insert({
+    version_number: newVersion.version,
+    context,
+    tree_snapshot: target.snapshot as any,
+    description: `Rollback from v${latest?.version ?? '?'} to v${targetVersion}`,
+    created_by: executedBy,
+  } as any).then(({ error }) => {
+    if (error) console.warn('[NavigationRollback] Failed to persist rollback:', error.message);
+  });
+
+  const summary = [
+    `Rollback executado: v${latest?.version ?? '?'} → v${targetVersion}`,
+    `Nova versão criada: v${newVersion.version}`,
+    ...(diff?.summary ?? []),
+  ];
 
   return {
     success: true,
     rolled_back_to: targetVersion,
+    new_version: newVersion.version,
     diff,
     restored_snapshot: target.snapshot,
+    summary,
   };
+}
+
+/**
+ * Load version history from database for a given context.
+ */
+export async function loadVersionsFromDB(context: 'saas' | 'tenant'): Promise<NavigationVersion[]> {
+  const { data, error } = await supabase
+    .from('navigation_versions')
+    .select('*')
+    .eq('context', context)
+    .order('version_number', { ascending: false })
+    .limit(MAX_VERSIONS) as any;
+
+  if (error || !data) return [];
+
+  return data.map((row: any) => ({
+    id: row.id,
+    version: row.version_number,
+    snapshot: row.tree_snapshot as MenuHierarchy,
+    created_at: new Date(row.created_at).getTime(),
+    created_by: row.created_by ?? 'system',
+    description: row.description,
+  }));
 }
