@@ -95,6 +95,7 @@ import ArchitectureSaasCore from '@/pages/platform/architecture/ArchitectureSaas
 import ArchitectureTenantModules from '@/pages/platform/architecture/ArchitectureTenantModules';
 import DependencyGraphVisualizer from '@/pages/platform/architecture/DependencyGraphVisualizer';
 import ModuleHealthMonitor from '@/pages/platform/architecture/ModuleHealthMonitor';
+import DocumentationManager from '@/pages/platform/architecture/DocumentationManager';
 
 const IncidentManagementDashboard = lazy(() => import('@/modules/incident-management/ui/IncidentManagementDashboard'));
 const GovernancePolicies = lazy(() => import('@/pages/platform/governance/GovernancePolicies'));
@@ -227,6 +228,7 @@ export const platformRoutes: RouteObject[] = [
             { path: 'tenant-modules', element: <ArchitectureTenantModules /> },
             { path: 'dependency-graph', element: <DependencyGraphVisualizer /> },
             { path: 'health-monitor', element: <ModuleHealthMonitor /> },
+            { path: 'documentation', element: <DocumentationManager /> },
           ],
         },
       ]),
