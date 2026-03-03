@@ -11,4 +11,6 @@ export type {
   ArchVersionEntry,
   DependencyEdge,
   DeliverableStatus,
+  ModuleLifecycleStatus,
+  ModuleMonitoringMetric,
 } from './types';
