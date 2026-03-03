@@ -3,7 +3,7 @@
  */
 import { useMemo, useState } from 'react';
 import { createArchitectureRiskAnalyzer } from '@/domains/architecture-risk';
-import type { ModuleRiskProfile, RiskLevel, CircularDependencyCycle, RefactorSuggestion, CouplingMetrics, DependencyRiskScore, BidirectionalDependency, CrossDomainViolation, CriticalityIndex } from '@/domains/architecture-risk';
+import type { ModuleRiskProfile, RiskLevel, CircularDependencyCycle, RefactorSuggestion, CouplingMetrics, DependencyRiskScore, BidirectionalDependency, CrossDomainViolation, CriticalityIndex, ChangeImpactPrediction } from '@/domains/architecture-risk';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   AlertTriangle, Shield, GitBranch, RotateCcw, Zap, Target,
   TrendingUp, Lightbulb, Activity, Server, Briefcase, ArrowRight,
+  Radar, Users, Workflow, PlayCircle, RotateCw, CheckCircle2, XCircle, AlertCircle,
 } from 'lucide-react';
 
 const RISK_COLORS: Record<RiskLevel, string> = {
@@ -47,6 +48,7 @@ export default function ArchitectureRiskDashboard() {
   const biDirDeps = useMemo(() => analyzer.getBidirectionalDependencies(), [analyzer]);
   const crossViolations = useMemo(() => analyzer.getCrossDomainViolations(), [analyzer]);
   const critIndexes = useMemo(() => analyzer.getCriticalityIndexes(), [analyzer]);
+  const impactPredictions = useMemo(() => analyzer.getChangeImpactPredictions(), [analyzer]);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
 
   const selectedProfile = selectedModule ? profiles.find(p => p.module_key === selectedModule) : null;
@@ -102,6 +104,7 @@ export default function ArchitectureRiskDashboard() {
           <TabsTrigger value="coupling" className="gap-1.5"><GitBranch className="h-3.5 w-3.5" />Coupling</TabsTrigger>
           <TabsTrigger value="cycles" className="gap-1.5"><RotateCcw className="h-3.5 w-3.5" />Ciclos</TabsTrigger>
           <TabsTrigger value="criticality" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Criticality</TabsTrigger>
+          <TabsTrigger value="impact" className="gap-1.5"><Radar className="h-3.5 w-3.5" />Impact Predictor</TabsTrigger>
           <TabsTrigger value="suggestions" className="gap-1.5"><Lightbulb className="h-3.5 w-3.5" />Refactoring</TabsTrigger>
         </TabsList>
 
@@ -151,6 +154,11 @@ export default function ArchitectureRiskDashboard() {
         {/* ── Criticality Index ── */}
         <TabsContent value="criticality">
           <CriticalityView indexes={critIndexes} />
+        </TabsContent>
+
+        {/* ── Change Impact Predictor ── */}
+        <TabsContent value="impact">
+          <ChangeImpactView predictions={impactPredictions} />
         </TabsContent>
 
         {/* ── Refactor Suggestions ── */}
@@ -1118,5 +1126,282 @@ function CriticalityDetail({ idx }: { idx: CriticalityIndex }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ── Change Impact Predictor View ──
+
+const PREFLIGHT_ICONS: Record<string, React.ReactNode> = {
+  pass: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />,
+  fail: <XCircle className="h-3.5 w-3.5 text-destructive" />,
+  warn: <AlertCircle className="h-3.5 w-3.5 text-amber-400" />,
+};
+
+const WORKFLOW_ICONS: Record<string, React.ReactNode> = {
+  onboarding: <Users className="h-3 w-3 text-blue-400" />,
+  offboarding: <Users className="h-3 w-3 text-orange-400" />,
+  payroll: <Briefcase className="h-3 w-3 text-emerald-400" />,
+  compliance: <Shield className="h-3 w-3 text-purple-400" />,
+  approval: <CheckCircle2 className="h-3 w-3 text-primary" />,
+  automation: <Zap className="h-3 w-3 text-amber-400" />,
+};
+
+function ChangeImpactView({ predictions }: { predictions: ChangeImpactPrediction[] }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const selectedPred = selected ? predictions.find(p => p.module_key === selected) : null;
+
+  const sandboxCount = predictions.filter(p => p.sandbox_recommended).length;
+  const rollbackCount = predictions.filter(p => p.rollback_required).length;
+  const criticalCount = predictions.filter(p => p.risk_level === 'critical' || p.risk_level === 'high').length;
+  const totalWorkflowBreaks = predictions.reduce((s, p) => s + p.affected_workflows.filter(w => w.will_break).length, 0);
+
+  return (
+    <div className="space-y-4">
+      {/* KPI row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Radar className="h-4 w-4 text-destructive" />
+              <span className="text-xs">Alto Impacto</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{criticalCount}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${criticalCount > 0 ? RISK_COLORS.critical : RISK_COLORS.none}`}>
+              {criticalCount > 0 ? 'blast radius alto' : 'ok'}
+            </Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <PlayCircle className="h-4 w-4 text-amber-400" />
+              <span className="text-xs">Sandbox Recomendado</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{sandboxCount}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <RotateCw className="h-4 w-4 text-orange-400" />
+              <span className="text-xs">Rollback Obrigatório</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{rollbackCount}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${rollbackCount > 0 ? RISK_COLORS.high : RISK_COLORS.none}`}>
+              {rollbackCount > 0 ? 'plano necessário' : 'ok'}
+            </Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Workflow className="h-4 w-4 text-destructive" />
+              <span className="text-xs">Workflows Quebrados</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{totalWorkflowBreaks}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${totalWorkflowBreaks > 0 ? RISK_COLORS.critical : RISK_COLORS.none}`}>
+              {totalWorkflowBreaks > 0 ? 'ação necessária' : 'ok'}
+            </Badge>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Module list + Detail */}
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-5">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Radar className="h-4 w-4 text-primary" />
+                Change Impact Predictor
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1 max-h-[600px] overflow-y-auto">
+              {predictions.map(p => (
+                <div
+                  key={p.module_key}
+                  className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors border text-xs ${
+                    selected === p.module_key ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted/30'
+                  }`}
+                  onClick={() => setSelected(prev => prev === p.module_key ? null : p.module_key)}
+                >
+                  {p.domain === 'saas'
+                    ? <Server className="h-3 w-3 text-blue-400 shrink-0" />
+                    : <Briefcase className="h-3 w-3 text-emerald-400 shrink-0" />}
+                  <span className="font-medium text-foreground truncate flex-1">{p.module_label}</span>
+                  <Badge variant="outline" className={`text-[9px] ${RISK_COLORS[p.risk_level]}`}>
+                    {p.blast_radius_score}
+                  </Badge>
+                  {p.sandbox_recommended && <PlayCircle className="h-3 w-3 text-amber-400 shrink-0" />}
+                  {p.rollback_required && <RotateCw className="h-3 w-3 text-orange-400 shrink-0" />}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="col-span-7">
+          {selectedPred ? (
+            <ChangeImpactDetail prediction={selectedPred} />
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Radar className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                <p className="text-sm text-muted-foreground">Selecione um módulo para ver a predição de impacto</p>
+                <p className="text-xs text-muted-foreground mt-1">Inclui módulos, tenants, workflows e recomendações de sandbox/rollback</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChangeImpactDetail({ prediction: p }: { prediction: ChangeImpactPrediction }) {
+  return (
+    <div className="space-y-4">
+      {/* Header card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Radar className="h-4 w-4 text-primary" />
+            {p.module_label}
+            <Badge variant="outline" className={`text-[10px] ml-auto ${RISK_COLORS[p.risk_level]}`}>
+              blast_radius: {p.blast_radius_score}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Strategy badges */}
+          <div className="flex gap-2 flex-wrap mb-4">
+            {p.sandbox_recommended && (
+              <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.medium}`}>
+                <PlayCircle className="h-3 w-3 mr-1" />
+                Sandbox Recomendado
+              </Badge>
+            )}
+            {p.rollback_required && (
+              <Badge variant="outline" className={`text-[10px] ${RISK_COLORS.high}`}>
+                <RotateCw className="h-3 w-3 mr-1" />
+                Rollback Obrigatório
+              </Badge>
+            )}
+            <Badge variant="outline" className={`text-[10px] ${p.rollback_strategy === 'immediate' ? RISK_COLORS.critical : p.rollback_strategy === 'phased' ? RISK_COLORS.high : RISK_COLORS.medium}`}>
+              Estratégia: {p.rollback_strategy}
+            </Badge>
+          </div>
+
+          {/* Preflight checks */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pre-Flight Checks</p>
+            {p.preflight_checks.map(check => (
+              <div key={check.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-muted/20">
+                {PREFLIGHT_ICONS[check.status]}
+                <span className="font-medium text-foreground">{check.label}</span>
+                <span className="text-muted-foreground ml-auto">{check.description}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Impacted Modules */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <GitBranch className="h-4 w-4 text-primary" />
+            Módulos Impactados ({p.impacted_modules.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {p.impacted_modules.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum módulo impactado ✓</p>
+          ) : (
+            <div className="space-y-1">
+              {p.impacted_modules.map(m => (
+                <div key={m.module_key} className="flex items-center gap-2 text-xs p-1.5 rounded bg-muted/20">
+                  {m.domain === 'saas'
+                    ? <Server className="h-3 w-3 text-blue-400 shrink-0" />
+                    : <Briefcase className="h-3 w-3 text-emerald-400 shrink-0" />}
+                  <span className="font-medium text-foreground">{m.module_label}</span>
+                  <Badge variant="outline" className={`text-[9px] ${m.impact_type === 'direct' ? RISK_COLORS.high : RISK_COLORS.low}`}>
+                    {m.impact_type} (d={m.depth})
+                  </Badge>
+                  {m.is_mandatory && (
+                    <Badge variant="outline" className={`text-[9px] ${RISK_COLORS.critical}`}>mandatória</Badge>
+                  )}
+                  <Badge variant="outline" className={`text-[9px] ml-auto ${RISK_COLORS[m.risk_level]}`}>{m.risk_level}</Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Affected Tenants */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            Tenants Afetados ({p.affected_tenants.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {p.affected_tenants.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum tenant afetado ✓</p>
+          ) : (
+            <div className="space-y-1">
+              {p.affected_tenants.map(t => (
+                <div key={t.tenant_id} className="flex items-center gap-2 text-xs p-2 rounded bg-muted/20">
+                  <Users className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <span className="font-medium text-foreground">{t.tenant_name}</span>
+                  <Badge variant="outline" className="text-[9px]">{t.plan_tier}</Badge>
+                  <Badge variant="outline" className={`text-[9px] ${RISK_COLORS[t.impact_severity]}`}>{t.impact_severity}</Badge>
+                  {t.has_active_sandbox && (
+                    <Badge variant="outline" className={`text-[9px] ${RISK_COLORS.medium}`}>
+                      <PlayCircle className="h-2.5 w-2.5 mr-0.5" />sandbox ativo
+                    </Badge>
+                  )}
+                  <span className="ml-auto text-muted-foreground">{t.affected_modules.length} módulo(s)</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Affected Workflows */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Workflow className="h-4 w-4 text-primary" />
+            Workflows Afetados ({p.affected_workflows.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {p.affected_workflows.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum workflow afetado ✓</p>
+          ) : (
+            <div className="space-y-1">
+              {p.affected_workflows.map(wf => (
+                <div key={wf.workflow_id} className={`flex items-center gap-2 text-xs p-2 rounded ${wf.will_break ? 'bg-destructive/5 border border-destructive/20' : 'bg-muted/20'}`}>
+                  {WORKFLOW_ICONS[wf.workflow_type] ?? <Workflow className="h-3 w-3 text-muted-foreground" />}
+                  <span className="font-medium text-foreground">{wf.workflow_name}</span>
+                  <Badge variant="outline" className="text-[9px]">{wf.workflow_type}</Badge>
+                  <Badge variant="outline" className={`text-[9px] ${RISK_COLORS[wf.impact_severity]}`}>{wf.impact_severity}</Badge>
+                  {wf.will_break && (
+                    <Badge variant="outline" className={`text-[9px] ${RISK_COLORS.critical}`}>
+                      <XCircle className="h-2.5 w-2.5 mr-0.5" />vai quebrar
+                    </Badge>
+                  )}
+                  <span className="ml-auto text-muted-foreground">{wf.depends_on_modules.length} deps</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

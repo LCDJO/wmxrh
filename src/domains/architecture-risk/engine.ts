@@ -157,6 +157,72 @@ export interface CrossDomainViolation {
   description: string;
 }
 
+// ── Change Impact Prediction (full) ──
+
+export interface ChangeImpactPrediction {
+  module_key: string;
+  module_label: string;
+  domain: 'saas' | 'tenant';
+  /** Transitively impacted modules */
+  impacted_modules: ImpactedModule[];
+  /** Tenants affected (simulated based on module domain) */
+  affected_tenants: AffectedTenant[];
+  /** Workflows that depend on this module */
+  affected_workflows: AffectedWorkflow[];
+  /** Overall blast radius score 0–100 */
+  blast_radius_score: number;
+  risk_level: RiskLevel;
+  /** Whether sandbox preview is recommended */
+  sandbox_recommended: boolean;
+  /** Whether rollback plan is required */
+  rollback_required: boolean;
+  /** Suggested rollback strategy */
+  rollback_strategy: 'immediate' | 'phased' | 'canary' | 'none';
+  /** Pre-flight checks */
+  preflight_checks: PreflightCheck[];
+}
+
+export interface ImpactedModule {
+  module_key: string;
+  module_label: string;
+  domain: 'saas' | 'tenant';
+  impact_type: 'direct' | 'transitive';
+  is_mandatory: boolean;
+  /** Depth from source (1 = direct, 2+ = transitive) */
+  depth: number;
+  risk_level: RiskLevel;
+}
+
+export interface AffectedTenant {
+  tenant_id: string;
+  tenant_name: string;
+  plan_tier: 'enterprise' | 'professional' | 'starter';
+  impact_severity: RiskLevel;
+  /** Modules this tenant uses that are in the blast radius */
+  affected_modules: string[];
+  /** Whether this tenant has active sandbox preview */
+  has_active_sandbox: boolean;
+}
+
+export interface AffectedWorkflow {
+  workflow_id: string;
+  workflow_name: string;
+  workflow_type: 'onboarding' | 'offboarding' | 'payroll' | 'compliance' | 'approval' | 'automation';
+  /** Modules this workflow depends on */
+  depends_on_modules: string[];
+  /** Whether workflow will break */
+  will_break: boolean;
+  /** Severity of impact */
+  impact_severity: RiskLevel;
+}
+
+export interface PreflightCheck {
+  id: string;
+  label: string;
+  status: 'pass' | 'fail' | 'warn';
+  description: string;
+}
+
 export interface CouplingMetrics {
   module_key: string;
   afferent_coupling: number;  // Ca — modules that depend on this
@@ -745,6 +811,188 @@ function predictChangeImpact(
   return { radius, affected: Array.from(affected), score: clamp(score), factors };
 }
 
+// ── 5b. Full Change Impact Prediction ──
+
+/** Simulated tenant data */
+const SIMULATED_TENANTS: Array<{ tenant_id: string; tenant_name: string; plan_tier: 'enterprise' | 'professional' | 'starter'; active_modules: string[] }> = [
+  { tenant_id: 't-001', tenant_name: 'Acme Corp', plan_tier: 'enterprise', active_modules: ['core_hr', 'payroll', 'benefits', 'agreements', 'esocial', 'sst', 'iam', 'tenant_module', 'analytics_module'] },
+  { tenant_id: 't-002', tenant_name: 'TechFlow Ltda', plan_tier: 'professional', active_modules: ['core_hr', 'payroll', 'time_tracking', 'iam', 'tenant_module', 'agreements'] },
+  { tenant_id: 't-003', tenant_name: 'Globex Industries', plan_tier: 'enterprise', active_modules: ['core_hr', 'payroll', 'benefits', 'esocial', 'sst', 'iam', 'tenant_module', 'fleet_module', 'analytics_module', 'agreements'] },
+  { tenant_id: 't-004', tenant_name: 'StartUp Brasil', plan_tier: 'starter', active_modules: ['core_hr', 'payroll', 'iam', 'tenant_module'] },
+  { tenant_id: 't-005', tenant_name: 'Construtora Atlas', plan_tier: 'professional', active_modules: ['core_hr', 'payroll', 'sst', 'iam', 'tenant_module', 'time_tracking'] },
+];
+
+/** Simulated workflows */
+const SIMULATED_WORKFLOWS: AffectedWorkflow[] = [
+  { workflow_id: 'wf-onb-001', workflow_name: 'Admissão Digital', workflow_type: 'onboarding', depends_on_modules: ['core_hr', 'agreements', 'iam', 'tenant_module'], will_break: false, impact_severity: 'none' },
+  { workflow_id: 'wf-off-001', workflow_name: 'Desligamento Completo', workflow_type: 'offboarding', depends_on_modules: ['core_hr', 'payroll', 'benefits', 'agreements'], will_break: false, impact_severity: 'none' },
+  { workflow_id: 'wf-pay-001', workflow_name: 'Fechamento de Folha', workflow_type: 'payroll', depends_on_modules: ['payroll', 'benefits', 'time_tracking', 'esocial'], will_break: false, impact_severity: 'none' },
+  { workflow_id: 'wf-comp-001', workflow_name: 'Envio eSocial', workflow_type: 'compliance', depends_on_modules: ['esocial', 'core_hr', 'payroll', 'sst'], will_break: false, impact_severity: 'none' },
+  { workflow_id: 'wf-appr-001', workflow_name: 'Aprovação de Férias', workflow_type: 'approval', depends_on_modules: ['core_hr', 'tenant_module'], will_break: false, impact_severity: 'none' },
+  { workflow_id: 'wf-auto-001', workflow_name: 'Automação de Benefícios', workflow_type: 'automation', depends_on_modules: ['benefits', 'core_hr', 'payroll'], will_break: false, impact_severity: 'none' },
+];
+
+function buildFullChangeImpactPrediction(
+  mod: ArchModuleInfo,
+  edges: DependencyEdge[],
+  modules: ArchModuleInfo[],
+): ChangeImpactPrediction {
+  // 1. Compute impacted modules with depth via BFS
+  const reverseGraph = new Map<string, Array<{ target: string; is_mandatory: boolean }>>();
+  for (const e of edges) {
+    if (!reverseGraph.has(e.to)) reverseGraph.set(e.to, []);
+    reverseGraph.get(e.to)!.push({ target: e.from, is_mandatory: e.is_mandatory });
+  }
+
+  const impactedModules: ImpactedModule[] = [];
+  const visited = new Set<string>();
+  const queue: Array<{ key: string; depth: number; is_mandatory: boolean }> = [];
+
+  // Seed: direct dependents
+  for (const dep of reverseGraph.get(mod.key) ?? []) {
+    if (dep.target !== mod.key) {
+      queue.push({ key: dep.target, depth: 1, is_mandatory: dep.is_mandatory });
+    }
+  }
+
+  while (queue.length) {
+    const { key, depth, is_mandatory } = queue.shift()!;
+    if (visited.has(key)) continue;
+    visited.add(key);
+
+    const depMod = modules.find(m => m.key === key);
+    impactedModules.push({
+      module_key: key,
+      module_label: depMod?.label ?? key,
+      domain: depMod?.domain ?? 'tenant',
+      impact_type: depth === 1 ? 'direct' : 'transitive',
+      is_mandatory,
+      depth,
+      risk_level: is_mandatory && depth <= 2 ? 'high' : depth <= 2 ? 'medium' : 'low',
+    });
+
+    for (const next of reverseGraph.get(key) ?? []) {
+      if (!visited.has(next.target)) {
+        queue.push({ key: next.target, depth: depth + 1, is_mandatory: next.is_mandatory });
+      }
+    }
+  }
+
+  impactedModules.sort((a, b) => a.depth - b.depth || (b.is_mandatory ? 1 : 0) - (a.is_mandatory ? 1 : 0));
+
+  const impactedKeys = new Set([mod.key, ...impactedModules.map(m => m.module_key)]);
+
+  // 2. Affected tenants
+  const affectedTenants: AffectedTenant[] = SIMULATED_TENANTS
+    .map(t => {
+      const affectedMods = t.active_modules.filter(m => impactedKeys.has(m));
+      if (affectedMods.length === 0 && !impactedKeys.has(mod.key)) return null;
+      // SaaS modules affect ALL tenants
+      const isSaasChange = mod.domain === 'saas';
+      if (!isSaasChange && affectedMods.length === 0) return null;
+
+      const severity: RiskLevel = affectedMods.length >= 3 ? 'critical' :
+        affectedMods.length >= 2 ? 'high' :
+        isSaasChange ? 'medium' : 'low';
+
+      return {
+        tenant_id: t.tenant_id,
+        tenant_name: t.tenant_name,
+        plan_tier: t.plan_tier,
+        impact_severity: severity,
+        affected_modules: isSaasChange ? [mod.key, ...affectedMods] : affectedMods,
+        has_active_sandbox: Math.random() > 0.7, // simulated
+      };
+    })
+    .filter(Boolean) as AffectedTenant[];
+
+  // 3. Affected workflows
+  const affectedWorkflows: AffectedWorkflow[] = SIMULATED_WORKFLOWS
+    .map(wf => {
+      const overlapping = wf.depends_on_modules.filter(m => impactedKeys.has(m));
+      if (overlapping.length === 0) return null;
+      const willBreak = overlapping.some(m => {
+        const imp = impactedModules.find(i => i.module_key === m);
+        return imp?.is_mandatory && imp.depth <= 1;
+      }) || overlapping.includes(mod.key);
+
+      const severity: RiskLevel = willBreak ? 'critical' :
+        overlapping.length >= 2 ? 'high' : 'medium';
+
+      return { ...wf, will_break: willBreak, impact_severity: severity };
+    })
+    .filter(Boolean) as AffectedWorkflow[];
+
+  // 4. Blast radius score
+  const radius = impactedModules.length;
+  let blastScore = 0;
+  if (radius >= 8) blastScore = 90;
+  else if (radius >= 5) blastScore = 65;
+  else if (radius >= 3) blastScore = 40;
+  else if (radius >= 1) blastScore = 20;
+
+  // Amplify if tenants or workflows affected
+  if (affectedTenants.length >= 4) blastScore = Math.min(100, blastScore + 10);
+  if (affectedWorkflows.filter(w => w.will_break).length >= 2) blastScore = Math.min(100, blastScore + 10);
+
+  // 5. Sandbox & Rollback decisions
+  const sandboxRecommended = blastScore >= 40 || affectedTenants.some(t => t.plan_tier === 'enterprise');
+  const rollbackRequired = blastScore >= 60 || affectedWorkflows.some(w => w.will_break);
+  const rollbackStrategy: ChangeImpactPrediction['rollback_strategy'] =
+    blastScore >= 80 ? 'immediate' :
+    blastScore >= 60 ? 'phased' :
+    blastScore >= 40 ? 'canary' : 'none';
+
+  // 6. Preflight checks
+  const preflightChecks: PreflightCheck[] = [
+    {
+      id: 'pf-deps',
+      label: 'Validação de Dependências',
+      status: impactedModules.filter(m => m.is_mandatory).length > 3 ? 'fail' : impactedModules.filter(m => m.is_mandatory).length > 0 ? 'warn' : 'pass',
+      description: `${impactedModules.filter(m => m.is_mandatory).length} dependências mandatórias no blast radius`,
+    },
+    {
+      id: 'pf-tenants',
+      label: 'Tenants Impactados',
+      status: affectedTenants.filter(t => t.plan_tier === 'enterprise').length > 0 ? 'warn' : 'pass',
+      description: `${affectedTenants.length} tenant(s) afetado(s), ${affectedTenants.filter(t => t.plan_tier === 'enterprise').length} enterprise`,
+    },
+    {
+      id: 'pf-workflows',
+      label: 'Workflows Críticos',
+      status: affectedWorkflows.some(w => w.will_break) ? 'fail' : affectedWorkflows.length > 0 ? 'warn' : 'pass',
+      description: `${affectedWorkflows.length} workflow(s) afetado(s), ${affectedWorkflows.filter(w => w.will_break).length} vão quebrar`,
+    },
+    {
+      id: 'pf-sandbox',
+      label: 'Sandbox Preview',
+      status: sandboxRecommended ? 'warn' : 'pass',
+      description: sandboxRecommended ? 'Recomendado ativar sandbox preview antes do deploy' : 'Sandbox não obrigatório',
+    },
+    {
+      id: 'pf-rollback',
+      label: 'Plano de Rollback',
+      status: rollbackRequired ? 'fail' : 'pass',
+      description: rollbackRequired ? `Rollback obrigatório — estratégia: ${rollbackStrategy}` : 'Rollback não obrigatório',
+    },
+  ];
+
+  return {
+    module_key: mod.key,
+    module_label: mod.label,
+    domain: mod.domain,
+    impacted_modules: impactedModules,
+    affected_tenants: affectedTenants,
+    affected_workflows: affectedWorkflows,
+    blast_radius_score: clamp(blastScore),
+    risk_level: riskLevel(blastScore),
+    sandbox_recommended: sandboxRecommended,
+    rollback_required: rollbackRequired,
+    rollback_strategy: rollbackStrategy,
+    preflight_checks: preflightChecks,
+  };
+}
+
 // ── 6. RiskScoringEngine ──
 
 const WEIGHTS = {
@@ -847,6 +1095,8 @@ export interface ArchitectureRiskAnalyzerAPI {
   getBidirectionalDependencies(): BidirectionalDependency[];
   getCrossDomainViolations(): CrossDomainViolation[];
   getCriticalityIndexes(): CriticalityIndex[];
+  getChangeImpactPredictions(): ChangeImpactPrediction[];
+  getChangeImpactForModule(moduleKey: string): ChangeImpactPrediction | null;
 }
 
 export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
@@ -955,6 +1205,11 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
     .map(p => p.criticality_detail)
     .sort((a, b) => b.criticality_index - a.criticality_index);
 
+  // Build full change impact predictions for all modules
+  const changeImpactPredictions = modules
+    .map(mod => buildFullChangeImpactPrediction(mod, edges, modules))
+    .sort((a, b) => b.blast_radius_score - a.blast_radius_score);
+
   return {
     analyze: () => summary,
     getModuleRisk: (key) => profiles.find(p => p.module_key === key) ?? null,
@@ -965,5 +1220,7 @@ export function createArchitectureRiskAnalyzer(): ArchitectureRiskAnalyzerAPI {
     getBidirectionalDependencies: () => bidirectionalDeps,
     getCrossDomainViolations: () => crossDomainViolations,
     getCriticalityIndexes: () => critIndexes,
+    getChangeImpactPredictions: () => changeImpactPredictions,
+    getChangeImpactForModule: (key) => changeImpactPredictions.find(p => p.module_key === key) ?? null,
   };
 }

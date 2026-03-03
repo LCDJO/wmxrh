@@ -15,4 +15,9 @@ export {
   type BidirectionalDependency,
   type CrossDomainViolation,
   type CriticalityIndex,
+  type ChangeImpactPrediction,
+  type ImpactedModule,
+  type AffectedTenant,
+  type AffectedWorkflow,
+  type PreflightCheck,
 } from './engine';
