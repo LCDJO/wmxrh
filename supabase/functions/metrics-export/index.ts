@@ -314,6 +314,48 @@ serve(async (req) => {
       lines.push("# TYPE custom_domain_active_total gauge");
       lines.push(`custom_domain_active_total ${customDomainRes.count ?? 0} ${ts}`);
 
+      // ══════════════════════════════════════════════════════════
+      // Architecture Intelligence Metrics
+      // ══════════════════════════════════════════════════════════
+
+      const [
+        archModuleVersionsRes,
+        archChangelogsRes,
+      ] = await Promise.all([
+        sb.from("module_versions").select("module_id, status"),
+        sb.from("platform_changelogs").select("id", { count: "exact", head: true }),
+      ]);
+
+      const mvRows = archModuleVersionsRes.data ?? [];
+      // Unique modules from version table
+      const uniqueModules = new Set(mvRows.map((r: any) => r.module_id));
+      const totalModules = uniqueModules.size;
+      const devModules = mvRows.filter((r: any) => r.status === "development" || r.status === "planning" || r.status === "draft");
+      const devModuleIds = new Set(devModules.map((r: any) => r.module_id));
+
+      // ── modules_total ─────────────────────────────────────────
+      lines.push("# HELP modules_total Total registered platform modules");
+      lines.push("# TYPE modules_total gauge");
+      lines.push(`modules_total ${totalModules} ${ts}`);
+
+      // ── modules_in_development ────────────────────────────────
+      lines.push("# HELP modules_in_development Modules in development or planning phase");
+      lines.push("# TYPE modules_in_development gauge");
+      lines.push(`modules_in_development ${devModuleIds.size} ${ts}`);
+
+      // ── architecture_changes_total ────────────────────────────
+      lines.push("# HELP architecture_changes_total Total architecture changelog entries");
+      lines.push("# TYPE architecture_changes_total counter");
+      lines.push(`architecture_changes_total ${archChangelogsRes.count ?? 0} ${ts}`);
+
+      // ── critical_dependency_count ─────────────────────────────
+      // Count modules with breaking_changes flagged in latest versions
+      const criticalDeps = mvRows.filter((r: any) => r.breaking_changes === true);
+      const criticalModuleIds = new Set(criticalDeps.map((r: any) => r.module_id));
+      lines.push("# HELP critical_dependency_count Modules with breaking changes (critical dependencies)");
+      lines.push("# TYPE critical_dependency_count gauge");
+      lines.push(`critical_dependency_count ${criticalModuleIds.size} ${ts}`);
+
       return new Response(lines.join("\n") + "\n", {
         headers: {
           ...corsHeaders,
