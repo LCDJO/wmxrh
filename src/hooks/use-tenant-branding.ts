@@ -99,9 +99,14 @@ export function useTenantBranding() {
       // Fallback: only logo allowed in reports
       return {
         header_logo_url: profile?.logo_url ?? null,
+        company_name: 'Plataforma RH',
         footer_text: null,
         primary_color: '#0D9668',
+        table_header_color: '#0D9668',
+        table_border_color: '#1E293B',
+        institutional_signature: null,
         system_name: 'Plataforma RH',
+        full_customization: false,
       };
     }
     return ctx;
