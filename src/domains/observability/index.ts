@@ -58,3 +58,7 @@ export {
   incrementBehaviorAnomalies, incrementHighRiskEntries,
   incrementSharedDeviceSuspicions, setAIModelAccuracyScore,
 } from './behavioral-ai-metrics';
+export {
+  setWhiteLabelEnabledTotal, incrementBrandingUpdates,
+  setCustomDomainActiveTotal,
+} from './whitelabel-metrics';
