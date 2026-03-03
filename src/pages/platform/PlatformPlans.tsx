@@ -24,7 +24,7 @@ import {
 import {
   Package, Plus, Pencil, Trash2, CreditCard, Puzzle, Flag,
   AlertTriangle, Check, X, DollarSign, ToggleLeft, Users,
-  Link2, Info, RefreshCw,
+  Link2, Info, RefreshCw, Palette,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -200,6 +200,9 @@ type PlanFormData = {
   feature_flags: string[];
   max_employees: string;
   unlimited_employees: boolean;
+  allow_whitelabel: boolean;
+  allow_custom_reports: boolean;
+  allow_custom_domain: boolean;
 };
 
 const emptyForm: PlanFormData = {
@@ -213,6 +216,9 @@ const emptyForm: PlanFormData = {
   feature_flags: [],
   max_employees: '',
   unlimited_employees: true,
+  allow_whitelabel: false,
+  allow_custom_reports: false,
+  allow_custom_domain: false,
 };
 
 export default function PlatformPlans() {
@@ -264,6 +270,9 @@ export default function PlatformPlans() {
       feature_flags: plan.feature_flags ?? [],
       max_employees: maxEmp != null ? String(maxEmp) : '',
       unlimited_employees: maxEmp == null,
+      allow_whitelabel: (plan as any).allow_whitelabel ?? false,
+      allow_custom_reports: (plan as any).allow_custom_reports ?? false,
+      allow_custom_domain: (plan as any).allow_custom_domain ?? false,
     });
     setDialogOpen(true);
   };
@@ -286,6 +295,9 @@ export default function PlatformPlans() {
       allowed_payment_methods: form.allowed_payment_methods,
       feature_flags: form.feature_flags,
       max_employees: form.unlimited_employees ? null : (parseInt(form.max_employees) || null),
+      allow_whitelabel: form.allow_whitelabel,
+      allow_custom_reports: form.allow_custom_reports,
+      allow_custom_domain: form.allow_custom_domain,
     };
 
     if (editingPlan) {
@@ -665,6 +677,27 @@ export default function PlatformPlans() {
               )}
             </div>
 
+            {/* WhiteLabel & Custom Features */}
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <Palette className="h-4 w-4 text-primary" /> Recursos de Personalização
+              </Label>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="flex items-center gap-2 rounded-lg border p-3">
+                  <Switch checked={form.allow_whitelabel} onCheckedChange={v => setForm(p => ({ ...p, allow_whitelabel: v }))} />
+                  <Label className="text-xs">WhiteLabel</Label>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border p-3">
+                  <Switch checked={form.allow_custom_reports} onCheckedChange={v => setForm(p => ({ ...p, allow_custom_reports: v }))} />
+                  <Label className="text-xs">Relatórios Custom</Label>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border p-3">
+                  <Switch checked={form.allow_custom_domain} onCheckedChange={v => setForm(p => ({ ...p, allow_custom_domain: v }))} />
+                  <Label className="text-xs">Domínio Custom</Label>
+                </div>
+              </div>
+            </div>
+
             <Separator />
 
             {/* Modules — Tree-based with dependencies */}
@@ -692,6 +725,9 @@ export default function PlatformPlans() {
                   setForm(prev => ({
                     ...prev,
                     allowed_modules: allSelected ? [] : [...ALL_MODULES],
+                    allow_whitelabel: !allSelected,
+                    allow_custom_reports: !allSelected,
+                    allow_custom_domain: !allSelected,
                   }));
                   toast.info(allSelected ? 'Todos os módulos removidos' : 'Todos os módulos selecionados');
                 }}
