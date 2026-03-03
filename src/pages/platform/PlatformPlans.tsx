@@ -684,6 +684,34 @@ export default function PlatformPlans() {
                 <span>Selecione o módulo raiz para ativar/desativar todo o grupo com suas dependências.</span>
               </div>
 
+              {/* Select All Modules */}
+              <button
+                type="button"
+                onClick={() => {
+                  const allSelected = form.allowed_modules.length === ALL_MODULES.length;
+                  setForm(prev => ({
+                    ...prev,
+                    allowed_modules: allSelected ? [] : [...ALL_MODULES],
+                  }));
+                  toast.info(allSelected ? 'Todos os módulos removidos' : 'Todos os módulos selecionados');
+                }}
+                className={cn(
+                  'flex items-center gap-2 w-full px-3 py-2.5 rounded-lg border text-sm font-semibold transition-all',
+                  form.allowed_modules.length === ALL_MODULES.length
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-dashed border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                )}
+              >
+                {form.allowed_modules.length === ALL_MODULES.length
+                  ? <Check className="h-4 w-4" />
+                  : <Puzzle className="h-4 w-4 opacity-50" />
+                }
+                Todos os módulos
+                <Badge variant="secondary" className="ml-auto text-[10px]">
+                  {ALL_MODULES.length} módulos
+                </Badge>
+              </button>
+
               <TooltipProvider delayDuration={200}>
                 {MODULE_TREE_GROUPS.map(group => {
                   const allGroupKeys = group.trees.flatMap(collectTreeKeys);
