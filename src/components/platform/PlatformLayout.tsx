@@ -231,7 +231,6 @@ const NAV_SECTIONS: NavSection[] = [
         ],
       },
       { to: '/platform/ai-operations', label: 'AI Operations', icon: Brain, requiredPermission: 'security.manage' },
-      { to: '/platform/document-signature', label: 'Assinatura Digital', icon: FileSignature, requiredPermission: 'security.manage' },
       { to: '/platform/integration-health', label: 'Integration Health', icon: Activity, requiredPermission: 'security.manage' },
     ],
   },
@@ -323,8 +322,10 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    label: 'Developers',
+    label: 'Integrações & Developers',
     items: [
+      { to: '/platform/document-signature', label: 'Assinatura Digital', icon: FileSignature, requiredPermission: 'security.manage' },
+      { to: '/platform/integration-health', label: 'Integration Health', icon: Activity, requiredPermission: 'security.manage' },
       {
         to: '/platform/apis',
         label: 'APIs',
