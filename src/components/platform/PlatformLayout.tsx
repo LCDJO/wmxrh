@@ -232,6 +232,18 @@ const NAV_SECTIONS: NavSection[] = [
       },
       { to: '/platform/ai-operations', label: 'AI Operations', icon: Brain, requiredPermission: 'security.manage' },
       { to: '/platform/integration-health', label: 'Integration Health', icon: Activity, requiredPermission: 'security.manage' },
+      {
+        to: '/platform/worktime',
+        label: 'Ponto & Jornada',
+        icon: Activity,
+        requiredPermission: 'security.manage',
+        children: [
+          { to: '/platform/worktime', label: 'Jornada de Trabalho' },
+          { to: '/platform/worktime/biometrics', label: 'Biometria' },
+          { to: '/platform/worktime/behavior-ai', label: 'Behavior AI' },
+          { to: '/platform/worktime/inspection', label: 'Fiscalização & Exportação' },
+        ],
+      },
     ],
   },
   {
@@ -386,6 +398,19 @@ const NAV_SECTIONS: NavSection[] = [
               { to: '/platform/structure/events', label: 'Eventos' },
               { to: '/platform/structure/menus', label: 'Menus' },
               { to: '/platform/structure/modules', label: 'Módulos' },
+              {
+                to: '/platform/structure/architecture',
+                label: 'Architecture Intelligence',
+                children: [
+                  { to: '/platform/structure/architecture/dashboard', label: 'Dashboard' },
+                  { to: '/platform/structure/architecture/risk-analyzer', label: 'Risk Analyzer' },
+                  { to: '/platform/structure/architecture/saas-core', label: 'SaaS Core' },
+                  { to: '/platform/structure/architecture/tenant-modules', label: 'Tenant Modules' },
+                  { to: '/platform/structure/architecture/dependency-graph', label: 'Dependency Graph' },
+                  { to: '/platform/structure/architecture/health-monitor', label: 'Health Monitor' },
+                  { to: '/platform/structure/architecture/documentation', label: 'Documentação' },
+                ],
+              },
               {
                 to: '/platform/structure/dashboards',
                 label: 'Dashboards',
