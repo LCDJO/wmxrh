@@ -86,6 +86,8 @@ export interface ArchDeliverable {
   status: DeliverableStatus;
   module_key: string;
   description?: string;
+  owner?: string;
+  due_date?: string;
   completed_at?: string;
 }
 
