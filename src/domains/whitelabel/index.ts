@@ -21,11 +21,13 @@ export type {
   GeneratedTheme,
   ReportBrandingContext,
   BrandingValidationResult,
+  WhiteLabelPlanLimits,
   BrandingProfileManagerAPI,
   ThemeGeneratorAPI,
   ReportTemplateCustomizerAPI,
   WhiteLabelValidatorAPI,
   BrandingVersionManagerAPI,
   DefaultFallbackResolverAPI,
+  PlanGateAPI,
   TenantBrandingEngineAPI,
 } from './types';

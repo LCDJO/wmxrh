@@ -65,6 +65,14 @@ export interface ReportBrandingContext {
   system_name: string;
 }
 
+// ── Plan Limits (WhiteLabel enablement) ──
+
+export interface WhiteLabelPlanLimits {
+  allow_whitelabel: boolean;
+  allow_custom_reports: boolean;
+  allow_custom_domain: boolean;
+}
+
 // ── Validation ──
 
 export interface BrandingValidationResult {
@@ -103,6 +111,14 @@ export interface DefaultFallbackResolverAPI {
   resolve(tenantId: string): TenantBrandingProfile;
 }
 
+export interface PlanGateAPI {
+  setLimits(tenantId: string, limits: WhiteLabelPlanLimits): void;
+  getLimits(tenantId: string): WhiteLabelPlanLimits;
+  canWhiteLabel(tenantId: string): boolean;
+  canCustomReports(tenantId: string): boolean;
+  canCustomDomain(tenantId: string): boolean;
+}
+
 export interface TenantBrandingEngineAPI {
   profiles: BrandingProfileManagerAPI;
   theme: ThemeGeneratorAPI;
@@ -110,4 +126,5 @@ export interface TenantBrandingEngineAPI {
   validator: WhiteLabelValidatorAPI;
   versioning: BrandingVersionManagerAPI;
   fallback: DefaultFallbackResolverAPI;
+  planGate: PlanGateAPI;
 }
