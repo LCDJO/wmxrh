@@ -61,18 +61,24 @@ interface NavSection {
 // ════════════════════════════════════
 
 const navSections: NavSection[] = [
-  // ── OVERVIEW ──
+  // ══════════════════════════════════════════════
+  // 1. DASHBOARD
+  // ══════════════════════════════════════════════
   {
-    label: 'Overview',
+    label: 'Dashboard',
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard', key: 'dashboard' },
+      { to: '/executive-dashboard', icon: TrendingUp, label: 'Dashboard Executivo', key: 'intelligence', moduleKey: 'workforce_intelligence' },
     ],
   },
 
-  // ── ORGANIZAÇÃO ──
+  // ══════════════════════════════════════════════
+  // 2. PESSOAS
+  // ══════════════════════════════════════════════
   {
-    label: 'Organização',
+    label: 'Pessoas',
     items: [
+      { to: '/employees', icon: Users, label: 'Colaboradores', key: 'employees', moduleKey: 'employees' },
       { to: '/companies', icon: Building2, label: 'Empresas', key: 'companies', moduleKey: 'companies' },
       { to: '/groups', icon: Layers, label: 'Grupos Econômicos', key: 'groups', moduleKey: 'groups' },
       { to: '/departments', icon: Briefcase, label: 'Departamentos', key: 'departments', moduleKey: 'departments' },
@@ -83,14 +89,6 @@ const navSections: NavSection[] = [
           { to: '/pccs-dashboard', icon: TrendingUp, label: 'PCCS', key: 'positions', moduleKey: 'positions' },
         ],
       },
-    ],
-  },
-
-  // ── PESSOAS ──
-  {
-    label: 'Pessoas',
-    items: [
-      { to: '/employees', icon: Users, label: 'Colaboradores', key: 'employees', moduleKey: 'employees' },
       { to: '/time-tracking', icon: Clock, label: 'Controle de Ponto', key: 'employees', moduleKey: 'employees' },
       { to: '/agreements', icon: ScrollText, label: 'Termos e Acordos', key: 'employees', moduleKey: 'agreements' },
       {
@@ -102,21 +100,6 @@ const navSections: NavSection[] = [
           { to: '/reference-letters', icon: FileSignature, label: 'Cartas de Referência', key: 'employees', moduleKey: 'employees' },
         ],
       },
-      {
-        to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation', moduleKey: 'compensation',
-        children: [
-          { to: '/compensation', icon: TrendingUp, label: 'Visão Geral', key: 'compensation', moduleKey: 'compensation' },
-          { to: '/payroll-simulation', icon: Calculator, label: 'Simulação Folha', key: 'compensation', moduleKey: 'payroll_simulation' },
-        ],
-      },
-      { to: '/benefits', icon: Gift, label: 'Benefícios', key: 'benefits', moduleKey: 'benefits' },
-    ],
-  },
-
-  // ── SAÚDE & SEGURANÇA ──
-  {
-    label: 'Saúde & Segurança',
-    items: [
       {
         to: '/health', icon: Stethoscope, label: 'Saúde Ocupacional', key: 'health' as NavKey, moduleKey: 'health',
         children: [
@@ -140,22 +123,23 @@ const navSections: NavSection[] = [
           { to: '/safety-automation', icon: Zap, label: 'Automação SST', key: 'health' as NavKey, moduleKey: 'health' },
         ],
       },
-      {
-        to: '/fleet-dashboard', icon: Car, label: 'Frota & Compliance', key: 'fleet' as NavKey, moduleKey: 'fleet',
-      },
-      {
-        to: '/live-display', icon: Monitor, label: 'Live Display (TV)', key: 'live_display' as NavKey, moduleKey: 'fleet',
-      },
-      {
-        to: '/command-center', icon: Radio, label: 'Command Center', key: 'operations' as NavKey, moduleKey: 'fleet',
-      },
     ],
   },
 
-  // ── TRABALHISTA & LEGAL ──
+  // ══════════════════════════════════════════════
+  // 3. FINANCEIRO RH
+  // ══════════════════════════════════════════════
   {
-    label: 'Trabalhista & Legal',
+    label: 'Financeiro RH',
     items: [
+      {
+        to: '/compensation', icon: TrendingUp, label: 'Remuneração', key: 'compensation', moduleKey: 'compensation',
+        children: [
+          { to: '/compensation', icon: TrendingUp, label: 'Visão Geral', key: 'compensation', moduleKey: 'compensation' },
+          { to: '/payroll-simulation', icon: Calculator, label: 'Simulação Folha', key: 'compensation', moduleKey: 'payroll_simulation' },
+        ],
+      },
+      { to: '/benefits', icon: Gift, label: 'Benefícios', key: 'benefits', moduleKey: 'benefits' },
       { to: '/labor-dashboard', icon: ClipboardCheck, label: 'Painel Trabalhista', key: 'labor_dashboard', moduleKey: 'labor_rules' },
       { to: '/labor-compliance', icon: Scale, label: 'Conformidade', key: 'labor_compliance', moduleKey: 'labor_compliance' },
       { to: '/labor-rules', icon: Gavel, label: 'Regras & Convenções', key: 'labor_rules', moduleKey: 'labor_rules' },
@@ -167,59 +151,61 @@ const navSections: NavSection[] = [
       { to: '/lgpd', icon: ShieldCheck, label: 'LGPD', key: 'compliance', moduleKey: 'compliance' },
       { to: '/compliance', icon: FileText, label: 'Rubricas', key: 'compliance', moduleKey: 'compliance' },
       { to: '/audit', icon: ScrollText, label: 'Auditoria', key: 'audit', moduleKey: 'audit' },
-    ],
-  },
-
-  // ── INTELIGÊNCIA ──
-  {
-    label: 'Inteligência',
-    items: [
-      { to: '/workforce-intelligence', icon: Brain, label: 'Inteligência RH', key: 'intelligence', moduleKey: 'workforce_intelligence' },
-      { to: '/strategic-intelligence', icon: Sparkles, label: 'IA Estratégica', key: 'intelligence', moduleKey: 'workforce_intelligence' },
-      { to: '/executive-dashboard', icon: TrendingUp, label: 'Dashboard Executivo', key: 'intelligence', moduleKey: 'workforce_intelligence' },
-    ],
-  },
-
-  // ── INTEGRAÇÕES ──
-  {
-    label: 'Integrações',
-    items: [
-      { to: '/apps', icon: Store, label: 'Apps & Integrações', key: 'iam_users' as NavKey },
-      { to: '/integrations/telegram', icon: Bot, label: 'Telegram', key: 'integrations' as NavKey },
-      { to: '/integrations/traccar', icon: Car, label: 'Traccar (GPS)', key: 'integrations' as NavKey, moduleKey: 'fleet' },
       { to: '/esocial', icon: Send, label: 'eSocial', key: 'esocial' as NavKey, moduleKey: 'esocial' },
       { to: '/esocial-governance', icon: ShieldCheck, label: 'eSocial Governance', key: 'esocial' as NavKey, moduleKey: 'esocial' },
     ],
   },
 
-  // ── COMUNICAÇÃO ──
+  // ══════════════════════════════════════════════
+  // 4. RECRUTAMENTO
+  // ══════════════════════════════════════════════
   {
-    label: 'Comunicação',
+    label: 'Recrutamento',
     items: [
-      { to: '/communication-center', icon: Send, label: 'Central de Comunicação', key: 'dashboard' },
+      { to: '/workforce-intelligence', icon: Brain, label: 'Inteligência RH', key: 'intelligence', moduleKey: 'workforce_intelligence' },
+      { to: '/strategic-intelligence', icon: Sparkles, label: 'IA Estratégica', key: 'intelligence', moduleKey: 'workforce_intelligence' },
     ],
   },
 
-  // ── SUPORTE ──
+  // ══════════════════════════════════════════════
+  // 5. AUTOMAÇÃO
+  // ══════════════════════════════════════════════
   {
-    label: 'Suporte',
+    label: 'Automação',
     items: [
-      { to: '/support/chat', icon: MessageSquarePlus, label: 'Chat ao Vivo', key: 'support' },
-      { to: '/support/new', icon: MessageSquarePlus, label: 'Abrir Chamado', key: 'support' },
-      { to: '/support/tickets', icon: Headphones, label: 'Meus Chamados', key: 'support' },
+      { to: '/fleet-dashboard', icon: Car, label: 'Frota & Compliance', key: 'fleet' as NavKey, moduleKey: 'fleet' },
+      { to: '/live-display', icon: Monitor, label: 'Live Display (TV)', key: 'live_display' as NavKey, moduleKey: 'fleet' },
+      { to: '/command-center', icon: Radio, label: 'Command Center', key: 'operations' as NavKey, moduleKey: 'fleet' },
+      { to: '/apps', icon: Store, label: 'Apps & Integrações', key: 'iam_users' as NavKey },
+      { to: '/integrations/telegram', icon: Bot, label: 'Telegram', key: 'integrations' as NavKey },
+      { to: '/integrations/traccar', icon: Car, label: 'Traccar (GPS)', key: 'integrations' as NavKey, moduleKey: 'fleet' },
+    ],
+  },
+
+  // ══════════════════════════════════════════════
+  // 6. RELATÓRIOS
+  // ══════════════════════════════════════════════
+  {
+    label: 'Relatórios',
+    items: [
       { to: '/support/wiki', icon: BookOpen, label: 'Base de Conhecimento', key: 'support' },
     ],
   },
 
-  // ── GROWTH ──
+  // ══════════════════════════════════════════════
+  // 7. MARKETING
+  // ══════════════════════════════════════════════
   {
-    label: 'Growth',
+    label: 'Marketing',
     items: [
       { to: '/referral', icon: Trophy, label: 'Indique e Ganhe', key: 'referral' },
+      { to: '/communication-center', icon: Send, label: 'Central de Comunicação', key: 'dashboard' },
     ],
   },
 
-  // ── CONFIGURAÇÕES ──
+  // ══════════════════════════════════════════════
+  // 8. CONFIGURAÇÕES
+  // ══════════════════════════════════════════════
   {
     label: 'Configurações',
     items: [
@@ -231,8 +217,10 @@ const navSections: NavSection[] = [
       { to: '/settings/webhooks', icon: Webhook, label: 'Webhooks', key: 'iam_users' },
       { to: '/settings/sso', icon: Shield, label: 'SSO / Federação', key: 'iam_users', moduleKey: 'iam' },
       { to: '/settings/scim', icon: Shield, label: 'SCIM Provisioning', key: 'iam_users', moduleKey: 'iam' },
-      
       { to: '/announcements', icon: Megaphone, label: 'Avisos do Sistema', key: 'dashboard' },
+      { to: '/support/chat', icon: MessageSquarePlus, label: 'Chat ao Vivo', key: 'support' },
+      { to: '/support/new', icon: MessageSquarePlus, label: 'Abrir Chamado', key: 'support' },
+      { to: '/support/tickets', icon: Headphones, label: 'Meus Chamados', key: 'support' },
     ],
   },
 ];
