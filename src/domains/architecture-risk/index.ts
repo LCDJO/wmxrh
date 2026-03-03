@@ -11,4 +11,5 @@ export {
   type CouplingMetrics,
   type PlatformRiskSummary,
   type RiskLevel,
+  type DependencyRiskScore,
 } from './engine';
