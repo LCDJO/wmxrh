@@ -13,4 +13,5 @@ export type {
   DeliverableStatus,
   ModuleLifecycleStatus,
   ModuleMonitoringMetric,
+  ModuleSLA,
 } from './types';
