@@ -257,10 +257,10 @@ export interface PlatformRiskSummary {
 // ── Helpers ──
 
 function riskLevel(score: number): RiskLevel {
-  if (score >= 80) return 'critical';
-  if (score >= 60) return 'high';
-  if (score >= 40) return 'medium';
-  if (score >= 20) return 'low';
+  if (score >= 81) return 'critical';
+  if (score >= 61) return 'high';
+  if (score >= 31) return 'medium';
+  if (score >= 1) return 'low';
   return 'none';
 }
 

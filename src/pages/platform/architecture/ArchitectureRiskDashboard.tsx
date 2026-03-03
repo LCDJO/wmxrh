@@ -292,7 +292,7 @@ function ModuleRiskDetail({ profile }: { profile: ModuleRiskProfile }) {
 }
 
 function RiskBar({ label, value }: { label: string; value: number }) {
-  const level = value >= 80 ? 'critical' : value >= 60 ? 'high' : value >= 40 ? 'medium' : value >= 20 ? 'low' : 'none';
+  const level = value >= 81 ? 'critical' : value >= 61 ? 'high' : value >= 31 ? 'medium' : value >= 1 ? 'low' : 'none';
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
