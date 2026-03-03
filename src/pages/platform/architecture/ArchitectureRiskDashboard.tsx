@@ -13,6 +13,7 @@ import {
   AlertTriangle, Shield, GitBranch, RotateCcw, Zap, Target,
   TrendingUp, Lightbulb, Activity, Server, Briefcase, ArrowRight,
   Radar, Users, Workflow, PlayCircle, RotateCw, CheckCircle2, XCircle, AlertCircle,
+  Flame, Bell, Info,
 } from 'lucide-react';
 
 const RISK_COLORS: Record<RiskLevel, string> = {
@@ -105,6 +106,8 @@ export default function ArchitectureRiskDashboard() {
           <TabsTrigger value="cycles" className="gap-1.5"><RotateCcw className="h-3.5 w-3.5" />Ciclos</TabsTrigger>
           <TabsTrigger value="criticality" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Criticality</TabsTrigger>
           <TabsTrigger value="impact" className="gap-1.5"><Radar className="h-3.5 w-3.5" />Impact Predictor</TabsTrigger>
+          <TabsTrigger value="heatmap" className="gap-1.5"><Flame className="h-3.5 w-3.5" />Heatmap</TabsTrigger>
+          <TabsTrigger value="alerts" className="gap-1.5"><Bell className="h-3.5 w-3.5" />Alertas</TabsTrigger>
           <TabsTrigger value="suggestions" className="gap-1.5"><Lightbulb className="h-3.5 w-3.5" />Refactoring</TabsTrigger>
         </TabsList>
 
@@ -159,6 +162,22 @@ export default function ArchitectureRiskDashboard() {
         {/* ── Change Impact Predictor ── */}
         <TabsContent value="impact">
           <ChangeImpactView predictions={impactPredictions} />
+        </TabsContent>
+
+        {/* ── Structural Heatmap ── */}
+        <TabsContent value="heatmap">
+          <StructuralHeatmap profiles={profiles} couplingMetrics={couplingMetrics} cycles={cycles} />
+        </TabsContent>
+
+        {/* ── Architectural Alerts ── */}
+        <TabsContent value="alerts">
+          <ArchitecturalAlerts
+            profiles={profiles}
+            cycles={cycles}
+            biDirDeps={biDirDeps}
+            crossViolations={crossViolations}
+            impactPredictions={impactPredictions}
+          />
         </TabsContent>
 
         {/* ── Refactor Suggestions ── */}
@@ -1400,6 +1419,414 @@ function ChangeImpactDetail({ prediction: p }: { prediction: ChangeImpactPredict
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ── Structural Heatmap ──
+
+function StructuralHeatmap({ profiles, couplingMetrics, cycles }: {
+  profiles: ModuleRiskProfile[];
+  couplingMetrics: CouplingMetrics[];
+  cycles: CircularDependencyCycle[];
+}) {
+  // Build heatmap grid: rows = modules, columns = risk dimensions
+  const DIMENSIONS = ['Dependência', 'Acoplamento', 'Circular', 'Criticidade', 'Impacto'] as const;
+
+  const modulesInCycles = new Set<string>();
+  cycles.forEach(c => c.cycle.forEach(k => modulesInCycles.add(k)));
+
+  const heatData = profiles.map(p => ({
+    key: p.module_key,
+    label: p.module_label,
+    domain: p.domain,
+    overall: p.risk_score,
+    level: p.risk_level,
+    cells: [p.dependency_risk, p.coupling_risk, p.circular_risk, p.criticality_score, Math.min(100, p.change_impact_radius * 12)] as number[],
+  }));
+
+  // Color mapping for heatmap cells
+  function cellColor(value: number): string {
+    if (value >= 81) return 'bg-red-500/70 text-white';
+    if (value >= 61) return 'bg-orange-500/60 text-white';
+    if (value >= 31) return 'bg-amber-500/50 text-foreground';
+    if (value >= 1) return 'bg-blue-500/20 text-foreground';
+    return 'bg-muted/30 text-muted-foreground';
+  }
+
+  // Domain distribution
+  const saasMods = profiles.filter(p => p.domain === 'saas');
+  const tenantMods = profiles.filter(p => p.domain === 'tenant');
+  const saasAvg = saasMods.length ? Math.round(saasMods.reduce((s, p) => s + p.risk_score, 0) / saasMods.length) : 0;
+  const tenantAvg = tenantMods.length ? Math.round(tenantMods.reduce((s, p) => s + p.risk_score, 0) / tenantMods.length) : 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Domain risk overview */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Server className="h-4 w-4 text-blue-400" />
+              <span className="text-xs">Risco Médio SaaS</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{saasAvg}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${RISK_COLORS[riskLevelFn(saasAvg)]}`}>{riskLevelFn(saasAvg)}</Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Briefcase className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs">Risco Médio Tenant</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{tenantAvg}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${RISK_COLORS[riskLevelFn(tenantAvg)]}`}>{riskLevelFn(tenantAvg)}</Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Flame className="h-4 w-4 text-red-400" />
+              <span className="text-xs">Hotspots (≥61)</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{profiles.filter(p => p.risk_score >= 61).length}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Shield className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs">Saudáveis (≤30)</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{profiles.filter(p => p.risk_score <= 30).length}</span>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Heatmap grid */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Flame className="h-4 w-4 text-primary" />
+            Heatmap Estrutural de Risco
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-left py-2 px-2 w-48">Módulo</th>
+                  <th className="text-center py-2 px-2 w-16">Score</th>
+                  {DIMENSIONS.map(d => (
+                    <th key={d} className="text-center py-2 px-2 w-20">{d}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {heatData.map(row => (
+                  <tr key={row.key} className="border-b border-border/30">
+                    <td className="py-1.5 px-2 font-medium text-foreground">
+                      <div className="flex items-center gap-1.5">
+                        {row.domain === 'saas'
+                          ? <Server className="h-3 w-3 text-blue-400 shrink-0" />
+                          : <Briefcase className="h-3 w-3 text-emerald-400 shrink-0" />}
+                        <span className="truncate">{row.label}</span>
+                      </div>
+                    </td>
+                    <td className="py-1.5 px-2 text-center">
+                      <Badge variant="outline" className={`text-[10px] ${RISK_COLORS[row.level]}`}>{row.overall}</Badge>
+                    </td>
+                    {row.cells.map((val, ci) => (
+                      <td key={ci} className="py-1.5 px-1 text-center">
+                        <div className={`rounded px-2 py-1 font-mono text-[11px] ${cellColor(val)}`}>
+                          {val}
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border">
+            <span className="text-[10px] text-muted-foreground">Legenda:</span>
+            <div className="flex items-center gap-1"><div className="w-4 h-3 rounded bg-red-500/70" /><span className="text-[10px] text-muted-foreground">Crítico (81–100)</span></div>
+            <div className="flex items-center gap-1"><div className="w-4 h-3 rounded bg-orange-500/60" /><span className="text-[10px] text-muted-foreground">Alto (61–80)</span></div>
+            <div className="flex items-center gap-1"><div className="w-4 h-3 rounded bg-amber-500/50" /><span className="text-[10px] text-muted-foreground">Médio (31–60)</span></div>
+            <div className="flex items-center gap-1"><div className="w-4 h-3 rounded bg-blue-500/20" /><span className="text-[10px] text-muted-foreground">Baixo (1–30)</span></div>
+            <div className="flex items-center gap-1"><div className="w-4 h-3 rounded bg-muted/30" /><span className="text-[10px] text-muted-foreground">Nenhum (0)</span></div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Helper to classify risk from score (mirrors engine logic)
+function riskLevelFn(score: number): RiskLevel {
+  if (score >= 81) return 'critical';
+  if (score >= 61) return 'high';
+  if (score >= 31) return 'medium';
+  if (score >= 1) return 'low';
+  return 'none';
+}
+
+// ── Architectural Alerts ──
+
+interface ArchAlert {
+  id: string;
+  severity: 'critical' | 'high' | 'medium' | 'info';
+  category: string;
+  title: string;
+  description: string;
+  affected_modules: string[];
+  action: string;
+}
+
+function ArchitecturalAlerts({ profiles, cycles, biDirDeps, crossViolations, impactPredictions }: {
+  profiles: ModuleRiskProfile[];
+  cycles: CircularDependencyCycle[];
+  biDirDeps: BidirectionalDependency[];
+  crossViolations: CrossDomainViolation[];
+  impactPredictions: ChangeImpactPrediction[];
+}) {
+  // Generate alerts from current architecture state
+  const alerts: ArchAlert[] = [];
+
+  // Critical cycle alerts
+  const blockingCycles = cycles.filter(c => c.is_blocking);
+  if (blockingCycles.length > 0) {
+    alerts.push({
+      id: 'alert-blocking-cycles',
+      severity: 'critical',
+      category: 'Ciclo Circular',
+      title: `${blockingCycles.length} ciclo(s) circular(es) bloqueante(s) detectado(s)`,
+      description: `Ciclos com dependências mandatórias que impedem evolução segura da arquitetura. Módulos: ${blockingCycles.flatMap(c => c.cycle).filter((v, i, a) => a.indexOf(v) === i).join(', ')}`,
+      affected_modules: blockingCycles.flatMap(c => c.cycle).filter((v, i, a) => a.indexOf(v) === i),
+      action: 'Aplicar Dependency Inversion ou event-driven para quebrar ciclos',
+    });
+  }
+
+  // Cross-domain violations
+  if (crossViolations.length > 0) {
+    alerts.push({
+      id: 'alert-cross-domain',
+      severity: 'critical',
+      category: 'Isolamento',
+      title: `${crossViolations.length} violação(ões) de isolamento SaaS↔Tenant`,
+      description: `Dependências diretas entre camadas Platform e Tenant violam o contrato arquitetural. ${crossViolations.map(v => `${v.from_module} → ${v.to_module}`).join('; ')}`,
+      affected_modules: [...new Set(crossViolations.flatMap(v => [v.from_module, v.to_module]))],
+      action: 'Substituir dependências diretas por eventos normalizados',
+    });
+  }
+
+  // Bidirectional dependencies
+  if (biDirDeps.length > 0) {
+    alerts.push({
+      id: 'alert-bidirectional',
+      severity: 'high',
+      category: 'Acoplamento',
+      title: `${biDirDeps.length} dependência(s) bidirecional(is) detectada(s)`,
+      description: `Acoplamento mútuo entre módulos impede evolução independente: ${biDirDeps.map(b => `${b.module_a} ↔ ${b.module_b}`).join('; ')}`,
+      affected_modules: [...new Set(biDirDeps.flatMap(b => [b.module_a, b.module_b]))],
+      action: 'Introduzir event bus ou mediator para desacoplar',
+    });
+  }
+
+  // Critical risk modules
+  const criticalModules = profiles.filter(p => p.risk_level === 'critical');
+  if (criticalModules.length > 0) {
+    alerts.push({
+      id: 'alert-critical-modules',
+      severity: 'critical',
+      category: 'Risco',
+      title: `${criticalModules.length} módulo(s) em risco crítico`,
+      description: `Módulos com score ≥81 requerem ação imediata: ${criticalModules.map(m => `${m.module_label} (${m.risk_score})`).join(', ')}`,
+      affected_modules: criticalModules.map(m => m.module_key),
+      action: 'Revisar dependências, implementar circuit breakers e degradação graceful',
+    });
+  }
+
+  // High blast radius
+  const highImpact = impactPredictions.filter(p => p.blast_radius_score >= 61);
+  if (highImpact.length > 0) {
+    alerts.push({
+      id: 'alert-blast-radius',
+      severity: 'high',
+      category: 'Impacto',
+      title: `${highImpact.length} módulo(s) com blast radius alto`,
+      description: `Mudanças nesses módulos afetam muitos dependentes: ${highImpact.map(p => `${p.module_label} (score ${p.blast_radius_score}, ${p.impacted_modules.length} módulos)`).join('; ')}`,
+      affected_modules: highImpact.map(p => p.module_key),
+      action: 'Ativar sandbox preview antes de deploy; preparar plano de rollback',
+    });
+  }
+
+  // Rollback required
+  const rollbackNeeded = impactPredictions.filter(p => p.rollback_required);
+  if (rollbackNeeded.length > 0) {
+    alerts.push({
+      id: 'alert-rollback-required',
+      severity: 'high',
+      category: 'Rollback',
+      title: `${rollbackNeeded.length} módulo(s) exigem plano de rollback`,
+      description: `Módulos com alto impacto ou workflows que vão quebrar: ${rollbackNeeded.map(p => `${p.module_label} (${p.rollback_strategy})`).join(', ')}`,
+      affected_modules: rollbackNeeded.map(p => p.module_key),
+      action: 'Definir e testar rollback antes de publicar mudanças',
+    });
+  }
+
+  // Workflow breaks
+  const brokenWorkflows = impactPredictions.flatMap(p => p.affected_workflows.filter(w => w.will_break));
+  if (brokenWorkflows.length > 0) {
+    alerts.push({
+      id: 'alert-workflow-breaks',
+      severity: 'critical',
+      category: 'Workflow',
+      title: `${brokenWorkflows.length} workflow(s) crítico(s) vão quebrar`,
+      description: `Workflows que dependem de módulos em mudança: ${brokenWorkflows.map(w => w.workflow_name).join(', ')}`,
+      affected_modules: [...new Set(brokenWorkflows.flatMap(w => w.depends_on_modules))],
+      action: 'Adaptar workflows antes da publicação ou usar feature flags',
+    });
+  }
+
+  // SPOF modules
+  const spofModules = profiles.filter(p => p.dependency_risk_detail.is_single_point_of_failure);
+  if (spofModules.length > 0) {
+    alerts.push({
+      id: 'alert-spof',
+      severity: 'high',
+      category: 'Resiliência',
+      title: `${spofModules.length} ponto(s) único(s) de falha`,
+      description: `Módulos cujo indisponibilidade impacta múltiplos dependentes: ${spofModules.map(m => m.module_label).join(', ')}`,
+      affected_modules: spofModules.map(m => m.module_key),
+      action: 'Implementar redundância, fallbacks e circuit breakers',
+    });
+  }
+
+  // Healthy notification
+  if (alerts.length === 0) {
+    alerts.push({
+      id: 'alert-healthy',
+      severity: 'info',
+      category: 'Status',
+      title: 'Arquitetura saudável — nenhum alerta ativo',
+      description: 'Todos os indicadores estão dentro dos limites aceitáveis.',
+      affected_modules: [],
+      action: 'Nenhuma ação necessária',
+    });
+  }
+
+  const ALERT_ICONS: Record<string, React.ReactNode> = {
+    critical: <XCircle className="h-4 w-4 text-red-400" />,
+    high: <AlertTriangle className="h-4 w-4 text-orange-400" />,
+    medium: <AlertCircle className="h-4 w-4 text-amber-400" />,
+    info: <Info className="h-4 w-4 text-blue-400" />,
+  };
+
+  const ALERT_BORDER: Record<string, string> = {
+    critical: 'border-red-500/30 bg-red-500/5',
+    high: 'border-orange-500/30 bg-orange-500/5',
+    medium: 'border-amber-500/30 bg-amber-500/5',
+    info: 'border-blue-500/30 bg-blue-500/5',
+  };
+
+  const critAlerts = alerts.filter(a => a.severity === 'critical');
+  const highAlerts = alerts.filter(a => a.severity === 'high');
+  const otherAlerts = alerts.filter(a => a.severity !== 'critical' && a.severity !== 'high');
+
+  return (
+    <div className="space-y-4">
+      {/* KPI */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Bell className="h-4 w-4 text-destructive" />
+              <span className="text-xs">Total de Alertas</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{alerts.length}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <XCircle className="h-4 w-4 text-red-400" />
+              <span className="text-xs">Críticos</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{critAlerts.length}</span>
+            <Badge variant="outline" className={`text-[10px] mt-1 ml-2 ${critAlerts.length > 0 ? RISK_COLORS.critical : RISK_COLORS.none}`}>
+              {critAlerts.length > 0 ? 'ação imediata' : 'ok'}
+            </Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <AlertTriangle className="h-4 w-4 text-orange-400" />
+              <span className="text-xs">Alto</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">{highAlerts.length}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+              <Shield className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs">Módulos Afetados</span>
+            </div>
+            <span className="text-2xl font-bold text-foreground">
+              {new Set(alerts.flatMap(a => a.affected_modules)).size}
+            </span>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Alert list */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bell className="h-4 w-4 text-primary" />
+            Alertas Arquiteturais ({alerts.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {[...critAlerts, ...highAlerts, ...otherAlerts].map(alert => (
+            <div key={alert.id} className={`p-4 rounded-lg border space-y-2 ${ALERT_BORDER[alert.severity]}`}>
+              <div className="flex items-start gap-3">
+                {ALERT_ICONS[alert.severity]}
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className={`text-[10px] ${RISK_COLORS[alert.severity === 'info' ? 'low' : alert.severity]}`}>
+                      {alert.severity}
+                    </Badge>
+                    <Badge variant="secondary" className="text-[10px]">{alert.category}</Badge>
+                    <span className="text-sm font-medium text-foreground">{alert.title}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{alert.description}</p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Lightbulb className="h-3 w-3 text-amber-400 shrink-0" />
+                    <span className="text-xs text-foreground font-medium">{alert.action}</span>
+                  </div>
+                  {alert.affected_modules.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {alert.affected_modules.slice(0, 8).map(m => (
+                        <Badge key={m} variant="secondary" className="text-[9px]">{m}</Badge>
+                      ))}
+                      {alert.affected_modules.length > 8 && (
+                        <Badge variant="secondary" className="text-[9px]">+{alert.affected_modules.length - 8}</Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>
