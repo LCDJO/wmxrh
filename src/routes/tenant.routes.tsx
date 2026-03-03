@@ -70,6 +70,7 @@ import ReferenceLetters from '@/pages/ReferenceLetters';
 import TimeTrackingPage from '@/pages/TimeTrackingPage';
 import TerminationSimulatorPage from '@/pages/TerminationSimulatorPage';
 import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
+import TenantPersonalization from '@/pages/settings/TenantPersonalization';
 import LgpdCompliance from '@/pages/LgpdCompliance';
 import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
 import EmployeeLiveDashboard from '@/pages/EmployeeLiveDashboard';
@@ -161,6 +162,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/notifications', element: pr('dashboard', <Notifications />) },
       { path: '/audit', element: pr('audit', <Audit />) },
       // ── Settings ──
+      { path: '/settings/personalization', element: pr('iam_users', <TenantPersonalization />) },
       { path: '/settings/pdf-layout', element: pr('iam_users', <PdfLayoutSettings />) },
       // Legacy redirect — /iam is referenced by notification-event-listener, onboarding-experience-bridge, and experience-orchestrator
       { path: '/iam', element: <Navigate to="/settings/users" replace /> },
