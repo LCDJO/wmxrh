@@ -741,6 +741,17 @@ export default function PlatformTenants() {
                         )}
                       </CardContent>
                     </Card>
+                  ) : tenantPlanMap[selectedTenant.id] ? (
+                    <Card>
+                      <CardContent className="pt-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <PlanBadge tier={tenantPlanMap[selectedTenant.id].tier} planName={tenantPlanMap[selectedTenant.id].planName} size="md" />
+                            <p className="text-xs text-muted-foreground capitalize mt-1">{tenantPlanMap[selectedTenant.id].billingCycle} · {tenantPlanMap[selectedTenant.id].status}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ) : (
                     <Card>
                       <CardContent className="pt-4 text-center">
