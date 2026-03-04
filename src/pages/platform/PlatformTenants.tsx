@@ -145,7 +145,7 @@ interface TenantDetails {
   memberships: { id: string; role: string; user_id: string }[];
 }
 
-type DialogMode = 'create' | 'view' | 'edit' | 'change-plan' | 'modules' | 'impersonate' | null;
+type DialogMode = 'create' | 'view' | 'edit' | 'change-plan' | 'impersonate' | null;
 
 export default function PlatformTenants() {
   const { can } = usePlatformPermissions();
@@ -179,8 +179,8 @@ export default function PlatformTenants() {
   }, []);
 
   // Modules
-  const [tenantModules, setTenantModules] = useState<TenantModule[]>([]);
-  const [modulesLoading, setModulesLoading] = useState(false);
+
+
 
   // Tenant plan data
   const [tenantPlanMap, setTenantPlanMap] = useState<Record<string, { planId: string; planName: string; tier: string; status: string; billingCycle: string; price: number; allowedModules: string[] }>>({});
@@ -356,13 +356,10 @@ export default function PlatformTenants() {
   };
 
   // ── Edit Tenant ──
-  const openEdit = async (tenant: Tenant) => {
+  const openEdit = (tenant: Tenant) => {
     setSelectedTenant(tenant);
     setEditForm({ name: tenant.name, document: tenant.document ?? '', email: tenant.email ?? '', phone: tenant.phone ?? '', address: tenant.address ?? '', status: tenant.status });
     setDialogMode('edit');
-    // Also fetch tenant modules for the sidebar
-    const { data } = await supabase.from('tenant_modules').select('id, tenant_id, module_key, is_active').eq('tenant_id', tenant.id);
-    setTenantModules((data as TenantModule[]) ?? []);
   };
 
   const handleSaveEdit = async () => {
@@ -477,26 +474,7 @@ export default function PlatformTenants() {
     }
   };
 
-  // ── Modules ──
-  const openModules = async (tenant: Tenant) => {
-    setSelectedTenant(tenant); setDialogMode('modules'); setModulesLoading(true);
-    const { data } = await supabase.from('tenant_modules').select('id, tenant_id, module_key, is_active').eq('tenant_id', tenant.id);
-    setTenantModules((data as TenantModule[]) ?? []); setModulesLoading(false);
-  };
 
-  const toggleModule = async (moduleKey: string, currentlyActive: boolean) => {
-    if (!selectedTenant) return;
-    const existing = tenantModules.find(m => m.module_key === moduleKey);
-    if (existing) {
-      await supabase.from('tenant_modules').update({ is_active: !currentlyActive, deactivated_at: currentlyActive ? new Date().toISOString() : null }).eq('id', existing.id);
-    } else {
-      await supabase.from('tenant_modules').insert({ tenant_id: selectedTenant.id, module_key: moduleKey, is_active: true });
-    }
-    const { data } = await supabase.from('tenant_modules').select('id, tenant_id, module_key, is_active').eq('tenant_id', selectedTenant.id);
-    setTenantModules((data as TenantModule[]) ?? []);
-  };
-
-  const isModuleActive = (key: string) => tenantModules.find(m => m.module_key === key)?.is_active ?? false;
 
   // ── View Details ──
   const openView = (tenant: Tenant) => {
@@ -655,11 +633,7 @@ export default function PlatformTenants() {
                               <ArrowRightLeft className="h-4 w-4 mr-2" /> Trocar plano
                             </DropdownMenuItem>
                           )}
-                          {can('module.enable') && !['deleted', 'pending_deletion'].includes(tenant.status) && (
-                            <DropdownMenuItem onClick={() => openModules(tenant)}>
-                              <Puzzle className="h-4 w-4 mr-2" /> Módulos
-                            </DropdownMenuItem>
-                          )}
+                          
                           {can('support.impersonate') && tenant.status === 'active' && (
                             <DropdownMenuItem onClick={() => openImpersonate(tenant)}>
                               <UserCog className="h-4 w-4 mr-2" /> Entrar como Tenant
@@ -809,9 +783,7 @@ export default function PlatformTenants() {
                     <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={() => { setDialogMode(null); setTimeout(() => openChangePlan(selectedTenant), 150); }}>
                       <ArrowRightLeft className="h-3.5 w-3.5" /> Plano
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={() => { setDialogMode(null); setTimeout(() => openModules(selectedTenant), 150); }}>
-                      <Puzzle className="h-3.5 w-3.5" /> Módulos
-                    </Button>
+                    
                   </div>
                 </TabsContent>
 
@@ -979,32 +951,7 @@ export default function PlatformTenants() {
                     <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
                   ) : tenantDetails ? (
                     <>
-                      {/* Modules */}
-                      <div>
-                        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                          <Puzzle className="h-3.5 w-3.5" /> Módulos ativos
-                        </h4>
-                        <div className="space-y-1.5">
-                          {tenantDetails.usage.modules.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-4">Nenhum módulo vinculado.</p>
-                          ) : (
-                            tenantDetails.usage.modules.map(mod => {
-                              const def = PLATFORM_MODULES.find(m => m.key === mod.module_key);
-                              return (
-                                <div key={mod.module_key} className="flex items-center justify-between p-2.5 rounded-lg border border-border/60">
-                                  <div className="space-y-0.5">
-                                    <p className="text-sm font-medium">{def?.label ?? mod.module_key}</p>
-                                    {def?.description && <p className="text-[10px] text-muted-foreground">{def.description}</p>}
-                                  </div>
-                                  <Badge className={mod.is_active ? 'bg-emerald-500/10 text-emerald-600 border-0 text-[10px]' : 'bg-muted text-muted-foreground border-0 text-[10px]'}>
-                                    {mod.is_active ? 'Ativo' : 'Inativo'}
-                                  </Badge>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      </div>
+                      
 
                       {/* Members */}
                       <div>
@@ -1260,30 +1207,6 @@ export default function PlatformTenants() {
                   </div>
                 )}
               </div>
-
-              {/* Actual Active Modules */}
-              <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <Puzzle className="h-3.5 w-3.5" /> Módulos Ativos
-                </p>
-                {(() => {
-                  const activeModules = tenantModules.filter(m => m.is_active);
-                  if (activeModules.length === 0) {
-                    return <p className="text-[11px] text-muted-foreground">Nenhum módulo ativo.</p>;
-                  }
-                  const shown = activeModules.slice(0, 8);
-                  const remaining = activeModules.length - shown.length;
-                  return (
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {shown.map(mod => {
-                        const def = PLATFORM_MODULES.find(m => m.key === mod.module_key);
-                        return <Badge key={mod.module_key} variant="outline" className="text-[9px]">{def?.label ?? mod.module_key}</Badge>;
-                      })}
-                      {remaining > 0 && <Badge variant="outline" className="text-[9px]">+{remaining}</Badge>}
-                    </div>
-                  );
-                })()}
-              </div>
             </div>
           </div>
           <DialogFooter>
@@ -1353,35 +1276,7 @@ export default function PlatformTenants() {
         </DialogContent>
       </Dialog>
 
-      {/* ═══ Modules Dialog ═══ */}
-      <Dialog open={dialogMode === 'modules'} onOpenChange={open => !open && setDialogMode(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-display flex items-center gap-2">
-              <Puzzle className="h-5 w-5 text-primary" /> Módulos — {selectedTenant?.name}
-            </DialogTitle>
-            <DialogDescription>Ative ou desative módulos para este tenant.</DialogDescription>
-          </DialogHeader>
-          {modulesLoading ? (
-            <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-          ) : (
-            <div className="space-y-2 py-2 max-h-[400px] overflow-y-auto">
-              {PLATFORM_MODULES.map(mod => {
-                const active = isModuleActive(mod.key);
-                return (
-                  <div key={mod.key} className="flex items-center justify-between p-3 rounded-lg border border-border/60 hover:bg-muted/30 transition-colors">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium text-foreground">{mod.label}</p>
-                      <p className="text-xs text-muted-foreground">{mod.description}</p>
-                    </div>
-                    <Switch checked={active} onCheckedChange={() => toggleModule(mod.key, active)} />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      
 
       {/* ═══ Impersonate Dialog ═══ */}
       <Dialog open={dialogMode === 'impersonate'} onOpenChange={open => !open && setDialogMode(null)}>
