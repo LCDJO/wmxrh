@@ -203,14 +203,38 @@ export default function PlatformTenants() {
   const [impersonating, setImpersonating] = useState(false);
 
   const fetchTenantPlans = useCallback(async () => {
-    const { data } = await supabase
+    // 1. Fetch tenant_plans rows
+    const { data: tpRows, error: tpErr } = await supabase
       .from('tenant_plans')
-      .select('tenant_id, plan_id, status, billing_cycle, saas_plans(name, price, allowed_modules)')
+      .select('tenant_id, plan_id, status, billing_cycle')
       .in('status', ['active', 'trial']);
+
+    if (tpErr) {
+      logger.error('fetchTenantPlans: tenant_plans query failed', { error: tpErr });
+      return;
+    }
+
+    const rows = (tpRows ?? []) as any[];
+    if (rows.length === 0) { setTenantPlanMap({}); return; }
+
+    // 2. Fetch saas_plans separately (avoids RLS join issues)
+    const planIds = [...new Set(rows.map(r => r.plan_id))];
+    const { data: plans } = await supabase
+      .from('saas_plans')
+      .select('id, name, price, allowed_modules')
+      .in('id', planIds);
+
+    const planLookup: Record<string, { name: string; price: number; allowed_modules: string[] }> = {};
+    ((plans ?? []) as any[]).forEach(p => {
+      planLookup[p.id] = { name: p.name, price: p.price, allowed_modules: p.allowed_modules ?? [] };
+    });
+
+    // 3. Build map
     const map: typeof tenantPlanMap = {};
-    ((data ?? []) as any[]).forEach(row => {
-      const price = row.saas_plans?.price ?? 0;
-      const name = row.saas_plans?.name ?? 'Free';
+    rows.forEach(row => {
+      const plan = planLookup[row.plan_id];
+      const price = plan?.price ?? 0;
+      const name = plan?.name ?? 'Free';
       map[row.tenant_id] = {
         planId: row.plan_id,
         planName: name,
@@ -218,7 +242,7 @@ export default function PlatformTenants() {
         status: row.status,
         billingCycle: row.billing_cycle,
         price,
-        allowedModules: row.saas_plans?.allowed_modules ?? [],
+        allowedModules: plan?.allowed_modules ?? [],
       };
     });
     setTenantPlanMap(map);
