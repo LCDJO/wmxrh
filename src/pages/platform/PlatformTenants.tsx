@@ -183,7 +183,7 @@ export default function PlatformTenants() {
   const [modulesLoading, setModulesLoading] = useState(false);
 
   // Tenant plan data
-  const [tenantPlanMap, setTenantPlanMap] = useState<Record<string, { planId: string; planName: string; tier: string; status: string; billingCycle: string }>>({});
+  const [tenantPlanMap, setTenantPlanMap] = useState<Record<string, { planId: string; planName: string; tier: string; status: string; billingCycle: string; price: number; allowedModules: string[] }>>({});
 
   // Plan change form
   const [newPlanId, setNewPlanId] = useState('');
@@ -205,9 +205,9 @@ export default function PlatformTenants() {
   const fetchTenantPlans = useCallback(async () => {
     const { data } = await supabase
       .from('tenant_plans')
-      .select('tenant_id, plan_id, status, billing_cycle, saas_plans(name, price)')
+      .select('tenant_id, plan_id, status, billing_cycle, saas_plans(name, price, allowed_modules)')
       .in('status', ['active', 'trial']);
-    const map: Record<string, { planId: string; planName: string; tier: string; status: string; billingCycle: string }> = {};
+    const map: typeof tenantPlanMap = {};
     ((data ?? []) as any[]).forEach(row => {
       const price = row.saas_plans?.price ?? 0;
       const name = row.saas_plans?.name ?? 'Free';
@@ -217,6 +217,8 @@ export default function PlatformTenants() {
         tier: inferPlanTier(name, price),
         status: row.status,
         billingCycle: row.billing_cycle,
+        price,
+        allowedModules: row.saas_plans?.allowed_modules ?? [],
       };
     });
     setTenantPlanMap(map);
@@ -258,12 +260,6 @@ export default function PlatformTenants() {
     setDetailsLoading(true);
     setTenantDetails(null);
     try {
-      const { data, error } = await supabase.functions.invoke('tenant-details', {
-        body: undefined,
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      // The edge function uses query params, so we need the full URL approach
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
@@ -720,30 +716,9 @@ export default function PlatformTenants() {
                     </div>
                   </div>
 
-                  {/* Plan card */}
-                  {detailsLoading ? (
+                  {/* Plan card — uses tenantPlanMap as single source of truth */}
+                  {detailsLoading && !tenantPlanMap[selectedTenant.id] ? (
                     <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                  ) : tenantDetails?.plan ? (
-                    <Card>
-                      <CardContent className="pt-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-foreground">{tenantDetails.plan.plan_name}</p>
-                            <p className="text-xs text-muted-foreground capitalize">{tenantDetails.plan.billing_cycle} · {tenantDetails.plan.status}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold font-display text-foreground">{formatBRL(tenantDetails.plan.plan_price)}</p>
-                            <p className="text-xs text-muted-foreground">/mês</p>
-                          </div>
-                        </div>
-                        {tenantDetails.plan.next_billing_date && (
-                          <p className="text-xs text-muted-foreground">Próxima cobrança: {format(new Date(tenantDetails.plan.next_billing_date), 'dd/MM/yyyy')}</p>
-                        )}
-                        {tenantDetails.plan.trial_ends_at && (
-                          <p className="text-xs text-amber-600">Trial expira: {format(new Date(tenantDetails.plan.trial_ends_at), 'dd/MM/yyyy')}</p>
-                        )}
-                      </CardContent>
-                    </Card>
                   ) : tenantPlanMap[selectedTenant.id] ? (
                     <Card>
                       <CardContent className="pt-4 space-y-3">
@@ -752,7 +727,27 @@ export default function PlatformTenants() {
                             <PlanBadge tier={tenantPlanMap[selectedTenant.id].tier} planName={tenantPlanMap[selectedTenant.id].planName} size="md" />
                             <p className="text-xs text-muted-foreground capitalize mt-1">{tenantPlanMap[selectedTenant.id].billingCycle} · {tenantPlanMap[selectedTenant.id].status}</p>
                           </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold font-display text-foreground">{formatBRL(tenantPlanMap[selectedTenant.id].price)}</p>
+                            <p className="text-xs text-muted-foreground">/mês</p>
+                          </div>
                         </div>
+                        {tenantDetails?.plan?.next_billing_date && (
+                          <p className="text-xs text-muted-foreground">Próxima cobrança: {format(new Date(tenantDetails.plan.next_billing_date), 'dd/MM/yyyy')}</p>
+                        )}
+                        {tenantDetails?.plan?.trial_ends_at && (
+                          <p className="text-xs text-amber-600">Trial expira: {format(new Date(tenantDetails.plan.trial_ends_at), 'dd/MM/yyyy')}</p>
+                        )}
+                        {tenantPlanMap[selectedTenant.id].allowedModules.length > 0 && (
+                          <div className="pt-1">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Módulos do plano</p>
+                            <div className="flex flex-wrap gap-1">
+                              {tenantPlanMap[selectedTenant.id].allowedModules.map(mod => (
+                                <Badge key={mod} variant="secondary" className="text-[9px]">{PLATFORM_MODULES.find(m => m.key === mod)?.label ?? mod}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ) : (
@@ -1183,6 +1178,10 @@ export default function PlatformTenants() {
                     <PlanBadge tier={tenantPlanMap[selectedTenant.id].tier} planName={tenantPlanMap[selectedTenant.id].planName} size="md" />
                     <div className="text-xs text-muted-foreground space-y-1">
                       <div className="flex justify-between">
+                        <span>Preço</span>
+                        <span className="font-medium text-foreground">{formatBRL(tenantPlanMap[selectedTenant.id].price)}/mês</span>
+                      </div>
+                      <div className="flex justify-between">
                         <span>Ciclo</span>
                         <span className="capitalize">{tenantPlanMap[selectedTenant.id].billingCycle}</span>
                       </div>
@@ -1191,6 +1190,16 @@ export default function PlatformTenants() {
                         <span className="capitalize">{tenantPlanMap[selectedTenant.id].status}</span>
                       </div>
                     </div>
+                    {tenantPlanMap[selectedTenant.id].allowedModules.length > 0 && (
+                      <div className="pt-1">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Módulos do plano ({tenantPlanMap[selectedTenant.id].allowedModules.length})</p>
+                        <div className="flex flex-wrap gap-1">
+                          {tenantPlanMap[selectedTenant.id].allowedModules.map(mod => (
+                            <Badge key={mod} variant="secondary" className="text-[9px]">{PLATFORM_MODULES.find(m => m.key === mod)?.label ?? mod}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">Nenhum plano vinculado</p>
