@@ -116,12 +116,23 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── 4. Get current plan (if any) ──
-  // Fetch ANY existing tenant_plan row (unique constraint on tenant_id means at most one)
-  const { data: currentPlan } = await admin
+  // First check if a row exists (simple query, no join that could fail)
+  const { data: existingRow } = await admin
     .from("tenant_plans")
-    .select("*, saas_plans(name, price)")
+    .select("id, plan_id, status, billing_cycle, started_at")
     .eq("tenant_id", tenant_id)
     .maybeSingle();
+
+  // If row exists, enrich with plan details separately
+  let currentPlan: any = null;
+  if (existingRow) {
+    const { data: oldPlanDetails } = await admin
+      .from("saas_plans")
+      .select("name, price")
+      .eq("id", existingRow.plan_id)
+      .maybeSingle();
+    currentPlan = { ...existingRow, saas_plans: oldPlanDetails };
+  }
 
   const now = new Date().toISOString();
   const today = now.slice(0, 10);
@@ -132,13 +143,12 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── 5. Cancel current plan & activate new one ──
-  // tenant_plans has a UNIQUE constraint on tenant_id, so we must UPDATE (not INSERT)
   const nextBillingDate = calculateNextBillingDate(billing_cycle);
 
   let newTenantPlan: any;
 
   if (currentPlan) {
-    // Update existing record in-place
+    // Update existing record in-place (unique constraint on tenant_id)
     const { data: updated, error: updateErr } = await admin
       .from("tenant_plans")
       .update({
