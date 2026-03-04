@@ -442,7 +442,7 @@ async function runHealthChecks(
 
   // ── 5. Queue Health ──
   const { count: pendingCount } = await supabase
-    .from('tenant_events')
+    .from('tenant_event_log')
     .select('*', { count: 'exact', head: true })
     .eq('tenant_id', tenantId)
     .in('status', ['pending', 'retry']);
