@@ -336,10 +336,13 @@ export default function PlatformTenants() {
   };
 
   // ── Edit Tenant ──
-  const openEdit = (tenant: Tenant) => {
+  const openEdit = async (tenant: Tenant) => {
     setSelectedTenant(tenant);
     setEditForm({ name: tenant.name, document: tenant.document ?? '', email: tenant.email ?? '', phone: tenant.phone ?? '', address: tenant.address ?? '', status: tenant.status });
     setDialogMode('edit');
+    // Also fetch tenant modules for the sidebar
+    const { data } = await supabase.from('tenant_modules').select('id, tenant_id, module_key, is_active').eq('tenant_id', tenant.id);
+    setTenantModules((data as TenantModule[]) ?? []);
   };
 
   const handleSaveEdit = async () => {
@@ -1170,6 +1173,31 @@ export default function PlatformTenants() {
 
             {/* Right column — Info panels */}
             <div className="lg:col-span-2 space-y-4">
+              {/* Current Plan */}
+              <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Package className="h-3.5 w-3.5" /> Plano Contratado
+                </p>
+                {selectedTenant && tenantPlanMap[selectedTenant.id] ? (
+                  <div className="space-y-2">
+                    <PlanBadge tier={tenantPlanMap[selectedTenant.id].tier} planName={tenantPlanMap[selectedTenant.id].planName} size="md" />
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <div className="flex justify-between">
+                        <span>Ciclo</span>
+                        <span className="capitalize">{tenantPlanMap[selectedTenant.id].billingCycle}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Status</span>
+                        <span className="capitalize">{tenantPlanMap[selectedTenant.id].status}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhum plano vinculado</p>
+                )}
+              </div>
+
+              {/* Info */}
               <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                   <Building2 className="h-3.5 w-3.5" /> Informações
@@ -1200,21 +1228,28 @@ export default function PlatformTenants() {
                 )}
               </div>
 
+              {/* Actual Active Modules */}
               <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                   <Puzzle className="h-3.5 w-3.5" /> Módulos Ativos
                 </p>
-                <p className="text-[11px] text-muted-foreground">
-                  Para gerenciar módulos, acesse a tela de detalhes do cliente.
-                </p>
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {PLATFORM_MODULES.slice(0, 8).map(mod => (
-                    <Badge key={mod.key} variant="outline" className="text-[9px]">{mod.label}</Badge>
-                  ))}
-                  {PLATFORM_MODULES.length > 8 && (
-                    <Badge variant="outline" className="text-[9px]">+{PLATFORM_MODULES.length - 8}</Badge>
-                  )}
-                </div>
+                {(() => {
+                  const activeModules = tenantModules.filter(m => m.is_active);
+                  if (activeModules.length === 0) {
+                    return <p className="text-[11px] text-muted-foreground">Nenhum módulo ativo.</p>;
+                  }
+                  const shown = activeModules.slice(0, 8);
+                  const remaining = activeModules.length - shown.length;
+                  return (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {shown.map(mod => {
+                        const def = PLATFORM_MODULES.find(m => m.key === mod.module_key);
+                        return <Badge key={mod.module_key} variant="outline" className="text-[9px]">{def?.label ?? mod.module_key}</Badge>;
+                      })}
+                      {remaining > 0 && <Badge variant="outline" className="text-[9px]">+{remaining}</Badge>}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
