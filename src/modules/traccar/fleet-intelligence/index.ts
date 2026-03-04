@@ -157,5 +157,17 @@ export type {
   ComplianceSummary,
 } from '../services/compliance.service';
 
+// ══════════════════════════════════════════════════════════
+// PIPELINE ORQUESTRADOR
+// ══════════════════════════════════════════════════════════
+export {
+  executePipeline,
+  executeLightPipeline,
+} from './fleet-data-pipeline';
+export type {
+  PipelineExecutionResult,
+  PipelineOptions,
+} from './fleet-data-pipeline';
+
 // ── Event handlers cross-module ──
 export { registerTraccarEventHandlers } from '../events';
