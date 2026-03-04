@@ -64,8 +64,8 @@ Deno.serve(async (req: Request) => {
     return jsonError(400, "INVALID_UUID", "tenant_id and plan_id must be valid UUIDs");
   }
 
-  if (!["monthly", "quarterly", "semiannual", "annual"].includes(billing_cycle)) {
-    return jsonError(400, "INVALID_CYCLE", "billing_cycle must be monthly, quarterly, semiannual or annual");
+  if (!["monthly", "quarterly", "annual", "custom"].includes(billing_cycle)) {
+    return jsonError(400, "INVALID_CYCLE", "billing_cycle must be monthly, quarterly, annual or custom");
   }
 
   // ── Admin client ──
@@ -165,8 +165,8 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (updateErr) {
-      console.error("[change-tenant-plan] Failed to update plan:", updateErr);
-      return jsonError(500, "ACTIVATION_FAILED", "Failed to activate new plan.");
+      console.error("[change-tenant-plan] Failed to update plan:", JSON.stringify(updateErr));
+      return jsonError(500, "ACTIVATION_FAILED", `Failed to activate new plan: ${updateErr.message}`);
     }
     newTenantPlan = updated;
   } else {
