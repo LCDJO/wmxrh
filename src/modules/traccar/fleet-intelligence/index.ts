@@ -4,20 +4,111 @@
  * ══════════════════════════════════════════════════════════
  *
  * Responsável por:
- *  ├── Análise comportamental de motoristas (BTIE)
+ *  ├── Configuração da integração Traccar
+ *  ├── Vinculação de dispositivos a colaboradores e veículos
+ *  ├── Definição de parâmetros comportamentais
+ *  ├── Cadastro de pontos de radar
+ *  ├── Análise de trajetos e velocidade
+ *  ├── Geração de infrações e alertas
+ *  ├── Dashboards operacionais e analíticos
  *  ├── Construção de viagens (TripBuilder)
  *  ├── Detecção de infrações em radares (RadarPointEngine)
  *  ├── Score de risco por motorista (DriverRiskScore)
  *  ├── Análise de hotspots de tráfego
- *  ├── Gestão de eventos comportamentais
- *  ├── Gestão de incidentes de compliance
  *  └── Handlers de eventos cross-module
  *
  * Consome eventos normalizados da camada SaaS Integration Core.
  * Toda lógica de negócio do tenant está aqui.
  */
 
-// ── BTIE Engines (lógica pura, sem I/O) ──
+// ══════════════════════════════════════════════════════════
+// CONFIGURAÇÃO DA INTEGRAÇÃO
+// ══════════════════════════════════════════════════════════
+export {
+  getTenantTraccarConfig,
+  saveTenantTraccarConfig,
+  deactivateTenantTraccar,
+} from './tenant-config.service';
+export type {
+  TenantTraccarConfigRow,
+  SaveTenantTraccarConfigDTO,
+} from './tenant-config.service';
+
+// ══════════════════════════════════════════════════════════
+// VINCULAÇÃO DE DISPOSITIVOS
+// ══════════════════════════════════════════════════════════
+export {
+  listDeviceMappings,
+  linkDevice,
+  unlinkDevice,
+  getUnlinkedDevices,
+  getDeviceByEmployee,
+} from './device-mapping.service';
+export type {
+  DeviceMapping,
+  CreateDeviceMappingDTO,
+  UpdateDeviceMappingDTO,
+} from './device-mapping.service';
+
+// ══════════════════════════════════════════════════════════
+// PARÂMETROS COMPORTAMENTAIS
+// ══════════════════════════════════════════════════════════
+export {
+  getTenantBehavioralParams,
+  toBehaviorConfig,
+  getDefaultBehavioralParams,
+} from './behavioral-params.service';
+export type { TenantBehavioralParams } from './behavioral-params.service';
+
+// ══════════════════════════════════════════════════════════
+// CADASTRO DE PONTOS DE RADAR
+// ══════════════════════════════════════════════════════════
+export {
+  listRadarPoints,
+  listActiveRadarPoints,
+  createRadarPoint,
+  updateRadarPoint,
+  deactivateRadarPoint,
+  deleteRadarPoint,
+  importRadarPoints,
+} from './radar-point.service';
+export type {
+  RadarPointRow,
+  CreateRadarPointDTO as CreateRadarDTO,
+  UpdateRadarPointDTO as UpdateRadarDTO,
+} from './radar-point.service';
+
+// ══════════════════════════════════════════════════════════
+// ANÁLISE DE TRAJETOS E VELOCIDADE
+// ══════════════════════════════════════════════════════════
+export {
+  analyzeTrips,
+  getDailyTrips,
+  getEmployeeTrips,
+} from './trip-analysis.service';
+export type {
+  TripAnalysisResult,
+  TripAnalysisOptions,
+} from './trip-analysis.service';
+
+// ══════════════════════════════════════════════════════════
+// GERAÇÃO DE INFRAÇÕES E ALERTAS
+// ══════════════════════════════════════════════════════════
+export {
+  generateInfractions,
+  evaluateEmployeeEscalation,
+  getFleetAlerts,
+  getInfractionCountsByEmployee,
+} from './infraction-alert.service';
+export type {
+  FleetInfraction,
+  FleetAlert,
+  GenerateInfractionsResult,
+} from './infraction-alert.service';
+
+// ══════════════════════════════════════════════════════════
+// BTIE ENGINES (lógica pura, sem I/O)
+// ══════════════════════════════════════════════════════════
 export { buildTrips, attachViolationsToTrips } from '../engines/trip-builder';
 export { detectRadarViolations } from '../engines/radar-point-engine';
 export { analyzeBehavior, radarViolationsToBehavior } from '../engines/behavior-engine';
@@ -40,7 +131,9 @@ export type {
   HotspotGrid,
 } from '../engines/types';
 
-// ── Serviço de eventos comportamentais (I/O com banco) ──
+// ══════════════════════════════════════════════════════════
+// SERVIÇOS DE DADOS (I/O com banco)
+// ══════════════════════════════════════════════════════════
 export {
   getBehaviorEvents,
   getBehaviorSummary,
@@ -53,7 +146,6 @@ export type {
   BehaviorEventType,
 } from '../services/behavior-engine.service';
 
-// ── Serviço de compliance (I/O com banco) ──
 export {
   getComplianceIncidents,
   getComplianceSummary,
