@@ -15,12 +15,13 @@
  *    - Controle de módulos liberados por plano
  *
  * 2) Tenant Fleet Intelligence (Tenant)
- *    - Análise comportamental (BTIE engines)
- *    - Construção de viagens
- *    - Detecção de infrações em radares
- *    - Score de risco por motorista
- *    - Gestão de compliance de frota
- *    - Handlers de eventos cross-module
+ *    - Configuração da integração Traccar
+ *    - Vinculação de dispositivos a colaboradores e veículos
+ *    - Definição de parâmetros comportamentais
+ *    - Cadastro de pontos de radar
+ *    - Análise de trajetos e velocidade
+ *    - Geração de infrações e alertas
+ *    - Dashboards operacionais e analíticos
  */
 
 // ── Manifest & Lifecycle ──
@@ -37,70 +38,25 @@ export { TraccarModuleUI } from './ui';
 // ══════════════════════════════════════════════════════════
 
 export {
-  // API Client (autenticação + consumo)
   traccarApi,
-  // Sincronização
-  triggerTraccarSync,
-  getCachedDevices,
-  linkDeviceToEmployee,
-  getSyncHealth,
-  testTraccarHealth,
-  // Monitoramento
-  getLatestHealthChecks,
-  getTenantHealthHistory,
-  triggerHealthCheck,
-  getActiveHealthAlerts,
-  getTenantHealthAlerts,
-  resolveHealthAlert,
-  getTokenOwnersByTenant,
-  // Normalização
-  normalizeTraccarEvent,
-  computeIntegrityHashSync,
-  computeIntegrityHashAsync,
-  validateWebhookRequest,
-  buildDispatchManifest,
-  // Controle de módulos por plano
-  resolveTraccarModuleAccess,
-  getTraccarModuleKeys,
-  isFleetIntelligenceEnabled,
-  // Publicação de eventos
-  publishTraccarEvent,
-  publishBatchTraccarEvents,
+  triggerTraccarSync, getCachedDevices, linkDeviceToEmployee, getSyncHealth, testTraccarHealth,
+  getLatestHealthChecks, getTenantHealthHistory, triggerHealthCheck,
+  getActiveHealthAlerts, getTenantHealthAlerts, resolveHealthAlert, getTokenOwnersByTenant,
+  normalizeTraccarEvent, computeIntegrityHashSync, computeIntegrityHashAsync,
+  validateWebhookRequest, buildDispatchManifest,
+  resolveTraccarModuleAccess, getTraccarModuleKeys, isFleetIntelligenceEnabled,
+  publishTraccarEvent, publishBatchTraccarEvents,
 } from './saas-core';
 
 export type {
-  // API Types
-  TraccarDevice,
-  TraccarPosition,
-  TraccarEvent,
-  TraccarGeofence,
-  TraccarNotification,
-  TraccarGroup,
-  TraccarDriver,
-  TraccarMaintenance,
-  TraccarCommand,
-  TraccarReportSummary,
-  TraccarReportTrip,
-  TraccarReportStop,
-  TraccarServerInfo,
-  TraccarStatistics,
-  SyncResult,
-  DeviceCacheEntry,
-  // Normalização
-  TraccarCanonicalEvent,
-  TraccarOsmAndPayload,
-  TraccarWebhookPayload,
-  TraccarWebhookValidation,
-  TraccarDispatchResult,
-  // Monitoramento
-  HealthCheckResult,
-  CheckResult,
-  HealthAlert,
-  TraccarTokenOwner,
-  // Module access
-  TraccarModuleAccessResult,
-  // Event publishing
-  TraccarEventPublishPayload,
+  TraccarDevice, TraccarPosition, TraccarEvent, TraccarGeofence, TraccarNotification,
+  TraccarGroup, TraccarDriver, TraccarMaintenance, TraccarCommand,
+  TraccarReportSummary, TraccarReportTrip, TraccarReportStop, TraccarServerInfo, TraccarStatistics,
+  SyncResult, DeviceCacheEntry,
+  TraccarCanonicalEvent, TraccarOsmAndPayload, TraccarWebhookPayload,
+  TraccarWebhookValidation, TraccarDispatchResult,
+  HealthCheckResult, CheckResult, HealthAlert, TraccarTokenOwner,
+  TraccarModuleAccessResult, TraccarEventPublishPayload,
 } from './saas-core';
 
 // ══════════════════════════════════════════════════════════
@@ -108,46 +64,48 @@ export type {
 // ══════════════════════════════════════════════════════════
 
 export {
+  // Configuração
+  getTenantTraccarConfig, saveTenantTraccarConfig, deactivateTenantTraccar,
+  // Dispositivos
+  listDeviceMappings, linkDevice, unlinkDevice, getUnlinkedDevices, getDeviceByEmployee,
+  // Parâmetros comportamentais
+  getTenantBehavioralParams, toBehaviorConfig, getDefaultBehavioralParams,
+  // Radares
+  listRadarPoints, listActiveRadarPoints, createRadarPoint, updateRadarPoint,
+  deactivateRadarPoint, deleteRadarPoint, importRadarPoints,
+  // Análise de trajetos
+  analyzeTrips, getDailyTrips, getEmployeeTrips,
+  // Infrações e alertas
+  generateInfractions, evaluateEmployeeEscalation, getFleetAlerts, getInfractionCountsByEmployee,
   // BTIE Engines
-  buildTrips,
-  attachViolationsToTrips,
-  detectRadarViolations,
-  analyzeBehavior,
-  radarViolationsToBehavior,
-  computeDriverRiskScore,
-  computeBatchDriverScores,
-  analyzeHotspots,
-  // Behavior service
-  getBehaviorEvents,
-  getBehaviorSummary,
-  recordBehaviorEvent,
-  evaluateSpeedSeverity,
-  // Compliance service
-  getComplianceIncidents,
-  getComplianceSummary,
-  createComplianceIncident,
-  reviewIncident,
-  // Event handlers
+  buildTrips, attachViolationsToTrips, detectRadarViolations,
+  analyzeBehavior, radarViolationsToBehavior,
+  computeDriverRiskScore, computeBatchDriverScores, analyzeHotspots,
+  // Behavior & compliance services
+  getBehaviorEvents, getBehaviorSummary, recordBehaviorEvent, evaluateSpeedSeverity,
+  getComplianceIncidents, getComplianceSummary, createComplianceIncident, reviewIncident,
+  // Events
   registerTraccarEventHandlers,
 } from './fleet-intelligence';
 
 export type {
+  // Config
+  TenantTraccarConfigRow, SaveTenantTraccarConfigDTO,
+  // Devices
+  DeviceMapping, CreateDeviceMappingDTO, UpdateDeviceMappingDTO,
+  // Params
+  TenantBehavioralParams,
+  // Radars
+  RadarPointRow, CreateRadarDTO, UpdateRadarDTO,
+  // Trip analysis
+  TripAnalysisResult, TripAnalysisOptions,
+  // Infractions
+  FleetInfraction, FleetAlert, GenerateInfractionsResult,
   // Engine types
-  PositionPoint,
-  TripSummary,
-  RadarPoint,
-  RadarViolationEvent,
-  BtieEvent,
-  BehaviorEventKind,
-  DriverRiskScore,
-  TrafficHotspot,
-  HotspotGrid,
-  ScoreInput,
-  BehaviorConfig,
+  PositionPoint, TripSummary, RadarPoint, RadarViolationEvent,
+  BtieEvent, BehaviorEventKind, DriverRiskScore, TrafficHotspot, HotspotGrid,
+  ScoreInput, BehaviorConfig,
   // Service types
-  BehaviorEvent,
-  BehaviorSummary,
-  BehaviorEventType,
-  ComplianceIncident,
-  ComplianceSummary,
+  BehaviorEvent, BehaviorSummary, BehaviorEventType,
+  ComplianceIncident, ComplianceSummary,
 } from './fleet-intelligence';
