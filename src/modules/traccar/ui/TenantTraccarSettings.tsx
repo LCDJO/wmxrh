@@ -5,7 +5,7 @@
  * - Optimized skeleton loading for cards
  * - Improved layout and UX
  */
-import { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
 import { usePermissions } from '@/domains/security/use-permissions';
 import { supabase } from '@/integrations/supabase/client';
