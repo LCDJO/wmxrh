@@ -1,22 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const FALLBACK_CENTER = { lat: -15.5989, lng: -56.0949 }; // Cuiabá MT
-let cachedPosition: { lat: number; lng: number } | null = null;
 
 /**
  * Resolves the best initial map center:
- *  1. Cached position from a previous call
- *  2. Average position of tenant's tracked devices (from DB)
- *  3. Browser geolocation
- *  4. Fallback (Cuiabá-MT)
+ *  1. Average position of tenant's tracked devices (from DB)
+ *  2. Browser geolocation
+ *  3. Fallback (Cuiabá-MT)
+ *
+ * NOTE: No module-level cache — always resolves fresh per tenant to avoid
+ * stale coordinates from previous sessions.
  */
 export function useDefaultMapCenter(tenantId?: string | null) {
-  const [center, setCenter] = useState(cachedPosition || FALLBACK_CENTER);
+  const [center, setCenter] = useState(FALLBACK_CENTER);
+  const resolved = useRef(false);
 
   useEffect(() => {
-    if (cachedPosition) return;
-
+    resolved.current = false;
     let cancelled = false;
 
     async function resolve() {
@@ -38,9 +39,8 @@ export function useDefaultMapCenter(tenantId?: string | null) {
             if (validDevices.length > 0) {
               const avgLat = validDevices.reduce((s: number, d: any) => s + d.latitude, 0) / validDevices.length;
               const avgLng = validDevices.reduce((s: number, d: any) => s + d.longitude, 0) / validDevices.length;
-              const loc = { lat: avgLat, lng: avgLng };
-              cachedPosition = loc;
-              setCenter(loc);
+              setCenter({ lat: avgLat, lng: avgLng });
+              resolved.current = true;
               return;
             }
           }
@@ -53,10 +53,9 @@ export function useDefaultMapCenter(tenantId?: string | null) {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
-            if (cancelled) return;
-            const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            cachedPosition = loc;
-            setCenter(loc);
+            if (cancelled || resolved.current) return;
+            setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            resolved.current = true;
           },
           () => { /* keep fallback */ },
           { timeout: 5000, maximumAge: 300000 }

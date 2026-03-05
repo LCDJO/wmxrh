@@ -40,7 +40,16 @@ export function FleetMap({ vehicles, onVehicleClick, heatmapMode = false, tenant
 
   // Init map
   useEffect(() => {
-    if (!ready || !mapContainer.current || mapRef.current) return;
+    if (!ready || !mapContainer.current) return;
+
+    // If map already exists, just update center when defaultCenter changes
+    if (mapRef.current) {
+      // Only re-center if no vehicles are present (vehicles use fitBounds)
+      if (vehicles.filter(v => v.lat && v.lng).length === 0) {
+        mapRef.current.setCenter(defaultCenter);
+      }
+      return;
+    }
 
     const map = new google.maps.Map(mapContainer.current, {
       center: defaultCenter,
@@ -64,7 +73,7 @@ export function FleetMap({ vehicles, onVehicleClick, heatmapMode = false, tenant
       mapRef.current = null;
       infoWindowRef.current = null;
     };
-  }, [ready]);
+  }, [ready, defaultCenter]);
 
   // Update markers
   useEffect(() => {
