@@ -1,10 +1,13 @@
 /**
  * TenantTraccarSettings — Tenant-level Traccar integration page
  * 
- * Redesigned with grouped cards and refined visual hierarchy.
+ * - Admin-only access guard
+ * - Optimized skeleton loading for cards
+ * - Improved layout and UX
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
+import { usePermissions } from '@/domains/security/use-permissions';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,16 +19,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import {
   MapPin, Loader2, RefreshCw, Satellite, Shield, Activity,
   CheckCircle2, WifiOff, ArrowDownToLine, Settings, Save, Eye, EyeOff, Bell, Key,
-  Server, Link, Timer, Zap,
+  Server, Link, Timer, Zap, ShieldAlert,
 } from 'lucide-react';
 import TraccarEventsTab from './TraccarEventsTab';
 import TraccarNotificationsTab from './TraccarNotificationsTab';
 import TenantHealthTab from './TenantHealthTab';
 import FleetPoliciesSummary from './FleetPoliciesSummary';
+
+// ── Types ──
 
 interface TraccarDevice {
   id: number;
@@ -79,9 +85,101 @@ const PROTOCOLS = [
   { value: 'api', label: 'API REST' },
 ];
 
+// ── Skeleton for config cards ──
+
+function ConfigCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="pb-4">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-1.5">
+          <Skeleton className="h-3.5 w-20" />
+          <Skeleton className="h-9 w-full" />
+        </div>
+        <div className="space-y-1.5">
+          <Skeleton className="h-3.5 w-24" />
+          <Skeleton className="h-9 w-full" />
+        </div>
+        <div className="space-y-1.5">
+          <Skeleton className="h-3.5 w-28" />
+          <Skeleton className="h-9 w-full" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Access denied component ──
+
+function AccessDenied() {
+  return (
+    <div className="flex flex-col items-center justify-center h-[60vh] gap-4 text-center">
+      <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
+        <ShieldAlert className="h-8 w-8 text-destructive" />
+      </div>
+      <div className="space-y-1.5">
+        <h2 className="text-lg font-semibold text-foreground">Acesso Restrito</h2>
+        <p className="text-sm text-muted-foreground max-w-sm">
+          Apenas administradores do tenant podem acessar as configurações de integração Traccar.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Secret field component ──
+
+function SecretField({ label, value, onChange, placeholder, show, onToggleShow, savedValue, hint }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder: string;
+  show: boolean; onToggleShow: () => void; savedValue: string; hint?: React.ReactNode;
+}) {
+  const maskSecret = (s: string) => {
+    if (!s) return '';
+    if (s.length <= 6) return '••••••';
+    return `${s.slice(0, 2)}${'•'.repeat(Math.min(s.length - 4, 20))}${s.slice(-2)}`;
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm font-medium text-foreground">{label}</Label>
+      <div className="relative">
+        <Input
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="pr-10"
+        />
+        <Button
+          type="button" variant="ghost" size="sm"
+          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+          onClick={onToggleShow}
+        >
+          {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+        </Button>
+      </div>
+      {savedValue && !value && (
+        <p className="text-xs text-muted-foreground">
+          Valor salvo: <span className="font-mono">{maskSecret(savedValue)}</span>
+        </p>
+      )}
+      {hint}
+    </div>
+  );
+}
+
+// ── Main component ──
+
 export default function TenantTraccarSettings() {
   const { currentTenant } = useTenant();
+  const { hasRole, loading: permissionsLoading, isTenantAdmin } = usePermissions();
   const tenantId = currentTenant?.id ?? null;
+
   const [loading, setLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
   const [serverInfo, setServerInfo] = useState<TraccarServerInfo | null>(null);
@@ -105,9 +203,12 @@ export default function TenantTraccarSettings() {
     setConfig(prev => ({ ...prev, ...partial }));
   };
 
+  // ── Admin access check ──
+  const isAdmin = isTenantAdmin || hasRole('owner', 'admin');
+
   // Load saved config
   const fetchConfig = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId || !isAdmin) return;
     setLoading(true);
     const { data } = await supabase
       .from('tenant_integration_configs')
@@ -131,7 +232,7 @@ export default function TenantTraccarSettings() {
       setSavedConfig(loaded);
     }
     setLoading(false);
-  }, [tenantId]);
+  }, [tenantId, isAdmin]);
 
   useEffect(() => { fetchConfig(); }, [fetchConfig]);
 
@@ -155,10 +256,11 @@ export default function TenantTraccarSettings() {
   }, [savedConfig.api_url, savedConfig.api_token, tenantId]);
 
   useEffect(() => {
+    if (!isAdmin) return;
     autoTestConnection();
     const interval = setInterval(autoTestConnection, 60_000);
     return () => clearInterval(interval);
-  }, [autoTestConnection]);
+  }, [autoTestConnection, isAdmin]);
 
   // Auto-sync devices
   const syncDevices = useCallback(async () => {
@@ -190,13 +292,13 @@ export default function TenantTraccarSettings() {
     }
   };
 
-  // Auto-sync timer management
+  // Auto-sync timer
   useEffect(() => {
     if (syncTimerRef.current) {
       clearInterval(syncTimerRef.current);
       syncTimerRef.current = null;
     }
-    if (savedConfig.auto_sync && savedConfig.is_active && savedConfig.api_url) {
+    if (savedConfig.auto_sync && savedConfig.is_active && savedConfig.api_url && isAdmin) {
       syncDevices();
       const ms = Math.max(savedConfig.sync_interval_min, 1) * 60_000;
       syncTimerRef.current = setInterval(syncDevices, ms);
@@ -204,7 +306,7 @@ export default function TenantTraccarSettings() {
     return () => {
       if (syncTimerRef.current) clearInterval(syncTimerRef.current);
     };
-  }, [savedConfig.auto_sync, savedConfig.is_active, savedConfig.sync_interval_min, savedConfig.api_url, syncDevices]);
+  }, [savedConfig.auto_sync, savedConfig.is_active, savedConfig.sync_interval_min, savedConfig.api_url, syncDevices, isAdmin]);
 
   const testConnection = async () => {
     setTestingConnection(true);
@@ -275,57 +377,67 @@ export default function TenantTraccarSettings() {
     }
   };
 
-  const maskSecret = (s: string) => {
-    if (!s) return '';
-    if (s.length <= 6) return '••••••';
-    return `${s.slice(0, 2)}${'•'.repeat(Math.min(s.length - 4, 20))}${s.slice(-2)}`;
-  };
-
-  if (loading) {
+  // ── Guard: loading permissions ──
+  if (permissionsLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-11 w-11 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-3.5 w-56" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ConfigCardSkeleton />
+          <ConfigCardSkeleton />
+        </div>
       </div>
     );
   }
 
-  const SecretField = ({ label, value, onChange, placeholder, show, onToggleShow, savedValue, hint }: {
-    label: string; value: string; onChange: (v: string) => void; placeholder: string;
-    show: boolean; onToggleShow: () => void; savedValue: string; hint?: React.ReactNode;
-  }) => (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-medium text-foreground">{label}</Label>
-      <div className="relative">
-        <Input
-          type={show ? 'text' : 'password'}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="pr-10"
-        />
-        <Button
-          type="button" variant="ghost" size="sm"
-          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-          onClick={onToggleShow}
-        >
-          {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-        </Button>
+  // ── Guard: admin only ──
+  if (!isAdmin) {
+    return <AccessDenied />;
+  }
+
+  // ── Guard: config loading ──
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center">
+              <MapPin className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-foreground tracking-tight">Traccar GPS</h1>
+              <p className="text-sm text-muted-foreground">Rastreamento GPS e compliance de frota</p>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ConfigCardSkeleton />
+          <ConfigCardSkeleton />
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-4">
+              <Skeleton className="h-4 w-36" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-9 w-full max-w-lg" />
+            </CardContent>
+          </Card>
+        </div>
       </div>
-      {savedValue && !value && (
-        <p className="text-xs text-muted-foreground">
-          Valor salvo: <span className="font-mono">{maskSecret(savedValue)}</span>
-        </p>
-      )}
-      {hint}
-    </div>
-  );
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center">
+          <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
             <MapPin className="h-5 w-5 text-primary" />
           </div>
           <div>
@@ -333,7 +445,7 @@ export default function TenantTraccarSettings() {
             <p className="text-sm text-muted-foreground">Rastreamento GPS e compliance de frota</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge
             variant="outline"
             className={`text-xs px-3 py-1 ${
@@ -349,11 +461,15 @@ export default function TenantTraccarSettings() {
               : connectionStatus === 'error' ? 'bg-destructive'
               : 'bg-muted-foreground'
             }`} />
-            {connectionStatus === 'connected' ? 'Conectado' : 'Desconectado'}
+            {connectionStatus === 'connected' ? 'Conectado' : connectionStatus === 'error' ? 'Desconectado' : 'Verificando...'}
           </Badge>
           {connectionStatus === 'connected' && serverInfo && (
             <Badge variant="outline" className="text-xs">v{serverInfo.version}</Badge>
           )}
+          <Button onClick={handleSaveConfig} disabled={savingConfig} size="sm" className="gap-1.5">
+            {savingConfig ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Salvar
+          </Button>
         </div>
       </div>
 
@@ -398,8 +514,8 @@ export default function TenantTraccarSettings() {
               savedValue={savedConfig.webhook_secret}
             />
 
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={testConnection} disabled={testingConnection || !config.api_url} className="gap-1.5">
+            <div className="pt-2">
+              <Button variant="outline" size="sm" onClick={testConnection} disabled={testingConnection || !config.api_url} className="gap-1.5 w-full sm:w-auto">
                 {testingConnection ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
                 Testar Conexão
               </Button>
@@ -490,22 +606,19 @@ export default function TenantTraccarSettings() {
         </Card>
       </div>
 
-      {/* ── Save Button ── */}
-      <div className="flex items-center gap-3">
-        <Button onClick={handleSaveConfig} disabled={savingConfig} className="gap-2">
-          {savingConfig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Salvar Configuração
-        </Button>
-        {connectionStatus === 'error' && (
-          <span className="text-sm text-destructive">Falha na conexão. Verifique as credenciais.</span>
-        )}
-      </div>
+      {/* ── Connection error feedback ── */}
+      {connectionStatus === 'error' && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-destructive/5 border border-destructive/20">
+          <WifiOff className="h-4 w-4 text-destructive shrink-0" />
+          <span className="text-sm text-destructive">Falha na conexão. Verifique as credenciais e tente novamente.</span>
+        </div>
+      )}
 
       <Separator />
 
       {/* ── Tabs ── */}
       <Tabs defaultValue="devices" className="space-y-4">
-        <TabsList className="inline-flex h-10 gap-1 bg-muted/50 p-1 rounded-lg">
+        <TabsList className="inline-flex h-10 gap-1 bg-muted/50 p-1 rounded-lg flex-wrap">
           <TabsTrigger value="devices" className="gap-1.5 text-xs rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm px-4">
             <Satellite className="h-3.5 w-3.5" /> Dispositivos
           </TabsTrigger>
@@ -527,7 +640,7 @@ export default function TenantTraccarSettings() {
         <TabsContent value="devices">
           <Card>
             <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <CardTitle className="text-base flex items-center gap-2">
                     <Satellite className="h-4 w-4 text-muted-foreground" /> Dispositivos do Traccar
@@ -541,7 +654,7 @@ export default function TenantTraccarSettings() {
                     )}
                   </CardDescription>
                 </div>
-                <Button onClick={handleManualSync} disabled={loadingDevices || !savedConfig.api_url} size="sm" variant="outline" className="gap-1.5">
+                <Button onClick={handleManualSync} disabled={loadingDevices || !savedConfig.api_url} size="sm" variant="outline" className="gap-1.5 shrink-0">
                   {loadingDevices ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowDownToLine className="h-3.5 w-3.5" />}
                   Sincronizar
                 </Button>
@@ -560,38 +673,40 @@ export default function TenantTraccarSettings() {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs">Nome</TableHead>
-                        <TableHead className="text-xs">ID Único</TableHead>
-                        <TableHead className="text-xs">Categoria</TableHead>
-                        <TableHead className="text-xs">Status</TableHead>
-                        <TableHead className="text-xs">Última Atualização</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {devices.map((device) => (
-                        <TableRow key={device.id}>
-                          <TableCell className="text-sm font-medium">{device.name}</TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">{device.uniqueId}</TableCell>
-                          <TableCell className="text-xs">{device.category || '—'}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={device.status === 'online' ? 'default' : 'secondary'}
-                              className={`text-xs ${device.status === 'online' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : ''}`}
-                            >
-                              {device.status === 'online' ? '● Online' : device.status === 'offline' ? '● Offline' : device.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {device.lastUpdate ? new Date(device.lastUpdate).toLocaleString('pt-BR') : '—'}
-                          </TableCell>
+                <div className="overflow-x-auto -mx-6">
+                  <div className="min-w-[600px] px-6">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">Nome</TableHead>
+                          <TableHead className="text-xs">ID Único</TableHead>
+                          <TableHead className="text-xs">Categoria</TableHead>
+                          <TableHead className="text-xs">Status</TableHead>
+                          <TableHead className="text-xs">Última Atualização</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {devices.map((device) => (
+                          <TableRow key={device.id}>
+                            <TableCell className="text-sm font-medium">{device.name}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{device.uniqueId}</TableCell>
+                            <TableCell className="text-xs">{device.category || '—'}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={device.status === 'online' ? 'default' : 'secondary'}
+                                className={`text-xs ${device.status === 'online' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : ''}`}
+                              >
+                                {device.status === 'online' ? '● Online' : device.status === 'offline' ? '● Offline' : device.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {device.lastUpdate ? new Date(device.lastUpdate).toLocaleString('pt-BR') : '—'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               )}
             </CardContent>
