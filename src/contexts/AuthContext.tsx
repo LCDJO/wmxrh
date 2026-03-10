@@ -259,6 +259,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const signOut = async () => {
     logger.info('Usuário fazendo logout', { userId: user?.id });
+    await endSession();
     await supabase.auth.signOut();
     logger.info('Logout realizado com sucesso');
   };
