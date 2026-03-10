@@ -4,20 +4,24 @@
  * SaaS-level monitoring of user sessions across ALL tenants.
  * Shows online users, geographic map, device/browser stats, suspicious activity.
  */
-import { useState, useMemo, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useSessionRealtime, type SessionRealtimeEvent, type ChannelStatus } from '@/domains/session/useSessionRealtime';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Users, Globe, Monitor, Smartphone, Shield, AlertTriangle,
-  MapPin, Clock, Activity, Wifi, WifiOff, Search, Laptop
+  MapPin, Clock, Activity, Wifi, WifiOff, Search, Laptop,
+  Radio, Zap, LogIn, LogOut, RefreshCw, Trash2
 } from 'lucide-react';
 
 // ═══════════════════════════════
@@ -58,24 +62,6 @@ interface UserSession {
 // ═══════════════════════════════
 
 function useAllSessions() {
-  const queryClient = useQueryClient();
-
-  // Realtime subscription: auto-invalidate on INSERT/UPDATE/DELETE
-  useEffect(() => {
-    const channel = supabase
-      .channel('user-sessions-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'user_sessions' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['platform-user-sessions'] });
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
-
   return useQuery({
     queryKey: ['platform-user-sessions'],
     queryFn: async () => {
@@ -492,11 +478,87 @@ function SessionsTable({ sessions, search, statusFilter }: { sessions: UserSessi
 }
 
 // ═══════════════════════════════
+// LIVE EVENT FEED
+// ═══════════════════════════════
+
+const EVENT_ICONS: Record<string, React.ReactNode> = {
+  SESSION_STARTED: <LogIn className="h-3.5 w-3.5 text-green-500" />,
+  SESSION_UPDATED: <RefreshCw className="h-3.5 w-3.5 text-blue-500" />,
+  SESSION_ENDED: <LogOut className="h-3.5 w-3.5 text-muted-foreground" />,
+};
+
+const EVENT_LABELS: Record<string, string> = {
+  SESSION_STARTED: 'Sessão Iniciada',
+  SESSION_UPDATED: 'Sessão Atualizada',
+  SESSION_ENDED: 'Sessão Encerrada',
+};
+
+function LiveEventFeed({ events, channelStatus, counters, onClear }: {
+  events: SessionRealtimeEvent[];
+  channelStatus: ChannelStatus;
+  counters: { started: number; updated: number; ended: number };
+  onClear: () => void;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Radio className={`h-4 w-4 ${channelStatus === 'connected' ? 'text-green-500 animate-pulse' : 'text-muted-foreground'}`} />
+            Eventos em Tempo Real
+            <Badge variant={channelStatus === 'connected' ? 'default' : 'destructive'} className="text-[10px] ml-1">
+              {channelStatus === 'connected' ? 'Conectado' : channelStatus === 'connecting' ? 'Conectando...' : 'Desconectado'}
+            </Badge>
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-0.5"><Zap className="h-3 w-3 text-green-500" />{counters.started}</span>
+              <span className="flex items-center gap-0.5"><RefreshCw className="h-3 w-3 text-blue-500" />{counters.updated}</span>
+              <span className="flex items-center gap-0.5"><LogOut className="h-3 w-3" />{counters.ended}</span>
+            </div>
+            {events.length > 0 && (
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={onClear}>
+                <Trash2 className="h-3 w-3 mr-1" /> Limpar
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {events.length === 0 ? (
+          <p className="text-center text-sm text-muted-foreground py-6">
+            Aguardando eventos de sessão...
+          </p>
+        ) : (
+          <ScrollArea className="h-[300px]">
+            <div className="space-y-1.5">
+              {events.map(evt => (
+                <div key={evt.id} className="flex items-center gap-2 p-2 rounded-md bg-muted/30 border border-border/20 text-xs">
+                  {EVENT_ICONS[evt.type]}
+                  <span className="font-medium">{EVENT_LABELS[evt.type]}</span>
+                  <span className="text-muted-foreground font-mono">{evt.userId.slice(0, 8)}…</span>
+                  {evt.city && <span className="text-muted-foreground">· {evt.city}</span>}
+                  {evt.browser && <span className="text-muted-foreground">· {evt.browser}</span>}
+                  <span className="ml-auto text-muted-foreground/70">
+                    {format(evt.timestamp, 'HH:mm:ss', { locale: ptBR })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════
 
 export default function PlatformUserActivity() {
   const { data: sessions = [], isLoading } = useAllSessions();
+  const { events, channelStatus, counters, clearEvents } = useSessionRealtime();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -513,71 +575,87 @@ export default function PlatformUserActivity() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">User Activity Intelligence</h1>
-        <p className="text-muted-foreground text-sm">
-          Monitoramento em tempo real de acessos de usuários em todos os tenants.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">User Activity Intelligence</h1>
+          <p className="text-muted-foreground text-sm">
+            Monitoramento em tempo real de acessos de usuários em todos os tenants.
+          </p>
+        </div>
+        <Badge variant={channelStatus === 'connected' ? 'default' : 'outline'} className="gap-1.5">
+          <Radio className={`h-3 w-3 ${channelStatus === 'connected' ? 'animate-pulse' : ''}`} />
+          {channelStatus === 'connected' ? 'Realtime Ativo' : 'Reconectando...'}
+        </Badge>
       </div>
 
       {/* Stats */}
       <StatsCards sessions={sessions} />
 
-      {/* Tabs */}
-      <Tabs defaultValue="sessions" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="sessions">Sessões</TabsTrigger>
-          <TabsTrigger value="map">Mapa de Acessos</TabsTrigger>
-          <TabsTrigger value="devices">Dispositivos</TabsTrigger>
-          <TabsTrigger value="suspicious">
-            Suspeitas
-            {suspiciousFlags.size > 0 && (
-              <Badge variant="destructive" className="ml-2 text-[10px] px-1.5">
-                {suspiciousFlags.size}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+      {/* Live Feed + Tabs */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Live Event Feed — right sidebar on large screens */}
+        <div className="lg:col-span-1 lg:order-2">
+          <LiveEventFeed events={events} channelStatus={channelStatus} counters={counters} onClear={clearEvents} />
+        </div>
 
-        <TabsContent value="sessions" className="space-y-4">
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por ID, IP, cidade, navegador..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="online">Online</SelectItem>
-                <SelectItem value="idle">Idle</SelectItem>
-                <SelectItem value="offline">Offline</SelectItem>
-                <SelectItem value="expired">Expirada</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <SessionsTable sessions={sessions} search={search} statusFilter={statusFilter} />
-        </TabsContent>
+        {/* Main content */}
+        <div className="lg:col-span-2 lg:order-1">
+          <Tabs defaultValue="sessions" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="sessions">Sessões</TabsTrigger>
+              <TabsTrigger value="map">Mapa</TabsTrigger>
+              <TabsTrigger value="devices">Dispositivos</TabsTrigger>
+              <TabsTrigger value="suspicious">
+                Suspeitas
+                {suspiciousFlags.size > 0 && (
+                  <Badge variant="destructive" className="ml-2 text-[10px] px-1.5">
+                    {suspiciousFlags.size}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="map">
-          <SessionMap sessions={sessions} />
-        </TabsContent>
+            <TabsContent value="sessions" className="space-y-4">
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por ID, IP, cidade, navegador..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="online">Online</SelectItem>
+                    <SelectItem value="idle">Idle</SelectItem>
+                    <SelectItem value="offline">Offline</SelectItem>
+                    <SelectItem value="expired">Expirada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <SessionsTable sessions={sessions} search={search} statusFilter={statusFilter} />
+            </TabsContent>
 
-        <TabsContent value="devices">
-          <DeviceDistribution sessions={sessions} />
-        </TabsContent>
+            <TabsContent value="map">
+              <SessionMap sessions={sessions} />
+            </TabsContent>
 
-        <TabsContent value="suspicious">
-          <SuspiciousPanel sessions={sessions} flags={suspiciousFlags} />
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="devices">
+              <DeviceDistribution sessions={sessions} />
+            </TabsContent>
+
+            <TabsContent value="suspicious">
+              <SuspiciousPanel sessions={sessions} flags={suspiciousFlags} />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 }
