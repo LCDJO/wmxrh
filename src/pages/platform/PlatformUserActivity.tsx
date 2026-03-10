@@ -62,24 +62,6 @@ interface UserSession {
 // ═══════════════════════════════
 
 function useAllSessions() {
-  const queryClient = useQueryClient();
-
-  // Realtime subscription: auto-invalidate on INSERT/UPDATE/DELETE
-  useEffect(() => {
-    const channel = supabase
-      .channel('user-sessions-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'user_sessions' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['platform-user-sessions'] });
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
-
   return useQuery({
     queryKey: ['platform-user-sessions'],
     queryFn: async () => {
