@@ -790,6 +790,10 @@ export default function PlatformUserActivity() {
               />
             </TabsContent>
 
+            <TabsContent value="heatmap">
+              <LoginHeatmaps sessions={sessions} />
+            </TabsContent>
+
             <TabsContent value="map">
               <SessionMap sessions={sessions} suspiciousIds={new Set(suspiciousFlags.keys())} />
             </TabsContent>
