@@ -201,6 +201,112 @@ function detectSuspicious(sessions: UserSession[]): Map<string, SuspiciousFlag[]
 }
 
 // ═══════════════════════════════
+// RISK SCORE ENGINE
+// ═══════════════════════════════
+
+type RiskLevel = 'normal' | 'attention' | 'high';
+
+interface SessionRiskScore {
+  score: number;
+  level: RiskLevel;
+  factors: { label: string; points: number }[];
+}
+
+function computeRiskScores(
+  sessions: UserSession[],
+  flags: Map<string, SuspiciousFlag[]>
+): Map<string, SessionRiskScore> {
+  const scores = new Map<string, SessionRiskScore>();
+
+  // Known IPs per user (seen more than once)
+  const userIps = new Map<string, Map<string, number>>();
+  sessions.forEach(s => {
+    if (!s.ip_address) return;
+    if (!userIps.has(s.user_id)) userIps.set(s.user_id, new Map());
+    const ips = userIps.get(s.user_id)!;
+    ips.set(s.ip_address, (ips.get(s.ip_address) ?? 0) + 1);
+  });
+
+  // Known devices per user
+  const userDeviceCounts = new Map<string, Map<string, number>>();
+  sessions.forEach(s => {
+    const fp = `${s.browser ?? ''}|${s.os ?? ''}|${s.device_type ?? ''}`;
+    if (!userDeviceCounts.has(s.user_id)) userDeviceCounts.set(s.user_id, new Map());
+    const devs = userDeviceCounts.get(s.user_id)!;
+    devs.set(fp, (devs.get(fp) ?? 0) + 1);
+  });
+
+  // Most common country per user
+  const userCountryCounts = new Map<string, Map<string, number>>();
+  sessions.forEach(s => {
+    if (!s.country) return;
+    if (!userCountryCounts.has(s.user_id)) userCountryCounts.set(s.user_id, new Map());
+    const cc = userCountryCounts.get(s.user_id)!;
+    cc.set(s.country, (cc.get(s.country) ?? 0) + 1);
+  });
+
+  sessions.forEach(s => {
+    let score = 0;
+    const factors: { label: string; points: number }[] = [];
+
+    // IP novo (+20): IP seen only once for this user
+    const ipCount = userIps.get(s.user_id)?.get(s.ip_address ?? '') ?? 0;
+    if (s.ip_address && ipCount <= 1) {
+      score += 20;
+      factors.push({ label: 'IP novo', points: 20 });
+    }
+
+    // VPN (+30)
+    if (s.is_vpn) {
+      score += 30;
+      factors.push({ label: 'VPN', points: 30 });
+    }
+
+    // País diferente (+40): not the user's most common country
+    if (s.country) {
+      const cc = userCountryCounts.get(s.user_id);
+      if (cc && cc.size > 1) {
+        const mainCountry = [...cc.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+        if (mainCountry && s.country !== mainCountry) {
+          score += 40;
+          factors.push({ label: 'País diferente', points: 40 });
+        }
+      }
+    }
+
+    // Dispositivo novo (+20): device fingerprint seen only once
+    const fp = `${s.browser ?? ''}|${s.os ?? ''}|${s.device_type ?? ''}`;
+    const devCount = userDeviceCounts.get(s.user_id)?.get(fp) ?? 0;
+    if (devCount <= 1) {
+      score += 20;
+      factors.push({ label: 'Dispositivo novo', points: 20 });
+    }
+
+    // Bonus from suspicious flags
+    const sessionFlags = flags.get(s.id);
+    if (sessionFlags) {
+      if (sessionFlags.some(f => f.type === 'impossible_travel')) {
+        score += 30;
+        factors.push({ label: 'Viagem impossível', points: 30 });
+      }
+      if (sessionFlags.some(f => f.type === 'multi_country')) {
+        score += 20;
+        factors.push({ label: 'Multi-país simultâneo', points: 20 });
+      }
+      if (sessionFlags.some(f => f.type === 'proxy')) {
+        score += 20;
+        factors.push({ label: 'Proxy', points: 20 });
+      }
+    }
+
+    const level: RiskLevel = score >= 60 ? 'high' : score >= 30 ? 'attention' : 'normal';
+    scores.set(s.id, { score: Math.min(score, 100), level, factors });
+  });
+
+  return scores;
+}
+
+// ═══════════════════════════════
 // STATS CARDS
 // ═══════════════════════════════
 
