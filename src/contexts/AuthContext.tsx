@@ -27,7 +27,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import { startSession, endSession } from '@/domains/session/session-tracker';
+import { startSession, endSession, type DeviceInfo, type BrowserGeo } from '@/domains/session/session-tracker';
 
 /**
  * Metadata adicional enviada no cadastro (signUp).
