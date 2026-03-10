@@ -107,7 +107,7 @@ export default function AuthSso() {
           {/* Redirecting */}
           {state === 'redirecting' && (
             <div className="flex flex-col items-center gap-3 py-6">
-              <CheckCircle2 className="h-8 w-8 text-green-500" />
+              <CheckCircle2 className="h-8 w-8 text-primary" />
               <p className="text-sm text-muted-foreground">Redirecionando para o provedor de identidade...</p>
             </div>
           )}
