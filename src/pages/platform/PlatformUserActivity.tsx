@@ -459,7 +459,29 @@ function DeviceDistribution({ sessions }: { sessions: UserSession[] }) {
 // ═══════════════════════════════
 
 function SuspiciousPanel({ sessions, flags }: { sessions: UserSession[]; flags: Map<string, SuspiciousFlag[]> }) {
-  const flagged = sessions.filter(s => flags.has(s.id));
+  const flagged = useMemo(() => {
+    const list = sessions.filter(s => flags.has(s.id));
+    // Sort by highest severity first
+    const sevOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+    return list.sort((a, b) => {
+      const aMax = Math.min(...(flags.get(a.id)?.map(f => sevOrder[f.severity] ?? 9) ?? [9]));
+      const bMax = Math.min(...(flags.get(b.id)?.map(f => sevOrder[f.severity] ?? 9) ?? [9]));
+      return aMax - bMax;
+    });
+  }, [sessions, flags]);
+
+  const severityCounts = useMemo(() => {
+    const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+    flags.forEach(ff => ff.forEach(f => { counts[f.severity]++; }));
+    return counts;
+  }, [flags]);
+
+  const severityVariant = (sev: string): 'default' | 'secondary' | 'outline' | 'destructive' => {
+    if (sev === 'critical') return 'destructive';
+    if (sev === 'high') return 'destructive';
+    if (sev === 'medium') return 'secondary';
+    return 'outline';
+  };
 
   if (flagged.length === 0) {
     return (
@@ -473,51 +495,85 @@ function SuspiciousPanel({ sessions, flags }: { sessions: UserSession[]; flags: 
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-destructive" /> Atividades Suspeitas ({flagged.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>User ID</TableHead>
-              <TableHead>IP</TableHead>
-              <TableHead>Local</TableHead>
-              <TableHead>Flags</TableHead>
-              <TableHead>Login</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {flagged.slice(0, 50).map(s => (
-              <TableRow key={s.id}>
-                <TableCell className="font-mono text-xs">{s.user_id.slice(0, 8)}...</TableCell>
-                <TableCell className="text-xs">{s.ip_address ?? '—'}</TableCell>
-                <TableCell className="text-xs">{[s.city, s.state, s.country].filter(Boolean).join(', ') || '—'}</TableCell>
-                <TableCell>
-                  <div className="flex gap-1 flex-wrap">
-                    {flags.get(s.id)?.map((f, i) => (
-                      <Badge
-                        key={i}
-                        variant={f.severity === 'high' ? 'destructive' : f.severity === 'medium' ? 'secondary' : 'outline'}
-                        className="text-[10px]"
-                      >
-                        {f.label}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {format(new Date(s.login_at), 'dd/MM HH:mm', { locale: ptBR })}
-                </TableCell>
+    <div className="space-y-4">
+      {/* Summary */}
+      <div className="flex gap-2 flex-wrap">
+        {severityCounts.critical > 0 && (
+          <Badge variant="destructive" className="text-xs">🔴 Crítico: {severityCounts.critical}</Badge>
+        )}
+        {severityCounts.high > 0 && (
+          <Badge variant="destructive" className="text-xs opacity-80">🟠 Alto: {severityCounts.high}</Badge>
+        )}
+        {severityCounts.medium > 0 && (
+          <Badge variant="secondary" className="text-xs">🟡 Médio: {severityCounts.medium}</Badge>
+        )}
+        {severityCounts.low > 0 && (
+          <Badge variant="outline" className="text-xs">🟢 Baixo: {severityCounts.low}</Badge>
+        )}
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-destructive" /> Atividades Suspeitas ({flagged.length} sessões)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Severidade</TableHead>
+                <TableHead>User ID</TableHead>
+                <TableHead>Tenant</TableHead>
+                <TableHead>IP</TableHead>
+                <TableHead>Local</TableHead>
+                <TableHead>Alertas</TableHead>
+                <TableHead>Login</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+            </TableHeader>
+            <TableBody>
+              {flagged.slice(0, 50).map(s => {
+                const sessionFlags = flags.get(s.id) ?? [];
+                const maxSev = sessionFlags.reduce((max, f) => {
+                  const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+                  return (order[f.severity] ?? 9) < (order[max] ?? 9) ? f.severity : max;
+                }, 'low' as string);
+                return (
+                  <TableRow key={s.id}>
+                    <TableCell>
+                      <Badge variant={severityVariant(maxSev)} className="text-[10px] uppercase">
+                        {maxSev === 'critical' ? '🔴' : maxSev === 'high' ? '🟠' : maxSev === 'medium' ? '🟡' : '🟢'} {maxSev}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{s.user_id.slice(0, 8)}…</TableCell>
+                    <TableCell className="font-mono text-xs">{s.tenant_id?.slice(0, 8) ?? '—'}…</TableCell>
+                    <TableCell className="text-xs">{s.ip_address ?? '—'}</TableCell>
+                    <TableCell className="text-xs">{[s.city, s.country].filter(Boolean).join(', ') || '—'}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {sessionFlags.map((f, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <Badge variant={severityVariant(f.severity)} className="text-[10px] shrink-0">
+                              {f.label}
+                            </Badge>
+                            {f.details && (
+                              <span className="text-[10px] text-muted-foreground truncate max-w-[180px]">{f.details}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {format(new Date(s.login_at), 'dd/MM HH:mm', { locale: ptBR })}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
