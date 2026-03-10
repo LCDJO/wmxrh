@@ -637,6 +637,103 @@ function LiveEventFeed({ events, channelStatus, counters, onClear }: {
 }
 
 // ═══════════════════════════════
+// LOGIN HEATMAPS
+// ═══════════════════════════════
+
+const CHART_COLORS = [
+  'hsl(var(--primary))',
+  'hsl(var(--accent-foreground))',
+  'hsl(var(--muted-foreground))',
+];
+
+function countBy(sessions: UserSession[], keyFn: (s: UserSession) => string | null): { name: string; count: number }[] {
+  const map = new Map<string, number>();
+  sessions.forEach(s => {
+    const key = keyFn(s) ?? 'Desconhecido';
+    map.set(key, (map.get(key) ?? 0) + 1);
+  });
+  return Array.from(map.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+function HeatmapChart({ title, icon: Icon, data, maxBars = 15 }: {
+  title: string;
+  icon: React.ElementType;
+  data: { name: string; count: number }[];
+  maxBars?: number;
+}) {
+  const sliced = data.slice(0, maxBars);
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Icon className="h-4 w-4" /> {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {sliced.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Sem dados disponíveis.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(200, sliced.length * 32)}>
+            <BarChart data={sliced} layout="vertical" margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
+              <XAxis type="number" hide />
+              <YAxis
+                dataKey="name"
+                type="category"
+                width={120}
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  fontSize: 12,
+                  color: 'hsl(var(--card-foreground))',
+                }}
+                cursor={{ fill: 'hsl(var(--muted) / 0.3)' }}
+                formatter={(value: number) => [`${value} logins`, 'Total']}
+              />
+              <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={24}>
+                {sliced.map((_, i) => (
+                  <Cell key={i} fill={`hsl(var(--primary) / ${1 - i * 0.04})`} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LoginHeatmaps({ sessions }: { sessions: UserSession[] }) {
+  const byCountry = useMemo(() => countBy(sessions, s => s.country), [sessions]);
+  const byCity = useMemo(() => countBy(sessions, s => s.city), [sessions]);
+  const byTenant = useMemo(() => countBy(sessions, s => s.tenant_id ? s.tenant_id.slice(0, 8) + '…' : null), [sessions]);
+  const byHour = useMemo(() => {
+    const hours = Array.from({ length: 24 }, (_, i) => ({ name: `${String(i).padStart(2, '0')}h`, count: 0 }));
+    sessions.forEach(s => {
+      const h = new Date(s.login_at).getHours();
+      hours[h].count++;
+    });
+    return hours;
+  }, [sessions]);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <HeatmapChart title="Logins por País" icon={Globe} data={byCountry} />
+      <HeatmapChart title="Logins por Cidade" icon={MapPin} data={byCity} />
+      <HeatmapChart title="Logins por Tenant" icon={Users} data={byTenant} />
+      <HeatmapChart title="Logins por Hora" icon={Clock} data={byHour} maxBars={24} />
+    </div>
+  );
+}
+
+// ═══════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════
 
