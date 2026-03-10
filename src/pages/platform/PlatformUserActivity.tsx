@@ -4,7 +4,7 @@
  * SaaS-level monitoring of user sessions across ALL tenants.
  * Shows online users, geographic map, device/browser stats, suspicious activity.
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSessionRealtime, type SessionRealtimeEvent, type ChannelStatus } from '@/domains/session/useSessionRealtime';
@@ -167,11 +167,113 @@ function StatsCards({ sessions }: { sessions: UserSession[] }) {
 }
 
 // ═══════════════════════════════
-// GEOGRAPHIC MAP (Leaflet)
+// INTERACTIVE LEAFLET MAP
 // ═══════════════════════════════
 
-function SessionMap({ sessions }: { sessions: UserSession[] }) {
-  const geoSessions = sessions.filter(s => s.latitude && s.longitude);
+function SessionMap({ sessions, suspiciousIds }: { sessions: UserSession[]; suspiciousIds: Set<string> }) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const leafletMap = useRef<any>(null);
+  const markersRef = useRef<any>(null);
+
+  const geoSessions = useMemo(
+    () => sessions.filter(s => s.latitude && s.longitude),
+    [sessions]
+  );
+
+  useEffect(() => {
+    if (!mapRef.current || geoSessions.length === 0) return;
+
+    let L: any;
+    let isMounted = true;
+
+    const initMap = async () => {
+      L = await import('leaflet');
+      await import('leaflet/dist/leaflet.css');
+
+      if (!isMounted || !mapRef.current) return;
+
+      // Create map only once
+      if (!leafletMap.current) {
+        leafletMap.current = L.map(mapRef.current, {
+          center: [geoSessions[0].latitude!, geoSessions[0].longitude!],
+          zoom: 3,
+          zoomControl: true,
+          attributionControl: false,
+        });
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          maxZoom: 19,
+        }).addTo(leafletMap.current);
+      }
+
+      // Clear old markers
+      if (markersRef.current) {
+        leafletMap.current.removeLayer(markersRef.current);
+      }
+
+      const markerGroup = L.layerGroup();
+
+      geoSessions.forEach(s => {
+        const isSuspicious = suspiciousIds.has(s.id);
+        const color = isSuspicious
+          ? '#ef4444' // red — suspicious
+          : s.status === 'online'
+            ? '#22c55e' // green — online
+            : s.status === 'idle'
+              ? '#eab308' // yellow — idle
+              : '#6b7280'; // gray — offline
+
+        const circle = L.circleMarker([s.latitude!, s.longitude!], {
+          radius: 7,
+          fillColor: color,
+          color: color,
+          weight: 1,
+          opacity: 0.9,
+          fillOpacity: 0.7,
+        });
+
+        const timestamp = new Date(s.login_at).toLocaleString('pt-BR');
+        circle.bindPopup(`
+          <div style="font-size:12px;line-height:1.6">
+            <strong>Usuário:</strong> ${s.user_id.slice(0, 8)}…<br/>
+            <strong>Tenant:</strong> ${s.tenant_id?.slice(0, 8) ?? '—'}…<br/>
+            <strong>Local:</strong> ${s.city ?? '—'}, ${s.country ?? '—'}<br/>
+            <strong>IP:</strong> ${s.ip_address ?? '—'}<br/>
+            <strong>Navegador:</strong> ${s.browser ?? '—'}<br/>
+            <strong>Status:</strong> ${s.status}${isSuspicious ? ' ⚠️ Suspeito' : ''}<br/>
+            <strong>Login:</strong> ${timestamp}
+          </div>
+        `);
+
+        markerGroup.addLayer(circle);
+      });
+
+      markerGroup.addTo(leafletMap.current);
+      markersRef.current = markerGroup;
+
+      // Fit bounds
+      if (geoSessions.length > 1) {
+        const bounds = L.latLngBounds(geoSessions.map(s => [s.latitude!, s.longitude!]));
+        leafletMap.current.fitBounds(bounds, { padding: [30, 30] });
+      }
+    };
+
+    initMap();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [geoSessions, suspiciousIds]);
+
+  // Cleanup map on unmount
+  useEffect(() => {
+    return () => {
+      if (leafletMap.current) {
+        leafletMap.current.remove();
+        leafletMap.current = null;
+      }
+    };
+  }, []);
 
   if (geoSessions.length === 0) {
     return (
@@ -184,52 +286,25 @@ function SessionMap({ sessions }: { sessions: UserSession[] }) {
     );
   }
 
-  // Group by city for summary
-  const byCity = new Map<string, { count: number; lat: number; lng: number; online: number }>();
-  geoSessions.forEach(s => {
-    const key = s.city ?? `${s.latitude?.toFixed(1)},${s.longitude?.toFixed(1)}`;
-    const existing = byCity.get(key);
-    if (existing) {
-      existing.count++;
-      if (s.status === 'online') existing.online++;
-    } else {
-      byCity.set(key, {
-        count: 1,
-        lat: s.latitude!,
-        lng: s.longitude!,
-        online: s.status === 'online' ? 1 : 0,
-      });
-    }
-  });
-
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <MapPin className="h-4 w-4" /> Mapa de Acessos
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Globe className="h-4 w-4" /> Mapa Global de Logins
+          </CardTitle>
+          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Online</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500 inline-block" /> Idle</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> Suspeito</span>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[400px] overflow-auto">
-          {Array.from(byCity.entries())
-            .sort((a, b) => b[1].count - a[1].count)
-            .map(([city, data]) => (
-              <div key={city} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/30">
-                <div className="flex-shrink-0">
-                  <div className={`w-3 h-3 rounded-full ${data.online > 0 ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground/40'}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{city}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {data.count} sessão(ões) · {data.online} online
-                  </p>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {data.lat.toFixed(2)}, {data.lng.toFixed(2)}
-                </div>
-              </div>
-            ))}
-        </div>
+        <div ref={mapRef} className="w-full h-[500px] rounded-lg overflow-hidden border border-border" />
+        <p className="text-[10px] text-muted-foreground mt-2 text-right">
+          {geoSessions.length} sessões com geolocalização
+        </p>
       </CardContent>
     </Card>
   );
@@ -714,7 +789,7 @@ export default function PlatformUserActivity() {
             </TabsContent>
 
             <TabsContent value="map">
-              <SessionMap sessions={sessions} />
+              <SessionMap sessions={sessions} suspiciousIds={new Set(suspiciousFlags.keys())} />
             </TabsContent>
 
             <TabsContent value="devices">
