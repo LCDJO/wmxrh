@@ -234,6 +234,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     logger.info('Login realizado com sucesso', { email });
+
+    // ── SESSION TRACKING: record session with geolocation + device info ──
+    if (data.user?.id) {
+      // Resolve tenant_id from membership (non-blocking)
+      supabase
+        .from('tenant_memberships')
+        .select('tenant_id')
+        .eq('user_id', data.user.id)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle()
+        .then(({ data: mem }) => {
+          startSession(data.user!.id, mem?.tenant_id ?? null, 'password');
+        });
+    }
+
     return { error: null };
   };
 
