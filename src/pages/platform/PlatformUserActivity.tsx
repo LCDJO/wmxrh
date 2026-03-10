@@ -685,6 +685,84 @@ function SuspiciousPanel({ sessions, flags }: { sessions: UserSession[]; flags: 
 }
 
 // ═══════════════════════════════
+// IP ASN/ISP LOOKUP HOOK
+// ═══════════════════════════════
+
+interface IpInfo {
+  isp: string;
+  org: string;
+  as: string; // e.g. "AS12345 Company Name"
+}
+
+const ipCache = new Map<string, IpInfo | 'loading' | 'error'>();
+
+function useIpLookup(ips: string[]) {
+  const [results, setResults] = useState<Map<string, IpInfo | 'loading' | 'error'>>(new Map());
+
+  useEffect(() => {
+    const uniqueIps = [...new Set(ips.filter(ip => ip && ip !== '—'))];
+    const toFetch = uniqueIps.filter(ip => !ipCache.has(ip));
+
+    if (toFetch.length === 0) {
+      // All cached
+      const map = new Map<string, IpInfo | 'loading' | 'error'>();
+      uniqueIps.forEach(ip => { if (ipCache.has(ip)) map.set(ip, ipCache.get(ip)!); });
+      setResults(map);
+      return;
+    }
+
+    // Mark as loading
+    toFetch.forEach(ip => ipCache.set(ip, 'loading'));
+    setResults(new Map(ipCache));
+
+    // Batch fetch (ip-api supports batch up to 100)
+    const batches: string[][] = [];
+    for (let i = 0; i < toFetch.length; i += 100) {
+      batches.push(toFetch.slice(i, i + 100));
+    }
+
+    batches.forEach(async (batch) => {
+      try {
+        const resp = await fetch('http://ip-api.com/batch?fields=query,isp,org,as', {
+          method: 'POST',
+          body: JSON.stringify(batch.map(ip => ({ query: ip }))),
+        });
+        if (!resp.ok) throw new Error('batch failed');
+        const data: Array<{ query: string; isp?: string; org?: string; as?: string }> = await resp.json();
+        data.forEach(d => {
+          ipCache.set(d.query, { isp: d.isp ?? '', org: d.org ?? '', as: d.as ?? '' });
+        });
+      } catch {
+        batch.forEach(ip => ipCache.set(ip, 'error'));
+      }
+      setResults(new Map(ipCache));
+    });
+  }, [ips.join(',')]);
+
+  return results;
+}
+
+/** Render IP cell with ASN/ISP info below */
+function IpCell({ ip, info }: { ip: string; info?: IpInfo | 'loading' | 'error' }) {
+  return (
+    <div>
+      <span className="font-mono">{ip}</span>
+      {info === 'loading' && (
+        <p className="text-[10px] text-muted-foreground animate-pulse">carregando…</p>
+      )}
+      {info === 'error' && (
+        <p className="text-[10px] text-muted-foreground">—</p>
+      )}
+      {info && typeof info === 'object' && (
+        <p className="text-[10px] text-muted-foreground truncate max-w-[180px]" title={`${info.as} · ${info.isp}`}>
+          {info.as?.split(' ').slice(0, 1).join('')} · {info.isp || info.org || '—'}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════
 // SESSIONS TABLE
 // ═══════════════════════════════
 
