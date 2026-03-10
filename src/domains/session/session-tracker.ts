@@ -197,6 +197,13 @@ export async function endSession(): Promise<void> {
   if (!activeSessionId) return;
 
   try {
+    // Auto-emit logout event before ending
+    await callSessionService('log_event', {
+      session_id: activeSessionId,
+      event_type: 'logout',
+      event_data: {},
+    }).catch(() => {});
+
     const result = await callSessionService('end', { session_id: activeSessionId });
     logger.info('Session ended via service', { sessionId: activeSessionId, duration: result?.duration });
     activeSessionId = null;
