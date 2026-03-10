@@ -871,7 +871,9 @@ function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFi
                     <TableCell className="font-mono text-xs">{s.user_id.slice(0, 8)}…</TableCell>
                     <TableCell className="text-xs">{s.city ?? '—'}</TableCell>
                     <TableCell className="text-xs">{s.country ?? '—'}</TableCell>
-                    <TableCell className="text-xs">{s.ip_address ?? '—'}</TableCell>
+                    <TableCell className="text-xs">
+                      <IpCell ip={s.ip_address ?? '—'} info={s.ip_address ? ipInfo.get(s.ip_address) : undefined} />
+                    </TableCell>
                     <TableCell className="text-xs">
                       {s.browser ?? '?'} {s.browser_version?.split('.')[0] ?? ''}
                     </TableCell>
