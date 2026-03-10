@@ -167,7 +167,11 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    // CRITICAL: Capture geolocation + device info IMMEDIATELY in click handler
+    // (before any await) to preserve browser gesture context for permissions
+    const clientContext = captureClientContext();
+
+    const { error } = await signIn(email, password, clientContext);
     if (error) {
       toast({ title: 'Erro de autenticação', description: error.message, variant: 'destructive' });
       setLoading(false);
