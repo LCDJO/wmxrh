@@ -1045,6 +1045,15 @@ export default function PlatformUserActivity() {
           <Tabs defaultValue="sessions" className="space-y-4">
             <TabsList>
               <TabsTrigger value="sessions">Sessões Ativas</TabsTrigger>
+              <TabsTrigger value="alerts">
+                Alertas
+                {(() => {
+                  const openAlerts = Array.from(suspiciousFlags.values()).flat().length;
+                  return openAlerts > 0 ? (
+                    <Badge variant="destructive" className="ml-2 text-[10px] px-1.5">{openAlerts}</Badge>
+                  ) : null;
+                })()}
+              </TabsTrigger>
               <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
               <TabsTrigger value="map">Mapa</TabsTrigger>
               <TabsTrigger value="devices">Dispositivos</TabsTrigger>
