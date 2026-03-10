@@ -1134,6 +1134,7 @@ export default function PlatformUserActivity() {
                 countryFilter={countryFilter}
                 cityFilter={cityFilter}
                 browserFilter={browserFilter}
+                riskScores={riskScores}
               />
             </TabsContent>
 
