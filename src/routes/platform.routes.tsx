@@ -21,6 +21,7 @@ import PlatformAudit from '@/pages/platform/PlatformAudit';
 import PlatformUsers from '@/pages/platform/PlatformUsers';
 import PlatformUsersDashboard from '@/pages/platform/PlatformUsersDashboard';
 import PlatformSecurityDashboard from '@/pages/platform/PlatformSecurityDashboard';
+import PlatformUserActivity from '@/pages/platform/PlatformUserActivity';
 import PlatformPlans from '@/pages/platform/PlatformPlans';
 import PlatformIAM from '@/pages/platform/PlatformIAM';
 import PlatformSecurityRoles from '@/pages/platform/PlatformSecurityRoles';
