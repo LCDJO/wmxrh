@@ -131,7 +131,7 @@ export default function AuthSso() {
           {/* Disabled */}
           {state === 'disabled' && (
             <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <AlertTriangle className="h-8 w-8 text-amber-500" />
+              <AlertTriangle className="h-8 w-8 text-accent-foreground" />
               <div>
                 <p className="font-medium">SSO configurado mas desabilitado</p>
                 <p className="text-sm text-muted-foreground mt-1">
