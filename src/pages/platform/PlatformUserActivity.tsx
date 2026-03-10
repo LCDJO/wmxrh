@@ -82,10 +82,24 @@ function useAllSessions() {
 // SUSPICIOUS BEHAVIOR DETECTION
 // ═══════════════════════════════
 
+type SuspiciousType = 'vpn' | 'proxy' | 'multi_country' | 'impossible_travel' | 'new_device' | 'unusual_hours';
+
 interface SuspiciousFlag {
-  type: 'vpn' | 'proxy' | 'multi_location' | 'rapid_switch' | 'unusual_hours';
+  type: SuspiciousType;
   label: string;
-  severity: 'low' | 'medium' | 'high';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  details?: string;
+}
+
+/** Haversine distance in km between two lat/lng points */
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function detectSuspicious(sessions: UserSession[]): Map<string, SuspiciousFlag[]> {
@@ -99,27 +113,85 @@ function detectSuspicious(sessions: UserSession[]): Map<string, SuspiciousFlag[]
     byUser.set(s.user_id, list);
   });
 
+  // Build known device fingerprints per user (browser + os + device_type)
+  const knownDevices = new Map<string, Set<string>>();
+  sessions.forEach(s => {
+    const fp = `${s.browser ?? ''}|${s.os ?? ''}|${s.device_type ?? ''}`;
+    if (!knownDevices.has(s.user_id)) knownDevices.set(s.user_id, new Set());
+    knownDevices.get(s.user_id)!.add(fp);
+  });
+
   sessions.forEach(s => {
     const f: SuspiciousFlag[] = [];
-
-    if (s.is_vpn) f.push({ type: 'vpn', label: 'VPN Detectada', severity: 'medium' });
-    if (s.is_proxy) f.push({ type: 'proxy', label: 'Proxy Detectado', severity: 'high' });
-
-    // Multiple locations for same user in last 24h
     const userSessions = byUser.get(s.user_id) ?? [];
-    const recentLocations = new Set(
-      userSessions
-        .filter(us => us.city && new Date(us.login_at).getTime() > Date.now() - 86400000)
-        .map(us => us.city)
-    );
-    if (recentLocations.size > 2) {
-      f.push({ type: 'multi_location', label: `${recentLocations.size} cidades em 24h`, severity: 'high' });
+
+    // ── Rule 1: VPN detected ──
+    if (s.is_vpn) {
+      f.push({ type: 'vpn', label: 'VPN Detectada', severity: 'medium', details: `IP: ${s.ip_address ?? '?'}` });
     }
 
-    // Login at unusual hours (midnight to 5am)
+    // ── Rule 2: Proxy detected ──
+    if (s.is_proxy) {
+      f.push({ type: 'proxy', label: 'Proxy Detectado', severity: 'high', details: `IP: ${s.ip_address ?? '?'}` });
+    }
+
+    // ── Rule 3: Simultaneous login in different countries ──
+    const onlineSessions = userSessions.filter(us => us.status === 'online' && us.id !== s.id);
+    const otherCountries = new Set(onlineSessions.map(us => us.country).filter(Boolean));
+    if (s.country && otherCountries.size > 0 && !otherCountries.has(s.country)) {
+      const countries = [s.country, ...Array.from(otherCountries)].join(', ');
+      f.push({
+        type: 'multi_country',
+        label: 'Login simultâneo multi-país',
+        severity: 'critical',
+        details: `Países: ${countries}`,
+      });
+    }
+
+    // ── Rule 4: Impossible travel (>5000km in <30min) ──
+    if (s.latitude && s.longitude) {
+      const loginTime = new Date(s.login_at).getTime();
+      for (const other of userSessions) {
+        if (other.id === s.id || !other.latitude || !other.longitude) continue;
+        const otherTime = new Date(other.login_at).getTime();
+        const diffMin = Math.abs(loginTime - otherTime) / 60000;
+        if (diffMin > 0 && diffMin <= 30) {
+          const dist = haversineKm(s.latitude, s.longitude, other.latitude, other.longitude);
+          if (dist > 5000) {
+            f.push({
+              type: 'impossible_travel',
+              label: 'Viagem impossível',
+              severity: 'critical',
+              details: `${Math.round(dist)}km em ${Math.round(diffMin)}min`,
+            });
+            break; // one flag per session is enough
+          }
+        }
+      }
+    }
+
+    // ── Rule 5: New/unknown device ──
+    const deviceFp = `${s.browser ?? ''}|${s.os ?? ''}|${s.device_type ?? ''}`;
+    const userDevices = knownDevices.get(s.user_id);
+    // If user has >1 known device and this is the only session with this fingerprint
+    if (userDevices && userDevices.size > 1) {
+      const sessionsWithThisFp = userSessions.filter(
+        us => `${us.browser ?? ''}|${us.os ?? ''}|${us.device_type ?? ''}` === deviceFp
+      );
+      if (sessionsWithThisFp.length === 1) {
+        f.push({
+          type: 'new_device',
+          label: 'Dispositivo novo',
+          severity: 'medium',
+          details: `${s.browser ?? '?'} / ${s.os ?? '?'} / ${s.device_type ?? '?'}`,
+        });
+      }
+    }
+
+    // ── Rule 6: Unusual hours (midnight to 5am) ──
     const hour = new Date(s.login_at).getHours();
     if (hour >= 0 && hour < 5) {
-      f.push({ type: 'unusual_hours', label: 'Horário incomum', severity: 'low' });
+      f.push({ type: 'unusual_hours', label: 'Horário incomum', severity: 'low', details: `Login às ${String(hour).padStart(2, '0')}h` });
     }
 
     if (f.length > 0) flags.set(s.id, f);
