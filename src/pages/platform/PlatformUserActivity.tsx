@@ -694,7 +694,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
   expired: { label: 'Expirada', variant: 'destructive', icon: <WifiOff className="h-3 w-3" /> },
 };
 
-function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFilter, cityFilter, browserFilter }: {
+function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFilter, cityFilter, browserFilter, riskScores }: {
   sessions: UserSession[];
   search: string;
   statusFilter: string;
@@ -702,6 +702,7 @@ function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFi
   countryFilter: string;
   cityFilter: string;
   browserFilter: string;
+  riskScores: Map<string, SessionRiskScore>;
 }) {
   const filtered = useMemo(() => {
     let result = sessions;
@@ -734,12 +735,24 @@ function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFi
     return result;
   }, [sessions, search, statusFilter, tenantFilter, countryFilter, cityFilter, browserFilter]);
 
+  const riskBadge = (risk: SessionRiskScore) => {
+    const variant: 'default' | 'secondary' | 'outline' | 'destructive' =
+      risk.level === 'high' ? 'destructive' : risk.level === 'attention' ? 'secondary' : 'outline';
+    const label = risk.level === 'high' ? 'Alto' : risk.level === 'attention' ? 'Atenção' : 'Normal';
+    return (
+      <Badge variant={variant} className="text-[10px] gap-1 cursor-help" title={risk.factors.map(f => `${f.label}: +${f.points}`).join('\n')}>
+        {risk.score} · {label}
+      </Badge>
+    );
+  };
+
   return (
     <Card>
       <CardContent className="p-0">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Risco</TableHead>
               <TableHead>Tenant</TableHead>
               <TableHead>Usuário</TableHead>
               <TableHead>Cidade</TableHead>
@@ -754,7 +767,7 @@ function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFi
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                   Nenhuma sessão encontrada.
                 </TableCell>
               </TableRow>
@@ -766,9 +779,11 @@ function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFi
                   : s.status === 'online'
                     ? formatDistanceToNow(new Date(s.login_at), { locale: ptBR, addSuffix: false })
                     : '—';
+                const risk = riskScores.get(s.id) ?? { score: 0, level: 'normal' as RiskLevel, factors: [] };
 
                 return (
                   <TableRow key={s.id}>
+                    <TableCell>{riskBadge(risk)}</TableCell>
                     <TableCell className="font-mono text-xs">{s.tenant_id?.slice(0, 8) ?? '—'}…</TableCell>
                     <TableCell className="font-mono text-xs">{s.user_id.slice(0, 8)}…</TableCell>
                     <TableCell className="text-xs">{s.city ?? '—'}</TableCell>
