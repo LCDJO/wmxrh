@@ -201,6 +201,112 @@ function detectSuspicious(sessions: UserSession[]): Map<string, SuspiciousFlag[]
 }
 
 // ═══════════════════════════════
+// RISK SCORE ENGINE
+// ═══════════════════════════════
+
+type RiskLevel = 'normal' | 'attention' | 'high';
+
+interface SessionRiskScore {
+  score: number;
+  level: RiskLevel;
+  factors: { label: string; points: number }[];
+}
+
+function computeRiskScores(
+  sessions: UserSession[],
+  flags: Map<string, SuspiciousFlag[]>
+): Map<string, SessionRiskScore> {
+  const scores = new Map<string, SessionRiskScore>();
+
+  // Known IPs per user (seen more than once)
+  const userIps = new Map<string, Map<string, number>>();
+  sessions.forEach(s => {
+    if (!s.ip_address) return;
+    if (!userIps.has(s.user_id)) userIps.set(s.user_id, new Map());
+    const ips = userIps.get(s.user_id)!;
+    ips.set(s.ip_address, (ips.get(s.ip_address) ?? 0) + 1);
+  });
+
+  // Known devices per user
+  const userDeviceCounts = new Map<string, Map<string, number>>();
+  sessions.forEach(s => {
+    const fp = `${s.browser ?? ''}|${s.os ?? ''}|${s.device_type ?? ''}`;
+    if (!userDeviceCounts.has(s.user_id)) userDeviceCounts.set(s.user_id, new Map());
+    const devs = userDeviceCounts.get(s.user_id)!;
+    devs.set(fp, (devs.get(fp) ?? 0) + 1);
+  });
+
+  // Most common country per user
+  const userCountryCounts = new Map<string, Map<string, number>>();
+  sessions.forEach(s => {
+    if (!s.country) return;
+    if (!userCountryCounts.has(s.user_id)) userCountryCounts.set(s.user_id, new Map());
+    const cc = userCountryCounts.get(s.user_id)!;
+    cc.set(s.country, (cc.get(s.country) ?? 0) + 1);
+  });
+
+  sessions.forEach(s => {
+    let score = 0;
+    const factors: { label: string; points: number }[] = [];
+
+    // IP novo (+20): IP seen only once for this user
+    const ipCount = userIps.get(s.user_id)?.get(s.ip_address ?? '') ?? 0;
+    if (s.ip_address && ipCount <= 1) {
+      score += 20;
+      factors.push({ label: 'IP novo', points: 20 });
+    }
+
+    // VPN (+30)
+    if (s.is_vpn) {
+      score += 30;
+      factors.push({ label: 'VPN', points: 30 });
+    }
+
+    // País diferente (+40): not the user's most common country
+    if (s.country) {
+      const cc = userCountryCounts.get(s.user_id);
+      if (cc && cc.size > 1) {
+        const mainCountry = [...cc.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+        if (mainCountry && s.country !== mainCountry) {
+          score += 40;
+          factors.push({ label: 'País diferente', points: 40 });
+        }
+      }
+    }
+
+    // Dispositivo novo (+20): device fingerprint seen only once
+    const fp = `${s.browser ?? ''}|${s.os ?? ''}|${s.device_type ?? ''}`;
+    const devCount = userDeviceCounts.get(s.user_id)?.get(fp) ?? 0;
+    if (devCount <= 1) {
+      score += 20;
+      factors.push({ label: 'Dispositivo novo', points: 20 });
+    }
+
+    // Bonus from suspicious flags
+    const sessionFlags = flags.get(s.id);
+    if (sessionFlags) {
+      if (sessionFlags.some(f => f.type === 'impossible_travel')) {
+        score += 30;
+        factors.push({ label: 'Viagem impossível', points: 30 });
+      }
+      if (sessionFlags.some(f => f.type === 'multi_country')) {
+        score += 20;
+        factors.push({ label: 'Multi-país simultâneo', points: 20 });
+      }
+      if (sessionFlags.some(f => f.type === 'proxy')) {
+        score += 20;
+        factors.push({ label: 'Proxy', points: 20 });
+      }
+    }
+
+    const level: RiskLevel = score >= 60 ? 'high' : score >= 30 ? 'attention' : 'normal';
+    scores.set(s.id, { score: Math.min(score, 100), level, factors });
+  });
+
+  return scores;
+}
+
+// ═══════════════════════════════
 // STATS CARDS
 // ═══════════════════════════════
 
@@ -588,7 +694,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
   expired: { label: 'Expirada', variant: 'destructive', icon: <WifiOff className="h-3 w-3" /> },
 };
 
-function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFilter, cityFilter, browserFilter }: {
+function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFilter, cityFilter, browserFilter, riskScores }: {
   sessions: UserSession[];
   search: string;
   statusFilter: string;
@@ -596,6 +702,7 @@ function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFi
   countryFilter: string;
   cityFilter: string;
   browserFilter: string;
+  riskScores: Map<string, SessionRiskScore>;
 }) {
   const filtered = useMemo(() => {
     let result = sessions;
@@ -628,12 +735,24 @@ function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFi
     return result;
   }, [sessions, search, statusFilter, tenantFilter, countryFilter, cityFilter, browserFilter]);
 
+  const riskBadge = (risk: SessionRiskScore) => {
+    const variant: 'default' | 'secondary' | 'outline' | 'destructive' =
+      risk.level === 'high' ? 'destructive' : risk.level === 'attention' ? 'secondary' : 'outline';
+    const label = risk.level === 'high' ? 'Alto' : risk.level === 'attention' ? 'Atenção' : 'Normal';
+    return (
+      <Badge variant={variant} className="text-[10px] gap-1 cursor-help" title={risk.factors.map(f => `${f.label}: +${f.points}`).join('\n')}>
+        {risk.score} · {label}
+      </Badge>
+    );
+  };
+
   return (
     <Card>
       <CardContent className="p-0">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Risco</TableHead>
               <TableHead>Tenant</TableHead>
               <TableHead>Usuário</TableHead>
               <TableHead>Cidade</TableHead>
@@ -648,7 +767,7 @@ function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFi
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                   Nenhuma sessão encontrada.
                 </TableCell>
               </TableRow>
@@ -660,9 +779,11 @@ function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFi
                   : s.status === 'online'
                     ? formatDistanceToNow(new Date(s.login_at), { locale: ptBR, addSuffix: false })
                     : '—';
+                const risk = riskScores.get(s.id) ?? { score: 0, level: 'normal' as RiskLevel, factors: [] };
 
                 return (
                   <TableRow key={s.id}>
+                    <TableCell>{riskBadge(risk)}</TableCell>
                     <TableCell className="font-mono text-xs">{s.tenant_id?.slice(0, 8) ?? '—'}…</TableCell>
                     <TableCell className="font-mono text-xs">{s.user_id.slice(0, 8)}…</TableCell>
                     <TableCell className="text-xs">{s.city ?? '—'}</TableCell>
@@ -876,6 +997,7 @@ export default function PlatformUserActivity() {
   const [browserFilter, setBrowserFilter] = useState('all');
 
   const suspiciousFlags = useMemo(() => detectSuspicious(sessions), [sessions]);
+  const riskScores = useMemo(() => computeRiskScores(sessions, suspiciousFlags), [sessions, suspiciousFlags]);
 
   // Derive unique filter options from sessions
   const tenantOptions = useMemo(() => [...new Set(sessions.map(s => s.tenant_id).filter(Boolean) as string[])].sort(), [sessions]);
@@ -1012,6 +1134,7 @@ export default function PlatformUserActivity() {
                 countryFilter={countryFilter}
                 cityFilter={cityFilter}
                 browserFilter={browserFilter}
+                riskScores={riskScores}
               />
             </TabsContent>
 
