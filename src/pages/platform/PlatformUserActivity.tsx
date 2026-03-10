@@ -654,7 +654,9 @@ function SuspiciousPanel({ sessions, flags }: { sessions: UserSession[]; flags: 
                     </TableCell>
                     <TableCell className="font-mono text-xs">{s.user_id.slice(0, 8)}…</TableCell>
                     <TableCell className="font-mono text-xs">{s.tenant_id?.slice(0, 8) ?? '—'}…</TableCell>
-                    <TableCell className="text-xs">{s.ip_address ?? '—'}</TableCell>
+                    <TableCell className="text-xs">
+                      <IpCell ip={s.ip_address ?? '—'} info={s.ip_address ? ipCache.get(s.ip_address) as any : undefined} />
+                    </TableCell>
                     <TableCell className="text-xs">{[s.city, s.country].filter(Boolean).join(', ') || '—'}</TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
@@ -680,6 +682,84 @@ function SuspiciousPanel({ sessions, flags }: { sessions: UserSession[]; flags: 
           </Table>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════
+// IP ASN/ISP LOOKUP HOOK
+// ═══════════════════════════════
+
+interface IpInfo {
+  isp: string;
+  org: string;
+  as: string; // e.g. "AS12345 Company Name"
+}
+
+const ipCache = new Map<string, IpInfo | 'loading' | 'error'>();
+
+function useIpLookup(ips: string[]) {
+  const [results, setResults] = useState<Map<string, IpInfo | 'loading' | 'error'>>(new Map());
+
+  useEffect(() => {
+    const uniqueIps = [...new Set(ips.filter(ip => ip && ip !== '—'))];
+    const toFetch = uniqueIps.filter(ip => !ipCache.has(ip));
+
+    if (toFetch.length === 0) {
+      // All cached
+      const map = new Map<string, IpInfo | 'loading' | 'error'>();
+      uniqueIps.forEach(ip => { if (ipCache.has(ip)) map.set(ip, ipCache.get(ip)!); });
+      setResults(map);
+      return;
+    }
+
+    // Mark as loading
+    toFetch.forEach(ip => ipCache.set(ip, 'loading'));
+    setResults(new Map(ipCache));
+
+    // Batch fetch (ip-api supports batch up to 100)
+    const batches: string[][] = [];
+    for (let i = 0; i < toFetch.length; i += 100) {
+      batches.push(toFetch.slice(i, i + 100));
+    }
+
+    batches.forEach(async (batch) => {
+      try {
+        const resp = await fetch('http://ip-api.com/batch?fields=query,isp,org,as', {
+          method: 'POST',
+          body: JSON.stringify(batch.map(ip => ({ query: ip }))),
+        });
+        if (!resp.ok) throw new Error('batch failed');
+        const data: Array<{ query: string; isp?: string; org?: string; as?: string }> = await resp.json();
+        data.forEach(d => {
+          ipCache.set(d.query, { isp: d.isp ?? '', org: d.org ?? '', as: d.as ?? '' });
+        });
+      } catch {
+        batch.forEach(ip => ipCache.set(ip, 'error'));
+      }
+      setResults(new Map(ipCache));
+    });
+  }, [ips.join(',')]);
+
+  return results;
+}
+
+/** Render IP cell with ASN/ISP info below */
+function IpCell({ ip, info }: { ip: string; info?: IpInfo | 'loading' | 'error' }) {
+  return (
+    <div>
+      <span className="font-mono">{ip}</span>
+      {info === 'loading' && (
+        <p className="text-[10px] text-muted-foreground animate-pulse">carregando…</p>
+      )}
+      {info === 'error' && (
+        <p className="text-[10px] text-muted-foreground">—</p>
+      )}
+      {info && typeof info === 'object' && (
+        <p className="text-[10px] text-muted-foreground truncate max-w-[180px]" title={`${info.as} · ${info.isp}`}>
+          {info.as?.split(' ').slice(0, 1).join('')} · {info.isp || info.org || '—'}
+        </p>
+      )}
     </div>
   );
 }
@@ -736,6 +816,10 @@ function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFi
     return result;
   }, [sessions, search, statusFilter, tenantFilter, countryFilter, cityFilter, browserFilter]);
 
+  // IP lookup for ASN/ISP
+  const ipList = useMemo(() => filtered.slice(0, 100).map(s => s.ip_address ?? ''), [filtered]);
+  const ipInfo = useIpLookup(ipList);
+
   const riskBadge = (risk: SessionRiskScore) => {
     const variant: 'default' | 'secondary' | 'outline' | 'destructive' =
       risk.level === 'high' ? 'destructive' : risk.level === 'attention' ? 'secondary' : 'outline';
@@ -789,7 +873,9 @@ function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFi
                     <TableCell className="font-mono text-xs">{s.user_id.slice(0, 8)}…</TableCell>
                     <TableCell className="text-xs">{s.city ?? '—'}</TableCell>
                     <TableCell className="text-xs">{s.country ?? '—'}</TableCell>
-                    <TableCell className="text-xs">{s.ip_address ?? '—'}</TableCell>
+                    <TableCell className="text-xs">
+                      <IpCell ip={s.ip_address ?? '—'} info={s.ip_address ? ipInfo.get(s.ip_address) : undefined} />
+                    </TableCell>
                     <TableCell className="text-xs">
                       {s.browser ?? '?'} {s.browser_version?.split('.')[0] ?? ''}
                     </TableCell>
