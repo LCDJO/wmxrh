@@ -789,7 +789,7 @@ export default function PlatformUserActivity() {
             </TabsContent>
 
             <TabsContent value="map">
-              <SessionMap sessions={sessions} />
+              <SessionMap sessions={sessions} suspiciousIds={new Set(suspiciousFlags.keys())} />
             </TabsContent>
 
             <TabsContent value="devices">
