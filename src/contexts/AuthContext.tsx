@@ -208,7 +208,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   }
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (
+    email: string,
+    password: string,
+    clientContext?: { device: DeviceInfo; geoPromise: Promise<BrowserGeo | null> }
+  ) => {
     logger.info('Tentativa de login', { email });
     
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -224,7 +228,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const blockedStatus = await checkAccountBlocked(userId);
       if (blockedStatus) {
         logger.warn('Login bloqueado — conta com status restritivo', { email, status: blockedStatus });
-        // Revogar sessão imediatamente
         await supabase.auth.signOut();
         const msg = blockedStatus === 'banned'
           ? 'Sua conta foi banida. Entre em contato com o suporte.'
@@ -235,9 +238,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     logger.info('Login realizado com sucesso', { email });
 
-    // ── SESSION TRACKING: record session with geolocation + device info ──
+    // ── SESSION TRACKING: record session with pre-captured client context ──
     if (data.user?.id) {
-      // Resolve tenant_id from membership (non-blocking)
       supabase
         .from('tenant_memberships')
         .select('tenant_id')
@@ -246,7 +248,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .limit(1)
         .maybeSingle()
         .then(({ data: mem }) => {
-          startSession(data.user!.id, mem?.tenant_id ?? null, 'password');
+          startSession(data.user!.id, mem?.tenant_id ?? null, 'password', null, clientContext);
         });
     }
 
