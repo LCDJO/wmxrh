@@ -384,11 +384,31 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
   expired: { label: 'Expirada', variant: 'destructive', icon: <WifiOff className="h-3 w-3" /> },
 };
 
-function SessionsTable({ sessions, search, statusFilter }: { sessions: UserSession[]; search: string; statusFilter: string }) {
+function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFilter, cityFilter, browserFilter }: {
+  sessions: UserSession[];
+  search: string;
+  statusFilter: string;
+  tenantFilter: string;
+  countryFilter: string;
+  cityFilter: string;
+  browserFilter: string;
+}) {
   const filtered = useMemo(() => {
     let result = sessions;
     if (statusFilter && statusFilter !== 'all') {
       result = result.filter(s => s.status === statusFilter);
+    }
+    if (tenantFilter && tenantFilter !== 'all') {
+      result = result.filter(s => s.tenant_id === tenantFilter);
+    }
+    if (countryFilter && countryFilter !== 'all') {
+      result = result.filter(s => s.country === countryFilter);
+    }
+    if (cityFilter && cityFilter !== 'all') {
+      result = result.filter(s => s.city === cityFilter);
+    }
+    if (browserFilter && browserFilter !== 'all') {
+      result = result.filter(s => s.browser === browserFilter);
     }
     if (search) {
       const q = search.toLowerCase();
@@ -398,11 +418,11 @@ function SessionsTable({ sessions, search, statusFilter }: { sessions: UserSessi
         s.city?.toLowerCase().includes(q) ||
         s.country?.toLowerCase().includes(q) ||
         s.browser?.toLowerCase().includes(q) ||
-        s.os?.toLowerCase().includes(q)
+        s.tenant_id?.toLowerCase().includes(q)
       );
     }
     return result;
-  }, [sessions, search, statusFilter]);
+  }, [sessions, search, statusFilter, tenantFilter, countryFilter, cityFilter, browserFilter]);
 
   return (
     <Card>
@@ -410,23 +430,21 @@ function SessionsTable({ sessions, search, statusFilter }: { sessions: UserSessi
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Status</TableHead>
-              <TableHead>User ID</TableHead>
               <TableHead>Tenant</TableHead>
+              <TableHead>Usuário</TableHead>
+              <TableHead>Cidade</TableHead>
+              <TableHead>País</TableHead>
               <TableHead>IP</TableHead>
-              <TableHead>Localização</TableHead>
-              <TableHead>Navegador / OS</TableHead>
+              <TableHead>Navegador</TableHead>
               <TableHead>Dispositivo</TableHead>
-              <TableHead>Método</TableHead>
-              <TableHead>Login</TableHead>
-              <TableHead>Última Atividade</TableHead>
-              <TableHead>Duração</TableHead>
+              <TableHead>Tempo Online</TableHead>
+              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   Nenhuma sessão encontrada.
                 </TableCell>
               </TableRow>
@@ -441,35 +459,21 @@ function SessionsTable({ sessions, search, statusFilter }: { sessions: UserSessi
 
                 return (
                   <TableRow key={s.id}>
+                    <TableCell className="font-mono text-xs">{s.tenant_id?.slice(0, 8) ?? '—'}…</TableCell>
+                    <TableCell className="font-mono text-xs">{s.user_id.slice(0, 8)}…</TableCell>
+                    <TableCell className="text-xs">{s.city ?? '—'}</TableCell>
+                    <TableCell className="text-xs">{s.country ?? '—'}</TableCell>
+                    <TableCell className="text-xs">{s.ip_address ?? '—'}</TableCell>
+                    <TableCell className="text-xs">
+                      {s.browser ?? '?'} {s.browser_version?.split('.')[0] ?? ''}
+                    </TableCell>
+                    <TableCell className="text-xs capitalize">{s.device_type ?? '—'}</TableCell>
+                    <TableCell className="text-xs">{duration}</TableCell>
                     <TableCell>
                       <Badge variant={st.variant} className="gap-1 text-[10px]">
                         {st.icon} {st.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{s.user_id.slice(0, 8)}...</TableCell>
-                    <TableCell className="font-mono text-xs">{s.tenant_id?.slice(0, 8) ?? '—'}...</TableCell>
-                    <TableCell className="text-xs">{s.ip_address ?? '—'}</TableCell>
-                    <TableCell className="text-xs">
-                      {[s.city, s.state].filter(Boolean).join(', ') || '—'}
-                      {s.country && <span className="text-muted-foreground"> ({s.country})</span>}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {s.browser ?? '?'} {s.browser_version?.split('.')[0] ?? ''} / {s.os ?? '?'}
-                    </TableCell>
-                    <TableCell className="text-xs capitalize">{s.device_type ?? '—'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-[10px] capitalize">
-                        {s.login_method ?? 'password'}
-                        {s.sso_provider && ` (${s.sso_provider})`}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {format(new Date(s.login_at), 'dd/MM HH:mm', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(s.last_activity), { locale: ptBR, addSuffix: true })}
-                    </TableCell>
-                    <TableCell className="text-xs">{duration}</TableCell>
                   </TableRow>
                 );
               })
