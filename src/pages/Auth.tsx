@@ -8,6 +8,7 @@
  */
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { captureClientContext } from '@/domains/session/session-tracker';
 import { supabase } from '@/integrations/supabase/client';
 import { platformEvents } from '@/domains/platform/platform-events';
 import { identityIntelligence } from '@/domains/security/kernel/identity-intelligence';
@@ -166,7 +167,11 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    // CRITICAL: Capture geolocation + device info IMMEDIATELY in click handler
+    // (before any await) to preserve browser gesture context for permissions
+    const clientContext = captureClientContext();
+
+    const { error } = await signIn(email, password, clientContext);
     if (error) {
       toast({ title: 'Erro de autenticação', description: error.message, variant: 'destructive' });
       setLoading(false);
