@@ -27,6 +27,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { startSession, endSession } from '@/domains/session/session-tracker';
 
 /**
  * Metadata adicional enviada no cadastro (signUp).
@@ -233,6 +234,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     logger.info('Login realizado com sucesso', { email });
+
+    // ── SESSION TRACKING: record session with geolocation + device info ──
+    if (data.user?.id) {
+      // Resolve tenant_id from membership (non-blocking)
+      supabase
+        .from('tenant_memberships')
+        .select('tenant_id')
+        .eq('user_id', data.user.id)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle()
+        .then(({ data: mem }) => {
+          startSession(data.user!.id, mem?.tenant_id ?? null, 'password');
+        });
+    }
+
     return { error: null };
   };
 
@@ -242,6 +259,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const signOut = async () => {
     logger.info('Usuário fazendo logout', { userId: user?.id });
+    await endSession();
     await supabase.auth.signOut();
     logger.info('Logout realizado com sucesso');
   };

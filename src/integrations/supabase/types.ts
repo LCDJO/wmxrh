@@ -21679,6 +21679,107 @@ export type Database = {
           },
         ]
       }
+      user_sessions: {
+        Row: {
+          browser: string | null
+          browser_version: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device_type: string | null
+          id: string
+          ip_address: string | null
+          ipv6: string | null
+          is_mobile: boolean | null
+          is_proxy: boolean | null
+          is_vpn: boolean | null
+          last_activity: string
+          latitude: number | null
+          login_at: string
+          login_method: string | null
+          logout_at: string | null
+          longitude: number | null
+          os: string | null
+          session_duration: number | null
+          session_token: string | null
+          sso_provider: string | null
+          state: string | null
+          status: string
+          tenant_id: string | null
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          browser?: string | null
+          browser_version?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          ipv6?: string | null
+          is_mobile?: boolean | null
+          is_proxy?: boolean | null
+          is_vpn?: boolean | null
+          last_activity?: string
+          latitude?: number | null
+          login_at?: string
+          login_method?: string | null
+          logout_at?: string | null
+          longitude?: number | null
+          os?: string | null
+          session_duration?: number | null
+          session_token?: string | null
+          sso_provider?: string | null
+          state?: string | null
+          status?: string
+          tenant_id?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          browser?: string | null
+          browser_version?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          ipv6?: string | null
+          is_mobile?: boolean | null
+          is_proxy?: boolean | null
+          is_vpn?: boolean | null
+          last_activity?: string
+          latitude?: number | null
+          login_at?: string
+          login_method?: string | null
+          logout_at?: string | null
+          longitude?: number | null
+          os?: string | null
+          session_duration?: number | null
+          session_token?: string | null
+          sso_provider?: string | null
+          state?: string | null
+          status?: string
+          tenant_id?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       validation_rate_limits: {
         Row: {
           attempt_count: number
