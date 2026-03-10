@@ -133,22 +133,26 @@ function detectSuspicious(sessions: UserSession[]): Map<string, SuspiciousFlag[]
 
 function StatsCards({ sessions }: { sessions: UserSession[] }) {
   const online = sessions.filter(s => s.status === 'online').length;
-  const idle = sessions.filter(s => s.status === 'idle').length;
+  const activeSessions = sessions.filter(s => s.status === 'online' || s.status === 'idle').length;
   const uniqueTenants = new Set(sessions.filter(s => s.tenant_id).map(s => s.tenant_id)).size;
-  const vpnCount = sessions.filter(s => s.is_vpn).length;
-  const mobileCount = sessions.filter(s => s.is_mobile).length;
+
+  // Average session duration (in minutes) for sessions that have duration
+  const durationsMin = sessions
+    .filter(s => s.session_duration && s.session_duration > 0)
+    .map(s => s.session_duration! / 60);
+  const avgDuration = durationsMin.length > 0
+    ? Math.round(durationsMin.reduce((a, b) => a + b, 0) / durationsMin.length)
+    : 0;
 
   const cards = [
-    { label: 'Online Agora', value: online, icon: Wifi, color: 'text-green-500' },
-    { label: 'Idle', value: idle, icon: Clock, color: 'text-yellow-500' },
+    { label: 'Usuários Online', value: online, icon: Users, color: 'text-primary' },
+    { label: 'Sessões Ativas', value: activeSessions, icon: Activity, color: 'text-primary' },
     { label: 'Tenants Ativos', value: uniqueTenants, icon: Globe, color: 'text-primary' },
-    { label: 'Sessões Mobile', value: mobileCount, icon: Smartphone, color: 'text-blue-500' },
-    { label: 'VPN/Proxy', value: vpnCount, icon: Shield, color: 'text-destructive' },
-    { label: 'Total Sessões (24h)', value: sessions.length, icon: Activity, color: 'text-muted-foreground' },
+    { label: 'Tempo Médio de Sessão', value: `${avgDuration}min`, icon: Clock, color: 'text-primary' },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {cards.map(c => (
         <Card key={c.label} className="border-border/50">
           <CardContent className="p-4 flex flex-col items-center text-center gap-1">
