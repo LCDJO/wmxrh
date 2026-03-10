@@ -697,6 +697,7 @@ export default function PlatformUserActivity() {
           <Tabs defaultValue="sessions" className="space-y-4">
             <TabsList>
               <TabsTrigger value="sessions">Sessões Ativas</TabsTrigger>
+              <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
               <TabsTrigger value="map">Mapa</TabsTrigger>
               <TabsTrigger value="devices">Dispositivos</TabsTrigger>
               <TabsTrigger value="suspicious">
