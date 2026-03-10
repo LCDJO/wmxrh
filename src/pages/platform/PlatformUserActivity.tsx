@@ -82,10 +82,24 @@ function useAllSessions() {
 // SUSPICIOUS BEHAVIOR DETECTION
 // ═══════════════════════════════
 
+type SuspiciousType = 'vpn' | 'proxy' | 'multi_country' | 'impossible_travel' | 'new_device' | 'unusual_hours';
+
 interface SuspiciousFlag {
-  type: 'vpn' | 'proxy' | 'multi_location' | 'rapid_switch' | 'unusual_hours';
+  type: SuspiciousType;
   label: string;
-  severity: 'low' | 'medium' | 'high';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  details?: string;
+}
+
+/** Haversine distance in km between two lat/lng points */
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function detectSuspicious(sessions: UserSession[]): Map<string, SuspiciousFlag[]> {
@@ -99,27 +113,85 @@ function detectSuspicious(sessions: UserSession[]): Map<string, SuspiciousFlag[]
     byUser.set(s.user_id, list);
   });
 
+  // Build known device fingerprints per user (browser + os + device_type)
+  const knownDevices = new Map<string, Set<string>>();
+  sessions.forEach(s => {
+    const fp = `${s.browser ?? ''}|${s.os ?? ''}|${s.device_type ?? ''}`;
+    if (!knownDevices.has(s.user_id)) knownDevices.set(s.user_id, new Set());
+    knownDevices.get(s.user_id)!.add(fp);
+  });
+
   sessions.forEach(s => {
     const f: SuspiciousFlag[] = [];
-
-    if (s.is_vpn) f.push({ type: 'vpn', label: 'VPN Detectada', severity: 'medium' });
-    if (s.is_proxy) f.push({ type: 'proxy', label: 'Proxy Detectado', severity: 'high' });
-
-    // Multiple locations for same user in last 24h
     const userSessions = byUser.get(s.user_id) ?? [];
-    const recentLocations = new Set(
-      userSessions
-        .filter(us => us.city && new Date(us.login_at).getTime() > Date.now() - 86400000)
-        .map(us => us.city)
-    );
-    if (recentLocations.size > 2) {
-      f.push({ type: 'multi_location', label: `${recentLocations.size} cidades em 24h`, severity: 'high' });
+
+    // ── Rule 1: VPN detected ──
+    if (s.is_vpn) {
+      f.push({ type: 'vpn', label: 'VPN Detectada', severity: 'medium', details: `IP: ${s.ip_address ?? '?'}` });
     }
 
-    // Login at unusual hours (midnight to 5am)
+    // ── Rule 2: Proxy detected ──
+    if (s.is_proxy) {
+      f.push({ type: 'proxy', label: 'Proxy Detectado', severity: 'high', details: `IP: ${s.ip_address ?? '?'}` });
+    }
+
+    // ── Rule 3: Simultaneous login in different countries ──
+    const onlineSessions = userSessions.filter(us => us.status === 'online' && us.id !== s.id);
+    const otherCountries = new Set(onlineSessions.map(us => us.country).filter(Boolean));
+    if (s.country && otherCountries.size > 0 && !otherCountries.has(s.country)) {
+      const countries = [s.country, ...Array.from(otherCountries)].join(', ');
+      f.push({
+        type: 'multi_country',
+        label: 'Login simultâneo multi-país',
+        severity: 'critical',
+        details: `Países: ${countries}`,
+      });
+    }
+
+    // ── Rule 4: Impossible travel (>5000km in <30min) ──
+    if (s.latitude && s.longitude) {
+      const loginTime = new Date(s.login_at).getTime();
+      for (const other of userSessions) {
+        if (other.id === s.id || !other.latitude || !other.longitude) continue;
+        const otherTime = new Date(other.login_at).getTime();
+        const diffMin = Math.abs(loginTime - otherTime) / 60000;
+        if (diffMin > 0 && diffMin <= 30) {
+          const dist = haversineKm(s.latitude, s.longitude, other.latitude, other.longitude);
+          if (dist > 5000) {
+            f.push({
+              type: 'impossible_travel',
+              label: 'Viagem impossível',
+              severity: 'critical',
+              details: `${Math.round(dist)}km em ${Math.round(diffMin)}min`,
+            });
+            break; // one flag per session is enough
+          }
+        }
+      }
+    }
+
+    // ── Rule 5: New/unknown device ──
+    const deviceFp = `${s.browser ?? ''}|${s.os ?? ''}|${s.device_type ?? ''}`;
+    const userDevices = knownDevices.get(s.user_id);
+    // If user has >1 known device and this is the only session with this fingerprint
+    if (userDevices && userDevices.size > 1) {
+      const sessionsWithThisFp = userSessions.filter(
+        us => `${us.browser ?? ''}|${us.os ?? ''}|${us.device_type ?? ''}` === deviceFp
+      );
+      if (sessionsWithThisFp.length === 1) {
+        f.push({
+          type: 'new_device',
+          label: 'Dispositivo novo',
+          severity: 'medium',
+          details: `${s.browser ?? '?'} / ${s.os ?? '?'} / ${s.device_type ?? '?'}`,
+        });
+      }
+    }
+
+    // ── Rule 6: Unusual hours (midnight to 5am) ──
     const hour = new Date(s.login_at).getHours();
     if (hour >= 0 && hour < 5) {
-      f.push({ type: 'unusual_hours', label: 'Horário incomum', severity: 'low' });
+      f.push({ type: 'unusual_hours', label: 'Horário incomum', severity: 'low', details: `Login às ${String(hour).padStart(2, '0')}h` });
     }
 
     if (f.length > 0) flags.set(s.id, f);
@@ -387,7 +459,29 @@ function DeviceDistribution({ sessions }: { sessions: UserSession[] }) {
 // ═══════════════════════════════
 
 function SuspiciousPanel({ sessions, flags }: { sessions: UserSession[]; flags: Map<string, SuspiciousFlag[]> }) {
-  const flagged = sessions.filter(s => flags.has(s.id));
+  const flagged = useMemo(() => {
+    const list = sessions.filter(s => flags.has(s.id));
+    // Sort by highest severity first
+    const sevOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+    return list.sort((a, b) => {
+      const aMax = Math.min(...(flags.get(a.id)?.map(f => sevOrder[f.severity] ?? 9) ?? [9]));
+      const bMax = Math.min(...(flags.get(b.id)?.map(f => sevOrder[f.severity] ?? 9) ?? [9]));
+      return aMax - bMax;
+    });
+  }, [sessions, flags]);
+
+  const severityCounts = useMemo(() => {
+    const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+    flags.forEach(ff => ff.forEach(f => { counts[f.severity]++; }));
+    return counts;
+  }, [flags]);
+
+  const severityVariant = (sev: string): 'default' | 'secondary' | 'outline' | 'destructive' => {
+    if (sev === 'critical') return 'destructive';
+    if (sev === 'high') return 'destructive';
+    if (sev === 'medium') return 'secondary';
+    return 'outline';
+  };
 
   if (flagged.length === 0) {
     return (
@@ -401,51 +495,85 @@ function SuspiciousPanel({ sessions, flags }: { sessions: UserSession[]; flags: 
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-destructive" /> Atividades Suspeitas ({flagged.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>User ID</TableHead>
-              <TableHead>IP</TableHead>
-              <TableHead>Local</TableHead>
-              <TableHead>Flags</TableHead>
-              <TableHead>Login</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {flagged.slice(0, 50).map(s => (
-              <TableRow key={s.id}>
-                <TableCell className="font-mono text-xs">{s.user_id.slice(0, 8)}...</TableCell>
-                <TableCell className="text-xs">{s.ip_address ?? '—'}</TableCell>
-                <TableCell className="text-xs">{[s.city, s.state, s.country].filter(Boolean).join(', ') || '—'}</TableCell>
-                <TableCell>
-                  <div className="flex gap-1 flex-wrap">
-                    {flags.get(s.id)?.map((f, i) => (
-                      <Badge
-                        key={i}
-                        variant={f.severity === 'high' ? 'destructive' : f.severity === 'medium' ? 'secondary' : 'outline'}
-                        className="text-[10px]"
-                      >
-                        {f.label}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {format(new Date(s.login_at), 'dd/MM HH:mm', { locale: ptBR })}
-                </TableCell>
+    <div className="space-y-4">
+      {/* Summary */}
+      <div className="flex gap-2 flex-wrap">
+        {severityCounts.critical > 0 && (
+          <Badge variant="destructive" className="text-xs">🔴 Crítico: {severityCounts.critical}</Badge>
+        )}
+        {severityCounts.high > 0 && (
+          <Badge variant="destructive" className="text-xs opacity-80">🟠 Alto: {severityCounts.high}</Badge>
+        )}
+        {severityCounts.medium > 0 && (
+          <Badge variant="secondary" className="text-xs">🟡 Médio: {severityCounts.medium}</Badge>
+        )}
+        {severityCounts.low > 0 && (
+          <Badge variant="outline" className="text-xs">🟢 Baixo: {severityCounts.low}</Badge>
+        )}
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-destructive" /> Atividades Suspeitas ({flagged.length} sessões)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Severidade</TableHead>
+                <TableHead>User ID</TableHead>
+                <TableHead>Tenant</TableHead>
+                <TableHead>IP</TableHead>
+                <TableHead>Local</TableHead>
+                <TableHead>Alertas</TableHead>
+                <TableHead>Login</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+            </TableHeader>
+            <TableBody>
+              {flagged.slice(0, 50).map(s => {
+                const sessionFlags = flags.get(s.id) ?? [];
+                const maxSev = sessionFlags.reduce((max, f) => {
+                  const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+                  return (order[f.severity] ?? 9) < (order[max] ?? 9) ? f.severity : max;
+                }, 'low' as string);
+                return (
+                  <TableRow key={s.id}>
+                    <TableCell>
+                      <Badge variant={severityVariant(maxSev)} className="text-[10px] uppercase">
+                        {maxSev === 'critical' ? '🔴' : maxSev === 'high' ? '🟠' : maxSev === 'medium' ? '🟡' : '🟢'} {maxSev}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{s.user_id.slice(0, 8)}…</TableCell>
+                    <TableCell className="font-mono text-xs">{s.tenant_id?.slice(0, 8) ?? '—'}…</TableCell>
+                    <TableCell className="text-xs">{s.ip_address ?? '—'}</TableCell>
+                    <TableCell className="text-xs">{[s.city, s.country].filter(Boolean).join(', ') || '—'}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {sessionFlags.map((f, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <Badge variant={severityVariant(f.severity)} className="text-[10px] shrink-0">
+                              {f.label}
+                            </Badge>
+                            {f.details && (
+                              <span className="text-[10px] text-muted-foreground truncate max-w-[180px]">{f.details}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {format(new Date(s.login_at), 'dd/MM HH:mm', { locale: ptBR })}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
