@@ -18,10 +18,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import {
   Users, Globe, Monitor, Smartphone, Shield, AlertTriangle,
   MapPin, Clock, Activity, Wifi, WifiOff, Search, Laptop,
-  Radio, Zap, LogIn, LogOut, RefreshCw, Trash2
+  Radio, Zap, LogIn, LogOut, RefreshCw, Trash2, BarChart3
 } from 'lucide-react';
 
 // ═══════════════════════════════
