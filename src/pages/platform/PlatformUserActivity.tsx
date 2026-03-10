@@ -982,6 +982,7 @@ export default function PlatformUserActivity() {
   const [browserFilter, setBrowserFilter] = useState('all');
 
   const suspiciousFlags = useMemo(() => detectSuspicious(sessions), [sessions]);
+  const riskScores = useMemo(() => computeRiskScores(sessions, suspiciousFlags), [sessions, suspiciousFlags]);
 
   // Derive unique filter options from sessions
   const tenantOptions = useMemo(() => [...new Set(sessions.map(s => s.tenant_id).filter(Boolean) as string[])].sort(), [sessions]);
