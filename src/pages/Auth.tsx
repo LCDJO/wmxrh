@@ -8,6 +8,7 @@
  */
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { captureClientContext } from '@/domains/session/session-tracker';
 import { supabase } from '@/integrations/supabase/client';
 import { platformEvents } from '@/domains/platform/platform-events';
 import { identityIntelligence } from '@/domains/security/kernel/identity-intelligence';
