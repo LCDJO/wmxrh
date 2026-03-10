@@ -279,6 +279,12 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/security/scim?tab=role-mapping', label: 'Role Mapping' },
         ],
       },
+      {
+        to: '/platform/security/user-activity',
+        label: 'User Activity Intelligence',
+        icon: Activity,
+        requiredPermission: 'security.view',
+      },
       { to: '/platform/audit', label: 'Auditoria', icon: ScrollText, requiredPermission: 'security.view' },
       { to: '/platform/logs', label: 'Logs do Sistema', icon: FileText, requiredRole: 'platform_super_admin' },
     ],

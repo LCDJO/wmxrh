@@ -148,6 +148,7 @@ export const platformRoutes: RouteObject[] = [
       sectionGuard('security', securityAdmin, [
         { index: true, element: <PlatformSecurity /> },
         { path: 'dashboard', element: <PlatformSecurityDashboard /> },
+        { path: 'user-activity', element: <PlatformUserActivity /> },
         { path: 'roles', element: <PlatformSecurityRoles /> },
         { path: 'permissions', element: <PlatformSecurityPermissions /> },
         { path: 'access-graph', element: <PlatformSecurityAccessGraph /> },
