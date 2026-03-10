@@ -1148,6 +1148,10 @@ export default function PlatformUserActivity() {
               />
             </TabsContent>
 
+            <TabsContent value="alerts">
+              <AlertsPanel sessions={sessions} flags={suspiciousFlags} riskScores={riskScores} />
+            </TabsContent>
+
             <TabsContent value="heatmap">
               <LoginHeatmaps sessions={sessions} />
             </TabsContent>
