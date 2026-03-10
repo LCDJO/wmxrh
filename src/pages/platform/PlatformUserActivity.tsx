@@ -654,7 +654,9 @@ function SuspiciousPanel({ sessions, flags }: { sessions: UserSession[]; flags: 
                     </TableCell>
                     <TableCell className="font-mono text-xs">{s.user_id.slice(0, 8)}…</TableCell>
                     <TableCell className="font-mono text-xs">{s.tenant_id?.slice(0, 8) ?? '—'}…</TableCell>
-                    <TableCell className="text-xs">{s.ip_address ?? '—'}</TableCell>
+                    <TableCell className="text-xs">
+                      <IpCell ip={s.ip_address ?? '—'} info={s.ip_address ? ipCache.get(s.ip_address) as any : undefined} />
+                    </TableCell>
                     <TableCell className="text-xs">{[s.city, s.country].filter(Boolean).join(', ') || '—'}</TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
