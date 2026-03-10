@@ -6,7 +6,7 @@
  * 
  * The frontend is responsible for:
  *   1. Detecting device/browser info (client-side only)
- *   2. Requesting browser geolocation (if user authorizes)
+ *   2. Requesting browser geolocation (MUST be called within user gesture)
  *   3. Sending data to the Session Service for server-side IP + geo enrichment
  *   4. Maintaining heartbeat interval
  *   5. Closing session on logout/tab close via sendBeacon
@@ -19,7 +19,7 @@ import { logger } from '@/lib/logger';
 // DEVICE / BROWSER DETECTION
 // ════════════════════════════════════
 
-interface DeviceInfo {
+export interface DeviceInfo {
   browser: string;
   browser_version: string;
   os: string;
@@ -28,7 +28,7 @@ interface DeviceInfo {
   user_agent: string;
 }
 
-function detectDevice(): DeviceInfo {
+export function detectDevice(): DeviceInfo {
   const ua = navigator.userAgent;
   let browser = 'Unknown';
   let browser_version = '';
@@ -66,13 +66,19 @@ function detectDevice(): DeviceInfo {
 // BROWSER GEOLOCATION
 // ════════════════════════════════════
 
-interface BrowserGeo {
+export interface BrowserGeo {
   latitude: number;
   longitude: number;
   accuracy: number;
 }
 
-function getBrowserGeolocation(): Promise<BrowserGeo | null> {
+/**
+ * Request browser geolocation permission.
+ * 
+ * CRITICAL: Must be called WITHIN a user gesture handler (click/submit)
+ * to satisfy browser security requirements. Do NOT call after await chains.
+ */
+export function requestGeolocation(): Promise<BrowserGeo | null> {
   return new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(
@@ -81,10 +87,23 @@ function getBrowserGeolocation(): Promise<BrowserGeo | null> {
         longitude: pos.coords.longitude,
         accuracy: pos.coords.accuracy,
       }),
-      () => resolve(null),
-      { timeout: 8000, maximumAge: 60000 }
+      (error) => {
+        logger.info('Geolocation denied or failed', { code: error.code, message: error.message });
+        resolve(null); // fallback to IP-based geo on server
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   });
+}
+
+/**
+ * Capture all client-side data synchronously within user gesture context.
+ * Call this at the TOP of your click/submit handler, BEFORE any await.
+ */
+export function captureClientContext(): { device: DeviceInfo; geoPromise: Promise<BrowserGeo | null> } {
+  const device = detectDevice();
+  const geoPromise = requestGeolocation(); // starts immediately in gesture context
+  return { device, geoPromise };
 }
 
 // ════════════════════════════════════
@@ -108,18 +127,24 @@ let activityInterval: ReturnType<typeof setInterval> | null = null;
 
 /**
  * Create a new session via Session Service edge function.
- * Server-side: extracts real IP, enriches geo, detects VPN/proxy.
- * Client-side: provides browser info + optional browser geolocation.
+ * 
+ * @param userId - Authenticated user ID
+ * @param tenantId - Resolved tenant ID (optional)
+ * @param loginMethod - 'password' | 'sso' | etc
+ * @param ssoProvider - SSO provider name (optional)
+ * @param clientContext - Pre-captured device + geo from captureClientContext()
  */
 export async function startSession(
   userId: string,
   tenantId?: string | null,
   loginMethod: string = 'password',
-  ssoProvider?: string | null
+  ssoProvider?: string | null,
+  clientContext?: { device: DeviceInfo; geoPromise: Promise<BrowserGeo | null> }
 ): Promise<string | null> {
   try {
-    const device = detectDevice();
-    const browserGeo = await getBrowserGeolocation();
+    // Use pre-captured context or capture now (less reliable outside gesture)
+    const device = clientContext?.device ?? detectDevice();
+    const browserGeo = clientContext ? await clientContext.geoPromise : null;
 
     const result = await callSessionService('start', {
       tenant_id: tenantId ?? null,
@@ -132,7 +157,7 @@ export async function startSession(
       device_type: device.device_type,
       user_agent: device.user_agent,
       is_mobile: device.is_mobile,
-      // Browser geolocation (if authorized)
+      // Browser geolocation (if authorized by user)
       latitude: browserGeo?.latitude ?? null,
       longitude: browserGeo?.longitude ?? null,
     });
@@ -143,6 +168,7 @@ export async function startSession(
       sessionId: activeSessionId,
       browser: device.browser,
       geo: result?.geo,
+      hasUserGeo: !!browserGeo,
     });
 
     startHeartbeat();
@@ -191,13 +217,12 @@ function stopHeartbeat() {
 }
 
 // ════════════════════════════════════
-// TAB CLOSE HANDLER (sendBeacon fallback)
+// TAB CLOSE HANDLER (sendBeacon)
 // ════════════════════════════════════
 
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
     if (activeSessionId) {
-      // sendBeacon to edge function for reliable close
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/session-service`;
       const body = JSON.stringify({
         action: 'end',
