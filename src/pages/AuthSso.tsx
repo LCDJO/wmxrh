@@ -115,7 +115,7 @@ export default function AuthSso() {
           {/* Not Found */}
           {state === 'not_found' && (
             <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <AlertTriangle className="h-8 w-8 text-amber-500" />
+              <AlertTriangle className="h-8 w-8 text-accent-foreground" />
               <div>
                 <p className="font-medium">Provedor SSO não encontrado</p>
                 <p className="text-sm text-muted-foreground mt-1">
