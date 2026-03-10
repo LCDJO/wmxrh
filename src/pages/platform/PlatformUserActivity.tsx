@@ -8,6 +8,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSessionRealtime, type SessionRealtimeEvent, type ChannelStatus } from '@/domains/session/useSessionRealtime';
+import { AlertsPanel } from '@/components/platform/AlertsPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -1044,6 +1045,15 @@ export default function PlatformUserActivity() {
           <Tabs defaultValue="sessions" className="space-y-4">
             <TabsList>
               <TabsTrigger value="sessions">Sessões Ativas</TabsTrigger>
+              <TabsTrigger value="alerts">
+                Alertas
+                {(() => {
+                  const openAlerts = Array.from(suspiciousFlags.values()).flat().length;
+                  return openAlerts > 0 ? (
+                    <Badge variant="destructive" className="ml-2 text-[10px] px-1.5">{openAlerts}</Badge>
+                  ) : null;
+                })()}
+              </TabsTrigger>
               <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
               <TabsTrigger value="map">Mapa</TabsTrigger>
               <TabsTrigger value="devices">Dispositivos</TabsTrigger>
@@ -1136,6 +1146,10 @@ export default function PlatformUserActivity() {
                 browserFilter={browserFilter}
                 riskScores={riskScores}
               />
+            </TabsContent>
+
+            <TabsContent value="alerts">
+              <AlertsPanel sessions={sessions} flags={suspiciousFlags} riskScores={riskScores} />
             </TabsContent>
 
             <TabsContent value="heatmap">
