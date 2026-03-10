@@ -814,6 +814,10 @@ function SessionsTable({ sessions, search, statusFilter, tenantFilter, countryFi
     return result;
   }, [sessions, search, statusFilter, tenantFilter, countryFilter, cityFilter, browserFilter]);
 
+  // IP lookup for ASN/ISP
+  const ipList = useMemo(() => filtered.slice(0, 100).map(s => s.ip_address ?? ''), [filtered]);
+  const ipInfo = useIpLookup(ipList);
+
   const riskBadge = (risk: SessionRiskScore) => {
     const variant: 'default' | 'secondary' | 'outline' | 'destructive' =
       risk.level === 'high' ? 'destructive' : risk.level === 'attention' ? 'secondary' : 'outline';
