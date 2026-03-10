@@ -172,6 +172,16 @@ export async function startSession(
     });
 
     startHeartbeat();
+
+    // Auto-emit login event
+    if (activeSessionId) {
+      callSessionService('log_event', {
+        session_id: activeSessionId,
+        event_type: 'login',
+        event_data: { browser: device.browser, os: device.os, device_type: device.device_type },
+      }).catch(() => {});
+    }
+
     return activeSessionId;
   } catch (err: any) {
     logger.error('Session start error', { error: err.message });
