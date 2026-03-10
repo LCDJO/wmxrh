@@ -569,8 +569,18 @@ export default function PlatformUserActivity() {
   const { events, channelStatus, counters, clearEvents } = useSessionRealtime();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [tenantFilter, setTenantFilter] = useState('all');
+  const [countryFilter, setCountryFilter] = useState('all');
+  const [cityFilter, setCityFilter] = useState('all');
+  const [browserFilter, setBrowserFilter] = useState('all');
 
   const suspiciousFlags = useMemo(() => detectSuspicious(sessions), [sessions]);
+
+  // Derive unique filter options from sessions
+  const tenantOptions = useMemo(() => [...new Set(sessions.map(s => s.tenant_id).filter(Boolean) as string[])].sort(), [sessions]);
+  const countryOptions = useMemo(() => [...new Set(sessions.map(s => s.country).filter(Boolean) as string[])].sort(), [sessions]);
+  const cityOptions = useMemo(() => [...new Set(sessions.map(s => s.city).filter(Boolean) as string[])].sort(), [sessions]);
+  const browserOptions = useMemo(() => [...new Set(sessions.map(s => s.browser).filter(Boolean) as string[])].sort(), [sessions]);
 
   if (isLoading) {
     return (
@@ -585,9 +595,9 @@ export default function PlatformUserActivity() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">User Activity Intelligence</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Activity Monitor</h1>
           <p className="text-muted-foreground text-sm">
-            Monitoramento em tempo real de acessos de usuários em todos os tenants.
+            Monitoramento em tempo real de sessões de usuários em todos os tenants.
           </p>
         </div>
         <Badge variant={channelStatus === 'connected' ? 'default' : 'outline'} className="gap-1.5">
@@ -601,7 +611,7 @@ export default function PlatformUserActivity() {
 
       {/* Live Feed + Tabs */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Live Event Feed — right sidebar on large screens */}
+        {/* Live Event Feed */}
         <div className="lg:col-span-1 lg:order-2">
           <LiveEventFeed events={events} channelStatus={channelStatus} counters={counters} onClear={clearEvents} />
         </div>
@@ -610,7 +620,7 @@ export default function PlatformUserActivity() {
         <div className="lg:col-span-2 lg:order-1">
           <Tabs defaultValue="sessions" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="sessions">Sessões</TabsTrigger>
+              <TabsTrigger value="sessions">Sessões Ativas</TabsTrigger>
               <TabsTrigger value="map">Mapa</TabsTrigger>
               <TabsTrigger value="devices">Dispositivos</TabsTrigger>
               <TabsTrigger value="suspicious">
@@ -624,8 +634,9 @@ export default function PlatformUserActivity() {
             </TabsList>
 
             <TabsContent value="sessions" className="space-y-4">
-              <div className="flex gap-3">
-                <div className="relative flex-1">
+              {/* Filters row */}
+              <div className="flex flex-wrap gap-2">
+                <div className="relative flex-1 min-w-[200px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Buscar por ID, IP, cidade, navegador..."
@@ -634,8 +645,41 @@ export default function PlatformUserActivity() {
                     className="pl-9"
                   />
                 </div>
+                <Select value={tenantFilter} onValueChange={setTenantFilter}>
+                  <SelectTrigger className="w-36">
+                    <SelectValue placeholder="Tenant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Tenants</SelectItem>
+                    {tenantOptions.map(t => (
+                      <SelectItem key={t} value={t}>{t.slice(0, 8)}…</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={countryFilter} onValueChange={setCountryFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="País" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Países</SelectItem>
+                    {countryOptions.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={cityFilter} onValueChange={setCityFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Cidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas Cidades</SelectItem>
+                    {cityOptions.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-32">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -646,8 +690,27 @@ export default function PlatformUserActivity() {
                     <SelectItem value="expired">Expirada</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select value={browserFilter} onValueChange={setBrowserFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Navegador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {browserOptions.map(b => (
+                      <SelectItem key={b} value={b}>{b}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <SessionsTable sessions={sessions} search={search} statusFilter={statusFilter} />
+              <SessionsTable
+                sessions={sessions}
+                search={search}
+                statusFilter={statusFilter}
+                tenantFilter={tenantFilter}
+                countryFilter={countryFilter}
+                cityFilter={cityFilter}
+                browserFilter={browserFilter}
+              />
             </TabsContent>
 
             <TabsContent value="map">
