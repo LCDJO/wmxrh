@@ -282,6 +282,56 @@ async function handleExpireStale(_req: Request): Promise<Response> {
 }
 
 // ════════════════════════════════════
+// LOG SESSION EVENT
+// ════════════════════════════════════
+
+async function handleLogEvent(req: Request, body: any): Promise<Response> {
+  const userId = getUserFromJWT(req);
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+  }
+
+  const supabase = getServiceClient();
+  const { session_id, event_type, event_data } = body;
+
+  if (!session_id || !event_type) {
+    return new Response(JSON.stringify({ error: 'session_id and event_type required' }), { status: 400, headers: corsHeaders });
+  }
+
+  const validTypes = ['login', 'logout', 'token_refresh', 'page_view', 'api_request', 'permission_denied'];
+  if (!validTypes.includes(event_type)) {
+    return new Response(JSON.stringify({ error: `Invalid event_type. Valid: ${validTypes.join(', ')}` }), { status: 400, headers: corsHeaders });
+  }
+
+  // Verify session belongs to user
+  const { data: session } = await supabase
+    .from('user_sessions')
+    .select('id')
+    .eq('id', session_id)
+    .eq('user_id', userId)
+    .single();
+
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'Session not found' }), { status: 404, headers: corsHeaders });
+  }
+
+  const { error } = await supabase
+    .from('user_session_events')
+    .insert({
+      session_id,
+      event_type,
+      event_data: event_data ?? {},
+      timestamp: new Date().toISOString(),
+    });
+
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders });
+  }
+
+  return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+// ════════════════════════════════════
 // ROUTER
 // ════════════════════════════════════
 
@@ -301,6 +351,8 @@ Deno.serve(async (req) => {
         return await handleHeartbeat(req, body);
       case 'end':
         return await handleEnd(req, body);
+      case 'log_event':
+        return await handleLogEvent(req, body);
       case 'expire_stale':
         return await handleExpireStale(req);
       default:

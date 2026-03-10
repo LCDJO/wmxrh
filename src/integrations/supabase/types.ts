@@ -21703,6 +21703,38 @@ export type Database = {
           },
         ]
       }
+      user_session_events: {
+        Row: {
+          event_data: Json | null
+          event_type: string
+          id: string
+          session_id: string
+          timestamp: string
+        }
+        Insert: {
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          session_id: string
+          timestamp?: string
+        }
+        Update: {
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          session_id?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_session_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "user_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_sessions: {
         Row: {
           browser: string | null
