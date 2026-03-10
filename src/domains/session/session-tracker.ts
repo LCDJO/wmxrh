@@ -1,10 +1,15 @@
 /**
- * SessionTracker — Captures device, browser, geolocation and IP data
- * on login and records it in the user_sessions table.
- *
- * Geolocation strategy:
- *   1. navigator.geolocation.getCurrentPosition() (if user authorizes)
- *   2. IP-based geolocation fallback (via free API)
+ * SessionTracker — Frontend client for Session Service edge function.
+ * 
+ * Architecture:
+ *   Browser → Session Service (Edge Function) → PostgreSQL + PostGIS
+ * 
+ * The frontend is responsible for:
+ *   1. Detecting device/browser info (client-side only)
+ *   2. Requesting browser geolocation (if user authorizes)
+ *   3. Sending data to the Session Service for server-side IP + geo enrichment
+ *   4. Maintaining heartbeat interval
+ *   5. Closing session on logout/tab close via sendBeacon
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -31,7 +36,6 @@ function detectDevice(): DeviceInfo {
   let device_type = 'desktop';
   const is_mobile = /Mobi|Android|iPhone|iPad/i.test(ua);
 
-  // Browser detection
   if (ua.includes('Firefox/')) {
     browser = 'Firefox';
     browser_version = ua.match(/Firefox\/([\d.]+)/)?.[1] ?? '';
@@ -46,14 +50,12 @@ function detectDevice(): DeviceInfo {
     browser_version = ua.match(/Version\/([\d.]+)/)?.[1] ?? '';
   }
 
-  // OS detection
   if (ua.includes('Windows')) os = 'Windows';
   else if (ua.includes('Mac OS')) os = 'macOS';
   else if (ua.includes('Linux')) os = 'Linux';
   else if (ua.includes('Android')) os = 'Android';
   else if (/iPhone|iPad/.test(ua)) os = 'iOS';
 
-  // Device type
   if (/iPad|Tablet/i.test(ua)) device_type = 'tablet';
   else if (is_mobile) device_type = 'mobile';
 
@@ -61,76 +63,40 @@ function detectDevice(): DeviceInfo {
 }
 
 // ════════════════════════════════════
-// GEOLOCATION
+// BROWSER GEOLOCATION
 // ════════════════════════════════════
 
-interface GeoData {
-  latitude: number | null;
-  longitude: number | null;
-  accuracy?: number;
-  ip_address?: string;
-  ipv6?: string;
-  country?: string;
-  state?: string;
-  city?: string;
-  is_vpn?: boolean;
-  is_proxy?: boolean;
+interface BrowserGeo {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
 }
 
-/** Strategy 1: Browser geolocation API */
-function getBrowserGeolocation(): Promise<GeoData | null> {
+function getBrowserGeolocation(): Promise<BrowserGeo | null> {
   return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      resolve(null);
-      return;
-    }
+    if (!navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        resolve({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-        });
-      },
-      () => resolve(null), // denied or error → fallback
+      (pos) => resolve({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+      }),
+      () => resolve(null),
       { timeout: 8000, maximumAge: 60000 }
     );
   });
 }
 
-/** Strategy 2: IP-based geolocation fallback (free API) */
-async function getIpGeolocation(): Promise<GeoData> {
-  const fallback: GeoData = {
-    latitude: null,
-    longitude: null,
-    ip_address: undefined,
-    country: undefined,
-    state: undefined,
-    city: undefined,
-  };
+// ════════════════════════════════════
+// SESSION SERVICE CLIENT
+// ════════════════════════════════════
 
-  try {
-    // Using ip-api.com (free, no key needed, 45 req/min)
-    const res = await fetch('http://ip-api.com/json/?fields=status,country,regionName,city,lat,lon,proxy,hosting,query', {
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return fallback;
-    const data = await res.json();
-    if (data.status !== 'success') return fallback;
-
-    return {
-      latitude: data.lat ?? null,
-      longitude: data.lon ?? null,
-      ip_address: data.query ?? undefined,
-      country: data.country ?? undefined,
-      state: data.regionName ?? undefined,
-      city: data.city ?? undefined,
-      is_vpn: data.proxy ?? false,
-      is_proxy: data.hosting ?? false,
-    };
-  } catch {
-    return fallback;
-  }
+async function callSessionService(action: string, payload: Record<string, any> = {}): Promise<any> {
+  const { data, error } = await supabase.functions.invoke('session-service', {
+    body: { action, ...payload },
+  });
+  if (error) throw error;
+  return data;
 }
 
 // ════════════════════════════════════
@@ -141,8 +107,9 @@ let activeSessionId: string | null = null;
 let activityInterval: ReturnType<typeof setInterval> | null = null;
 
 /**
- * Create a new session record on login.
- * Called from AuthContext after successful signIn.
+ * Create a new session via Session Service edge function.
+ * Server-side: extracts real IP, enriches geo, detects VPN/proxy.
+ * Client-side: provides browser info + optional browser geolocation.
  */
 export async function startSession(
   userId: string,
@@ -152,66 +119,33 @@ export async function startSession(
 ): Promise<string | null> {
   try {
     const device = detectDevice();
+    const browserGeo = await getBrowserGeolocation();
 
-    // Geolocation: try browser first, fallback to IP
-    const [browserGeo, ipGeo] = await Promise.all([
-      getBrowserGeolocation(),
-      getIpGeolocation(),
-    ]);
+    const result = await callSessionService('start', {
+      tenant_id: tenantId ?? null,
+      login_method: loginMethod,
+      sso_provider: ssoProvider ?? null,
+      // Device info (client-only)
+      browser: device.browser,
+      browser_version: device.browser_version,
+      os: device.os,
+      device_type: device.device_type,
+      user_agent: device.user_agent,
+      is_mobile: device.is_mobile,
+      // Browser geolocation (if authorized)
+      latitude: browserGeo?.latitude ?? null,
+      longitude: browserGeo?.longitude ?? null,
+    });
 
-    const geo: GeoData = {
-      latitude: browserGeo?.latitude ?? ipGeo.latitude,
-      longitude: browserGeo?.longitude ?? ipGeo.longitude,
-      ip_address: ipGeo.ip_address,
-      country: ipGeo.country,
-      state: ipGeo.state,
-      city: ipGeo.city,
-      is_vpn: ipGeo.is_vpn,
-      is_proxy: ipGeo.is_proxy,
-    };
+    activeSessionId = result?.session_id ?? null;
 
-    const sessionToken = crypto.randomUUID();
+    logger.info('Session started via service', {
+      sessionId: activeSessionId,
+      browser: device.browser,
+      geo: result?.geo,
+    });
 
-    const { data, error } = await supabase
-      .from('user_sessions')
-      .insert({
-        user_id: userId,
-        tenant_id: tenantId ?? null,
-        session_token: sessionToken,
-        login_at: new Date().toISOString(),
-        last_activity: new Date().toISOString(),
-        ip_address: geo.ip_address ?? null,
-        country: geo.country ?? null,
-        state: geo.state ?? null,
-        city: geo.city ?? null,
-        latitude: geo.latitude,
-        longitude: geo.longitude,
-        browser: device.browser,
-        browser_version: device.browser_version,
-        os: device.os,
-        device_type: device.device_type,
-        user_agent: device.user_agent,
-        login_method: loginMethod,
-        sso_provider: ssoProvider ?? null,
-        is_mobile: device.is_mobile,
-        is_vpn: geo.is_vpn ?? false,
-        is_proxy: geo.is_proxy ?? false,
-        status: 'online',
-      } as any)
-      .select('id')
-      .single();
-
-    if (error) {
-      logger.error('Failed to create user session', { error: error.message });
-      return null;
-    }
-
-    activeSessionId = data?.id ?? null;
-    logger.info('Session started', { sessionId: activeSessionId, browser: device.browser, city: geo.city });
-
-    // Start heartbeat (update last_activity every 60s)
     startHeartbeat();
-
     return activeSessionId;
   } catch (err: any) {
     logger.error('Session start error', { error: err.message });
@@ -220,44 +154,23 @@ export async function startSession(
 }
 
 /**
- * End the current session (on signOut or tab close).
+ * End the current session via Session Service.
  */
 export async function endSession(): Promise<void> {
   stopHeartbeat();
-
   if (!activeSessionId) return;
 
   try {
-    const loginAt = await getSessionLoginAt(activeSessionId);
-    const duration = loginAt ? Math.floor((Date.now() - new Date(loginAt).getTime()) / 1000) : null;
-
-    await supabase
-      .from('user_sessions')
-      .update({
-        status: 'offline',
-        logout_at: new Date().toISOString(),
-        session_duration: duration,
-      } as any)
-      .eq('id', activeSessionId);
-
-    logger.info('Session ended', { sessionId: activeSessionId, duration });
+    const result = await callSessionService('end', { session_id: activeSessionId });
+    logger.info('Session ended via service', { sessionId: activeSessionId, duration: result?.duration });
     activeSessionId = null;
   } catch (err: any) {
     logger.error('Session end error', { error: err.message });
   }
 }
 
-async function getSessionLoginAt(sessionId: string): Promise<string | null> {
-  const { data } = await supabase
-    .from('user_sessions')
-    .select('login_at')
-    .eq('id', sessionId)
-    .single();
-  return (data as any)?.login_at ?? null;
-}
-
 // ════════════════════════════════════
-// HEARTBEAT (last_activity + status)
+// HEARTBEAT
 // ════════════════════════════════════
 
 function startHeartbeat() {
@@ -265,12 +178,9 @@ function startHeartbeat() {
   activityInterval = setInterval(async () => {
     if (!activeSessionId) return;
     try {
-      await supabase
-        .from('user_sessions')
-        .update({ last_activity: new Date().toISOString(), status: 'online' } as any)
-        .eq('id', activeSessionId);
+      await callSessionService('heartbeat', { session_id: activeSessionId });
     } catch { /* silent */ }
-  }, 60_000); // every 60s
+  }, 60_000);
 }
 
 function stopHeartbeat() {
@@ -280,17 +190,20 @@ function stopHeartbeat() {
   }
 }
 
-// Handle tab close / browser close
+// ════════════════════════════════════
+// TAB CLOSE HANDLER (sendBeacon fallback)
+// ════════════════════════════════════
+
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
     if (activeSessionId) {
-      // Best-effort: use sendBeacon for reliable delivery
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_sessions?id=eq.${activeSessionId}`;
+      // sendBeacon to edge function for reliable close
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/session-service`;
       const body = JSON.stringify({
-        status: 'offline',
-        logout_at: new Date().toISOString(),
+        action: 'end',
+        session_id: activeSessionId,
       });
-      navigator.sendBeacon?.(url); // fallback; full update via endSession() when possible
+      navigator.sendBeacon?.(url, body);
     }
     stopHeartbeat();
   });
