@@ -8,6 +8,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSessionRealtime, type SessionRealtimeEvent, type ChannelStatus } from '@/domains/session/useSessionRealtime';
+import { AlertsPanel } from '@/components/platform/AlertsPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
