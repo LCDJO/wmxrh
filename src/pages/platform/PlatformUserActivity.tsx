@@ -4,20 +4,24 @@
  * SaaS-level monitoring of user sessions across ALL tenants.
  * Shows online users, geographic map, device/browser stats, suspicious activity.
  */
-import { useState, useMemo, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useSessionRealtime, type SessionRealtimeEvent, type ChannelStatus } from '@/domains/session/useSessionRealtime';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Users, Globe, Monitor, Smartphone, Shield, AlertTriangle,
-  MapPin, Clock, Activity, Wifi, WifiOff, Search, Laptop
+  MapPin, Clock, Activity, Wifi, WifiOff, Search, Laptop,
+  Radio, Zap, LogIn, LogOut, RefreshCw, Trash2
 } from 'lucide-react';
 
 // ═══════════════════════════════
