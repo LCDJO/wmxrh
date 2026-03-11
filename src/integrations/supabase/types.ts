@@ -23161,10 +23161,9 @@ export type Database = {
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       expire_inactive_display_sessions: { Args: never; Returns: number }
-      expire_stale_sessions: {
-        Args: { stale_minutes?: number }
-        Returns: number
-      }
+      expire_stale_sessions:
+        | { Args: never; Returns: number }
+        | { Args: { stale_minutes?: number }; Returns: number }
       find_profiles_for_anonymization: {
         Args: { p_tenant_id: string }
         Returns: {

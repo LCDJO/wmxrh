@@ -280,36 +280,61 @@ function stopHeartbeat() {
   }
 }
 
+/** Best-effort PATCH to mark session offline (used on tab/browser close) */
+function patchSessionOffline() {
+  if (!activeSessionId) return;
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_sessions?id=eq.${activeSessionId}`;
+  const body = JSON.stringify({
+    status: 'offline',
+    logout_at: new Date().toISOString(),
+  });
+  try {
+    fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        'Prefer': 'return=minimal',
+      },
+      body,
+      keepalive: true,
+    }).catch(() => {});
+  } catch { /* silent */ }
+}
+
 // Handle tab close / browser close
 if (typeof window !== 'undefined') {
+  // beforeunload — fires when tab/window is closing
   window.addEventListener('beforeunload', () => {
-    if (activeSessionId) {
-      // Best-effort: use sendBeacon with proper headers for reliable delivery
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_sessions?id=eq.${activeSessionId}`;
-      const body = JSON.stringify({
-        status: 'offline',
-        logout_at: new Date().toISOString(),
-      });
-      const blob = new Blob([body], { type: 'application/json' });
-      // sendBeacon doesn't support custom headers, so use fetch keepalive as primary
-      try {
-        fetch(url, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            'Prefer': 'return=minimal',
-          },
-          body,
-          keepalive: true,
-        }).catch(() => {});
-      } catch {
-        // Last resort fallback
-        navigator.sendBeacon?.(url, blob);
-      }
-    }
+    patchSessionOffline();
     stopHeartbeat();
+  });
+
+  // pagehide — more reliable on mobile browsers
+  window.addEventListener('pagehide', () => {
+    patchSessionOffline();
+    stopHeartbeat();
+  });
+
+  // visibilitychange — mark idle when tab is hidden, online when visible
+  document.addEventListener('visibilitychange', () => {
+    if (!activeSessionId) return;
+    if (document.visibilityState === 'hidden') {
+      // Mark as idle after tab is hidden
+      supabase
+        .from('user_sessions')
+        .update({ status: 'idle', last_activity: new Date().toISOString() } as any)
+        .eq('id', activeSessionId)
+        .then(() => {});
+    } else if (document.visibilityState === 'visible') {
+      // Back to online when tab is focused again
+      supabase
+        .from('user_sessions')
+        .update({ status: 'online', last_activity: new Date().toISOString() } as any)
+        .eq('id', activeSessionId)
+        .then(() => {});
+    }
   });
 }
 
