@@ -74,7 +74,7 @@ export default function PlatformMonitoring() {
 
       {/* Tab Navigation synced with routes */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-6 max-w-3xl">
+        <TabsList className="grid w-full grid-cols-7 max-w-4xl">
           {TABS.map(tab => {
             const Icon = tab.icon;
             return (
