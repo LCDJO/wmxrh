@@ -67,6 +67,11 @@ export class ObservabilityBridge {
     metrics.gauge('tenants_whitelabel_enabled_total', 0);
     metrics.increment('branding_updates_total', {}, 0);
     metrics.gauge('custom_domain_active_total', 0);
+    // User Presence baselines
+    metrics.gauge('active_sessions_total', 0);
+    metrics.gauge('login_events_total', 0);
+    metrics.gauge('session_duration_avg_seconds', 0);
+    metrics.increment('geo_login_distribution', {}, 0);
   }
 
   /** Update gauges from current state */
