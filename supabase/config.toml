@@ -80,6 +80,3 @@ verify_jwt = false
 
 [functions.agreement-signature]
 verify_jwt = false
-
-[functions.session-service]
-verify_jwt = false

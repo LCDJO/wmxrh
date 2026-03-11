@@ -27,7 +27,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import { startSession, endSession, type DeviceInfo, type BrowserGeo } from '@/domains/session/session-tracker';
+import { startSession, endSession } from '@/domains/session/session-tracker';
 
 /**
  * Metadata adicional enviada no cadastro (signUp).
@@ -56,7 +56,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signUp: (email: string, password: string, metadata?: SignUpMetadata) => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string, clientContext?: { device: DeviceInfo; geoPromise: Promise<BrowserGeo | null> }) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -208,11 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   }
 
-  const signIn = async (
-    email: string,
-    password: string,
-    clientContext?: { device: DeviceInfo; geoPromise: Promise<BrowserGeo | null> }
-  ) => {
+  const signIn = async (email: string, password: string) => {
     logger.info('Tentativa de login', { email });
     
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -228,6 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const blockedStatus = await checkAccountBlocked(userId);
       if (blockedStatus) {
         logger.warn('Login bloqueado — conta com status restritivo', { email, status: blockedStatus });
+        // Revogar sessão imediatamente
         await supabase.auth.signOut();
         const msg = blockedStatus === 'banned'
           ? 'Sua conta foi banida. Entre em contato com o suporte.'
@@ -238,8 +235,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     logger.info('Login realizado com sucesso', { email });
 
-    // ── SESSION TRACKING: record session with pre-captured client context ──
+    // ── SESSION TRACKING: record session with geolocation + device info ──
     if (data.user?.id) {
+      // Resolve tenant_id from membership (non-blocking)
       supabase
         .from('tenant_memberships')
         .select('tenant_id')
@@ -248,7 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .limit(1)
         .maybeSingle()
         .then(({ data: mem }) => {
-          startSession(data.user!.id, mem?.tenant_id ?? null, 'password', null, clientContext);
+          startSession(data.user!.id, mem?.tenant_id ?? null, 'password');
         });
     }
 
