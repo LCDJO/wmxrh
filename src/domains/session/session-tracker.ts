@@ -193,6 +193,7 @@ export async function startSession(
       city: ipGeo.city,
       is_vpn: ipGeo.is_vpn,
       is_proxy: ipGeo.is_proxy,
+      asn_name: ipGeo.asn_name,
     };
 
     const sessionToken = crypto.randomUUID();
