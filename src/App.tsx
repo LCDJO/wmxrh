@@ -22,6 +22,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
 import LiveDisplayTV from "./pages/LiveDisplayTV";
+import UserPresenceTV from "./pages/UserPresenceTV";
 import PublicDocumentValidation from "./pages/PublicDocumentValidation";
 import LiveDisplayPair from "./pages/LiveDisplayPair";
 import StatusPage from "./pages/StatusPage";
