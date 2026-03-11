@@ -9,6 +9,7 @@
  */
 
 import type { ActiveSession } from './types';
+import { emitSuspiciousLoginDetected } from './event-catalog';
 
 export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
 export type AlertType = 'simultaneous_sessions' | 'unusual_country' | 'impossible_travel';
