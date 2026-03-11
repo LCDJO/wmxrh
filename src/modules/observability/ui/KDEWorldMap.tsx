@@ -119,23 +119,26 @@ export default function KDEWorldMap({ sessions }: Props) {
     if (geoPoints.length === 0) { pointLayerRef.current.addTo(map); return; }
 
     const curZoom = map.getZoom();
+    const showKDE = geoPoints.length >= 10;
 
-    // Create 15 KDE layer groups
-    KDE_LAYERS.forEach((def, idx) => {
-      const group = L.layerGroup();
-      for (const p of geoPoints) {
-        L.circle([p.lat, p.lng], {
-          radius: def.radius,
-          fillColor: def.fill,
-          fillOpacity: 1,
-          color: def.stroke,
-          weight: def.strokeWidth,
-          interactive: false,
-        }).addTo(group);
-      }
-      kdeGroupsRef.current.set(idx, group);
-      if (curZoom >= def.minZ && curZoom <= def.maxZ) group.addTo(map);
-    });
+    // Create 15 KDE layer groups (only if 10+ sessions)
+    if (showKDE) {
+      KDE_LAYERS.forEach((def, idx) => {
+        const group = L.layerGroup();
+        for (const p of geoPoints) {
+          L.circle([p.lat, p.lng], {
+            radius: def.radius,
+            fillColor: def.fill,
+            fillOpacity: 1,
+            color: def.stroke,
+            weight: def.strokeWidth,
+            interactive: false,
+          }).addTo(group);
+        }
+        kdeGroupsRef.current.set(idx, group);
+        if (curZoom >= def.minZ && curZoom <= def.maxZ) group.addTo(map);
+      });
+    }
 
     // Session markers with glow
     for (const p of geoPoints) {
