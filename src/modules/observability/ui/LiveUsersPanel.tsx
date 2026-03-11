@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import {
   Users, Globe, Monitor, Smartphone, MapPin, Clock,
   RefreshCw, Building2, Shield, Eye, Laptop, Map,
+  ArrowUp, ArrowDown,
 } from 'lucide-react';
 import KDEWorldMap from './KDEWorldMap';
 import {
