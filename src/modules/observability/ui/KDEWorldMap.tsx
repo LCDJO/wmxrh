@@ -1,9 +1,10 @@
 /**
- * KDEWorldMap — Multi-scale KDE heatmap using native Leaflet circles.
+ * KDEWorldMap — 15-layer smoothed Kernel Density Estimation heatmap.
  * 
- * 12 concentric layers per point from continental (500km) to street-level (50m),
- * enabling smooth density visualization across all zoom levels (2→18).
- * Layers are dynamically shown/hidden based on zoom for performance.
+ * Uses L.circle with 15 graduated layers from 600km (continental) to 30m 
+ * (pinpoint). Each layer uses carefully tuned opacity and smooth color 
+ * transitions following a proper Gaussian-inspired falloff curve.
+ * Layers are zoom-adaptive for performance.
  */
 import { useEffect, useRef, useMemo, useState } from 'react';
 import L from 'leaflet';
@@ -14,40 +15,41 @@ interface Props {
   sessions: ActiveSession[];
 }
 
-// Multi-scale KDE layers: from macro (continental) to micro (street)
-// Each layer is visible at specific zoom ranges for performance
 interface KDELayerDef {
-  radiusMeters: number;
-  color: string;
-  minZoom: number;
-  maxZoom: number;
-  label: string;
+  radius: number;
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+  minZ: number;
+  maxZ: number;
 }
 
+// 15 smoothly graduated layers with Gaussian-like opacity falloff
+// Colors transition: deep indigo → blue → cyan → teal → green → lime → yellow → orange → red
 const KDE_LAYERS: KDELayerDef[] = [
-  // === MACRO — visible zoomed out (continents/countries) ===
-  { radiusMeters: 500000, color: 'rgba(15,25,120,0.04)',  minZoom: 2,  maxZoom: 5,  label: 'continental' },
-  { radiusMeters: 250000, color: 'rgba(20,50,180,0.06)',  minZoom: 2,  maxZoom: 6,  label: 'regional' },
-  { radiusMeters: 120000, color: 'rgba(25,80,200,0.08)',  minZoom: 3,  maxZoom: 7,  label: 'state' },
-  // === MESO — mid-range zoom (states/cities) ===
-  { radiusMeters: 60000,  color: 'rgba(0,150,220,0.10)',  minZoom: 4,  maxZoom: 9,  label: 'metro' },
-  { radiusMeters: 30000,  color: 'rgba(30,190,180,0.14)', minZoom: 5,  maxZoom: 10, label: 'city' },
-  { radiusMeters: 15000,  color: 'rgba(50,200,100,0.18)', minZoom: 6,  maxZoom: 12, label: 'district' },
-  // === MICRO — close zoom (neighborhoods/streets) ===
-  { radiusMeters: 6000,   color: 'rgba(150,210,30,0.22)', minZoom: 7,  maxZoom: 14, label: 'neighborhood' },
-  { radiusMeters: 2500,   color: 'rgba(220,200,30,0.28)', minZoom: 8,  maxZoom: 15, label: 'block' },
-  { radiusMeters: 1000,   color: 'rgba(240,150,20,0.35)', minZoom: 9,  maxZoom: 16, label: 'street' },
-  { radiusMeters: 400,    color: 'rgba(240,80,20,0.42)',  minZoom: 10, maxZoom: 17, label: 'building' },
-  { radiusMeters: 150,    color: 'rgba(220,40,30,0.55)',  minZoom: 12, maxZoom: 18, label: 'precise' },
-  { radiusMeters: 50,     color: 'rgba(200,20,20,0.70)',  minZoom: 14, maxZoom: 18, label: 'exact' },
+  { radius: 600000, fill: 'rgba(30,20,100,0.025)',  stroke: 'rgba(30,20,100,0.01)',   strokeWidth: 1, minZ: 2,  maxZ: 5  },
+  { radius: 400000, fill: 'rgba(30,40,160,0.035)',  stroke: 'rgba(30,40,160,0.015)',  strokeWidth: 1, minZ: 2,  maxZ: 6  },
+  { radius: 250000, fill: 'rgba(25,70,200,0.045)',  stroke: 'rgba(25,70,200,0.02)',   strokeWidth: 1, minZ: 2,  maxZ: 7  },
+  { radius: 160000, fill: 'rgba(15,110,210,0.055)', stroke: 'rgba(15,110,210,0.025)', strokeWidth: 0, minZ: 3,  maxZ: 8  },
+  { radius: 100000, fill: 'rgba(0,160,200,0.065)',  stroke: 'rgba(0,160,200,0.03)',   strokeWidth: 0, minZ: 3,  maxZ: 9  },
+  { radius: 60000,  fill: 'rgba(0,190,170,0.08)',   stroke: 'transparent',            strokeWidth: 0, minZ: 4,  maxZ: 10 },
+  { radius: 35000,  fill: 'rgba(30,200,120,0.10)',  stroke: 'transparent',            strokeWidth: 0, minZ: 5,  maxZ: 11 },
+  { radius: 20000,  fill: 'rgba(80,210,60,0.13)',   stroke: 'transparent',            strokeWidth: 0, minZ: 5,  maxZ: 12 },
+  { radius: 12000,  fill: 'rgba(160,215,30,0.16)',  stroke: 'transparent',            strokeWidth: 0, minZ: 6,  maxZ: 13 },
+  { radius: 7000,   fill: 'rgba(210,200,20,0.20)',  stroke: 'transparent',            strokeWidth: 0, minZ: 7,  maxZ: 14 },
+  { radius: 3500,   fill: 'rgba(240,165,15,0.26)',  stroke: 'transparent',            strokeWidth: 0, minZ: 8,  maxZ: 15 },
+  { radius: 1500,   fill: 'rgba(245,110,15,0.34)',  stroke: 'transparent',            strokeWidth: 0, minZ: 9,  maxZ: 16 },
+  { radius: 500,    fill: 'rgba(235,60,20,0.44)',   stroke: 'transparent',            strokeWidth: 0, minZ: 10, maxZ: 17 },
+  { radius: 150,    fill: 'rgba(210,30,25,0.58)',   stroke: 'transparent',            strokeWidth: 0, minZ: 12, maxZ: 18 },
+  { radius: 30,     fill: 'rgba(180,15,20,0.72)',   stroke: 'transparent',            strokeWidth: 0, minZ: 14, maxZ: 18 },
 ];
 
 export default function KDEWorldMap({ sessions }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const kdeGroupsRef = useRef<Map<string, L.LayerGroup>>(new Map());
+  const kdeGroupsRef = useRef<Map<number, L.LayerGroup>>(new Map());
   const pointLayerRef = useRef<L.LayerGroup | null>(null);
-  const [currentZoom, setCurrentZoom] = useState(4);
+  const [zoom, setZoom] = useState(4);
 
   const geoPoints = useMemo(
     () =>
@@ -62,6 +64,7 @@ export default function KDEWorldMap({ sessions }: Props) {
           os: s.os,
           status: s.status,
           userId: s.user_id,
+          ip: s.ip_address,
           lastActivity: s.last_activity,
         })),
     [sessions],
@@ -70,7 +73,6 @@ export default function KDEWorldMap({ sessions }: Props) {
   // Init map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-
     const map = L.map(containerRef.current, {
       center: [-15, -50],
       zoom: 4,
@@ -82,139 +84,101 @@ export default function KDEWorldMap({ sessions }: Props) {
       zoomSnap: 0.5,
       zoomDelta: 0.5,
     });
-
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       subdomains: 'abcd',
-      maxZoom: 19,
+      maxZoom: 20,
     }).addTo(map);
-
     mapRef.current = map;
-
-    map.on('zoomend', () => setCurrentZoom(map.getZoom()));
-
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
+    map.on('zoomend', () => setZoom(map.getZoom()));
+    return () => { map.remove(); mapRef.current = null; };
   }, []);
 
-  // Update KDE layer visibility on zoom change
+  // Toggle layers by zoom
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    for (const [idx, group] of kdeGroupsRef.current) {
+      const def = KDE_LAYERS[idx];
+      const visible = zoom >= def.minZ && zoom <= def.maxZ;
+      if (visible && !map.hasLayer(group)) map.addLayer(group);
+      if (!visible && map.hasLayer(group)) map.removeLayer(group);
+    }
+  }, [zoom]);
+
+  // Build KDE + markers
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    for (const [label, group] of kdeGroupsRef.current) {
-      const def = KDE_LAYERS.find(l => l.label === label);
-      if (!def) continue;
-      if (currentZoom >= def.minZoom && currentZoom <= def.maxZoom) {
-        if (!map.hasLayer(group)) map.addLayer(group);
-      } else {
-        if (map.hasLayer(group)) map.removeLayer(group);
-      }
-    }
-  }, [currentZoom]);
-
-  // Render KDE layers + points when data changes
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    // Clear all existing KDE groups
-    for (const [, group] of kdeGroupsRef.current) {
-      group.clearLayers();
-      if (map.hasLayer(group)) map.removeLayer(group);
-    }
+    // Cleanup
+    for (const [, g] of kdeGroupsRef.current) { g.clearLayers(); map.removeLayer(g); }
     kdeGroupsRef.current.clear();
-
-    if (pointLayerRef.current) {
-      pointLayerRef.current.clearLayers();
-      map.removeLayer(pointLayerRef.current);
-    }
+    if (pointLayerRef.current) { pointLayerRef.current.clearLayers(); map.removeLayer(pointLayerRef.current); }
     pointLayerRef.current = L.layerGroup();
 
-    if (geoPoints.length === 0) {
-      pointLayerRef.current.addTo(map);
-      return;
-    }
+    if (geoPoints.length === 0) { pointLayerRef.current.addTo(map); return; }
 
-    // Create a layer group per KDE scale
-    const zoom = map.getZoom();
-    for (const layerDef of KDE_LAYERS) {
+    const curZoom = map.getZoom();
+
+    // Create 15 KDE layer groups
+    KDE_LAYERS.forEach((def, idx) => {
       const group = L.layerGroup();
-
       for (const p of geoPoints) {
         L.circle([p.lat, p.lng], {
-          radius: layerDef.radiusMeters,
-          fillColor: layerDef.color,
+          radius: def.radius,
+          fillColor: def.fill,
           fillOpacity: 1,
-          color: 'transparent',
-          weight: 0,
+          color: def.stroke,
+          weight: def.strokeWidth,
           interactive: false,
         }).addTo(group);
       }
+      kdeGroupsRef.current.set(idx, group);
+      if (curZoom >= def.minZ && curZoom <= def.maxZ) group.addTo(map);
+    });
 
-      kdeGroupsRef.current.set(layerDef.label, group);
-
-      // Only add to map if within zoom range
-      if (zoom >= layerDef.minZoom && zoom <= layerDef.maxZoom) {
-        group.addTo(map);
-      }
-    }
-
-    // Session point markers
+    // Session markers with glow
     for (const p of geoPoints) {
-      const isOnline = p.status === 'online';
+      const on = p.status === 'online';
+      const color = on ? '#10b981' : '#f59e0b';
 
-      // Outer glow
+      // Outer pulse glow
       L.circleMarker([p.lat, p.lng], {
-        radius: 10,
-        fillColor: isOnline ? '#10b981' : '#f59e0b',
-        fillOpacity: 0.15,
-        color: 'transparent',
-        weight: 0,
-        interactive: false,
+        radius: 12, fillColor: color, fillOpacity: 0.12,
+        color: color, weight: 1, opacity: 0.15, interactive: false,
       }).addTo(pointLayerRef.current!);
 
       // Inner dot
-      const marker = L.circleMarker([p.lat, p.lng], {
-        radius: 5,
-        fillColor: isOnline ? '#10b981' : '#f59e0b',
-        fillOpacity: 0.95,
-        color: '#ffffff',
-        weight: 2,
-        opacity: 0.8,
+      const m = L.circleMarker([p.lat, p.lng], {
+        radius: 5, fillColor: color, fillOpacity: 0.95,
+        color: '#fff', weight: 2, opacity: 0.85,
       });
 
-      const ago = p.lastActivity
-        ? formatTimeAgo(new Date(p.lastActivity))
-        : '';
-
-      const tooltipContent = [
-        `<div style="font-size:11px;line-height:1.5;min-width:140px">`,
-        `<strong>${p.city || 'Local desconhecido'}${p.country ? ', ' + p.country : ''}</strong>`,
-        `<br/><span style="opacity:0.6">📍</span> ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}`,
-        `<br/><span style="color:${isOnline ? '#10b981' : '#f59e0b'}">●</span> ${isOnline ? 'Online' : 'Idle'}${ago ? ' · ' + ago : ''}`,
-        p.browser ? `<br/><span style="opacity:0.6">🌐</span> ${p.browser}${p.os ? ' / ' + p.os : ''}` : '',
+      const ago = timeAgo(new Date(p.lastActivity));
+      m.bindTooltip(
+        `<div style="font-size:11px;line-height:1.5;min-width:150px">` +
+        `<strong>${p.city || '—'}${p.country ? ', ' + p.country : ''}</strong>` +
+        `<br/>📍 ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}` +
+        (p.ip ? `<br/>🌐 IP: <code style="font-size:10px">${p.ip}</code>` : '') +
+        `<br/><span style="color:${color}">●</span> ${on ? 'Online' : 'Idle'} · ${ago}` +
+        (p.browser ? `<br/>💻 ${p.browser}${p.os ? ' / ' + p.os : ''}` : '') +
         `</div>`,
-      ].join('');
-
-      marker.bindTooltip(tooltipContent, { direction: 'top', offset: [0, -8] });
-      marker.addTo(pointLayerRef.current!);
+        { direction: 'top', offset: [0, -10] },
+      );
+      m.addTo(pointLayerRef.current!);
     }
 
     pointLayerRef.current.addTo(map);
 
-    // Fit bounds
     const bounds = L.latLngBounds(geoPoints.map(p => [p.lat, p.lng] as L.LatLngTuple));
     map.fitBounds(bounds, { padding: [80, 80], maxZoom: 12 });
   }, [geoPoints]);
 
+  const activeLayers = KDE_LAYERS.filter(l => zoom >= l.minZ && zoom <= l.maxZ).length;
+
   return (
     <div className="relative">
-      <div
-        ref={containerRef}
-        className="w-full h-[480px] rounded-lg border border-border"
-      />
+      <div ref={containerRef} className="w-full h-[500px] rounded-lg border border-border" />
 
       {geoPoints.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/60 rounded-lg pointer-events-none">
@@ -223,50 +187,73 @@ export default function KDEWorldMap({ sessions }: Props) {
       )}
 
       {/* Legend */}
-      <div className="absolute bottom-4 right-4 z-[1000] bg-background/90 backdrop-blur-sm rounded-lg px-3.5 py-3 border border-border shadow-lg">
-        <div className="text-[10px] font-semibold text-foreground mb-2 tracking-wide uppercase">
-          Densidade KDE
+      <div className="absolute bottom-4 right-4 z-[1000] bg-background/92 backdrop-blur-md rounded-xl px-4 py-3.5 border border-border shadow-xl">
+        <div className="text-[10px] font-bold text-foreground mb-2.5 tracking-wider uppercase">
+          Kernel Density Estimation
         </div>
-        <div
-          className="h-3 w-44 rounded-full mb-2 border border-border/40"
-          style={{
-            background:
-              'linear-gradient(to right, rgba(15,25,120,0.3), rgba(25,80,200,0.4), rgba(0,150,220,0.5), rgba(50,200,100,0.6), rgba(220,200,30,0.7), rgba(240,80,20,0.8), rgba(200,20,20,0.95))',
-          }}
-        />
-        <div className="flex justify-between text-[9px] text-muted-foreground w-44">
+        {/* Gradient bar */}
+        <div className="relative h-4 w-48 rounded-lg mb-2 overflow-hidden border border-border/30">
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(to right,
+                rgba(30,20,100,0.3),
+                rgba(25,70,200,0.4),
+                rgba(0,160,200,0.5),
+                rgba(0,190,170,0.55),
+                rgba(80,210,60,0.6),
+                rgba(160,215,30,0.65),
+                rgba(210,200,20,0.7),
+                rgba(240,165,15,0.78),
+                rgba(245,110,15,0.85),
+                rgba(235,60,20,0.9),
+                rgba(180,15,20,0.95)
+              )`,
+            }}
+          />
+        </div>
+        <div className="flex justify-between text-[8px] text-muted-foreground w-48 mb-3">
+          <span>Dispersa</span>
           <span>Baixa</span>
           <span>Média</span>
           <span>Alta</span>
-          <span>Crítica</span>
+          <span>Densa</span>
         </div>
-        <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/40">
-          <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white/50" /> Online
+
+        {/* Status indicators */}
+        <div className="flex items-center gap-3 pt-2 border-t border-border/40">
+          <span className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white/40 shadow-sm shadow-emerald-500/30" />
+            Online
           </span>
-          <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white/50" /> Idle
+          <span className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white/40 shadow-sm shadow-amber-500/30" />
+            Idle
           </span>
         </div>
-        <div className="mt-1.5 pt-1.5 border-t border-border/30 text-[8px] text-muted-foreground/60">
-          Zoom: {currentZoom.toFixed(1)} · Camadas: {KDE_LAYERS.filter(l => currentZoom >= l.minZoom && currentZoom <= l.maxZoom).length}/12
+
+        {/* Zoom info */}
+        <div className="mt-2 pt-2 border-t border-border/30 text-[8px] text-muted-foreground/70 flex justify-between">
+          <span>Zoom {zoom.toFixed(1)}</span>
+          <span>{activeLayers}/15 camadas</span>
         </div>
       </div>
 
       {/* Stats */}
       {geoPoints.length > 0 && (
-        <div className="absolute top-4 left-4 z-[1000] bg-background/90 backdrop-blur-sm rounded-md px-3 py-1.5 border border-border text-xs text-muted-foreground pointer-events-none">
-          <span className="font-bold text-foreground">{geoPoints.length}</span> sessões geolocalizadas
+        <div className="absolute top-4 left-4 z-[1000] bg-background/92 backdrop-blur-md rounded-lg px-3.5 py-2 border border-border shadow-lg text-xs text-muted-foreground pointer-events-none">
+          <span className="font-bold text-foreground text-sm">{geoPoints.length}</span>
+          <span className="ml-1">sessões geolocalizadas</span>
         </div>
       )}
     </div>
   );
 }
 
-function formatTimeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return 'agora';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}min`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
-  return `${Math.floor(seconds / 86400)}d`;
+function timeAgo(d: Date): string {
+  const s = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (s < 60) return 'agora';
+  if (s < 3600) return `${Math.floor(s / 60)}min`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
 }
