@@ -65,4 +65,6 @@ export {
 export {
   setOnlineUsersTotal, setIdleUsersTotal, incrementLoginEvents,
   setVpnSessionsTotal, setMobileSessionsPct, setUniqueCountriesTotal,
+  setActiveSessionsTotal, setSessionDurationAvg, recordGeoLoginDistribution,
+  setLoginEventsTotal,
 } from './presence-metrics';
