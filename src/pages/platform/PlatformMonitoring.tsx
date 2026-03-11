@@ -91,6 +91,7 @@ export default function PlatformMonitoring() {
           <Route path="errors" element={<ErrorTrackingPanel />} />
           <Route path="performance" element={<PerformancePanel />} />
           <Route path="incidents" element={<IncidentsPanel />} />
+          <Route path="live-users" element={<LiveUsersPanel />} />
         </Routes>
       </Suspense>
     </div>
