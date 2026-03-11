@@ -42,6 +42,20 @@ export function analyzeLoginSecurity(
   alerts.push(...detectUnusualCountry(recentSessions));
   alerts.push(...detectImpossibleTravel(recentSessions));
 
+  // Emit domain events for each alert
+  for (const alert of alerts) {
+    emitSuspiciousLoginDetected({
+      userId: alert.user_id,
+      tenantId: (alert.metadata?.tenant_id as string) ?? '',
+      alertType: alert.type,
+      severity: alert.severity,
+      description: alert.description,
+      ip: alert.metadata?.ip as string | undefined,
+      country: alert.metadata?.country as string | undefined,
+      details: alert.metadata,
+    });
+  }
+
   return alerts.sort((a, b) => severityWeight(b.severity) - severityWeight(a.severity));
 }
 
