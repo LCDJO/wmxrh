@@ -287,14 +287,43 @@ async function getSessionLoginAt(sessionId: string): Promise<string | null> {
 // HEARTBEAT (last_activity + status)
 // ════════════════════════════════════
 
+function getTransferredBytes(): { uploaded: number; downloaded: number } {
+  try {
+    const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
+    let downloaded = 0;
+    let uploaded = 0;
+    for (const e of entries) {
+      downloaded += e.transferSize || 0;
+      // Estimate upload from request body sizes (encodedBodySize is response only)
+      // For requests we approximate upload as ~5% of download for typical web apps
+    }
+    // Use Navigation API for the main document
+    const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    if (nav) {
+      downloaded += nav.transferSize || 0;
+    }
+    // Rough upload estimate: POST/PUT requests contribute ~10% of total traffic
+    uploaded = Math.round(downloaded * 0.1);
+    return { uploaded, downloaded };
+  } catch {
+    return { uploaded: 0, downloaded: 0 };
+  }
+}
+
 function startHeartbeat() {
   stopHeartbeat();
   activityInterval = setInterval(async () => {
     if (!activeSessionId) return;
     try {
+      const { uploaded, downloaded } = getTransferredBytes();
       await supabase
         .from('user_sessions')
-        .update({ last_activity: new Date().toISOString(), status: 'online' } as any)
+        .update({
+          last_activity: new Date().toISOString(),
+          status: 'online',
+          bytes_uploaded: uploaded,
+          bytes_downloaded: downloaded,
+        } as any)
         .eq('id', activeSessionId);
     } catch { /* silent */ }
   }, 60_000); // every 60s
