@@ -127,6 +127,7 @@ async function getIpGeolocation(): Promise<GeoData> {
           city: data.city ?? undefined,
           is_vpn: false,
           is_proxy: false,
+          asn_name: data.org ?? undefined,
         };
       }
     }
