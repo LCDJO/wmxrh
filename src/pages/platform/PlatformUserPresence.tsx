@@ -12,6 +12,7 @@ import {
   Activity, Eye, AlertTriangle, Wifi, RefreshCw, BarChart3,
   Laptop, KeyRound, TrendingUp,
 } from 'lucide-react';
+const LiveUserMapRenderer = lazy(() => import('@/modules/observability/ui/LiveUserMapRenderer'));
 import {
   fetchActiveSessions,
   fetchRecentSessions,
