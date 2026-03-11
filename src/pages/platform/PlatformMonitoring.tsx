@@ -19,6 +19,7 @@ const ErrorTrackingPanel = lazy(() => import('@/modules/observability/ui/ErrorTr
 const PerformancePanel = lazy(() => import('@/modules/observability/ui/PerformancePanel'));
 const IncidentsPanel = lazy(() => import('@/modules/observability/ui/IncidentsPanel'));
 const LiveUsersPanel = lazy(() => import('@/modules/observability/ui/LiveUsersPanel'));
+const SecurityAlertsPanel = lazy(() => import('@/modules/observability/ui/SecurityAlertsPanel'));
 
 function PanelLoader() {
   return (
