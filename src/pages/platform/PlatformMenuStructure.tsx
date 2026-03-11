@@ -102,6 +102,8 @@ const createDefaultTree = (): MenuTreeNode[] => [
       mn('mon-err', 'Erros', '/platform/monitoring/errors'),
       mn('mon-perf', 'Performance', '/platform/monitoring/performance'),
       mn('mon-inc', 'Incidentes', '/platform/monitoring/incidents'),
+      mn('mon-live', 'Usuários Online', '/platform/monitoring/live-users'),
+      mn('mon-sec', 'Alertas Segurança', '/platform/monitoring/security-alerts'),
     ],
   }),
   mn('observability', 'Observabilidade', '/platform/observability', { icon: 'Eye' }),
