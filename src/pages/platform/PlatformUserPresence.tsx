@@ -110,46 +110,11 @@ export default function PlatformUserPresence() {
 
         {/* ── Geo Map ── */}
         <TabsContent value="map">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                Mapa de Presença
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {summary && summary.geo_clusters.length > 0 ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {summary.geo_clusters.slice(0, 12).map((cluster, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/20">
-                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10">
-                          <MapPin className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm text-foreground truncate">
-                            {cluster.city ?? 'Desconhecido'}, {cluster.country ?? '—'}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {cluster.latitude.toFixed(2)}, {cluster.longitude.toFixed(2)}
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {cluster.count} {cluster.count === 1 ? 'sessão' : 'sessões'}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground py-12">
-                  <Globe className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
-                  Sem dados de localização
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-muted-foreground">Carregando mapa…</div>}>
+            <LiveUserMapRenderer />
+          </Suspense>
         </TabsContent>
+
 
         {/* ── Login Analytics ── */}
         <TabsContent value="analytics">
