@@ -40,6 +40,7 @@ const TABS = [
 ] as const;
 
 function resolveTab(pathname: string): string {
+  if (pathname.endsWith('/security-alerts')) return 'security-alerts';
   if (pathname.endsWith('/live-users')) return 'live-users';
   if (pathname.endsWith('/modules')) return 'modules';
   if (pathname.endsWith('/errors')) return 'errors';
