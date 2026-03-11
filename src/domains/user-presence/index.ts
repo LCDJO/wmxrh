@@ -20,3 +20,16 @@ export {
 export { usePresenceRealtime } from './use-presence-realtime';
 export { analyzeLoginSecurity } from './login-security-analyzer';
 export type { SecurityAlert, AlertSeverity, AlertType } from './login-security-analyzer';
+export {
+  USER_PRESENCE_EVENTS,
+  emitUserLoggedIn,
+  emitUserSessionUpdated,
+  emitUserLoggedOut,
+  emitSuspiciousLoginDetected,
+} from './event-catalog';
+export type {
+  UserLoggedInPayload,
+  UserSessionUpdatedPayload,
+  UserLoggedOutPayload,
+  SuspiciousLoginDetectedPayload,
+} from './event-catalog';
