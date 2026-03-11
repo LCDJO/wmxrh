@@ -284,13 +284,30 @@ function stopHeartbeat() {
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
     if (activeSessionId) {
-      // Best-effort: use sendBeacon for reliable delivery
+      // Best-effort: use sendBeacon with proper headers for reliable delivery
       const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_sessions?id=eq.${activeSessionId}`;
       const body = JSON.stringify({
         status: 'offline',
         logout_at: new Date().toISOString(),
       });
-      navigator.sendBeacon?.(url); // fallback; full update via endSession() when possible
+      const blob = new Blob([body], { type: 'application/json' });
+      // sendBeacon doesn't support custom headers, so use fetch keepalive as primary
+      try {
+        fetch(url, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Prefer': 'return=minimal',
+          },
+          body,
+          keepalive: true,
+        }).catch(() => {});
+      } catch {
+        // Last resort fallback
+        navigator.sendBeacon?.(url, blob);
+      }
     }
     stopHeartbeat();
   });
