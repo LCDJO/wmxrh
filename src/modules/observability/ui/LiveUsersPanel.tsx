@@ -21,6 +21,11 @@ import {
 } from '@/domains/user-presence';
 import type { ActiveSession, PresenceSummary } from '@/domains/user-presence';
 
+function formatMB(bytes: number | null | undefined): string {
+  if (!bytes || bytes <= 0) return '0 MB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
 export default function LiveUsersPanel() {
   const [active, setActive] = useState<ActiveSession[]>([]);
   const [summary, setSummary] = useState<PresenceSummary | null>(null);
