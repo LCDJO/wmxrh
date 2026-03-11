@@ -12,25 +12,26 @@ import { ScrollText, RefreshCw, Link2, Power, AlertTriangle, Search, Shield } fr
 import { format } from 'date-fns';
 import type { Database } from '@/integrations/supabase/types';
 
-type AuditRow = Database['public']['Tables']['live_display_audit_log']['Row'];
+type LogRow = Database['public']['Tables']['display_connection_logs']['Row'];
 
 const EVENT_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
   pair_request: { label: 'Solicitação de Pareamento', color: 'text-blue-500', icon: Link2 },
   pair_confirm: { label: 'Pareamento Confirmado', color: 'text-emerald-500', icon: Link2 },
   disconnect: { label: 'Desconexão', color: 'text-amber-500', icon: Power },
   token_expired: { label: 'Token Expirado', color: 'text-muted-foreground', icon: Shield },
+  data_fetch: { label: 'Data Fetch', color: 'text-primary', icon: Shield },
   error: { label: 'Erro', color: 'text-destructive', icon: AlertTriangle },
 };
 
 export default function DisplayLogsPanel() {
-  const [logs, setLogs] = useState<AuditRow[]>([]);
+  const [logs, setLogs] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from('live_display_audit_log')
+      .from('display_connection_logs')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(500);
@@ -83,7 +84,7 @@ export default function DisplayLogsPanel() {
             ) : (
               <div className="space-y-1">
                 {filtered.map(log => {
-                  const cfg = EVENT_CONFIG[log.event_type] ?? EVENT_CONFIG.error;
+                  const cfg = EVENT_CONFIG[log.event_type] ?? { label: log.event_type, color: 'text-muted-foreground', icon: Shield };
                   const Icon = cfg.icon;
                   const meta = log.metadata as Record<string, any> | null;
                   return (
