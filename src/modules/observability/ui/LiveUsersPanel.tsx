@@ -9,8 +9,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import {
   Users, Globe, Monitor, Smartphone, MapPin, Clock,
-  RefreshCw, Building2, Shield, Eye, Laptop,
+  RefreshCw, Building2, Shield, Eye, Laptop, Map,
 } from 'lucide-react';
+import KDEWorldMap from './KDEWorldMap';
 import {
   fetchActiveSessions,
   fetchRecentSessions,
