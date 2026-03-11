@@ -11,7 +11,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Activity, Heart, Server, Bug, Cpu, Loader2, ShieldAlert, Eye, Shield } from 'lucide-react';
+import { Activity, Heart, Server, Bug, Cpu, Loader2, ShieldAlert, Eye, Shield, Tv } from 'lucide-react';
 
 const PlatformStatusPanel = lazy(() => import('@/modules/observability/ui/PlatformStatusPanel'));
 const ModuleMonitoringPanel = lazy(() => import('@/modules/observability/ui/ModuleMonitoringPanel'));
