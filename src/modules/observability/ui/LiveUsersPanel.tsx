@@ -187,6 +187,10 @@ export default function LiveUsersPanel() {
                     {(s as any).asn_name && <span className="text-[10px] text-muted-foreground/70 pl-4">{(s as any).asn_name}</span>}
                   </div>
                   <span className="text-muted-foreground flex items-center gap-1"><Monitor className="h-3 w-3" />{s.browser ?? '?'}/{s.os ?? '?'}</span>
+                  <div className="text-muted-foreground flex items-center gap-2">
+                    <span className="flex items-center gap-0.5 text-emerald-500"><ArrowUp className="h-3 w-3" />{formatMB((s as any).bytes_uploaded)}</span>
+                    <span className="flex items-center gap-0.5 text-blue-500"><ArrowDown className="h-3 w-3" />{formatMB((s as any).bytes_downloaded)}</span>
+                  </div>
                   <span className="text-muted-foreground flex items-center gap-1 ml-auto"><Clock className="h-3 w-3" />{new Date(s.last_activity).toLocaleTimeString('pt-BR')}</span>
                 </div>
               ))}
