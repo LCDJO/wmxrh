@@ -80,6 +80,7 @@ import PlatformWorkTime from '@/pages/platform/PlatformWorkTime';
 import PlatformBiometrics from '@/pages/platform/PlatformBiometrics';
 import PlatformBehaviorAI from '@/pages/platform/PlatformBehaviorAI';
 import PlatformInspectionExport from '@/pages/platform/PlatformInspectionExport';
+import PlatformUserPresence from '@/pages/platform/PlatformUserPresence';
 import PlatformLogs from '@/pages/platform/PlatformLogs';
 import DocumentSignatureIntegrations from '@/pages/platform/PlatformDocumentSignature';
 import SettingsGamification from '@/pages/platform/PlatformSettingsGamification';
