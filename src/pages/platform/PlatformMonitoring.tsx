@@ -36,6 +36,7 @@ const TABS = [
   { value: 'performance', label: 'Performance', icon: Cpu, path: 'performance' },
   { value: 'incidents', label: 'Incidentes', icon: ShieldAlert, path: 'incidents' },
   { value: 'live-users', label: 'Live Users', icon: Eye, path: 'live-users' },
+  { value: 'security-alerts', label: 'Segurança', icon: Shield, path: 'security-alerts' },
 ] as const;
 
 function resolveTab(pathname: string): string {
