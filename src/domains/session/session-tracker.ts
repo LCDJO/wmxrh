@@ -75,6 +75,7 @@ interface GeoData {
   city?: string;
   is_vpn?: boolean;
   is_proxy?: boolean;
+  asn_name?: string;
 }
 
 /** Strategy 1: Browser geolocation API */
@@ -126,6 +127,7 @@ async function getIpGeolocation(): Promise<GeoData> {
           city: data.city ?? undefined,
           is_vpn: false,
           is_proxy: false,
+          asn_name: data.org ?? undefined,
         };
       }
     }
@@ -148,6 +150,7 @@ async function getIpGeolocation(): Promise<GeoData> {
         city: data.city ?? undefined,
         is_vpn: false,
         is_proxy: false,
+        asn_name: data.org ?? undefined,
       };
     }
   } catch { /* silent */ }
@@ -190,6 +193,7 @@ export async function startSession(
       city: ipGeo.city,
       is_vpn: ipGeo.is_vpn,
       is_proxy: ipGeo.is_proxy,
+      asn_name: ipGeo.asn_name,
     };
 
     const sessionToken = crypto.randomUUID();
@@ -218,6 +222,7 @@ export async function startSession(
         is_mobile: device.is_mobile,
         is_vpn: geo.is_vpn ?? false,
         is_proxy: geo.is_proxy ?? false,
+        asn_name: geo.asn_name ?? null,
         status: 'online',
       } as any)
       .select('id')

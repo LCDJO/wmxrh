@@ -21737,6 +21737,7 @@ export type Database = {
       }
       user_sessions: {
         Row: {
+          asn_name: string | null
           browser: string | null
           browser_version: string | null
           city: string | null
@@ -21768,6 +21769,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          asn_name?: string | null
           browser?: string | null
           browser_version?: string | null
           city?: string | null
@@ -21799,6 +21801,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          asn_name?: string | null
           browser?: string | null
           browser_version?: string | null
           city?: string | null
@@ -23586,6 +23589,7 @@ export type Database = {
       sessions_within_radius: {
         Args: { center_lat: number; center_lng: number; radius_km?: number }
         Returns: {
+          asn_name: string | null
           browser: string | null
           browser_version: string | null
           city: string | null

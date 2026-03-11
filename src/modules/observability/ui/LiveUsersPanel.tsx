@@ -181,7 +181,10 @@ export default function LiveUsersPanel() {
                   <div className={`h-2 w-2 rounded-full shrink-0 ${s.status === 'online' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                   <span className="font-mono text-muted-foreground w-[70px] truncate">{s.user_id.slice(0, 8)}…</span>
                   <span className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{s.city ?? '—'}</span>
-                  <span className="text-muted-foreground flex items-center gap-1"><Globe className="h-3 w-3" />{s.ip_address ?? '—'}</span>
+                  <div className="text-muted-foreground flex flex-col">
+                    <span className="flex items-center gap-1"><Globe className="h-3 w-3" />{s.ip_address ?? '—'}</span>
+                    {(s as any).asn_name && <span className="text-[10px] text-muted-foreground/70 pl-4">{(s as any).asn_name}</span>}
+                  </div>
                   <span className="text-muted-foreground flex items-center gap-1"><Monitor className="h-3 w-3" />{s.browser ?? '?'}/{s.os ?? '?'}</span>
                   <span className="text-muted-foreground flex items-center gap-1 ml-auto"><Clock className="h-3 w-3" />{new Date(s.last_activity).toLocaleTimeString('pt-BR')}</span>
                 </div>
