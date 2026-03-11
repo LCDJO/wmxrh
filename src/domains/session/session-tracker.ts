@@ -222,6 +222,7 @@ export async function startSession(
         is_mobile: device.is_mobile,
         is_vpn: geo.is_vpn ?? false,
         is_proxy: geo.is_proxy ?? false,
+        asn_name: geo.asn_name ?? null,
         status: 'online',
       } as any)
       .select('id')
