@@ -21740,6 +21740,8 @@ export type Database = {
           asn_name: string | null
           browser: string | null
           browser_version: string | null
+          bytes_downloaded: number | null
+          bytes_uploaded: number | null
           city: string | null
           country: string | null
           created_at: string
@@ -21772,6 +21774,8 @@ export type Database = {
           asn_name?: string | null
           browser?: string | null
           browser_version?: string | null
+          bytes_downloaded?: number | null
+          bytes_uploaded?: number | null
           city?: string | null
           country?: string | null
           created_at?: string
@@ -21804,6 +21808,8 @@ export type Database = {
           asn_name?: string | null
           browser?: string | null
           browser_version?: string | null
+          bytes_downloaded?: number | null
+          bytes_uploaded?: number | null
           city?: string | null
           country?: string | null
           created_at?: string
@@ -23592,6 +23598,8 @@ export type Database = {
           asn_name: string | null
           browser: string | null
           browser_version: string | null
+          bytes_downloaded: number | null
+          bytes_uploaded: number | null
           city: string | null
           country: string | null
           created_at: string
