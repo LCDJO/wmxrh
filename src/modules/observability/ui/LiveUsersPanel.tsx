@@ -9,8 +9,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import {
   Users, Globe, Monitor, Smartphone, MapPin, Clock,
-  RefreshCw, Building2, Shield, Eye, Laptop,
+  RefreshCw, Building2, Shield, Eye, Laptop, Map,
 } from 'lucide-react';
+import KDEWorldMap from './KDEWorldMap';
 import {
   fetchActiveSessions,
   fetchRecentSessions,
@@ -74,6 +75,18 @@ export default function LiveUsersPanel() {
           <KPI icon={<Smartphone className="h-4 w-4" />} label="Mobile" value={`${summary.mobile_pct}%`} accent="text-purple-500" />
         </div>
       )}
+
+      {/* KDE World Map */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Map className="h-4 w-4 text-primary" /> Mapa de Densidade de Logins (KDE)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <KDEWorldMap sessions={active} />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Sessions by Tenant */}
