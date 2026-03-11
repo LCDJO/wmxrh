@@ -11,7 +11,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Activity, Heart, Server, Bug, Cpu, Loader2, ShieldAlert, Eye } from 'lucide-react';
+import { Activity, Heart, Server, Bug, Cpu, Loader2, ShieldAlert, Eye, Shield } from 'lucide-react';
 
 const PlatformStatusPanel = lazy(() => import('@/modules/observability/ui/PlatformStatusPanel'));
 const ModuleMonitoringPanel = lazy(() => import('@/modules/observability/ui/ModuleMonitoringPanel'));
@@ -19,6 +19,7 @@ const ErrorTrackingPanel = lazy(() => import('@/modules/observability/ui/ErrorTr
 const PerformancePanel = lazy(() => import('@/modules/observability/ui/PerformancePanel'));
 const IncidentsPanel = lazy(() => import('@/modules/observability/ui/IncidentsPanel'));
 const LiveUsersPanel = lazy(() => import('@/modules/observability/ui/LiveUsersPanel'));
+const SecurityAlertsPanel = lazy(() => import('@/modules/observability/ui/SecurityAlertsPanel'));
 
 function PanelLoader() {
   return (
@@ -35,9 +36,11 @@ const TABS = [
   { value: 'performance', label: 'Performance', icon: Cpu, path: 'performance' },
   { value: 'incidents', label: 'Incidentes', icon: ShieldAlert, path: 'incidents' },
   { value: 'live-users', label: 'Live Users', icon: Eye, path: 'live-users' },
+  { value: 'security-alerts', label: 'Segurança', icon: Shield, path: 'security-alerts' },
 ] as const;
 
 function resolveTab(pathname: string): string {
+  if (pathname.endsWith('/security-alerts')) return 'security-alerts';
   if (pathname.endsWith('/live-users')) return 'live-users';
   if (pathname.endsWith('/modules')) return 'modules';
   if (pathname.endsWith('/errors')) return 'errors';
@@ -71,7 +74,7 @@ export default function PlatformMonitoring() {
 
       {/* Tab Navigation synced with routes */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-6 max-w-3xl">
+        <TabsList className="grid w-full grid-cols-7 max-w-4xl">
           {TABS.map(tab => {
             const Icon = tab.icon;
             return (
@@ -92,6 +95,7 @@ export default function PlatformMonitoring() {
           <Route path="performance" element={<PerformancePanel />} />
           <Route path="incidents" element={<IncidentsPanel />} />
           <Route path="live-users" element={<LiveUsersPanel />} />
+          <Route path="security-alerts" element={<SecurityAlertsPanel />} />
         </Routes>
       </Suspense>
     </div>
