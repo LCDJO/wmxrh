@@ -75,6 +75,7 @@ interface GeoData {
   city?: string;
   is_vpn?: boolean;
   is_proxy?: boolean;
+  asn_name?: string;
 }
 
 /** Strategy 1: Browser geolocation API */
