@@ -80,6 +80,7 @@ import PlatformWorkTime from '@/pages/platform/PlatformWorkTime';
 import PlatformBiometrics from '@/pages/platform/PlatformBiometrics';
 import PlatformBehaviorAI from '@/pages/platform/PlatformBehaviorAI';
 import PlatformInspectionExport from '@/pages/platform/PlatformInspectionExport';
+import PlatformUserPresence from '@/pages/platform/PlatformUserPresence';
 import PlatformLogs from '@/pages/platform/PlatformLogs';
 import DocumentSignatureIntegrations from '@/pages/platform/PlatformDocumentSignature';
 import SettingsGamification from '@/pages/platform/PlatformSettingsGamification';
@@ -301,6 +302,7 @@ export const platformRoutes: RouteObject[] = [
       { path: 'worktime/biometrics', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformBiometrics /></PlatformGuard> },
       { path: 'worktime/behavior-ai', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformBehaviorAI /></PlatformGuard> },
       { path: 'worktime/inspection', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformInspectionExport /></PlatformGuard> },
+      { path: 'user-presence', element: <PlatformGuard allowedRoles={securityAdmin}><PlatformUserPresence /></PlatformGuard> },
     ],
   },
 ];

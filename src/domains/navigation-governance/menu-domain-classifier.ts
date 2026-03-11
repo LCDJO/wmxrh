@@ -71,6 +71,7 @@ const MODULE_DOMAIN_MAP: Record<string, ModuleDomain> = {
   observability: 'monitoring',
   analytics: 'monitoring',
   autonomous_ops: 'monitoring',
+  user_presence: 'monitoring',
 
   // ── Tenant HR ──
   core_hr: 'tenant_hr',
