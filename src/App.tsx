@@ -48,6 +48,7 @@ function FullScreenLoader({ label }: { label: string }) {
 const publicRoutes: RouteObject[] = [
   { path: '/tv', element: <LiveDisplayTV /> },
   { path: '/display', element: <LiveDisplayTV /> },
+  { path: '/display/presence', element: <UserPresenceTV /> },
   { path: '/live-display/pair', element: <LiveDisplayPair /> },
   { path: '/public/validate/:token', element: <PublicDocumentValidation /> },
   { path: '/status', element: <StatusPage /> },
