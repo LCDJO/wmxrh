@@ -154,7 +154,6 @@ async function getIpGeolocation(): Promise<GeoData> {
 
   return fallback;
 }
-}
 
 // ════════════════════════════════════
 // SESSION LIFECYCLE
