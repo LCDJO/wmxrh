@@ -18,3 +18,5 @@ export {
   computeLoginAnalytics,
 } from './presence-engine';
 export { usePresenceRealtime } from './use-presence-realtime';
+export { analyzeLoginSecurity } from './login-security-analyzer';
+export type { SecurityAlert, AlertSeverity, AlertType } from './login-security-analyzer';
