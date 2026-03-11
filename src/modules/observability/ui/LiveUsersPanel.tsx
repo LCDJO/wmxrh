@@ -76,6 +76,18 @@ export default function LiveUsersPanel() {
         </div>
       )}
 
+      {/* KDE World Map */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Map className="h-4 w-4 text-primary" /> Mapa de Densidade de Logins (KDE)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <KDEWorldMap sessions={active} />
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Sessions by Tenant */}
         <Card>
