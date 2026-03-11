@@ -2,7 +2,7 @@
  * KDEWorldMap — Canvas-based Kernel Density Estimation heatmap
  * rendered as a smooth Leaflet overlay on a dark world map.
  */
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { ActiveSession } from '@/domains/user-presence';
@@ -12,35 +12,65 @@ interface Props {
 }
 
 // ═══════════════════════════════════════
-// CANVAS HEATMAP LAYER
+// CANVAS HEATMAP RENDERING
 // ═══════════════════════════════════════
 
-/** Draw a smooth KDE heatmap onto a canvas using radial gradients per point. */
+let paletteCache: Uint8ClampedArray | null = null;
+
+function getPalette(): Uint8ClampedArray {
+  if (paletteCache) return paletteCache;
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 1;
+  const ctx = c.getContext('2d')!;
+  const grad = ctx.createLinearGradient(0, 0, 256, 0);
+  grad.addColorStop(0.0, 'rgba(0,0,0,0)');
+  grad.addColorStop(0.06, 'rgba(20,40,180,0.3)');
+  grad.addColorStop(0.18, 'rgba(30,100,220,0.5)');
+  grad.addColorStop(0.32, 'rgba(0,200,220,0.6)');
+  grad.addColorStop(0.48, 'rgba(50,210,80,0.68)');
+  grad.addColorStop(0.62, 'rgba(180,220,30,0.76)');
+  grad.addColorStop(0.76, 'rgba(250,180,20,0.84)');
+  grad.addColorStop(0.9, 'rgba(240,80,20,0.9)');
+  grad.addColorStop(1.0, 'rgba(220,30,30,0.95)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 256, 1);
+  paletteCache = ctx.getImageData(0, 0, 256, 1).data;
+  return paletteCache;
+}
+
 function renderHeatCanvas(
   canvas: HTMLCanvasElement,
   map: L.Map,
   points: { lat: number; lng: number }[],
-  radius = 35,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
   const size = map.getSize();
-  canvas.width = size.x;
-  canvas.height = size.y;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = size.x * dpr;
+  canvas.height = size.y * dpr;
+  canvas.style.width = size.x + 'px';
+  canvas.style.height = size.y + 'px';
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size.x, size.y);
 
   if (points.length === 0) return;
 
-  // 1) Draw grayscale intensity layer (additive blending)
+  const zoom = map.getZoom();
+  const radius = Math.max(25, 18 * Math.pow(1.5, zoom - 2));
+
+  // 1) Draw grayscale intensity (additive)
   ctx.globalCompositeOperation = 'lighter';
 
   for (const p of points) {
     const px = map.latLngToContainerPoint([p.lat, p.lng]);
     const grad = ctx.createRadialGradient(px.x, px.y, 0, px.x, px.y, radius);
-    grad.addColorStop(0, 'rgba(255,255,255,0.6)');
-    grad.addColorStop(0.4, 'rgba(255,255,255,0.25)');
-    grad.addColorStop(0.7, 'rgba(255,255,255,0.08)');
+    grad.addColorStop(0, 'rgba(255,255,255,0.65)');
+    grad.addColorStop(0.25, 'rgba(255,255,255,0.35)');
+    grad.addColorStop(0.5, 'rgba(255,255,255,0.15)');
+    grad.addColorStop(0.75, 'rgba(255,255,255,0.04)');
     grad.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
@@ -48,49 +78,26 @@ function renderHeatCanvas(
     ctx.fill();
   }
 
-  // 2) Colorize: read pixels, map grayscale intensity → heatmap color
+  // 2) Colorize pixels
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform for pixel manipulation
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imageData.data;
-  const palette = buildPalette();
+  const palette = getPalette();
 
   for (let i = 0; i < data.length; i += 4) {
-    const intensity = data[i]; // grayscale value 0-255
-    if (intensity < 3) {
-      data[i + 3] = 0; // transparent
+    const val = data[i];
+    if (val < 2) {
+      data[i + 3] = 0;
       continue;
     }
-    const idx = Math.min(255, intensity);
-    data[i] = palette[idx * 4];
-    data[i + 1] = palette[idx * 4 + 1];
-    data[i + 2] = palette[idx * 4 + 2];
-    data[i + 3] = palette[idx * 4 + 3];
+    const idx = Math.min(255, val) * 4;
+    data[i] = palette[idx];
+    data[i + 1] = palette[idx + 1];
+    data[i + 2] = palette[idx + 2];
+    data[i + 3] = palette[idx + 3];
   }
 
   ctx.putImageData(imageData, 0, 0);
-  ctx.globalCompositeOperation = 'source-over';
-}
-
-/** Build a 256-step RGBA palette: transparent → blue → cyan → green → yellow → red */
-function buildPalette(): Uint8ClampedArray {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 1;
-  const ctx = canvas.getContext('2d')!;
-  const grad = ctx.createLinearGradient(0, 0, 256, 0);
-
-  grad.addColorStop(0.0, 'rgba(0, 0, 0, 0)');
-  grad.addColorStop(0.05, 'rgba(20, 50, 180, 0.25)');
-  grad.addColorStop(0.15, 'rgba(30, 100, 220, 0.45)');
-  grad.addColorStop(0.3, 'rgba(0, 200, 220, 0.55)');
-  grad.addColorStop(0.45, 'rgba(50, 210, 80, 0.65)');
-  grad.addColorStop(0.6, 'rgba(180, 220, 30, 0.75)');
-  grad.addColorStop(0.75, 'rgba(250, 180, 20, 0.82)');
-  grad.addColorStop(0.88, 'rgba(240, 80, 20, 0.88)');
-  grad.addColorStop(1.0, 'rgba(220, 30, 30, 0.95)');
-
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 256, 1);
-  return ctx.getImageData(0, 0, 256, 1).data;
 }
 
 // ═══════════════════════════════════════
@@ -99,9 +106,10 @@ function buildPalette(): Uint8ClampedArray {
 
 export default function KDEWorldMap({ sessions }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<L.Map | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const pointMarkersRef = useRef<L.LayerGroup | null>(null);
+  const markersRef = useRef<L.LayerGroup | null>(null);
+  const geoPointsRef = useRef<{ lat: number; lng: number }[]>([]);
 
   const geoPoints = useMemo(
     () =>
@@ -111,17 +119,12 @@ export default function KDEWorldMap({ sessions }: Props) {
     [sessions],
   );
 
-  const redraw = useCallback(() => {
-    if (!mapInstance.current || !canvasRef.current) return;
-    // Scale radius by zoom for consistent visual
-    const zoom = mapInstance.current.getZoom();
-    const radius = Math.max(20, 12 * Math.pow(1.6, zoom - 2));
-    renderHeatCanvas(canvasRef.current, mapInstance.current, geoPoints, radius);
-  }, [geoPoints]);
+  // Keep ref in sync for event handlers
+  geoPointsRef.current = geoPoints;
 
-  // Init map
+  // Init map (once)
   useEffect(() => {
-    if (!containerRef.current || mapInstance.current) return;
+    if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current, {
       center: [-10, -50],
@@ -137,80 +140,83 @@ export default function KDEWorldMap({ sessions }: Props) {
       subdomains: 'abcd',
     }).addTo(map);
 
-    // Create canvas overlay
+    // Canvas overlay — below Leaflet overlays pane
     const canvas = document.createElement('canvas');
-    canvas.style.position = 'absolute';
-    canvas.style.top = '0';
-    canvas.style.left = '0';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.pointerEvents = 'none';
-    canvas.style.zIndex = '400';
-    map.getContainer().appendChild(canvas);
+    canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:250;';
+    map.getPane('overlayPane')!.appendChild(canvas);
     canvasRef.current = canvas;
+    mapRef.current = map;
 
-    mapInstance.current = map;
+    const redraw = () => {
+      if (canvasRef.current && mapRef.current) {
+        renderHeatCanvas(canvasRef.current, mapRef.current, geoPointsRef.current);
+      }
+    };
 
-    map.on('moveend zoomend resize', () => redraw());
+    map.on('moveend', redraw);
+    map.on('zoomend', redraw);
+    map.on('resize', redraw);
 
     return () => {
       map.remove();
-      mapInstance.current = null;
+      mapRef.current = null;
       canvasRef.current = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Render heatmap + point markers
+  // Update heatmap + markers when sessions change
   useEffect(() => {
-    const map = mapInstance.current;
-    if (!map) return;
+    const map = mapRef.current;
+    if (!map || !canvasRef.current) return;
 
-    // Redraw canvas heatmap
-    redraw();
+    // Redraw heatmap
+    renderHeatCanvas(canvasRef.current, map, geoPoints);
 
     // Point markers
-    if (pointMarkersRef.current) pointMarkersRef.current.clearLayers();
-    pointMarkersRef.current = L.layerGroup().addTo(map);
+    if (markersRef.current) markersRef.current.clearLayers();
+    markersRef.current = L.layerGroup().addTo(map);
 
     for (const p of geoPoints) {
-      const marker = L.circleMarker([p.lat, p.lng], {
+      L.circleMarker([p.lat, p.lng], {
         radius: 3.5,
         fillColor: '#ffffff',
         fillOpacity: 0.85,
         color: 'rgba(255,255,255,0.3)',
         weight: 1,
-      });
-      marker.bindTooltip(`${p.lat.toFixed(2)}, ${p.lng.toFixed(2)}`, { direction: 'top', className: 'text-xs' });
-      pointMarkersRef.current.addLayer(marker);
+      })
+        .bindTooltip(`${p.lat.toFixed(2)}, ${p.lng.toFixed(2)}`, { direction: 'top' })
+        .addTo(markersRef.current!);
     }
 
-    // Fit bounds
     if (geoPoints.length > 0) {
       const bounds = L.latLngBounds(geoPoints.map(p => [p.lat, p.lng] as L.LatLngTuple));
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6 });
     }
-  }, [geoPoints, redraw]);
+  }, [geoPoints]);
 
   return (
     <div className="relative">
       <div ref={containerRef} className="w-full h-[450px] rounded-lg border border-border overflow-hidden" />
 
       {geoPoints.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/60 rounded-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/60 rounded-lg pointer-events-none">
           <p className="text-sm text-muted-foreground">Sem dados geográficos disponíveis</p>
         </div>
       )}
 
-      {/* Legend */}
-      <div className="absolute bottom-3 right-3 bg-background/85 backdrop-blur-sm rounded-lg px-3 py-2.5 border border-border shadow-lg">
-        <div className="text-[10px] font-semibold text-foreground mb-2 tracking-wide uppercase">Densidade</div>
+      {/* Legend — outside map container, positioned over it */}
+      <div className="absolute bottom-4 right-4 z-[500] bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2.5 border border-border shadow-lg pointer-events-auto">
+        <div className="text-[10px] font-semibold text-foreground mb-2 tracking-wide uppercase">
+          Densidade de Sessões
+        </div>
         <div
-          className="h-2.5 w-32 rounded-full mb-1.5"
+          className="h-3 w-36 rounded-full mb-1.5 border border-border/50"
           style={{
-            background: 'linear-gradient(to right, rgba(20,50,180,0.5), rgba(0,200,220,0.6), rgba(50,210,80,0.7), rgba(250,180,20,0.8), rgba(220,30,30,0.95))',
+            background:
+              'linear-gradient(to right, rgba(20,40,180,0.6), rgba(0,200,220,0.7), rgba(50,210,80,0.75), rgba(250,180,20,0.85), rgba(220,30,30,0.95))',
           }}
         />
-        <div className="flex justify-between text-[9px] text-muted-foreground w-32">
+        <div className="flex justify-between text-[9px] text-muted-foreground w-36">
           <span>Baixa</span>
           <span>Média</span>
           <span>Alta</span>
@@ -219,8 +225,8 @@ export default function KDEWorldMap({ sessions }: Props) {
 
       {/* Stats badge */}
       {geoPoints.length > 0 && (
-        <div className="absolute top-3 left-3 bg-background/85 backdrop-blur-sm rounded-md px-2.5 py-1.5 border border-border text-[10px] text-muted-foreground">
-          <span className="font-semibold text-foreground">{geoPoints.length}</span> sessões geolocalizadas
+        <div className="absolute top-4 left-4 z-[500] bg-background/90 backdrop-blur-sm rounded-md px-3 py-1.5 border border-border text-xs text-muted-foreground pointer-events-none">
+          <span className="font-bold text-foreground">{geoPoints.length}</span> sessões geolocalizadas
         </div>
       )}
     </div>
