@@ -98,7 +98,7 @@ function getBrowserGeolocation(): Promise<GeoData | null> {
   });
 }
 
-/** Strategy 2: IP-based geolocation fallback (free API) */
+/** Strategy 2: IP-based geolocation fallback (HTTPS APIs) */
 async function getIpGeolocation(): Promise<GeoData> {
   const fallback: GeoData = {
     latitude: null,
@@ -109,28 +109,51 @@ async function getIpGeolocation(): Promise<GeoData> {
     city: undefined,
   };
 
+  // Try ipapi.co first (HTTPS, free 1k/day)
   try {
-    // Using ip-api.com (free, no key needed, 45 req/min)
-    const res = await fetch('http://ip-api.com/json/?fields=status,country,regionName,city,lat,lon,proxy,hosting,query', {
+    const res = await fetch('https://ipapi.co/json/', {
       signal: AbortSignal.timeout(5000),
     });
-    if (!res.ok) return fallback;
-    const data = await res.json();
-    if (data.status !== 'success') return fallback;
+    if (res.ok) {
+      const data = await res.json();
+      if (data.ip) {
+        return {
+          latitude: data.latitude ?? null,
+          longitude: data.longitude ?? null,
+          ip_address: data.ip,
+          country: data.country_name ?? undefined,
+          state: data.region ?? undefined,
+          city: data.city ?? undefined,
+          is_vpn: false,
+          is_proxy: false,
+        };
+      }
+    }
+  } catch { /* try next */ }
 
-    return {
-      latitude: data.lat ?? null,
-      longitude: data.lon ?? null,
-      ip_address: data.query ?? undefined,
-      country: data.country ?? undefined,
-      state: data.regionName ?? undefined,
-      city: data.city ?? undefined,
-      is_vpn: data.proxy ?? false,
-      is_proxy: data.hosting ?? false,
-    };
-  } catch {
-    return fallback;
-  }
+  // Fallback: ipinfo.io (HTTPS, free 50k/month)
+  try {
+    const res = await fetch('https://ipinfo.io/json', {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const [lat, lng] = (data.loc || ',').split(',').map(Number);
+      return {
+        latitude: isNaN(lat) ? null : lat,
+        longitude: isNaN(lng) ? null : lng,
+        ip_address: data.ip ?? undefined,
+        country: data.country ?? undefined,
+        state: data.region ?? undefined,
+        city: data.city ?? undefined,
+        is_vpn: false,
+        is_proxy: false,
+      };
+    }
+  } catch { /* silent */ }
+
+  return fallback;
+}
 }
 
 // ════════════════════════════════════
