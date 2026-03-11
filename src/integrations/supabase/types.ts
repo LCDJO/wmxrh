@@ -24334,7 +24334,12 @@ export type Database = {
         | "clt_aprendiz"
         | "estagio"
         | "autonomo"
-      display_board_tipo: "fleet" | "sst" | "compliance" | "executivo"
+      display_board_tipo:
+        | "fleet"
+        | "sst"
+        | "compliance"
+        | "executivo"
+        | "user_presence"
       display_session_status: "pending" | "active" | "expired"
       display_status: "active" | "paused" | "disconnected" | "offline"
       employee_dependent_type:
@@ -24778,7 +24783,13 @@ export const Constants = {
         "estagio",
         "autonomo",
       ],
-      display_board_tipo: ["fleet", "sst", "compliance", "executivo"],
+      display_board_tipo: [
+        "fleet",
+        "sst",
+        "compliance",
+        "executivo",
+        "user_presence",
+      ],
       display_session_status: ["pending", "active", "expired"],
       display_status: ["active", "paused", "disconnected", "offline"],
       employee_dependent_type: [
