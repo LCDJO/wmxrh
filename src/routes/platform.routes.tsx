@@ -33,6 +33,7 @@ import PlatformGovernanceAI from '@/pages/platform/PlatformGovernanceAI';
 import PlatformGovernanceDashboard from '@/pages/platform/PlatformGovernanceDashboard';
 import PlatformObservability from '@/pages/platform/PlatformObservability';
 import PlatformMonitoring from '@/pages/platform/PlatformMonitoring';
+import PlatformLiveDisplays from '@/pages/platform/PlatformLiveDisplays';
 import PlatformControlPlane from '@/pages/platform/PlatformControlPlane';
 import PlatformTenantBranding from '@/pages/platform/PlatformTenantBranding';
 import PlatformDRTests from '@/pages/platform/PlatformDRTests';
@@ -274,6 +275,7 @@ export const platformRoutes: RouteObject[] = [
       { path: 'automation', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformAutomation /></PlatformGuard> },
       { path: 'integration-automation/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformIntegrationAutomation /></PlatformGuard> },
       { path: 'observability', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformObservability /></PlatformGuard> },
+      { path: 'monitoring/live-displays/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformLiveDisplays /></PlatformGuard> },
       { path: 'monitoring/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformMonitoring /></PlatformGuard> },
       { path: 'control-plane', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformControlPlane /></PlatformGuard> },
       { path: 'control-plane/dr-tests', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformDRTests /></PlatformGuard> },
