@@ -44,6 +44,7 @@ import {
   BookOpen,
   FileSignature,
   FileText,
+  Map,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
