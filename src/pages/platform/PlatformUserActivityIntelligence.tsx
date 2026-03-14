@@ -3,22 +3,27 @@
  *
  * Route: /platform/monitoring/user-activity
  *
- * Provides:
+ * Features:
  *  - Real-time session overview (all tenants)
- *  - World map with login locations
- *  - Security alerts (VPN, concurrent logins, anomalies)
+ *  - Interactive Leaflet map with session dots
+ *  - Heatmap analytics (country, city, tenant, hour)
+ *  - Risk scoring and threat detection
+ *  - Security alerts with resolve/block/logout actions
  *  - Device & browser analytics
+ *  - Enhanced session table with filters and actions
  */
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Activity, Globe, Shield, BarChart3, RefreshCw, Loader2 } from 'lucide-react';
+import { Activity, Globe, Shield, BarChart3, RefreshCw, Loader2, Map, AlertTriangle } from 'lucide-react';
 import { useActiveSessions } from '@/modules/user-activity/hooks/useActiveSessions';
 import { SessionStatsCards } from '@/modules/user-activity/ui/SessionStatsCards';
-import { ActiveSessionsPanel } from '@/modules/user-activity/ui/ActiveSessionsPanel';
-import { SessionWorldMap } from '@/modules/user-activity/ui/SessionWorldMap';
+import { SessionLeafletMap } from '@/modules/user-activity/ui/SessionLeafletMap';
+import { LoginHeatmapPanel } from '@/modules/user-activity/ui/LoginHeatmapPanel';
 import { SecurityAlertsPanel } from '@/modules/user-activity/ui/SecurityAlertsPanel';
+import { AlertManagementPanel } from '@/modules/user-activity/ui/AlertManagementPanel';
 import { DeviceAnalyticsPanel } from '@/modules/user-activity/ui/DeviceAnalyticsPanel';
+import { EnhancedSessionsPanel } from '@/modules/user-activity/ui/EnhancedSessionsPanel';
 
 export default function PlatformUserActivityIntelligence() {
   const { sessions, stats, loading, refresh } = useActiveSessions();
@@ -42,7 +47,7 @@ export default function PlatformUserActivityIntelligence() {
             User Activity Intelligence
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Monitoramento global de sessões e comportamento de usuários em todos os tenants
+            Monitoramento global de sessões, geolocalização e comportamento suspeito — todos os tenants
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={refresh} className="gap-1.5">
@@ -55,35 +60,55 @@ export default function PlatformUserActivityIntelligence() {
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 max-w-xl">
-          <TabsTrigger value="overview" className="text-xs gap-1.5">
-            <Globe className="h-3.5 w-3.5" /> Visão Geral
+        <TabsList className="grid w-full grid-cols-6 max-w-3xl">
+          <TabsTrigger value="overview" className="text-xs gap-1">
+            <Globe className="h-3.5 w-3.5" /> Overview
           </TabsTrigger>
-          <TabsTrigger value="sessions" className="text-xs gap-1.5">
+          <TabsTrigger value="map" className="text-xs gap-1">
+            <Map className="h-3.5 w-3.5" /> Mapa
+          </TabsTrigger>
+          <TabsTrigger value="sessions" className="text-xs gap-1">
             <Activity className="h-3.5 w-3.5" /> Sessões
           </TabsTrigger>
-          <TabsTrigger value="security" className="text-xs gap-1.5">
-            <Shield className="h-3.5 w-3.5" /> Segurança
+          <TabsTrigger value="heatmap" className="text-xs gap-1">
+            <BarChart3 className="h-3.5 w-3.5" /> Heatmap
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="text-xs gap-1.5">
-            <BarChart3 className="h-3.5 w-3.5" /> Analytics
+          <TabsTrigger value="alerts" className="text-xs gap-1">
+            <AlertTriangle className="h-3.5 w-3.5" /> Alertas
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="text-xs gap-1">
+            <Shield className="h-3.5 w-3.5" /> Analytics
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <SessionWorldMap sessions={sessions} />
+          <SessionLeafletMap sessions={sessions} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <ActiveSessionsPanel sessions={sessions.filter(s => s.status === 'online' || s.status === 'idle')} />
+            <EnhancedSessionsPanel
+              sessions={sessions.filter(s => s.status === 'online' || s.status === 'idle')}
+              onRefresh={refresh}
+            />
             <SecurityAlertsPanel sessions={sessions} />
           </div>
         </TabsContent>
 
-        <TabsContent value="sessions">
-          <ActiveSessionsPanel sessions={sessions} />
+        <TabsContent value="map">
+          <SessionLeafletMap sessions={sessions} />
         </TabsContent>
 
-        <TabsContent value="security">
-          <SecurityAlertsPanel sessions={sessions} />
+        <TabsContent value="sessions">
+          <EnhancedSessionsPanel sessions={sessions} onRefresh={refresh} />
+        </TabsContent>
+
+        <TabsContent value="heatmap">
+          <LoginHeatmapPanel sessions={sessions} />
+        </TabsContent>
+
+        <TabsContent value="alerts">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <AlertManagementPanel />
+            <SecurityAlertsPanel sessions={sessions} />
+          </div>
         </TabsContent>
 
         <TabsContent value="analytics">
