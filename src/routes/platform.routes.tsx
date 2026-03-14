@@ -245,6 +245,18 @@ export const platformRoutes: RouteObject[] = [
             { path: 'documentation', element: <DocumentationManager /> },
           ],
         },
+        {
+          path: 'atlas',
+          element: <PlatformGuard allowedRoles={architectureAdmin}><SystemAtlasLayout /></PlatformGuard>,
+          children: [
+            { index: true, element: <Navigate to="/platform/structure/atlas/modules" replace /> },
+            { path: 'modules', element: <AtlasModuleView /> },
+            { path: 'database', element: <AtlasDatabaseExplorer /> },
+            { path: 'relations', element: <AtlasRelationsGraph /> },
+            { path: 'impact', element: <AtlasImpactAnalysis /> },
+            { path: 'search', element: <AtlasSearch /> },
+          ],
+        },
       ]),
 
       // ── Settings ── (shared opsAdmin guard)
