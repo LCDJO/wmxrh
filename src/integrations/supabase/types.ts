@@ -18927,6 +18927,87 @@ export type Database = {
           },
         ]
       }
+      security_alerts: {
+        Row: {
+          alert_type: string
+          auto_action_taken: string | null
+          created_at: string
+          description: string | null
+          id: string
+          ip_address: string | null
+          location: string | null
+          metadata: Json | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          risk_level: string
+          risk_score: number
+          session_id: string | null
+          status: string
+          tenant_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          auto_action_taken?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          ip_address?: string | null
+          location?: string | null
+          metadata?: Json | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          risk_level?: string
+          risk_score?: number
+          session_id?: string | null
+          status?: string
+          tenant_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          auto_action_taken?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          ip_address?: string | null
+          location?: string | null
+          metadata?: Json | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          risk_level?: string
+          risk_score?: number
+          session_id?: string | null
+          status?: string
+          tenant_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_alerts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "user_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_logs: {
         Row: {
           action: string
@@ -18976,6 +19057,57 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "security_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_risk_analysis: {
+        Row: {
+          analysis_timestamp: string
+          created_at: string
+          id: string
+          reasons: Json
+          risk_level: string
+          risk_score: number
+          session_id: string | null
+          tenant_id: string | null
+          user_id: string
+        }
+        Insert: {
+          analysis_timestamp?: string
+          created_at?: string
+          id?: string
+          reasons?: Json
+          risk_level?: string
+          risk_score?: number
+          session_id?: string | null
+          tenant_id?: string | null
+          user_id: string
+        }
+        Update: {
+          analysis_timestamp?: string
+          created_at?: string
+          id?: string
+          reasons?: Json
+          risk_level?: string
+          risk_score?: number
+          session_id?: string | null
+          tenant_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_risk_analysis_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "user_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_risk_analysis_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -21742,6 +21874,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_devices: {
+        Row: {
+          browser: string | null
+          browser_version: string | null
+          countries: string[] | null
+          created_at: string
+          device_fingerprint: string
+          device_name: string | null
+          device_type: string | null
+          first_seen: string
+          id: string
+          ip_addresses: string[] | null
+          last_seen: string
+          login_count: number
+          metadata: Json | null
+          os: string | null
+          trusted: boolean
+          trusted_at: string | null
+          trusted_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          browser?: string | null
+          browser_version?: string | null
+          countries?: string[] | null
+          created_at?: string
+          device_fingerprint: string
+          device_name?: string | null
+          device_type?: string | null
+          first_seen?: string
+          id?: string
+          ip_addresses?: string[] | null
+          last_seen?: string
+          login_count?: number
+          metadata?: Json | null
+          os?: string | null
+          trusted?: boolean
+          trusted_at?: string | null
+          trusted_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          browser?: string | null
+          browser_version?: string | null
+          countries?: string[] | null
+          created_at?: string
+          device_fingerprint?: string
+          device_name?: string | null
+          device_type?: string | null
+          first_seen?: string
+          id?: string
+          ip_addresses?: string[] | null
+          last_seen?: string
+          login_count?: number
+          metadata?: Json | null
+          os?: string | null
+          trusted?: boolean
+          trusted_at?: string | null
+          trusted_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
