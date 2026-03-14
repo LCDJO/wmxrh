@@ -14,6 +14,21 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/contexts/AuthContext';
+import { remoteLogout, blockSession } from '../engine/session-events';
+import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  Monitor, Smartphone, Tablet, Globe, Search, Clock, LogOut, Ban, MoreHorizontal,
+} from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { remoteLogout, blockSession } from '../engine/session-events';
 import { toast } from 'sonner';
 import type { SessionRecord } from '../hooks/useActiveSessions';
