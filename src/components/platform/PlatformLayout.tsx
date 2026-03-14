@@ -44,6 +44,7 @@ import {
   BookOpen,
   FileSignature,
   FileText,
+  Map,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -361,6 +362,19 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/structure/architecture/dependency-graph', label: 'Dependency Graph' },
           { to: '/platform/structure/architecture/health-monitor', label: 'Health Monitor' },
           { to: '/platform/structure/architecture/documentation', label: 'Documentação' },
+        ],
+      },
+      {
+        to: '/platform/structure/atlas',
+        label: 'System Atlas',
+        icon: Map,
+        requiredPermission: 'security.manage',
+        children: [
+          { to: '/platform/structure/atlas/modules', label: 'Módulos' },
+          { to: '/platform/structure/atlas/database', label: 'Banco de Dados' },
+          { to: '/platform/structure/atlas/relations', label: 'Relações' },
+          { to: '/platform/structure/atlas/impact', label: 'Impacto' },
+          { to: '/platform/structure/atlas/search', label: 'Pesquisa' },
         ],
       },
       { to: '/platform/structure/events', label: 'Eventos', icon: Zap, requiredPermission: 'security.manage' },
