@@ -45,7 +45,7 @@ export async function blockSession(
   blockedBy: string,
   reason: string
 ): Promise<boolean> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('user_sessions')
     .update({
       status: 'offline',
@@ -54,12 +54,21 @@ export async function blockSession(
       blocked_reason: reason,
       logout_at: new Date().toISOString(),
     } as any)
-    .eq('id', sessionId);
+    .eq('id', sessionId)
+    .select('id');
 
-  if (!error) {
-    await emitSessionEvent('session_blocked', { session_id: sessionId, reason }, blockedBy);
+  if (error) {
+    console.error('[SessionEvent] blockSession failed:', error);
+    return false;
   }
-  return !error;
+
+  if (!data || data.length === 0) {
+    console.error('[SessionEvent] blockSession: no rows updated — likely RLS denied');
+    return false;
+  }
+
+  await emitSessionEvent('session_blocked', { session_id: sessionId, reason }, blockedBy);
+  return true;
 }
 
 /**
@@ -69,16 +78,25 @@ export async function remoteLogout(
   sessionId: string,
   performedBy: string
 ): Promise<boolean> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('user_sessions')
     .update({
       status: 'offline',
       logout_at: new Date().toISOString(),
     } as any)
-    .eq('id', sessionId);
+    .eq('id', sessionId)
+    .select('id');
 
-  if (!error) {
-    await emitSessionEvent('remote_logout', { session_id: sessionId, performed_by: performedBy }, performedBy);
+  if (error) {
+    console.error('[SessionEvent] remoteLogout failed:', error);
+    return false;
   }
-  return !error;
+
+  if (!data || data.length === 0) {
+    console.error('[SessionEvent] remoteLogout: no rows updated — likely RLS denied');
+    return false;
+  }
+
+  await emitSessionEvent('remote_logout', { session_id: sessionId, performed_by: performedBy }, performedBy);
+  return true;
 }
