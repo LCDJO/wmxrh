@@ -6,29 +6,12 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
   Monitor, Smartphone, Tablet, Globe, Search, Clock, LogOut, Ban, MoreHorizontal,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { remoteLogout, blockSession } from '../engine/session-events';
-import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
-  Monitor, Smartphone, Tablet, Globe, Search, Clock, LogOut, Ban, MoreHorizontal,
-} from 'lucide-react';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { remoteLogout, blockSession } from '../engine/session-events';
 import { toast } from 'sonner';
 import type { SessionRecord } from '../hooks/useActiveSessions';
@@ -52,6 +35,7 @@ interface Props {
 }
 
 export function ActiveSessionsPanel({ sessions, onRefresh }: Props) {
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -75,7 +59,7 @@ export function ActiveSessionsPanel({ sessions, onRefresh }: Props) {
   const handleLogout = async (sessionId: string) => {
     setLoadingId(sessionId);
     try {
-      await remoteLogout(sessionId);
+      await remoteLogout(sessionId, user?.id ?? 'admin');
       toast.success('Sessão encerrada com sucesso');
       onRefresh?.();
     } catch {
@@ -88,7 +72,7 @@ export function ActiveSessionsPanel({ sessions, onRefresh }: Props) {
   const handleBlock = async (sessionId: string) => {
     setLoadingId(sessionId);
     try {
-      await blockSession(sessionId, 'Bloqueio manual via painel');
+      await blockSession(sessionId, user?.id ?? 'admin', 'Bloqueio manual via painel');
       toast.success('Sessão bloqueada com sucesso');
       onRefresh?.();
     } catch {
@@ -140,11 +124,8 @@ export function ActiveSessionsPanel({ sessions, onRefresh }: Props) {
               const isActive = s.status === 'online' || s.status === 'idle';
               return (
                 <div key={s.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/20 transition-colors">
-                  {/* Status dot */}
                   <span className={`h-2 w-2 rounded-full shrink-0 ${statusColors[s.status] ?? statusColors.offline}`} />
-                  {/* Device */}
                   <DevIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 text-xs">
                       <span className="font-medium text-foreground truncate">
@@ -162,7 +143,6 @@ export function ActiveSessionsPanel({ sessions, onRefresh }: Props) {
                       {s.asn_name && <><span>•</span><span className="truncate max-w-[100px]">{s.asn_name}</span></>}
                     </div>
                   </div>
-                  {/* Location */}
                   <div className="text-right shrink-0">
                     <div className="text-[10px] text-muted-foreground">
                       {[s.city, s.state, s.country].filter(Boolean).join(', ') || '—'}
@@ -172,7 +152,6 @@ export function ActiveSessionsPanel({ sessions, onRefresh }: Props) {
                       {elapsed < 1 ? 'agora' : `${elapsed}m atrás`}
                     </div>
                   </div>
-                  {/* Flags */}
                   <div className="flex gap-1 shrink-0">
                     {s.is_vpn && <Badge variant="destructive" className="text-[8px] h-4 px-1">VPN</Badge>}
                     {s.is_proxy && <Badge variant="outline" className="text-[8px] h-4 px-1">Proxy</Badge>}
@@ -180,38 +159,31 @@ export function ActiveSessionsPanel({ sessions, onRefresh }: Props) {
                   </div>
                   {/* Actions */}
                   <div className="shrink-0">
-                    <TooltipProvider delayDuration={200}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            disabled={loadingId === s.id}
-                          >
-                            <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44">
-                          <DropdownMenuItem
-                            onClick={() => handleLogout(s.id)}
-                            disabled={!isActive || loadingId === s.id}
-                            className="text-xs gap-2"
-                          >
-                            <LogOut className="h-3.5 w-3.5" />
-                            Encerrar sessão
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleBlock(s.id)}
-                            disabled={!isActive || loadingId === s.id}
-                            className="text-xs gap-2 text-destructive focus:text-destructive"
-                          >
-                            <Ban className="h-3.5 w-3.5" />
-                            Bloquear sessão
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TooltipProvider>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" disabled={loadingId === s.id}>
+                          <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem
+                          onClick={() => handleLogout(s.id)}
+                          disabled={!isActive || loadingId === s.id}
+                          className="text-xs gap-2"
+                        >
+                          <LogOut className="h-3.5 w-3.5" />
+                          Encerrar sessão
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleBlock(s.id)}
+                          disabled={!isActive || loadingId === s.id}
+                          className="text-xs gap-2 text-destructive focus:text-destructive"
+                        >
+                          <Ban className="h-3.5 w-3.5" />
+                          Bloquear sessão
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               );
