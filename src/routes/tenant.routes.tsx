@@ -77,6 +77,7 @@ import EmployeeLiveDashboard from '@/pages/EmployeeLiveDashboard';
 
 import SsoSettings from '@/pages/SsoSettings';
 import ScimSettings from '@/pages/ScimSettings';
+import MySessionsPage from '@/pages/tenant/MySessionsPage';
 
 const TenantOnboarding = lazy(() => import('@/pages/TenantOnboarding'));
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
