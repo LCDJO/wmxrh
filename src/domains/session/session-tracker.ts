@@ -179,7 +179,7 @@ export async function startSession(
     try {
       await supabase.rpc('enforce_single_session', {
         p_user_id: userId,
-        p_tenant_id: tenantId ?? null,
+        p_tenant_id: tenantId ?? undefined,
       });
       logger.info('Previous sessions terminated for single-session enforcement');
     } catch (e: any) {

@@ -54,7 +54,7 @@ export default function MySessionsPage() {
   const currentSessionId = getActiveSessionId();
 
   // Fetch active sessions for current user
-  useState(() => {
+  useEffect(() => {
     if (!user?.id) return;
     (async () => {
       const { data } = await supabase
@@ -66,7 +66,7 @@ export default function MySessionsPage() {
       setActiveSessions((data ?? []) as ActiveSession[]);
       setLoadingActive(false);
     })();
-  });
+  }, [user?.id]);
 
   const handleTerminate = async (sessionId: string) => {
     setTerminatingId(sessionId);
