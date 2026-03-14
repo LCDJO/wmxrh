@@ -13,8 +13,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { calculateRiskScore } from '@/modules/user-activity/engine/risk-scoring';
-
-// ════════════════════════════════════
+import { analyzeSession } from '@/modules/security-intelligence/engine/security-intelligence-engine';
 // DEVICE / BROWSER DETECTION
 // ════════════════════════════════════
 
@@ -290,6 +289,13 @@ export async function startSession(
 
     startHeartbeat();
     setupVisibilityTracking();
+
+    // Run full security intelligence analysis (async, non-blocking)
+    if (activeSessionId) {
+      analyzeSession(activeSessionId).catch(err => {
+        logger.error('Security analysis error', { error: err?.message });
+      });
+    }
 
     return activeSessionId;
   } catch (err: any) {
