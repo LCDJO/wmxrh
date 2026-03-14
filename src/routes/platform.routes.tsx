@@ -101,6 +101,12 @@ import ModuleHealthMonitor from '@/pages/platform/architecture/ModuleHealthMonit
 import DocumentationManager from '@/pages/platform/architecture/DocumentationManager';
 import ArchitectureDashboard from '@/pages/platform/architecture/ArchitectureDashboard';
 import ArchitectureRiskDashboard from '@/pages/platform/architecture/ArchitectureRiskDashboard';
+import SystemAtlasLayout from '@/pages/platform/atlas/SystemAtlasLayout';
+import AtlasModuleView from '@/pages/platform/atlas/AtlasModuleView';
+import AtlasDatabaseExplorer from '@/pages/platform/atlas/AtlasDatabaseExplorer';
+import AtlasRelationsGraph from '@/pages/platform/atlas/AtlasRelationsGraph';
+import AtlasImpactAnalysis from '@/pages/platform/atlas/AtlasImpactAnalysis';
+import AtlasSearch from '@/pages/platform/atlas/AtlasSearch';
 
 const IncidentManagementDashboard = lazy(() => import('@/modules/incident-management/ui/IncidentManagementDashboard'));
 const GovernancePolicies = lazy(() => import('@/pages/platform/governance/GovernancePolicies'));

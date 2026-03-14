@@ -149,9 +149,9 @@ export default function AtlasDatabaseExplorer() {
                         )}
                       >
                         <div className="col-span-1 flex gap-1">
-                          {isPk && <Key className="h-3 w-3 text-amber-400" title="Primary Key" />}
-                          {fkRef && <Link2 className="h-3 w-3 text-blue-400" title="Foreign Key" />}
-                          {isIndexed && !isPk && <Hash className="h-3 w-3 text-muted-foreground" title="Index" />}
+                          {isPk && <span title="Primary Key"><Key className="h-3 w-3 text-amber-400" /></span>}
+                          {fkRef && <span title="Foreign Key"><Link2 className="h-3 w-3 text-blue-400" /></span>}
+                          {isIndexed && !isPk && <span title="Index"><Hash className="h-3 w-3 text-muted-foreground" /></span>}
                         </div>
                         <div className="col-span-3 font-mono font-medium text-foreground truncate">{col.column_name}</div>
                         <div className={cn("col-span-2 font-mono", typeColor(col.udt_name))}>{col.udt_name}</div>
