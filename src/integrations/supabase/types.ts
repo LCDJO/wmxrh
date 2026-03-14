@@ -19064,6 +19064,107 @@ export type Database = {
           },
         ]
       }
+      session_history: {
+        Row: {
+          asn_name: string | null
+          browser: string | null
+          browser_version: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device_fingerprint: string | null
+          device_type: string | null
+          duration_seconds: number | null
+          id: string
+          ip_address: string | null
+          is_mobile: boolean | null
+          is_proxy: boolean | null
+          is_vpn: boolean | null
+          latitude: number | null
+          login_at: string
+          login_method: string | null
+          logout_at: string
+          logout_reason: string
+          longitude: number | null
+          os: string | null
+          risk_factors: Json | null
+          risk_score: number | null
+          session_id: string
+          state: string | null
+          tenant_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          asn_name?: string | null
+          browser?: string | null
+          browser_version?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_fingerprint?: string | null
+          device_type?: string | null
+          duration_seconds?: number | null
+          id?: string
+          ip_address?: string | null
+          is_mobile?: boolean | null
+          is_proxy?: boolean | null
+          is_vpn?: boolean | null
+          latitude?: number | null
+          login_at: string
+          login_method?: string | null
+          logout_at: string
+          logout_reason?: string
+          longitude?: number | null
+          os?: string | null
+          risk_factors?: Json | null
+          risk_score?: number | null
+          session_id: string
+          state?: string | null
+          tenant_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          asn_name?: string | null
+          browser?: string | null
+          browser_version?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_fingerprint?: string | null
+          device_type?: string | null
+          duration_seconds?: number | null
+          id?: string
+          ip_address?: string | null
+          is_mobile?: boolean | null
+          is_proxy?: boolean | null
+          is_vpn?: boolean | null
+          latitude?: number | null
+          login_at?: string
+          login_method?: string | null
+          logout_at?: string
+          logout_reason?: string
+          longitude?: number | null
+          os?: string | null
+          risk_factors?: Json | null
+          risk_score?: number | null
+          session_id?: string
+          state?: string | null
+          tenant_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_risk_analysis: {
         Row: {
           analysis_timestamp: string
@@ -22052,6 +22153,7 @@ export type Database = {
           login_at: string
           login_method: string | null
           logout_at: string | null
+          logout_reason: string | null
           longitude: number | null
           os: string | null
           risk_factors: Json | null
@@ -22093,6 +22195,7 @@ export type Database = {
           login_at?: string
           login_method?: string | null
           logout_at?: string | null
+          logout_reason?: string | null
           longitude?: number | null
           os?: string | null
           risk_factors?: Json | null
@@ -22134,6 +22237,7 @@ export type Database = {
           login_at?: string
           login_method?: string | null
           logout_at?: string | null
+          logout_reason?: string | null
           longitude?: number | null
           os?: string | null
           risk_factors?: Json | null
@@ -23358,6 +23462,10 @@ export type Database = {
             }
             Returns: string
           }
+      admin_logout_session: {
+        Args: { p_performed_by: string; p_session_id: string }
+        Returns: boolean
+      }
       anonymize_archived_profile: {
         Args: {
           p_anonymized_by: string
@@ -23365,6 +23473,10 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: boolean
+      }
+      archive_session: {
+        Args: { p_logout_reason?: string; p_session_id: string }
+        Returns: undefined
       }
       calculate_payroll_simulation: {
         Args: {
@@ -23432,6 +23544,7 @@ export type Database = {
       }
       cleanup_expired_display_events: { Args: never; Returns: number }
       cleanup_expired_events: { Args: never; Returns: number }
+      cleanup_idle_sessions: { Args: never; Returns: undefined }
       cleanup_old_display_logs: { Args: never; Returns: undefined }
       compute_risk_heatmap: {
         Args: {
@@ -23478,6 +23591,10 @@ export type Database = {
         | { Args: { schema_name: string; table_name: string }; Returns: string }
         | { Args: { table_name: string }; Returns: string }
       enablelongtransactions: { Args: never; Returns: string }
+      enforce_single_session: {
+        Args: { p_tenant_id?: string; p_user_id: string }
+        Returns: undefined
+      }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       expire_inactive_display_sessions: { Args: never; Returns: number }
       expire_stale_sessions: { Args: never; Returns: number }
@@ -23931,6 +24048,7 @@ export type Database = {
           login_at: string
           login_method: string | null
           logout_at: string | null
+          logout_reason: string | null
           longitude: number | null
           os: string | null
           risk_factors: Json | null
