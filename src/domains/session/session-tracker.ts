@@ -339,7 +339,7 @@ export async function endSession(): Promise<void> {
           logout_at: new Date().toISOString(),
           logout_reason: 'user_logout',
         } as any)
-        .eq('id', activeSessionId);
+        .eq('id', activeSessionId!);
       activeSessionId = null;
     } catch (e: any) {
       logger.error('Session end fallback error', { error: e.message });
