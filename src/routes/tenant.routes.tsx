@@ -173,6 +173,7 @@ export const tenantRoutes: RouteObject[] = [
       
       { path: '/settings/sso', element: pr('iam_users', <SsoSettings />) },
       { path: '/settings/scim', element: pr('iam_users', <ScimSettings />) },
+      { path: '/settings/sessions', element: <MySessionsPage /> },
       // ── Referral ──
       { path: '/referral', element: pr('referral', <ReferralPage />) },
       // ── Support ──
