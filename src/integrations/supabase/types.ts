@@ -18983,6 +18983,84 @@ export type Database = {
           },
         ]
       }
+      session_security_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          description: string | null
+          id: string
+          ip_address: string | null
+          location: string | null
+          metadata: Json | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          risk_score: number | null
+          session_id: string | null
+          severity: string
+          status: string
+          tenant_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          ip_address?: string | null
+          location?: string | null
+          metadata?: Json | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          risk_score?: number | null
+          session_id?: string | null
+          severity?: string
+          status?: string
+          tenant_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          ip_address?: string | null
+          location?: string | null
+          metadata?: Json | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          risk_score?: number | null
+          session_id?: string | null
+          severity?: string
+          status?: string
+          tenant_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_security_alerts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "user_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_security_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       signed_documents: {
         Row: {
           agreement_template_id: string | null
@@ -21709,21 +21787,27 @@ export type Database = {
           event_type: string
           id: string
           session_id: string
+          tenant_id: string | null
           timestamp: string
+          user_id: string | null
         }
         Insert: {
           event_data?: Json | null
           event_type: string
           id?: string
           session_id: string
+          tenant_id?: string | null
           timestamp?: string
+          user_id?: string | null
         }
         Update: {
           event_data?: Json | null
           event_type?: string
           id?: string
           session_id?: string
+          tenant_id?: string | null
           timestamp?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -21733,11 +21817,21 @@ export type Database = {
             referencedRelation: "user_sessions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_session_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_sessions: {
         Row: {
           asn_name: string | null
+          blocked_at: string | null
+          blocked_by: string | null
+          blocked_reason: string | null
           browser: string | null
           browser_version: string | null
           bytes_downloaded: number | null
@@ -21745,6 +21839,7 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          device_fingerprint: string | null
           device_type: string | null
           geo_point: unknown
           id: string
@@ -21752,6 +21847,7 @@ export type Database = {
           ipv6: string | null
           is_mobile: boolean | null
           is_proxy: boolean | null
+          is_suspicious: boolean | null
           is_vpn: boolean | null
           last_activity: string
           latitude: number | null
@@ -21760,6 +21856,8 @@ export type Database = {
           logout_at: string | null
           longitude: number | null
           os: string | null
+          risk_factors: Json | null
+          risk_score: number | null
           session_duration: number | null
           session_token: string | null
           sso_provider: string | null
@@ -21772,6 +21870,9 @@ export type Database = {
         }
         Insert: {
           asn_name?: string | null
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           browser?: string | null
           browser_version?: string | null
           bytes_downloaded?: number | null
@@ -21779,6 +21880,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          device_fingerprint?: string | null
           device_type?: string | null
           geo_point?: unknown
           id?: string
@@ -21786,6 +21888,7 @@ export type Database = {
           ipv6?: string | null
           is_mobile?: boolean | null
           is_proxy?: boolean | null
+          is_suspicious?: boolean | null
           is_vpn?: boolean | null
           last_activity?: string
           latitude?: number | null
@@ -21794,6 +21897,8 @@ export type Database = {
           logout_at?: string | null
           longitude?: number | null
           os?: string | null
+          risk_factors?: Json | null
+          risk_score?: number | null
           session_duration?: number | null
           session_token?: string | null
           sso_provider?: string | null
@@ -21806,6 +21911,9 @@ export type Database = {
         }
         Update: {
           asn_name?: string | null
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           browser?: string | null
           browser_version?: string | null
           bytes_downloaded?: number | null
@@ -21813,6 +21921,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          device_fingerprint?: string | null
           device_type?: string | null
           geo_point?: unknown
           id?: string
@@ -21820,6 +21929,7 @@ export type Database = {
           ipv6?: string | null
           is_mobile?: boolean | null
           is_proxy?: boolean | null
+          is_suspicious?: boolean | null
           is_vpn?: boolean | null
           last_activity?: string
           latitude?: number | null
@@ -21828,6 +21938,8 @@ export type Database = {
           logout_at?: string | null
           longitude?: number | null
           os?: string | null
+          risk_factors?: Json | null
+          risk_score?: number | null
           session_duration?: number | null
           session_token?: string | null
           sso_provider?: string | null
@@ -23596,6 +23708,9 @@ export type Database = {
         Args: { center_lat: number; center_lng: number; radius_km?: number }
         Returns: {
           asn_name: string | null
+          blocked_at: string | null
+          blocked_by: string | null
+          blocked_reason: string | null
           browser: string | null
           browser_version: string | null
           bytes_downloaded: number | null
@@ -23603,6 +23718,7 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          device_fingerprint: string | null
           device_type: string | null
           geo_point: unknown
           id: string
@@ -23610,6 +23726,7 @@ export type Database = {
           ipv6: string | null
           is_mobile: boolean | null
           is_proxy: boolean | null
+          is_suspicious: boolean | null
           is_vpn: boolean | null
           last_activity: string
           latitude: number | null
@@ -23618,6 +23735,8 @@ export type Database = {
           logout_at: string | null
           longitude: number | null
           os: string | null
+          risk_factors: Json | null
+          risk_score: number | null
           session_duration: number | null
           session_token: string | null
           sso_provider: string | null
