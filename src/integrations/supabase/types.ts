@@ -23863,6 +23863,7 @@ export type Database = {
         }
         Returns: string
       }
+      introspect_public_schema: { Args: never; Returns: Json }
       is_active_platform_user: { Args: { _user_id: string }; Returns: boolean }
       is_platform_billing_admin: {
         Args: { _user_id: string }
