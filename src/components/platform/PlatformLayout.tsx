@@ -420,6 +420,7 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/monitoring/performance', label: 'Performance' },
           { to: '/platform/monitoring/incidents', label: 'Incidentes' },
           { to: '/platform/monitoring/user-activity', label: 'User Activity Intelligence' },
+          { to: '/platform/monitoring/security-center', label: 'Security Center' },
         ],
       },
       { to: '/platform/observability', label: 'Observabilidade', icon: Eye, requiredPermission: 'security.view' },

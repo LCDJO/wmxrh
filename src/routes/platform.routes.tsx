@@ -277,6 +277,7 @@ export const platformRoutes: RouteObject[] = [
       { path: 'observability', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformObservability /></PlatformGuard> },
       { path: 'monitoring/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformMonitoring /></PlatformGuard> },
       { path: 'monitoring/user-activity', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformUserActivityIntelligence /></PlatformGuard> },
+      { path: 'monitoring/security-center', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformSecurityCenter /></PlatformGuard> },
       { path: 'control-plane', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformControlPlane /></PlatformGuard> },
       { path: 'control-plane/dr-tests', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformDRTests /></PlatformGuard> },
       { path: 'chaos-engineering', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformChaosEngineering /></PlatformGuard> },
