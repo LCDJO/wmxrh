@@ -11,7 +11,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { calculateRiskScore, type RiskResult } from './risk-scoring';
+import { calculateRiskScore, type RiskResult } from '@/modules/user-activity/engine/risk-scoring';
 
 // ════════════════════════════════════
 // TYPES
