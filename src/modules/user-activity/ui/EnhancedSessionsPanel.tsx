@@ -173,7 +173,10 @@ export function EnhancedSessionsPanel({ sessions, onRefresh }: Props) {
                     <TableCell className="font-medium truncate max-w-[120px]">{s.tenant_name ?? '—'}</TableCell>
                     <TableCell className="font-mono text-[10px] text-muted-foreground">{s.user_id.slice(0, 8)}</TableCell>
                     <TableCell>{[s.city, s.country].filter(Boolean).join(', ') || '—'}</TableCell>
-                    <TableCell className="font-mono text-[10px]">{s.ip_address ?? '—'}</TableCell>
+                    <TableCell>
+                      <div className="font-mono text-[10px]">{s.ip_address ?? '—'}</div>
+                      {s.asn_name && <div className="text-[9px] text-muted-foreground truncate max-w-[140px]">{s.asn_name}</div>}
+                    </TableCell>
                     <TableCell>{s.browser} {s.browser_version?.split('.')[0]}</TableCell>
                     <TableCell><DevIcon className="h-3.5 w-3.5 text-muted-foreground inline" /> {s.device_type}</TableCell>
                     <TableCell className="flex items-center gap-0.5"><Clock className="h-2.5 w-2.5 text-muted-foreground" /> {formatDuration(s)}</TableCell>

@@ -104,6 +104,7 @@ export function ActiveSessionsPanel({ sessions }: Props) {
                       <span>{s.os}</span>
                       <span>•</span>
                       <span>{s.ip_address ?? '—'}</span>
+                      {s.asn_name && <><span>•</span><span className="truncate max-w-[100px]">{s.asn_name}</span></>}
                     </div>
                   </div>
                   {/* Location */}
