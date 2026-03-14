@@ -117,7 +117,7 @@ export default function MySessionsPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Globe className="h-4 w-4 text-emerald-500" /> Sessões Ativas
+            <Globe className="h-4 w-4 text-primary" /> Sessões Ativas
             <Badge variant="secondary" className="ml-auto">{activeSessions.length}</Badge>
           </CardTitle>
         </CardHeader>
