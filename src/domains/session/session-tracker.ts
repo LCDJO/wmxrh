@@ -13,8 +13,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { calculateRiskScore } from '@/modules/user-activity/engine/risk-scoring';
-
-// ════════════════════════════════════
+import { analyzeSession } from '@/modules/security-intelligence/engine/security-intelligence-engine';
 // DEVICE / BROWSER DETECTION
 // ════════════════════════════════════
 
