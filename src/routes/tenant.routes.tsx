@@ -77,6 +77,7 @@ import EmployeeLiveDashboard from '@/pages/EmployeeLiveDashboard';
 
 import SsoSettings from '@/pages/SsoSettings';
 import ScimSettings from '@/pages/ScimSettings';
+import MySessionsPage from '@/pages/tenant/MySessionsPage';
 
 const TenantOnboarding = lazy(() => import('@/pages/TenantOnboarding'));
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
@@ -172,6 +173,7 @@ export const tenantRoutes: RouteObject[] = [
       
       { path: '/settings/sso', element: pr('iam_users', <SsoSettings />) },
       { path: '/settings/scim', element: pr('iam_users', <ScimSettings />) },
+      { path: '/settings/sessions', element: <MySessionsPage /> },
       // ── Referral ──
       { path: '/referral', element: pr('referral', <ReferralPage />) },
       // ── Support ──

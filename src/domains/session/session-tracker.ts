@@ -175,6 +175,17 @@ export async function startSession(
   ssoProvider?: string | null
 ): Promise<string | null> {
   try {
+    // ── Enforce single session per user+tenant ──
+    try {
+      await supabase.rpc('enforce_single_session', {
+        p_user_id: userId,
+        p_tenant_id: tenantId ?? undefined,
+      });
+      logger.info('Previous sessions terminated for single-session enforcement');
+    } catch (e: any) {
+      logger.warn('enforce_single_session failed (non-blocking)', { error: e.message });
+    }
+
     const device = detectDevice();
     const fingerprint = generateDeviceFingerprint();
 
@@ -309,22 +320,30 @@ export async function endSession(): Promise<void> {
   if (!activeSessionId) return;
 
   try {
-    const loginAt = await getSessionLoginAt(activeSessionId);
-    const duration = loginAt ? Math.floor((Date.now() - new Date(loginAt).getTime()) / 1000) : null;
+    // Use archive_session RPC to move to history
+    await supabase.rpc('archive_session', {
+      p_session_id: activeSessionId,
+      p_logout_reason: 'user_logout',
+    });
 
-    await supabase
-      .from('user_sessions')
-      .update({
-        status: 'offline',
-        logout_at: new Date().toISOString(),
-        session_duration: duration,
-      } as any)
-      .eq('id', activeSessionId);
-
-    logger.info('Session ended', { sessionId: activeSessionId, duration });
+    logger.info('Session ended and archived', { sessionId: activeSessionId });
     activeSessionId = null;
   } catch (err: any) {
-    logger.error('Session end error', { error: err.message });
+    // Fallback: direct update if RPC fails
+    logger.warn('archive_session RPC failed, falling back to direct update', { error: err.message });
+    try {
+      await supabase
+        .from('user_sessions')
+        .update({
+          status: 'offline',
+          logout_at: new Date().toISOString(),
+          logout_reason: 'user_logout',
+        } as any)
+        .eq('id', activeSessionId!);
+      activeSessionId = null;
+    } catch (e: any) {
+      logger.error('Session end fallback error', { error: e.message });
+    }
   }
 }
 
