@@ -3,7 +3,7 @@
  */
 import { Outlet, useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
-import { Boxes, Server, Shield, Briefcase, GitBranch, Activity, BookOpen, LayoutDashboard, AlertTriangle } from 'lucide-react';
+import { Boxes, Server, Shield, Briefcase, GitBranch, Activity, BookOpen, LayoutDashboard, AlertTriangle, Map } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', path: '/platform/structure/architecture/dashboard', icon: LayoutDashboard, description: 'Visão geral da arquitetura' },
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { label: 'Dependency Graph', path: '/platform/structure/architecture/dependency-graph', icon: GitBranch, description: 'Grafo de dependências entre módulos' },
   { label: 'Health Monitor', path: '/platform/structure/architecture/health-monitor', icon: Activity, description: 'Monitoramento integrado' },
   { label: 'Documentation', path: '/platform/structure/architecture/documentation', icon: BookOpen, description: 'Documentação viva e changelog' },
+  { label: 'System Atlas', path: '/platform/structure/atlas', icon: Map, description: 'Explorador visual do banco de dados' },
 ];
 
 export default function ArchitectureLayout() {
