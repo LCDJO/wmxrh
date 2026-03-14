@@ -395,7 +395,7 @@ export default function LiveDisplayTV() {
       );
     }
     if (pairingState.phase === 'waiting') {
-      const pairUrl = `${window.location.origin}/live-display/pair?code=${pairingState.pairing_code}`;
+      const pairUrl = `${window.location.origin}/live-display?code=${pairingState.pairing_code}`;
       return (
         <div className="min-h-screen bg-[#060610] flex items-center justify-center text-white">
           <style>{TV_STYLES}</style>

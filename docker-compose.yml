@@ -1,0 +1,32 @@
+services:
+
+  # ─── Produção (build otimizado + nginx) ───────────────────────────────────
+  wmxrh-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wmxrh-prod
+    ports:
+      - "4000:80"          # Acesse em http://localhost:4000
+    env_file:
+      - .env
+    restart: unless-stopped
+    profiles:
+      - prod
+
+  # ─── Desenvolvimento (hot reload) ─────────────────────────────────────────
+  wmxrh-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: wmxrh-dev
+    ports:
+      - "3000:8080"         # Acesse em http://localhost:3000
+    env_file:
+      - .env
+    volumes:
+      - .:/app              # Monta o código local para hot reload
+      - /app/node_modules   # Evita sobrescrever node_modules do container
+    restart: unless-stopped
+    profiles:
+      - dev

@@ -11,5 +11,5 @@ export const authRoutes: RouteObject[] = [
   { path: '/auth/login', element: <Auth /> },
   { path: '/auth/sso', element: <AuthSso /> },
   { path: '/reset-password', element: <ResetPassword /> },
-  { path: '*', element: <Navigate to="/auth/login" replace /> },
+  { path: '*', element: <Navigate to="/" replace /> },
 ];

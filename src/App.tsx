@@ -1,9 +1,9 @@
-import { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, useRoutes, Navigate } from "react-router-dom";
+import { BrowserRouter, useRoutes, Navigate, useLocation } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TenantProvider, useTenant } from "./contexts/TenantContext";
@@ -20,6 +20,7 @@ import { MandatoryPolicyScreen } from "./components/policy/MandatoryPolicyScreen
 import { BannedAccountScreen } from "./components/enforcement/BannedAccountScreen";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import Landing from "./pages/Landing";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
 import LiveDisplayTV from "./pages/LiveDisplayTV";
 import PublicDocumentValidation from "./pages/PublicDocumentValidation";
@@ -53,6 +54,7 @@ const publicRoutes: RouteObject[] = [
 ];
 
 function AppRoutes() {
+  const location = useLocation();
   const { user, loading: authLoading } = useAuth();
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { isPlatformUser, loading: platformLoading } = useAdaptiveUserType();
@@ -62,13 +64,18 @@ function AppRoutes() {
   const routes = useMemo<RouteObject[]>(() => {
     if (authLoading || (user && tenantLoading) || (user && platformLoading)) {
       return [
+        { path: '/', element: <Landing /> },
         ...publicRoutes,
         { path: '*', element: <FullScreenLoader label="Carregando..." /> },
       ];
     }
 
     if (!user) {
-      return [...authRoutes, ...publicRoutes];
+      return [
+        { path: '/', element: <Landing /> },
+        ...authRoutes,
+        ...publicRoutes,
+      ];
     }
 
     // Wait for ban + policy checks before rendering tenant routes
@@ -124,6 +131,11 @@ function AppRoutes() {
       { path: '*', element: <NotFound /> },
     ];
   }, [user, authLoading, tenantLoading, platformLoading, currentTenant, isPlatformUser, policyChecked, hasPending, pending, refreshPolicies, banCheck]);
+
+  // Landing page em '/' para usuários não autenticados — após todos os hooks
+  if (location.pathname === '/' && (authLoading || !user)) {
+    return <Landing />;
+  }
 
   return useRoutes(routes);
 }

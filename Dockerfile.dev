@@ -1,0 +1,17 @@
+# ─── Desenvolvimento com Hot Reload ───────────────────────────────────────────
+FROM oven/bun:1-alpine
+
+WORKDIR /app
+
+# Copia arquivos de dependências
+COPY package.json bun.lockb ./
+
+# Instala dependências
+RUN bun install
+
+# Copia o restante do código
+COPY . .
+
+EXPOSE 8080
+
+CMD ["bunx", "vite", "--host", "0.0.0.0", "--port", "8080"]
