@@ -290,6 +290,13 @@ export async function startSession(
     startHeartbeat();
     setupVisibilityTracking();
 
+    // Run full security intelligence analysis (async, non-blocking)
+    if (activeSessionId) {
+      analyzeSession(activeSessionId).catch(err => {
+        logger.error('Security analysis error', { error: err?.message });
+      });
+    }
+
     return activeSessionId;
   } catch (err: any) {
     logger.error('Session start error', { error: err.message });
