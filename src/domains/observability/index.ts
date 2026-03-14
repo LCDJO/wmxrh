@@ -62,9 +62,3 @@ export {
   setWhiteLabelEnabledTotal, incrementBrandingUpdates,
   setCustomDomainActiveTotal,
 } from './whitelabel-metrics';
-export {
-  setOnlineUsersTotal, setIdleUsersTotal, incrementLoginEvents,
-  setVpnSessionsTotal, setMobileSessionsPct, setUniqueCountriesTotal,
-  setActiveSessionsTotal, setSessionDurationAvg, recordGeoLoginDistribution,
-  setLoginEventsTotal,
-} from './presence-metrics';

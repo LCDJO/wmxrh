@@ -75,7 +75,6 @@ interface GeoData {
   city?: string;
   is_vpn?: boolean;
   is_proxy?: boolean;
-  asn_name?: string;
 }
 
 /** Strategy 1: Browser geolocation API */
@@ -99,7 +98,7 @@ function getBrowserGeolocation(): Promise<GeoData | null> {
   });
 }
 
-/** Strategy 2: IP-based geolocation fallback (HTTPS APIs) */
+/** Strategy 2: IP-based geolocation fallback (free API) */
 async function getIpGeolocation(): Promise<GeoData> {
   const fallback: GeoData = {
     latitude: null,
@@ -110,52 +109,28 @@ async function getIpGeolocation(): Promise<GeoData> {
     city: undefined,
   };
 
-  // Try ipapi.co first (HTTPS, free 1k/day)
   try {
-    const res = await fetch('https://ipapi.co/json/', {
+    // Using ip-api.com (free, no key needed, 45 req/min)
+    const res = await fetch('http://ip-api.com/json/?fields=status,country,regionName,city,lat,lon,proxy,hosting,query', {
       signal: AbortSignal.timeout(5000),
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.ip) {
-        return {
-          latitude: data.latitude ?? null,
-          longitude: data.longitude ?? null,
-          ip_address: data.ip,
-          country: data.country_name ?? undefined,
-          state: data.region ?? undefined,
-          city: data.city ?? undefined,
-          is_vpn: false,
-          is_proxy: false,
-          asn_name: data.org ?? undefined,
-        };
-      }
-    }
-  } catch { /* try next */ }
+    if (!res.ok) return fallback;
+    const data = await res.json();
+    if (data.status !== 'success') return fallback;
 
-  // Fallback: ipinfo.io (HTTPS, free 50k/month)
-  try {
-    const res = await fetch('https://ipinfo.io/json', {
-      signal: AbortSignal.timeout(5000),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const [lat, lng] = (data.loc || ',').split(',').map(Number);
-      return {
-        latitude: isNaN(lat) ? null : lat,
-        longitude: isNaN(lng) ? null : lng,
-        ip_address: data.ip ?? undefined,
-        country: data.country ?? undefined,
-        state: data.region ?? undefined,
-        city: data.city ?? undefined,
-        is_vpn: false,
-        is_proxy: false,
-        asn_name: data.org ?? undefined,
-      };
-    }
-  } catch { /* silent */ }
-
-  return fallback;
+    return {
+      latitude: data.lat ?? null,
+      longitude: data.lon ?? null,
+      ip_address: data.query ?? undefined,
+      country: data.country ?? undefined,
+      state: data.regionName ?? undefined,
+      city: data.city ?? undefined,
+      is_vpn: data.proxy ?? false,
+      is_proxy: data.hosting ?? false,
+    };
+  } catch {
+    return fallback;
+  }
 }
 
 // ════════════════════════════════════
@@ -193,7 +168,6 @@ export async function startSession(
       city: ipGeo.city,
       is_vpn: ipGeo.is_vpn,
       is_proxy: ipGeo.is_proxy,
-      asn_name: ipGeo.asn_name,
     };
 
     const sessionToken = crypto.randomUUID();
@@ -222,7 +196,6 @@ export async function startSession(
         is_mobile: device.is_mobile,
         is_vpn: geo.is_vpn ?? false,
         is_proxy: geo.is_proxy ?? false,
-        asn_name: geo.asn_name ?? null,
         status: 'online',
       } as any)
       .select('id')
@@ -287,43 +260,14 @@ async function getSessionLoginAt(sessionId: string): Promise<string | null> {
 // HEARTBEAT (last_activity + status)
 // ════════════════════════════════════
 
-function getTransferredBytes(): { uploaded: number; downloaded: number } {
-  try {
-    const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
-    let downloaded = 0;
-    let uploaded = 0;
-    for (const e of entries) {
-      downloaded += e.transferSize || 0;
-      // Estimate upload from request body sizes (encodedBodySize is response only)
-      // For requests we approximate upload as ~5% of download for typical web apps
-    }
-    // Use Navigation API for the main document
-    const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-    if (nav) {
-      downloaded += nav.transferSize || 0;
-    }
-    // Rough upload estimate: POST/PUT requests contribute ~10% of total traffic
-    uploaded = Math.round(downloaded * 0.1);
-    return { uploaded, downloaded };
-  } catch {
-    return { uploaded: 0, downloaded: 0 };
-  }
-}
-
 function startHeartbeat() {
   stopHeartbeat();
   activityInterval = setInterval(async () => {
     if (!activeSessionId) return;
     try {
-      const { uploaded, downloaded } = getTransferredBytes();
       await supabase
         .from('user_sessions')
-        .update({
-          last_activity: new Date().toISOString(),
-          status: 'online',
-          bytes_uploaded: uploaded,
-          bytes_downloaded: downloaded,
-        } as any)
+        .update({ last_activity: new Date().toISOString(), status: 'online' } as any)
         .eq('id', activeSessionId);
     } catch { /* silent */ }
   }, 60_000); // every 60s
@@ -336,61 +280,19 @@ function stopHeartbeat() {
   }
 }
 
-/** Best-effort PATCH to mark session offline (used on tab/browser close) */
-function patchSessionOffline() {
-  if (!activeSessionId) return;
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_sessions?id=eq.${activeSessionId}`;
-  const body = JSON.stringify({
-    status: 'offline',
-    logout_at: new Date().toISOString(),
-  });
-  try {
-    fetch(url, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        'Prefer': 'return=minimal',
-      },
-      body,
-      keepalive: true,
-    }).catch(() => {});
-  } catch { /* silent */ }
-}
-
 // Handle tab close / browser close
 if (typeof window !== 'undefined') {
-  // beforeunload — fires when tab/window is closing
   window.addEventListener('beforeunload', () => {
-    patchSessionOffline();
-    stopHeartbeat();
-  });
-
-  // pagehide — more reliable on mobile browsers
-  window.addEventListener('pagehide', () => {
-    patchSessionOffline();
-    stopHeartbeat();
-  });
-
-  // visibilitychange — mark idle when tab is hidden, online when visible
-  document.addEventListener('visibilitychange', () => {
-    if (!activeSessionId) return;
-    if (document.visibilityState === 'hidden') {
-      // Mark as idle after tab is hidden
-      supabase
-        .from('user_sessions')
-        .update({ status: 'idle', last_activity: new Date().toISOString() } as any)
-        .eq('id', activeSessionId)
-        .then(() => {});
-    } else if (document.visibilityState === 'visible') {
-      // Back to online when tab is focused again
-      supabase
-        .from('user_sessions')
-        .update({ status: 'online', last_activity: new Date().toISOString() } as any)
-        .eq('id', activeSessionId)
-        .then(() => {});
+    if (activeSessionId) {
+      // Best-effort: use sendBeacon for reliable delivery
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_sessions?id=eq.${activeSessionId}`;
+      const body = JSON.stringify({
+        status: 'offline',
+        logout_at: new Date().toISOString(),
+      });
+      navigator.sendBeacon?.(url); // fallback; full update via endSession() when possible
     }
+    stopHeartbeat();
   });
 }
 

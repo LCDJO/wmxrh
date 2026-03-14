@@ -12,7 +12,6 @@ export const DISPLAY_TIPOS = {
   sst: { label: 'SST', description: 'Saúde e segurança do trabalho, EPIs e NRs' },
   compliance: { label: 'Compliance', description: 'Incidentes, advertências e conformidade' },
   executivo: { label: 'Executivo', description: 'Visão consolidada de workforce e KPIs' },
-  user_presence: { label: 'Presença de Usuários', description: 'Sessões ativas, geolocalização e analytics em tempo real' },
 } as const;
 
 export type DisplayBoardTipo = keyof typeof DISPLAY_TIPOS;

@@ -1,1 +1,0 @@
-ALTER TYPE public.display_board_tipo ADD VALUE IF NOT EXISTS 'user_presence';

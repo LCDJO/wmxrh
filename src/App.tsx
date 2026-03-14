@@ -22,7 +22,6 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
 import LiveDisplayTV from "./pages/LiveDisplayTV";
-import UserPresenceTV from "./pages/UserPresenceTV";
 import PublicDocumentValidation from "./pages/PublicDocumentValidation";
 import LiveDisplayPair from "./pages/LiveDisplayPair";
 import StatusPage from "./pages/StatusPage";
@@ -48,7 +47,6 @@ function FullScreenLoader({ label }: { label: string }) {
 const publicRoutes: RouteObject[] = [
   { path: '/tv', element: <LiveDisplayTV /> },
   { path: '/display', element: <LiveDisplayTV /> },
-  { path: '/display/presence', element: <UserPresenceTV /> },
   { path: '/live-display/pair', element: <LiveDisplayPair /> },
   { path: '/public/validate/:token', element: <PublicDocumentValidation /> },
   { path: '/status', element: <StatusPage /> },

@@ -33,7 +33,6 @@ import PlatformGovernanceAI from '@/pages/platform/PlatformGovernanceAI';
 import PlatformGovernanceDashboard from '@/pages/platform/PlatformGovernanceDashboard';
 import PlatformObservability from '@/pages/platform/PlatformObservability';
 import PlatformMonitoring from '@/pages/platform/PlatformMonitoring';
-import PlatformLiveDisplays from '@/pages/platform/PlatformLiveDisplays';
 import PlatformControlPlane from '@/pages/platform/PlatformControlPlane';
 import PlatformTenantBranding from '@/pages/platform/PlatformTenantBranding';
 import PlatformDRTests from '@/pages/platform/PlatformDRTests';
@@ -81,7 +80,6 @@ import PlatformWorkTime from '@/pages/platform/PlatformWorkTime';
 import PlatformBiometrics from '@/pages/platform/PlatformBiometrics';
 import PlatformBehaviorAI from '@/pages/platform/PlatformBehaviorAI';
 import PlatformInspectionExport from '@/pages/platform/PlatformInspectionExport';
-import PlatformUserPresence from '@/pages/platform/PlatformUserPresence';
 import PlatformLogs from '@/pages/platform/PlatformLogs';
 import DocumentSignatureIntegrations from '@/pages/platform/PlatformDocumentSignature';
 import SettingsGamification from '@/pages/platform/PlatformSettingsGamification';
@@ -275,7 +273,6 @@ export const platformRoutes: RouteObject[] = [
       { path: 'automation', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformAutomation /></PlatformGuard> },
       { path: 'integration-automation/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformIntegrationAutomation /></PlatformGuard> },
       { path: 'observability', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformObservability /></PlatformGuard> },
-      { path: 'monitoring/live-displays/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformLiveDisplays /></PlatformGuard> },
       { path: 'monitoring/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformMonitoring /></PlatformGuard> },
       { path: 'control-plane', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformControlPlane /></PlatformGuard> },
       { path: 'control-plane/dr-tests', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformDRTests /></PlatformGuard> },
@@ -304,7 +301,6 @@ export const platformRoutes: RouteObject[] = [
       { path: 'worktime/biometrics', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformBiometrics /></PlatformGuard> },
       { path: 'worktime/behavior-ai', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformBehaviorAI /></PlatformGuard> },
       { path: 'worktime/inspection', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformInspectionExport /></PlatformGuard> },
-      { path: 'user-presence', element: <PlatformGuard allowedRoles={securityAdmin}><PlatformUserPresence /></PlatformGuard> },
     ],
   },
 ];
