@@ -33,6 +33,7 @@ import PlatformGovernanceAI from '@/pages/platform/PlatformGovernanceAI';
 import PlatformGovernanceDashboard from '@/pages/platform/PlatformGovernanceDashboard';
 import PlatformObservability from '@/pages/platform/PlatformObservability';
 import PlatformMonitoring from '@/pages/platform/PlatformMonitoring';
+import PlatformUserActivityIntelligence from '@/pages/platform/PlatformUserActivityIntelligence';
 import PlatformControlPlane from '@/pages/platform/PlatformControlPlane';
 import PlatformTenantBranding from '@/pages/platform/PlatformTenantBranding';
 import PlatformDRTests from '@/pages/platform/PlatformDRTests';
