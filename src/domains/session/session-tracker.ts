@@ -175,6 +175,17 @@ export async function startSession(
   ssoProvider?: string | null
 ): Promise<string | null> {
   try {
+    // ── Enforce single session per user+tenant ──
+    try {
+      await supabase.rpc('enforce_single_session', {
+        p_user_id: userId,
+        p_tenant_id: tenantId ?? null,
+      });
+      logger.info('Previous sessions terminated for single-session enforcement');
+    } catch (e: any) {
+      logger.warn('enforce_single_session failed (non-blocking)', { error: e.message });
+    }
+
     const device = detectDevice();
     const fingerprint = generateDeviceFingerprint();
 

@@ -39,64 +39,54 @@ export async function emitSessionEvent(
 
 /**
  * Block a session remotely (platform admin action).
+ * Uses SECURITY DEFINER RPC to bypass RLS.
  */
 export async function blockSession(
   sessionId: string,
   blockedBy: string,
   reason: string
 ): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('user_sessions')
-    .update({
-      status: 'offline',
-      blocked_at: new Date().toISOString(),
-      blocked_by: blockedBy,
-      blocked_reason: reason,
-      logout_at: new Date().toISOString(),
-    } as any)
-    .eq('id', sessionId)
-    .select('id');
+  // Use admin RPC that validates platform role server-side
+  const { data, error } = await supabase.rpc('admin_logout_session', {
+    p_session_id: sessionId,
+    p_performed_by: blockedBy,
+  });
 
   if (error) {
-    console.error('[SessionEvent] blockSession failed:', error);
+    console.error('[SessionEvent] blockSession RPC failed:', error);
     return false;
   }
 
-  if (!data || data.length === 0) {
-    console.error('[SessionEvent] blockSession: no rows updated — likely RLS denied');
+  if (data === false) {
+    console.error('[SessionEvent] blockSession: permission denied');
     return false;
   }
 
-  await emitSessionEvent('session_blocked', { session_id: sessionId, reason }, blockedBy);
   return true;
 }
 
 /**
  * Force remote logout of a session.
+ * Uses SECURITY DEFINER RPC to bypass RLS.
  */
 export async function remoteLogout(
   sessionId: string,
   performedBy: string
 ): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('user_sessions')
-    .update({
-      status: 'offline',
-      logout_at: new Date().toISOString(),
-    } as any)
-    .eq('id', sessionId)
-    .select('id');
+  const { data, error } = await supabase.rpc('admin_logout_session', {
+    p_session_id: sessionId,
+    p_performed_by: performedBy,
+  });
 
   if (error) {
-    console.error('[SessionEvent] remoteLogout failed:', error);
+    console.error('[SessionEvent] remoteLogout RPC failed:', error);
     return false;
   }
 
-  if (!data || data.length === 0) {
-    console.error('[SessionEvent] remoteLogout: no rows updated — likely RLS denied');
+  if (data === false) {
+    console.error('[SessionEvent] remoteLogout: permission denied');
     return false;
   }
 
-  await emitSessionEvent('remote_logout', { session_id: sessionId, performed_by: performedBy }, performedBy);
   return true;
 }
