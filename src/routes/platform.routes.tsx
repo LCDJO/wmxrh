@@ -17,7 +17,6 @@ import PlatformTenants from '@/pages/platform/PlatformTenants';
 import PlatformModules from '@/pages/platform/PlatformModules';
 import PlatformSecurity from '@/pages/platform/PlatformSecurity';
 import PlatformCommunications from '@/pages/platform/PlatformCommunications';
-import PlatformAudit from '@/pages/platform/PlatformAudit';
 import PlatformUsers from '@/pages/platform/PlatformUsers';
 import PlatformUsersDashboard from '@/pages/platform/PlatformUsersDashboard';
 import PlatformSecurityDashboard from '@/pages/platform/PlatformSecurityDashboard';
@@ -277,7 +276,6 @@ export const platformRoutes: RouteObject[] = [
       { path: 'tenants/:tenantId/branding', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformTenantBranding /></PlatformGuard> },
       { path: 'modules', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformModules /></PlatformGuard> },
       { path: 'plans', element: <PlatformGuard allowedRoles={financeAdmin}><PlatformPlans /></PlatformGuard> },
-      { path: 'audit', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformAudit /></PlatformGuard> },
       { path: 'logs', element: <PlatformGuard allowedRoles={['platform_super_admin']}><PlatformLogs /></PlatformGuard> },
       { path: 'communications', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformCommunications /></PlatformGuard> },
       // ── Governance Control Plane ──
