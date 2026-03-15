@@ -12,6 +12,7 @@ import { hasPlatformPermission } from '@/domains/platform/platform-permissions';
 import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import type { PlatformPermission } from '@/domains/platform/platform-permissions';
 import { platformEvents } from '@/domains/platform/platform-events';
+import { landingVersionService } from './landing-version-service';
 
 // ═══════════════════════════════════
 // Types
@@ -343,6 +344,22 @@ class LandingPageGovernanceEngine {
       .from('landing_pages')
       .update({ status: 'published', published_at: now })
       .eq('id', request.landing_page_id);
+
+    // Criar snapshot imutável da versão publicada
+    const { data: publishedPage } = await supabase
+      .from('landing_pages')
+      .select('*')
+      .eq('id', request.landing_page_id)
+      .single();
+
+    if (publishedPage) {
+      await landingVersionService.createVersion(
+        publishedPage as any,
+        actor.userId,
+        'published',
+        notes ?? `Publicado por ${actor.email} — v${request.version_number}`,
+      );
+    }
 
     await this.log(requestId, request.landing_page_id, 'published', actor, notes);
 
