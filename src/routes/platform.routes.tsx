@@ -152,7 +152,7 @@ export const platformRoutes: RouteObject[] = [
 
       // ── Security section ── (shared securityAdmin guard)
       sectionGuard('security', securityAdmin, [
-        { index: true, element: <PlatformSecurity /> },
+        { index: true, element: <Navigate to="/platform/security/dashboard" replace /> },
         { path: 'dashboard', element: <PlatformSecurityDashboard /> },
         { path: 'roles', element: <PlatformSecurityRoles /> },
         { path: 'permissions', element: <PlatformSecurityPermissions /> },

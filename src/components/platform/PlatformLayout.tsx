@@ -221,16 +221,14 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Segurança',
     items: [
-      { to: '/platform/iam', label: 'IAM', icon: KeyRound, requiredPermission: 'security.manage' },
+      { to: '/platform/security/dashboard', label: 'Dashboard de Segurança', icon: ShieldCheck, requiredPermission: 'security.view' },
       {
-        to: '/platform/security',
-        label: 'Cargos e Permissões',
-        icon: ShieldCheck,
-        requiredPermission: 'security.view',
+        to: '/platform/iam',
+        label: 'Cargos & Permissões',
+        icon: KeyRound,
+        requiredPermission: 'security.manage',
         children: [
-          { to: '/platform/security/dashboard', label: 'Visão Geral' },
-          { to: '/platform/security/roles', label: 'Cargos' },
-          { to: '/platform/security/permissions', label: 'Permissões' },
+          { to: '/platform/iam', label: 'Cargos & Permissões' },
           { to: '/platform/security/access-graph', label: 'Access Graph' },
           { to: '/platform/security/unified-graph', label: 'Unified Graph' },
         ],
