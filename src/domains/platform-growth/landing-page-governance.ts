@@ -12,8 +12,6 @@ import { hasPlatformPermission } from '@/domains/platform/platform-permissions';
 import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import type { PlatformPermission } from '@/domains/platform/platform-permissions';
 import { platformEvents } from '@/domains/platform/platform-events';
-import { securePublishService } from './secure-publish-service';
-import { emitGrowthEvent } from './growth.events';
 
 // ═══════════════════════════════════
 // Types
@@ -112,6 +110,18 @@ class LandingPageGovernanceEngine {
 
     if (pageError || !page) throw new Error('Landing page not found');
 
+    // Rate limit: máximo 5 submissões por usuário na última hora
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: recentCount } = await (supabase
+      .from('landing_page_approval_requests') as any)
+      .select('*', { count: 'exact', head: true })
+      .eq('submitted_by_user_id', actor.userId)
+      .gte('created_at', oneHourAgo);
+
+    if ((recentCount ?? 0) >= 5) {
+      throw new Error('Limite de submissões atingido: máximo 5 submissões por hora. Aguarde antes de submeter novamente.');
+    }
+
     // Check no pending request exists
     const { data: existing } = await (supabase
       .from('landing_page_approval_requests') as any)
@@ -121,7 +131,7 @@ class LandingPageGovernanceEngine {
       .limit(1);
 
     if (existing && existing.length > 0) {
-      throw new Error('There is already a pending or approved request for this page. Cancel it first.');
+      throw new Error('Já existe uma solicitação pendente ou aprovada para esta página. Cancele-a primeiro.');
     }
 
     // Compute next version number
@@ -131,6 +141,20 @@ class LandingPageGovernanceEngine {
       .eq('landing_page_id', landingPageId);
 
     const versionNumber = (count ?? 0) + 1;
+
+    // Compute diff against last approved/published snapshot (if any)
+    const { data: lastApproved } = await (supabase
+      .from('landing_page_approval_requests') as any)
+      .select('page_snapshot')
+      .eq('landing_page_id', landingPageId)
+      .in('status', ['approved', 'published'])
+      .order('version_number', { ascending: false })
+      .limit(1);
+
+    const prevSnapshot = lastApproved?.[0]?.page_snapshot as Record<string, unknown> | undefined;
+    const diff = prevSnapshot
+      ? this.computeDiff(prevSnapshot, page as unknown as Record<string, unknown>)
+      : null;
 
     // Create approval request
     const { data: request, error } = await (supabase
@@ -149,8 +173,8 @@ class LandingPageGovernanceEngine {
 
     if (error || !request) throw new Error(`Failed to create approval request: ${error?.message}`);
 
-    // Log action
-    await this.log(request.id, landingPageId, 'submitted', actor, notes);
+    // Log action — diff incluído nos metadados do log (governance_logs tem coluna metadata)
+    await this.log(request.id, landingPageId, 'submitted', actor, notes, diff ?? undefined);
 
     // Update landing page status
     await supabase
@@ -219,78 +243,13 @@ class LandingPageGovernanceEngine {
       approvedBy: actor.email,
     });
 
-    // ── Auto-publish pipeline ──────────────────────────
-    // Runs validation but only blocks on critical errors (warnings are tolerated).
-    // Registers the approver in the audit trail + system as the publisher.
-    try {
-      const publishResult = await securePublishService.publish(
-        request.landing_page_id,
-        actor.userId,
-        actor.role,
-        {
-          changeNotes: `Auto-publicação após aprovação por ${actor.email}`,
-          forcePublish: true,        // tolerate warnings
-          skipValidation: false,     // still run validation
-        },
-      );
-
-      if (publishResult.success) {
-        // Update governance request to published status
-        const now = new Date().toISOString();
-        await (supabase
-          .from('landing_page_approval_requests') as any)
-          .update({
-            status: 'published',
-            published_by: actor.email,
-            published_by_user_id: actor.userId,
-            published_at: now,
-          })
-          .eq('id', requestId);
-
-        await this.log(requestId, request.landing_page_id, 'auto_published', actor,
-          `Publicação automática após aprovação. Versão: ${publishResult.versionCreated ?? '—'}`,
-        );
-
-        // Log system actor separately for dual audit trail
-        await this.log(requestId, request.landing_page_id, 'system_auto_publish', {
-          userId: 'system-auto-publish',
-          email: 'system@platform.internal',
-          role: 'platform_super_admin' as PlatformRoleType,
-        }, `Sistema executou publicação automática aprovada por ${actor.email}`);
-
-        platformEvents.landingPagePublished(actor.userId, {
-          landingPageId: request.landing_page_id,
-          requestId,
-          publishedBy: actor.email,
-          version: request.version_number,
-        });
-
-        // Emit warnings if any
-        if (publishResult.errors.length > 0) {
-          emitGrowthEvent({
-            type: 'LandingVersionCreated',
-            timestamp: Date.now(),
-            pageId: request.landing_page_id,
-            pageTitle: '',
-            versionNumber: publishResult.versionCreated ?? 0,
-            changeSummary: `Auto-publicação com ${publishResult.errors.length} aviso(s): ${publishResult.errors.map(e => e.message).join('; ')}`,
-            createdBy: actor.userId,
-          });
-        }
-      } else {
-        // Only blocking errors prevent auto-publish — log the failure
-        const blockingErrors = publishResult.errors.filter(e => e.severity === 'blocking');
-        await this.log(requestId, request.landing_page_id, 'auto_publish_failed', actor,
-          `Falha na publicação automática: ${blockingErrors.map(e => e.message).join('; ')}`,
-        );
-        console.warn('[Governance] Auto-publish blocked after approval:', blockingErrors);
-      }
-    } catch (publishError) {
-      console.error('[Governance] Auto-publish error after approval:', publishError);
-      await this.log(requestId, request.landing_page_id, 'auto_publish_error', actor,
-        `Erro na publicação automática: ${publishError instanceof Error ? publishError.message : String(publishError)}`,
-      );
-    }
+    // ── Publicação explícita requerida ────────────────────────────────────────
+    // A aprovação NÃO publica automaticamente. O diretor deve clicar em
+    // "Publicar" separadamente, permitindo revisão final antes de ir ao ar.
+    // Isso elimina o risco de publicação acidental pós-aprovação.
+    await this.log(requestId, request.landing_page_id, 'approved_pending_publish', actor,
+      `Aprovada por ${actor.email}. Aguardando publicação explícita.`,
+    );
 
     return data as unknown as ApprovalRequest;
   }
@@ -501,12 +460,31 @@ class LandingPageGovernanceEngine {
   // Private
   // ═══════════════════════════════════
 
+  /**
+   * Compute a shallow diff between two snapshots.
+   * Migrado do GrowthSubmissionService para consolidar a lógica de versionamento.
+   */
+  private computeDiff(
+    prev: Record<string, unknown>,
+    next: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const diff: Record<string, unknown> = {};
+    const allKeys = new Set([...Object.keys(prev), ...Object.keys(next)]);
+    for (const key of allKeys) {
+      if (JSON.stringify(prev[key]) !== JSON.stringify(next[key])) {
+        diff[key] = { from: prev[key], to: next[key] };
+      }
+    }
+    return diff;
+  }
+
   private async log(
     requestId: string,
     landingPageId: string,
     action: string,
     actor: ActorContext,
     notes?: string,
+    diff?: Record<string, unknown>,
   ): Promise<void> {
     await (supabase.from('landing_page_governance_logs') as any).insert({
       approval_request_id: requestId,
@@ -515,7 +493,7 @@ class LandingPageGovernanceEngine {
       performed_by: actor.email,
       performed_by_user_id: actor.userId,
       notes: notes || null,
-      metadata: { role: actor.role },
+      metadata: { role: actor.role, ...(diff ? { diff } : {}) },
     });
   }
 }

@@ -67,6 +67,7 @@ import MarketingAnalytics from '@/pages/platform/marketing/MarketingAnalytics';
 import LandingDrafts from '@/pages/platform/landing/LandingDrafts';
 import LandingReview from '@/pages/platform/landing/LandingReview';
 import LandingPublished from '@/pages/platform/landing/LandingPublished';
+import LandingHomeEditor from '@/pages/platform/landing/LandingHomeEditor';
 import PlatformVersioning from '@/pages/platform/PlatformVersioning';
 import PlatformNavigationRefactor from '@/pages/platform/PlatformNavigationRefactor';
 import PlatformSaasSettings from '@/pages/platform/PlatformSaasSettings';
@@ -215,6 +216,7 @@ export const platformRoutes: RouteObject[] = [
         { path: 'analytics', element: <MarketingAnalytics /> },
       ]),
       sectionGuard('landing', marketingRoles, [
+        { path: 'home-editor', element: <LandingHomeEditor /> },
         { path: 'drafts', element: <LandingDrafts /> },
         { path: 'review', element: <LandingReview /> },
         { path: 'published', element: <LandingPublished /> },
@@ -271,9 +273,6 @@ export const platformRoutes: RouteObject[] = [
       sectionGuard('navigation', opsAdmin, [
         { path: 'refactor', element: <PlatformNavigationRefactor /> },
       ]),
-
-      // ── Shortcut: /platform/architecture/risk ──
-      { path: 'architecture/risk', element: <PlatformGuard allowedRoles={architectureAdmin}><ArchitectureRiskDashboard /></PlatformGuard> },
 
       // ── Standalone guarded routes ──
       { path: 'tenants', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformTenants /></PlatformGuard> },

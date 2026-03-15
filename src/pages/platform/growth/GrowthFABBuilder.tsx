@@ -25,7 +25,7 @@ import {
 } from '@/domains/platform-growth/landing-template-engine';
 import type { FABBlock, FABBlockType, FABContent } from '@/domains/platform-growth/types';
 import { LandingPageRenderer } from '@/components/landing/LandingPageRenderer';
-import { growthSubmissionService } from '@/domains/platform-growth/growth-submission.service';
+import { landingPageGovernance } from '@/domains/platform-growth/landing-page-governance';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformIdentity } from '@/domains/platform/PlatformGuard';
 import { hasPlatformPermission } from '@/domains/platform/platform-permissions';
@@ -74,8 +74,8 @@ export default function GrowthFABBuilder() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { identity } = usePlatformIdentity();
-  const canSubmit = hasPlatformPermission(identity?.role, 'growth.submit');
-  const canPublishAutonomously = hasPlatformPermission(identity?.role, 'growth.approve') && hasPlatformPermission(identity?.role, 'growth.publish');
+  const canSubmit = hasPlatformPermission(identity?.role, 'landing_page.submit');
+  const canPublishAutonomously = hasPlatformPermission(identity?.role, 'landing_page.approve') && hasPlatformPermission(identity?.role, 'landing_page.publish');
 
   // ── FAB Editor state ──
   const [blocks, setBlocks] = useState<FABBlock[]>(() => [
@@ -214,29 +214,36 @@ export default function GrowthFABBuilder() {
     }
   };
 
-  /** Submit content for director/superadmin approval */
+  /** Submit landing page for director approval via governance engine */
   const handleSubmitForApproval = async (contentBlocks: FABBlock[]) => {
-    if (!lpName.trim() || !user) {
+    if (!lpName.trim() || !user || !identity) {
       toast.error('Informe um nome para a Landing Page');
       return;
     }
     const slug = lpSlug.trim() || lpName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     setSubmitting(true);
     try {
-      await growthSubmissionService.submit({
-        content_type: 'landing_page',
-        content_id: slug,
-        content_title: lpName.trim(),
-        content_snapshot: { blocks: contentBlocks, industry, slug } as any,
-        change_summary: changeSummary || undefined,
-        submitted_by_email: user.email || '',
-      }, user.id);
+      // 1. Criar LP como rascunho (ou reutilizar se já existir)
+      const created = await landingPageBuilder.create({
+        name: lpName.trim(),
+        slug,
+        blocks: contentBlocks,
+      });
+      if (!created) throw new Error('Falha ao criar landing page');
+
+      // 2. Submeter via governance engine (com permissões + rate limiting)
+      await landingPageGovernance.submit(
+        created.id,
+        { userId: user.id, email: user.email ?? '', role: identity.role },
+        changeSummary || undefined,
+      );
+
       toast.success('Submissão enviada para aprovação!', {
         description: 'O Diretor de Marketing ou SuperAdmin precisam aprovar antes da publicação.',
       });
-      navigate('/platform/growth/submissions');
-    } catch {
-      toast.error('Erro ao submeter para aprovação.');
+      navigate('/platform/landing/review');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao submeter para aprovação.');
     } finally {
       setSubmitting(false);
     }

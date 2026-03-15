@@ -1,6 +1,13 @@
 /**
  * GrowthSubmissionService — Handles the approval workflow for Growth content.
- * 
+ *
+ * Escopo: FAB content, website pages, campaigns e templates.
+ *
+ * ⚠️  LANDING PAGES não passam por aqui.
+ *     Use `landingPageGovernance` (landing-page-governance.ts) para landing pages.
+ *     Esse serviço existia antes da separação; o campo `content_type: 'landing_page'`
+ *     foi removido para evitar dois trilhos de aprovação concorrentes.
+ *
  * Workflow:
  *  1. Marketing Team creates content → submits for approval (status: pending)
  *  2. Director / SuperAdmin reviews → approves or rejects
@@ -47,7 +54,7 @@ export interface SubmissionLog {
 }
 
 export interface CreateSubmissionInput {
-  content_type: 'landing_page' | 'fab_content' | 'website_page' | 'campaign' | 'template';
+  content_type: 'fab_content' | 'website_page' | 'campaign' | 'template';
   content_id: string;
   content_title: string;
   content_snapshot: Record<string, unknown>;
@@ -58,6 +65,14 @@ export interface CreateSubmissionInput {
 class GrowthSubmissionService {
   /** Submit content for approval */
   async submit(input: CreateSubmissionInput, userId: string): Promise<GrowthSubmission> {
+    // Guard: landing pages têm sistema próprio
+    if ((input.content_type as string) === 'landing_page') {
+      throw new Error(
+        'Landing pages não passam pelo GrowthSubmissionService. ' +
+        'Use landingPageGovernance.submit() de landing-page-governance.ts.',
+      );
+    }
+
     // Get latest version number for this content
     const { data: existing } = await supabase
       .from('growth_submissions')

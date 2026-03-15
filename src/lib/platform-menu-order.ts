@@ -23,8 +23,14 @@ export function getSavedMenuOrder(): SavedMenuOrder | null {
   }
 }
 
+/** Custom event dispatched whenever the menu order is saved.
+ *  Allows same-tab listeners to react immediately (localStorage 'storage'
+ *  event only fires in OTHER tabs, not the originating tab). */
+export const MENU_ORDER_UPDATED_EVENT = 'platform:menu-order-updated';
+
 export function saveMenuOrder(order: SavedMenuOrder): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+  window.dispatchEvent(new CustomEvent(MENU_ORDER_UPDATED_EVENT));
 }
 
 /**

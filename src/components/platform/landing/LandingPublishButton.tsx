@@ -78,22 +78,47 @@ export function LandingPublishButton({
   const [status, setStatus] = useState<DeployStatus>(currentStatus);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const invokeDeploy = async (action: 'deploy' | 'undeploy', attempt: number): Promise<{ url?: string }> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000); // 30s timeout
+
+    try {
+      const { data, error } = await supabase.functions.invoke('landing-deploy', {
+        body: { action, landing_page_id: pageId, tenant_id: tenantId },
+      });
+
+      clearTimeout(timeout);
+
+      if (error) {
+        // Cloudflare rate limit — wait and retry
+        if (error.message?.includes('429') && attempt < 3) {
+          await new Promise(r => setTimeout(r, 2 ** attempt * 1000));
+          return invokeDeploy(action, attempt + 1);
+        }
+        throw error;
+      }
+      if (data?.error) throw new Error(data.error);
+
+      return data ?? {};
+    } catch (err: unknown) {
+      clearTimeout(timeout);
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        if (attempt < 2) {
+          return invokeDeploy(action, attempt + 1);
+        }
+        throw new Error('Timeout: Cloudflare demorou mais de 30s para responder. Tente novamente.');
+      }
+      throw err;
+    }
+  };
+
   const callDeploy = async (action: 'deploy' | 'undeploy') => {
     setStatus('publishing');
     setErrorMsg(null);
     onStatusChange?.('publishing');
 
     try {
-      const { data, error } = await supabase.functions.invoke('landing-deploy', {
-        body: {
-          action,
-          landing_page_id: pageId,
-          tenant_id: tenantId,
-        },
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const data = await invokeDeploy(action, 1);
 
       if (action === 'deploy') {
         setStatus('online');
@@ -105,7 +130,8 @@ export function LandingPublishButton({
     } catch (err: unknown) {
       console.error('Deploy error:', err);
       setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Falha ao publicar');
+      const msg = err instanceof Error ? err.message : 'Falha ao publicar';
+      setErrorMsg(msg);
       onStatusChange?.('error');
     }
   };

@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformIdentity, type PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import type { PlatformPermission } from '@/domains/platform/platform-permissions';
-import { getSavedMenuOrder, applyOrder, type SavedMenuOrder } from '@/lib/platform-menu-order';
+import { getSavedMenuOrder, applyOrder, MENU_ORDER_UPDATED_EVENT, type SavedMenuOrder } from '@/lib/platform-menu-order';
 import {
   LayoutDashboard,
   Building2,
@@ -44,7 +44,7 @@ import {
   BookOpen,
   FileSignature,
   FileText,
-  Map,
+  Map as MapIcon,
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
@@ -107,7 +107,6 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/control-plane/chaos', label: 'Chaos Engineering' },
         ],
       },
-      { to: '/platform/modules', label: 'Módulos', icon: Puzzle, requiredPermission: 'module.view' },
       { to: '/platform/plans', label: 'Planos', icon: Package, requiredPermission: 'plan.manage' },
       { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
       {
@@ -128,7 +127,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Clientes',
     items: [
-      { to: '/platform/tenants', label: 'Clientes', icon: Building2, requiredPermission: 'tenant.view' },
+      { to: '/platform/tenants', label: 'Lista de Tenants', icon: Building2, requiredPermission: 'tenant.view' },
       { to: '/platform/users/dashboard', label: 'Visão Geral Usuários', icon: BarChart3, requiredPermission: 'platform_user.view' },
       { to: '/platform/users', label: 'Usuários', icon: Users, requiredPermission: 'platform_user.view' },
     ],
@@ -170,7 +169,7 @@ const NAV_SECTIONS: NavSection[] = [
         children: [
           { to: '/platform/growth', label: 'Visão Geral' },
           { to: '/platform/growth/insights', label: 'Insights', requiredPermission: 'growth.view' },
-          { to: '/platform/growth/landing-pages', label: 'Landing Pages', requiredPermission: 'landing_page.view' },
+          { to: '/platform/growth/landing-pages', label: 'LP Analytics', requiredPermission: 'landing_page.view' },
           { to: '/platform/growth/conversions', label: 'Conversões', requiredPermission: 'growth.view' },
           { to: '/platform/growth/fab-builder', label: 'FAB Builder', requiredPermission: 'landing.create' },
           { to: '/platform/growth/submissions', label: 'Meus Rascunhos', requiredPermission: 'landing.view_drafts' },
@@ -201,10 +200,11 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         to: '/platform/landing',
-        label: 'Landing Pages',
+        label: 'Gestão Editorial',
         icon: BookOpen,
         requiredPermission: 'landing.view_drafts',
         children: [
+          { to: '/platform/landing/home-editor', label: 'Editor Home' },
           { to: '/platform/landing/drafts', label: 'Rascunhos' },
           { to: '/platform/landing/review', label: 'Revisão' },
           { to: '/platform/landing/published', label: 'Publicadas' },
@@ -367,7 +367,7 @@ const NAV_SECTIONS: NavSection[] = [
       {
         to: '/platform/structure/atlas',
         label: 'System Atlas',
-        icon: Map,
+        icon: MapIcon,
         requiredPermission: 'security.manage',
         children: [
           { to: '/platform/structure/atlas/modules', label: 'Módulos' },
@@ -379,7 +379,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       { to: '/platform/structure/events', label: 'Eventos', icon: Zap, requiredPermission: 'security.manage' },
       { to: '/platform/structure/menus', label: 'Menus', icon: FileEdit, requiredPermission: 'security.manage' },
-      { to: '/platform/structure/modules', label: 'Módulos', icon: Puzzle, requiredPermission: 'security.manage' },
+      { to: '/platform/structure/modules', label: 'Catálogo de Módulos', icon: Puzzle, requiredPermission: 'security.manage' },
       {
         to: '/platform/settings',
         label: 'Settings',
@@ -396,7 +396,28 @@ const NAV_SECTIONS: NavSection[] = [
   },
 
   // ══════════════════════════════════════════════
-  // 8. CONTINUIDADE
+  // 8. PRODUTOS & MÓDULOS
+  // ══════════════════════════════════════════════
+  {
+    label: 'Produtos & Módulos',
+    items: [
+      {
+        to: '/platform/worktime',
+        label: 'Ponto & Jornada',
+        icon: Activity,
+        requiredPermission: 'security.manage',
+        children: [
+          { to: '/platform/worktime', label: 'Jornada de Trabalho' },
+          { to: '/platform/worktime/biometrics', label: 'Biometria' },
+          { to: '/platform/worktime/behavior-ai', label: 'Behavior AI' },
+          { to: '/platform/worktime/inspection', label: 'Fiscalização & Exportação' },
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════
+  // 9. CONTINUIDADE
   // ══════════════════════════════════════════════
   {
     label: 'Continuidade',
@@ -428,7 +449,7 @@ const NAV_SECTIONS: NavSection[] = [
         icon: Monitor,
         requiredPermission: 'security.view',
         children: [
-          { to: '/platform/monitoring', label: 'Status' },
+          { to: '/platform/monitoring', label: 'Status da Plataforma' },
           { to: '/platform/monitoring/modules', label: 'Módulos' },
           { to: '/platform/monitoring/errors', label: 'Erros' },
           { to: '/platform/monitoring/performance', label: 'Performance' },
@@ -438,18 +459,6 @@ const NAV_SECTIONS: NavSection[] = [
         ],
       },
       { to: '/platform/observability', label: 'Observabilidade', icon: Eye, requiredPermission: 'security.view' },
-      {
-        to: '/platform/worktime',
-        label: 'Ponto & Jornada',
-        icon: Activity,
-        requiredPermission: 'security.manage',
-        children: [
-          { to: '/platform/worktime', label: 'Jornada de Trabalho' },
-          { to: '/platform/worktime/biometrics', label: 'Biometria' },
-          { to: '/platform/worktime/behavior-ai', label: 'Behavior AI' },
-          { to: '/platform/worktime/inspection', label: 'Fiscalização & Exportação' },
-        ],
-      },
     ],
   },
 ];
@@ -530,32 +539,55 @@ export default function PlatformLayout() {
   const [expandedChild, setExpandedChild] = useState<string | null>(null);
   const alertService = useAgentAlerts(user?.id ?? '');
 
-  // Reset any saved menu order so the default NAV_SECTIONS order is used
+  // Reactive menu order: initialise from localStorage, re-read on every save
+  const [savedOrder, setSavedOrder] = useState<SavedMenuOrder | null>(() => getSavedMenuOrder());
   useEffect(() => {
-    localStorage.removeItem('platform_menu_order');
+    const handler = () => setSavedOrder(getSavedMenuOrder());
+    window.addEventListener(MENU_ORDER_UPDATED_EVENT, handler);
+    // Also sync when the user returns from another tab
+    window.addEventListener('storage', handler);
+    return () => {
+      window.removeEventListener(MENU_ORDER_UPDATED_EVENT, handler);
+      window.removeEventListener('storage', handler);
+    };
   }, []);
-  const savedOrder: SavedMenuOrder | null = null;
 
   const visibleSections = useMemo(() => {
-    return NAV_SECTIONS.map(section => {
-      let items = section.items.filter(item => {
-        if (item.requiredRole && identity?.role !== item.requiredRole) return false;
-        if (!item.requiredPermission) return true;
-        return can(item.requiredPermission);
-      }).map(item => {
-        if (!item.children) return item;
-        return {
-          ...item,
-          children: item.children.filter(child =>
-            !child.requiredPermission || can(child.requiredPermission)
-          ),
-        };
-      });
+    // Build lookup: item path → section label (for re-grouping after reorder)
+    const itemToSection = new Map<string, string>();
+    NAV_SECTIONS.forEach(s => s.items.forEach(item => itemToSection.set(item.to, s.label)));
 
-      // Menu order reset — always use default NAV_SECTIONS order
+    // Apply saved order to the flat item list (new items not in savedOrder go to end)
+    const flatItems = savedOrder?.rootOrder?.length
+      ? applyOrder(NAV_ITEMS, savedOrder.rootOrder, item => item.to)
+      : NAV_ITEMS;
 
-      return { ...section, items };
-    }).filter(section => section.items.length > 0);
+    // Filter by role/permission
+    const visibleItems = flatItems.filter(item => {
+      if (item.requiredRole && identity?.role !== item.requiredRole) return false;
+      if (!item.requiredPermission) return true;
+      return can(item.requiredPermission);
+    }).map(item => {
+      if (!item.children) return item;
+      return {
+        ...item,
+        children: item.children.filter(child =>
+          !child.requiredPermission || can(child.requiredPermission)
+        ),
+      };
+    });
+
+    // Re-bucket into sections preserving section labels, in the order items appear
+    const sectionBuckets = new Map<string, PlatformNavItem[]>();
+    NAV_SECTIONS.forEach(s => sectionBuckets.set(s.label, []));
+    visibleItems.forEach(item => {
+      const label = itemToSection.get(item.to);
+      if (label) sectionBuckets.get(label)?.push(item);
+    });
+
+    return NAV_SECTIONS
+      .map(s => ({ ...s, items: sectionBuckets.get(s.label) ?? [] }))
+      .filter(s => s.items.length > 0);
   }, [can, savedOrder, identity?.role]);
 
   const handleLogout = async () => {
