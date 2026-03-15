@@ -96,28 +96,6 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Plataforma',
     items: [
       { to: '/platform/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      {
-        to: '/platform/control-plane',
-        label: 'Control Plane',
-        icon: Gauge,
-        requiredPermission: 'security.manage',
-        children: [
-          { to: '/platform/control-plane', label: 'Visão Geral' },
-          { to: '/platform/control-plane/dr-tests', label: 'DR Tests' },
-          { to: '/platform/control-plane/chaos', label: 'Chaos Engineering' },
-        ],
-      },
-      { to: '/platform/plans', label: 'Planos', icon: Package, requiredPermission: 'plan.manage' },
-      { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
-      {
-        to: '/platform/support',
-        label: 'Suporte',
-        icon: Headphones,
-        children: [
-          { to: '/platform/support/console', label: 'Console de Suporte' },
-          { to: '/platform/support/analytics', label: 'Analytics' },
-        ],
-      },
     ],
   },
 
@@ -139,6 +117,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Receita & Billing',
     items: [
+      { to: '/platform/plans', label: 'Planos', icon: Package, requiredPermission: 'plan.manage' },
       {
         to: '/platform/billing',
         label: 'Billing',
@@ -161,6 +140,15 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/revenue/intelligence', label: 'Intelligence' },
         ],
       },
+    ],
+  },
+
+  // ══════════════════════════════════════════════
+  // 4. MARKETING
+  // ══════════════════════════════════════════════
+  {
+    label: 'Marketing',
+    items: [
       {
         to: '/platform/growth',
         label: 'Growth AI',
@@ -191,8 +179,8 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         to: '/platform/marketing',
-        label: 'Marketing',
-        icon: Megaphone,
+        label: 'Analytics',
+        icon: BarChart3,
         requiredPermission: 'security.view',
         children: [
           { to: '/platform/marketing/analytics', label: 'Analytics' },
@@ -214,7 +202,26 @@ const NAV_SECTIONS: NavSection[] = [
   },
 
   // ══════════════════════════════════════════════
-  // 4. SEGURANÇA
+  // 5. SUPORTE
+  // ══════════════════════════════════════════════
+  {
+    label: 'Suporte',
+    items: [
+      { to: '/platform/communications', label: 'Comunicação', icon: Megaphone },
+      {
+        to: '/platform/support',
+        label: 'Console de Suporte',
+        icon: Headphones,
+        children: [
+          { to: '/platform/support/console', label: 'Console' },
+          { to: '/platform/support/analytics', label: 'Analytics' },
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════
+  // 6. SEGURANÇA
   // ══════════════════════════════════════════════
   {
     label: 'Segurança',
@@ -432,6 +439,17 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/incidents?tab=sla', label: 'SLA' },
           { to: '/platform/incidents?tab=postmortems', label: 'Postmortems' },
           { to: '/platform/incidents?tab=availability', label: 'Disponibilidade' },
+        ],
+      },
+      {
+        to: '/platform/control-plane',
+        label: 'Control Plane',
+        icon: Gauge,
+        requiredPermission: 'security.manage',
+        children: [
+          { to: '/platform/control-plane', label: 'Visão Geral' },
+          { to: '/platform/control-plane/dr-tests', label: 'DR Tests' },
+          { to: '/platform/control-plane/chaos', label: 'Chaos Engineering' },
         ],
       },
     ],
