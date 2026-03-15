@@ -1,15 +1,12 @@
 /**
  * PlatformLayout — Shell layout for /platform/* routes.
  * Visually distinct from tenant AppLayout with purple accent and "Modo Plataforma" label.
- * Reads saved menu order from localStorage to dynamically reorder sidebar navigation.
  */
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformIdentity, type PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import { usePlatformPermissions } from '@/domains/platform/use-platform-permissions';
 import type { PlatformPermission } from '@/domains/platform/platform-permissions';
-import { getSavedMenuOrder, applyOrder, MENU_ORDER_UPDATED_EVENT, type SavedMenuOrder } from '@/lib/platform-menu-order';
 import {
   LayoutDashboard,
   Building2,
@@ -39,7 +36,6 @@ import {
   Eye,
   Gauge,
   BarChart3,
-  FileEdit,
   CheckSquare,
   BookOpen,
   FileSignature,
@@ -384,7 +380,6 @@ const NAV_SECTIONS: NavSection[] = [
         ],
       },
       { to: '/platform/structure/events', label: 'Eventos', icon: Zap, requiredPermission: 'security.manage' },
-      { to: '/platform/structure/menus', label: 'Menus', icon: FileEdit, requiredPermission: 'security.manage' },
       { to: '/platform/structure/modules', label: 'Catálogo de Módulos', icon: Puzzle, requiredPermission: 'security.manage' },
       {
         to: '/platform/settings',
@@ -481,8 +476,6 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-// Flatten sections into a single array for backward compat with ordering logic
-const NAV_ITEMS: PlatformNavItem[] = NAV_SECTIONS.flatMap(s => s.items);
 
 function GrandchildNavItem({ gc, currentPath }: { gc: NavGrandChild; currentPath: string }) {
   const hasLeaves = gc.children && gc.children.length > 0;
@@ -557,56 +550,26 @@ export default function PlatformLayout() {
   const [expandedChild, setExpandedChild] = useState<string | null>(null);
   const alertService = useAgentAlerts(user?.id ?? '');
 
-  // Reactive menu order: initialise from localStorage, re-read on every save
-  const [savedOrder, setSavedOrder] = useState<SavedMenuOrder | null>(() => getSavedMenuOrder());
-  useEffect(() => {
-    const handler = () => setSavedOrder(getSavedMenuOrder());
-    window.addEventListener(MENU_ORDER_UPDATED_EVENT, handler);
-    // Also sync when the user returns from another tab
-    window.addEventListener('storage', handler);
-    return () => {
-      window.removeEventListener(MENU_ORDER_UPDATED_EVENT, handler);
-      window.removeEventListener('storage', handler);
-    };
-  }, []);
-
   const visibleSections = useMemo(() => {
-    // Build lookup: item path → section label (for re-grouping after reorder)
-    const itemToSection = new Map<string, string>();
-    NAV_SECTIONS.forEach(s => s.items.forEach(item => itemToSection.set(item.to, s.label)));
-
-    // Apply saved order to the flat item list (new items not in savedOrder go to end)
-    const flatItems = savedOrder?.rootOrder?.length
-      ? applyOrder(NAV_ITEMS, savedOrder.rootOrder, item => item.to)
-      : NAV_ITEMS;
-
-    // Filter by role/permission
-    const visibleItems = flatItems.filter(item => {
-      if (item.requiredRole && identity?.role !== item.requiredRole) return false;
-      if (!item.requiredPermission) return true;
-      return can(item.requiredPermission);
-    }).map(item => {
-      if (!item.children) return item;
-      return {
-        ...item,
-        children: item.children.filter(child =>
-          !child.requiredPermission || can(child.requiredPermission)
-        ),
-      };
-    });
-
-    // Re-bucket into sections preserving section labels, in the order items appear
-    const sectionBuckets = new Map<string, PlatformNavItem[]>();
-    NAV_SECTIONS.forEach(s => sectionBuckets.set(s.label, []));
-    visibleItems.forEach(item => {
-      const label = itemToSection.get(item.to);
-      if (label) sectionBuckets.get(label)?.push(item);
-    });
-
-    return NAV_SECTIONS
-      .map(s => ({ ...s, items: sectionBuckets.get(s.label) ?? [] }))
-      .filter(s => s.items.length > 0);
-  }, [can, savedOrder, identity?.role]);
+    return NAV_SECTIONS.map(section => ({
+      ...section,
+      items: section.items
+        .filter(item => {
+          if (item.requiredRole && identity?.role !== item.requiredRole) return false;
+          if (!item.requiredPermission) return true;
+          return can(item.requiredPermission);
+        })
+        .map(item => {
+          if (!item.children) return item;
+          return {
+            ...item,
+            children: item.children.filter(child =>
+              !child.requiredPermission || can(child.requiredPermission)
+            ),
+          };
+        }),
+    })).filter(s => s.items.length > 0);
+  }, [can, identity?.role]);
 
   const handleLogout = async () => {
     await signOut();

@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(cd /d/dev/wmxrh/src/pages __NEW_LINE_d2343dbf6b913651__ echo \"=== PÁGINAS MUITO CURTAS \\(possível placeholder\\) ===\" find . -name \"*.tsx\" -exec wc -l {})",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(cd:*)",
+      "Bash(npx tsc:*)",
+      "Bash(wc:*)",
+      "Bash(ls:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec wmxrh-dev grep -n \"Catálogo de Módulos\\\\|Lista de Tenants\\\\|Produtos\" /app/src/components/platform/PlatformLayout.tsx 2>&1 | head -20)",
+      "Bash(MSYS_NO_PATHCONV=1 docker logs wmxrh-dev --tail 30 2>&1)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec wmxrh-dev grep -n \"label:\" /app/src/components/platform/PlatformLayout.tsx 2>&1 | head -60)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec wmxrh-dev grep -n \"label:\" /app/src/components/platform/PlatformLayout.tsx 2>&1 | tail -80)",
+      "Bash(MSYS_NO_PATHCONV=1 docker logs wmxrh-dev --tail 50 2>&1)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec wmxrh-dev cat /app/src/components/platform/PlatformLayout.tsx | grep -n \"Produtos & Módulos\\\\|Lista de Tenants\\\\|Catálogo\" 2>&1)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec wmxrh-dev ls /app/node_modules/.vite 2>&1)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec wmxrh-dev touch /app/src/components/platform/PlatformLayout.tsx 2>&1 && echo \"touched\")",
+      "Bash(sleep:*)",
+      "Bash(docker-compose:*)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec wmxrh-dev ls /app 2>&1)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec wmxrh-dev ps aux 2>&1)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec wmxrh-dev sed -i 's/Modo Plataforma<\\\\/span>/Modo Plataforma ✓<\\\\/span>/' /app/src/components/platform/PlatformLayout.tsx 2>&1 && echo \"done\")",
+      "Bash(MSYS_NO_PATHCONV=1 docker logs wmxrh-dev 2>&1 | tail -20)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec wmxrh-dev grep -c \"Modo Plataforma\" /app/src/components/platform/PlatformLayout.tsx 2>&1)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec wmxrh-dev grep -c \"Produtos & Módulos\" /app/src/components/platform/PlatformLayout.tsx 2>&1)"
+    ]
+  }
+}

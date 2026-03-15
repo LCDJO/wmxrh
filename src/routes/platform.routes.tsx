@@ -48,7 +48,6 @@ import PlatformRevenue from '@/pages/platform/PlatformRevenue';
 import PlatformCoupons from '@/pages/platform/PlatformCoupons';
 import BillingControlCenter from '@/pages/platform/BillingControlCenter';
 import PlatformEvents from '@/pages/platform/PlatformEvents';
-import PlatformMenuStructure from '@/pages/platform/PlatformMenuStructure';
 import PlatformModulesCatalog from '@/pages/platform/PlatformModulesCatalog';
 import PlatformRevenueIntelligence from '@/pages/platform/PlatformRevenueIntelligence';
 import PlatformReferrals from '@/pages/platform/PlatformReferrals';
@@ -231,7 +230,6 @@ export const platformRoutes: RouteObject[] = [
       // ── Structure ── (shared opsAdmin guard)
       sectionGuard('structure', opsAdmin, [
         { path: 'events', element: <PlatformEvents /> },
-        { path: 'menus', element: <PlatformMenuStructure /> },
         { path: 'modules', element: <PlatformModulesCatalog /> },
         {
           path: 'architecture',
