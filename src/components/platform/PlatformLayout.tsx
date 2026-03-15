@@ -187,6 +187,7 @@ const NAV_SECTIONS: NavSection[] = [
         requiredPermission: 'billing.view',
         children: [
           { to: '/platform/website', label: 'Dashboard' },
+          { to: '/platform/landing/home-editor', label: 'Página Inicial' },
           { to: '/platform/website/ai-designer', label: 'AI Designer' },
           { to: '/platform/website/templates', label: 'Templates' },
           { to: '/platform/website/versions', label: 'Versionamento' },
