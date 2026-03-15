@@ -101,8 +101,28 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Clientes',
     items: [
       { to: '/platform/tenants', label: 'Lista de Tenants', icon: Building2, requiredPermission: 'tenant.view' },
-      { to: '/platform/users/dashboard', label: 'Visão Geral Usuários', icon: BarChart3, requiredPermission: 'platform_user.view' },
+    ],
+  },
+
+  // ══════════════════════════════════════════════
+  // 3. USUÁRIOS & ACESSO
+  // ══════════════════════════════════════════════
+  {
+    label: 'Usuários & Acesso',
+    items: [
+      { to: '/platform/users/dashboard', label: 'Visão Geral', icon: BarChart3, requiredPermission: 'platform_user.view' },
       { to: '/platform/users', label: 'Usuários', icon: Users, requiredPermission: 'platform_user.view' },
+      {
+        to: '/platform/iam',
+        label: 'Cargos & Permissões',
+        icon: KeyRound,
+        requiredPermission: 'security.manage',
+        children: [
+          { to: '/platform/iam', label: 'Cargos & Permissões' },
+          { to: '/platform/security/access-graph', label: 'Access Graph' },
+          { to: '/platform/security/unified-graph', label: 'Unified Graph' },
+        ],
+      },
     ],
   },
 
@@ -222,17 +242,6 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Segurança',
     items: [
       { to: '/platform/security/dashboard', label: 'Dashboard de Segurança', icon: ShieldCheck, requiredPermission: 'security.view' },
-      {
-        to: '/platform/iam',
-        label: 'Cargos & Permissões',
-        icon: KeyRound,
-        requiredPermission: 'security.manage',
-        children: [
-          { to: '/platform/iam', label: 'Cargos & Permissões' },
-          { to: '/platform/security/access-graph', label: 'Access Graph' },
-          { to: '/platform/security/unified-graph', label: 'Unified Graph' },
-        ],
-      },
       { to: '/platform/governance', label: 'Governance Dashboard', icon: BarChart3, requiredPermission: 'security.view' },
       {
         to: '/platform/governance/policies',
