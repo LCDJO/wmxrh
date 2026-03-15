@@ -33,7 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import {
   Loader2, Save, Send, CheckCircle2, Globe, Plus, Trash2,
-  History, Home, XCircle, RefreshCw, Clock,
+  History, Home, XCircle, RefreshCw, Clock, ExternalLink, Zap,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -181,8 +181,9 @@ function VersionHistoryPanel({ pageId }: { pageId: string }) {
 // ─── Página principal ──────────────────────────────────────────────────────────
 
 export default function LandingHomeEditor() {
-  const { identity } = usePlatformIdentity();
+  const { identity, hasRole } = usePlatformIdentity();
   const { can } = usePlatformPermissions();
+  const isSuperAdmin = hasRole('platform_super_admin');
   const { toast } = useToast();
 
   const [page, setPage] = useState<LandingPage | null>(null);
@@ -342,6 +343,25 @@ export default function LandingHomeEditor() {
     setSaving(false);
   };
 
+  // ── Publicação direta (sem fluxo de aprovação) ───────────────────────────
+
+  const handleDirectPublish = async () => {
+    if (!page) return;
+    setActing(true);
+    try {
+      const { error } = await supabase
+        .from('landing_pages')
+        .update({ blocks: contentToBlocks(content) as any, status: 'published' })
+        .eq('id', page.id);
+      if (error) throw new Error(error.message);
+      toast({ title: 'Publicada!', description: 'A landing page está no ar em /.' });
+      await loadPage();
+    } catch (e: unknown) {
+      toast({ title: 'Erro ao publicar', description: e instanceof Error ? e.message : String(e), variant: 'destructive' });
+    }
+    setActing(false);
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -379,8 +399,9 @@ export default function LandingHomeEditor() {
   const canApprove = can('landing.approve') && status === 'pending_review' && !!pendingRequestId;
   const canReject = can('landing.reject') && status === 'pending_review' && !!pendingRequestId;
   const canPublish = can('landing.publish') && status === 'approved';
-  const canPublishNew = status === 'published' && can('landing.submit_for_review');
-  const isEditable = status === 'draft';
+  const canPublishNew = status === 'published' && (can('landing.submit_for_review') || isSuperAdmin);
+  const canDirectPublish = isSuperAdmin && status !== 'published';
+  const isEditable = status === 'draft' || isSuperAdmin;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -400,9 +421,13 @@ export default function LandingHomeEditor() {
           <Badge variant={getStatusVariant(status as any)}>
             {getStatusLabel(status as any)}
           </Badge>
+          <Button variant="ghost" size="sm" className="gap-1.5" asChild>
+            <a href="/" target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4" /> Ver ao vivo
+            </a>
+          </Button>
           <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setShowHistory(h => !h)}>
-            <History className="h-4 w-4" />
-            Histórico
+            <History className="h-4 w-4" /> Histórico
           </Button>
           {isEditable && (
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSave} disabled={saving}>
@@ -410,8 +435,14 @@ export default function LandingHomeEditor() {
               Salvar Rascunho
             </Button>
           )}
-          {canSubmit && (
-            <Button size="sm" className="gap-1.5" onClick={handleSubmit} disabled={acting}>
+          {canDirectPublish && (
+            <Button size="sm" className="gap-1.5" onClick={handleDirectPublish} disabled={acting}>
+              {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              Publicar Agora
+            </Button>
+          )}
+          {canSubmit && !canDirectPublish && (
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={handleSubmit} disabled={acting}>
               {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               Submeter para Aprovação
             </Button>
