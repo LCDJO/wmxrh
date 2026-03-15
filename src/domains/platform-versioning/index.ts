@@ -43,7 +43,7 @@ export function createAdvancedVersioningEngine(): AdvancedVersioningEngineAPI {
   const releases = new ReleaseManager();
   const dependencies = new DependencyResolver(modules);
   const features = new FeatureChangeTracker();
-  const rollback = new RollbackOrchestrator(releases, modules, dependencies);
+  const rollback = new RollbackOrchestrator(releases, modules, dependencies, changelog);
   const renderer = new ChangelogRenderer(changelog, releases);
   const tracker = new AutoChangeTracker(changelog);
 

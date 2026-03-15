@@ -6,13 +6,15 @@ import { ROLLBACK_PROTECTED_MODULES } from './types';
 import type { ReleaseManager } from './release-manager';
 import type { DependencyResolver } from './dependency-resolver';
 import type { ModuleVersionRegistry } from './module-version-registry';
-import { versionId } from './version-utils';
+import type { ChangeLogger } from './change-logger';
+import { versionId, formatVersion } from './version-utils';
 
 export class RollbackOrchestrator {
   constructor(
     private releaseManager: ReleaseManager,
     private moduleRegistry: ModuleVersionRegistry,
     private dependencyResolver: DependencyResolver,
+    private changelog: ChangeLogger,
   ) {}
 
   async planModuleRollback(
@@ -160,24 +162,137 @@ export class RollbackOrchestrator {
     };
   }
 
-  executeStep(plan: RollbackPlan, stepOrder: number): RollbackStep | null {
+  async executeStep(plan: RollbackPlan, stepOrder: number, executedBy: string): Promise<RollbackStep | null> {
     const step = plan.steps.find(s => s.order === stepOrder);
     if (!step || step.status === 'skipped' || step.status === 'done') return null;
     if (step.status !== 'pending') return null;
+
     step.status = 'in_progress';
-    step.status = 'done';
+
+    try {
+      switch (step.action) {
+        case 'downgrade_module': {
+          // Deprecate current released version
+          const current = await this.moduleRegistry.getCurrent(step.target);
+          if (current) {
+            await this.moduleRegistry.deprecate(step.target, current.id);
+          }
+          // Re-release the target version
+          if (step.to_version) {
+            const allVersions = await this.moduleRegistry.listForModule(step.target);
+            const targetVer = allVersions.find(v =>
+              v.version.major === step.to_version!.major &&
+              v.version.minor === step.to_version!.minor &&
+              v.version.patch === step.to_version!.patch
+            );
+            if (targetVer) {
+              await this.moduleRegistry.transition(step.target, targetVer.id, 'released');
+            }
+          }
+          await this.changelog.log({
+            module_id: step.target,
+            entity_type: 'module',
+            entity_id: step.target,
+            change_type: 'rolled_back',
+            version_tag: step.to_version ? `v${formatVersion(step.to_version)}` : 'unknown',
+            payload_diff: { before: step.from_version, after: step.to_version },
+            changed_by: executedBy,
+          });
+          break;
+        }
+
+        case 'deactivate_module': {
+          const current = await this.moduleRegistry.getCurrent(step.target);
+          if (current) {
+            await this.moduleRegistry.deprecate(step.target, current.id);
+            await this.changelog.log({
+              module_id: step.target,
+              entity_type: 'module',
+              entity_id: step.target,
+              change_type: 'deactivated',
+              version_tag: current.version_tag,
+              payload_diff: { before: current.version, after: null },
+              changed_by: executedBy,
+            });
+          }
+          break;
+        }
+
+        case 'restore_platform_version': {
+          await this.changelog.log({
+            entity_type: 'platform_version',
+            entity_id: step.target,
+            change_type: 'rolled_back',
+            version_tag: step.target,
+            payload_diff: { restored_platform_version_id: step.target, plan_id: plan.id },
+            changed_by: executedBy,
+          });
+          break;
+        }
+
+        case 'notify': {
+          await this.changelog.log({
+            entity_type: 'rollback_notification',
+            entity_id: plan.id,
+            change_type: 'updated',
+            version_tag: 'rollback',
+            payload_diff: {
+              plan_id: plan.id,
+              scope: plan.scope,
+              modules_affected: plan.modules_affected,
+              notified_at: new Date().toISOString(),
+            },
+            changed_by: executedBy,
+          });
+          break;
+        }
+
+        case 'skip_protected':
+          step.status = 'skipped';
+          return step;
+      }
+
+      step.status = 'done';
+    } catch (err) {
+      step.status = 'failed';
+      step.reason = err instanceof Error ? err.message : String(err);
+      throw err;
+    }
+
     return step;
   }
 
-  async executeFull(plan: RollbackPlan): Promise<RollbackPlan> {
+  async executeFull(
+    plan: RollbackPlan,
+    executedBy: string,
+  ): Promise<{ plan: RollbackPlan; errors: string[] }> {
+    const errors: string[] = [];
+
     for (const step of plan.steps.sort((a, b) => a.order - b.order)) {
       if (step.status === 'skipped') continue;
-      this.executeStep(plan, step.order);
+
+      // Abort remaining steps if a previous one failed
+      if (errors.length > 0) {
+        step.status = 'failed';
+        step.reason = 'Abortado: step anterior falhou';
+        continue;
+      }
+
+      try {
+        await this.executeStep(plan, step.order, executedBy);
+      } catch (err) {
+        errors.push(
+          `Step ${step.order} (${step.action} → ${step.target}): ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
     }
-    if (plan.scope === 'release' && plan.release_id) {
+
+    // Only mark release as rolled_back if all steps succeeded
+    if (errors.length === 0 && plan.scope === 'release' && plan.release_id) {
       await this.releaseManager.transition(plan.release_id, 'rolled_back');
     }
-    return plan;
+
+    return { plan, errors };
   }
 
   isProtected(moduleKey: string): boolean {

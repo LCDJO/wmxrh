@@ -99,11 +99,17 @@ export function RollbackPanel({ canRollback = true }: { canRollback?: boolean })
     setExecuting(true);
     try {
       const engine = getAdvancedVersioningEngine();
-      const result = await engine.rollback.executeFull(plan);
-      setPlan(result);
-      toast.success('Rollback executado com sucesso', {
-        description: `${result.modules_skipped.length} módulo(s) protegido(s) preservados.`,
-      });
+      const { plan: updatedPlan, errors } = await engine.rollback.executeFull(plan, user?.id ?? 'system');
+      setPlan(updatedPlan);
+      if (errors.length === 0) {
+        toast.success('Rollback executado com sucesso', {
+          description: `${updatedPlan.modules_skipped.length} módulo(s) protegido(s) preservados.`,
+        });
+      } else {
+        toast.error(`Rollback parcialmente falhou (${errors.length} erro(s))`, {
+          description: errors[0],
+        });
+      }
       await fetchReleases();
     } catch {
       toast.error('Erro ao executar rollback.');
