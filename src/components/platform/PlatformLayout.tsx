@@ -323,7 +323,6 @@ const NAV_SECTIONS: NavSection[] = [
         ],
       },
       { to: '/platform/document-signature', label: 'Assinatura Digital', icon: FileSignature, requiredPermission: 'security.manage' },
-      { to: '/platform/integration-health', label: 'Integration Health', icon: Activity, requiredPermission: 'security.manage' },
     ],
   },
 
@@ -452,6 +451,7 @@ const NAV_SECTIONS: NavSection[] = [
           { to: '/platform/control-plane/chaos', label: 'Chaos Engineering' },
         ],
       },
+      { to: '/platform/integration-health', label: 'Integration Health', icon: Activity, requiredPermission: 'security.manage' },
     ],
   },
 
