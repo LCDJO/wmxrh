@@ -49,7 +49,17 @@ export function useModuleVersioning() {
       },
     );
 
-    // Auto-release
+    // Validate dependencies before releasing — block if mandatory deps are unmet or
+    // if publishing this version would break dependents in the registry.
+    const validation = await engine.dependencies.validateBeforePublish(moduleId, nextVersion);
+    if (!validation.ok) {
+      // Mark the draft as deprecated so it doesn't pollute the registry
+      await engine.modules.deprecate(moduleId, newVersion.id);
+      const messages = validation.errors.map(e => e.message).join('\n• ');
+      throw new Error(`Publicação bloqueada por dependências não satisfeitas:\n• ${messages}`);
+    }
+
+    // Release
     await engine.modules.release(moduleId, newVersion.id);
 
     // Track the change in changelog

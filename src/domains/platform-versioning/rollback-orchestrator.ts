@@ -77,6 +77,13 @@ export class RollbackOrchestrator {
     const target = await this.releaseManager.getById(targetReleaseId);
     if (!current || !target) return null;
 
+    // Gap 3: only allow rollback from a finalized release — draft/candidate are unstable
+    if (current.status !== 'final') {
+      throw new Error(
+        `Rollback só pode ser aplicado a releases com status "final". Status atual de "${current.name}": "${current.status}".`,
+      );
+    }
+
     const steps: RollbackStep[] = [];
     const modulesAffected: string[] = [];
     const modulesSkipped: string[] = [];
@@ -268,6 +275,9 @@ export class RollbackOrchestrator {
   ): Promise<{ plan: RollbackPlan; errors: string[] }> {
     const errors: string[] = [];
 
+    // Gap 4: capture current state of all affected modules before touching anything
+    const snapshot = await this.captureModuleSnapshot(plan.modules_affected);
+
     for (const step of plan.steps.sort((a, b) => a.order - b.order)) {
       if (step.status === 'skipped') continue;
 
@@ -287,12 +297,60 @@ export class RollbackOrchestrator {
       }
     }
 
-    // Only mark release as rolled_back if all steps succeeded
-    if (errors.length === 0 && plan.scope === 'release' && plan.release_id) {
+    if (errors.length > 0) {
+      // Gap 4: restore snapshot — undo any partial changes
+      await this.restoreModuleSnapshot(snapshot, plan.modules_affected, executedBy);
+      return { plan, errors };
+    }
+
+    // All steps succeeded — mark release as rolled_back
+    if (plan.scope === 'release' && plan.release_id) {
       await this.releaseManager.transition(plan.release_id, 'rolled_back');
     }
 
     return { plan, errors };
+  }
+
+  // ── Snapshot helpers (atomicity) ──────────────────────────────────────────
+
+  private async captureModuleSnapshot(moduleKeys: string[]): Promise<Map<string, string | null>> {
+    const snapshot = new Map<string, string | null>();
+    for (const key of moduleKeys) {
+      const current = await this.moduleRegistry.getCurrent(key);
+      snapshot.set(key, current?.id ?? null);
+    }
+    return snapshot;
+  }
+
+  private async restoreModuleSnapshot(
+    snapshot: Map<string, string | null>,
+    moduleKeys: string[],
+    restoredBy: string,
+  ): Promise<void> {
+    for (const key of moduleKeys) {
+      const originalVersionId = snapshot.get(key);
+
+      // Deprecate whatever ended up as released after the partial rollback
+      const current = await this.moduleRegistry.getCurrent(key);
+      if (current && current.id !== originalVersionId) {
+        await this.moduleRegistry.deprecate(key, current.id);
+      }
+
+      // Re-release the original version if there was one
+      if (originalVersionId) {
+        await this.moduleRegistry.transition(key, originalVersionId, 'released');
+      }
+
+      await this.changelog.log({
+        module_id: key,
+        entity_type: 'module',
+        entity_id: key,
+        change_type: 'rolled_back',
+        version_tag: 'rollback-restore',
+        payload_diff: { reason: 'Restauração automática após falha no rollback', original_version_id: originalVersionId },
+        changed_by: restoredBy,
+      });
+    }
   }
 
   isProtected(moduleKey: string): boolean {

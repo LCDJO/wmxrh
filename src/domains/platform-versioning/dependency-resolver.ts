@@ -63,7 +63,13 @@ export class DependencyResolver {
     if (targetVersion) {
       const broken = await this.wouldBreak(moduleKey, targetVersion);
       for (const b of broken) {
-        warnings.push({ module_key: b, message: `Dependente "${b}" pode quebrar se "${moduleKey}" for publicado como v${formatVersion(targetVersion)}` });
+        errors.push({
+          module_key: moduleKey,
+          dependency: b,
+          required_version: formatVersion(targetVersion),
+          actual_version: formatVersion(targetVersion),
+          message: `Publicar "${moduleKey}" como v${formatVersion(targetVersion)} quebrará o módulo "${b}" que depende de uma versão mais alta — atualize "${b}" primeiro ou escolha um bump de versão compatível`,
+        });
       }
     }
 
