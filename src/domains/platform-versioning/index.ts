@@ -77,6 +77,8 @@ export { formatVersion, parseVersion, compareVersions, bumpVersion, satisfiesRan
 export { MODULE_CATALOG } from './module-catalog';
 export { seedAllModuleVersions } from './module-version-seeder';
 export { useModuleVersioning } from './use-module-versioning';
+export { useSupportModuleVersion } from './use-support-module-version';
+export type { SupportModuleVersionContext } from './use-support-module-version';
 export { SupportModuleVersionRegistry } from './support-module-version';
 export type { SupportModuleVersion } from './support-module-version';
 export { SupportModuleSandboxPreview } from './support-sandbox-preview';

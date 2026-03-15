@@ -19,6 +19,7 @@ import { useTenant } from '@/contexts/TenantContext';
 import { TicketService } from '@/domains/support/ticket-service';
 import { WikiService } from '@/domains/support/wiki-service';
 import { EvaluationService } from '@/domains/support/evaluation-service';
+import { useSupportModuleVersion } from '@/domains/platform-versioning/use-support-module-version';
 import LiveChatWindow from './LiveChatWindow';
 import type { SupportTicket, TicketMessage, WikiArticle, TicketPriority, TicketCategory, TicketStatus } from '@/domains/support/types';
 
@@ -55,6 +56,12 @@ const TenantSupportPortal = () => {
   const { currentTenant } = useTenant();
   const [activeTab, setActiveTab] = useState('tickets');
 
+  // Resolve feature flags for this tenant — respects active sandbox preview sessions
+  const { flag, isPreview, loading: flagsLoading } = useSupportModuleVersion(currentTenant?.id);
+
+  const liveChatEnabled = flag('live_chat_enabled', true);
+  const wikiEnabled = flag('wiki_enabled', true);
+
   if (!currentTenant || !user) {
     return <div className="p-6 text-muted-foreground">Carregando...</div>;
   }
@@ -69,6 +76,11 @@ const TenantSupportPortal = () => {
           <h1 className="text-2xl font-bold text-foreground">Central de Suporte</h1>
           <p className="text-sm text-muted-foreground">Abra tickets e consulte a base de conhecimento</p>
         </div>
+        {isPreview && (
+          <span className="ml-auto text-[10px] font-semibold px-2 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            Preview ativo
+          </span>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -76,18 +88,27 @@ const TenantSupportPortal = () => {
           <TabsTrigger value="tickets" className="gap-2">
             <MessageSquare className="h-4 w-4" /> Meus Tickets
           </TabsTrigger>
-          <TabsTrigger value="wiki" className="gap-2">
-            <BookOpen className="h-4 w-4" /> Base de Conhecimento
-          </TabsTrigger>
+          {wikiEnabled && (
+            <TabsTrigger value="wiki" className="gap-2">
+              <BookOpen className="h-4 w-4" /> Base de Conhecimento
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="tickets" className="mt-4">
-          <TicketPanel tenantId={currentTenant.id} userId={user.id} />
+          <TicketPanel
+            tenantId={currentTenant.id}
+            userId={user.id}
+            liveChatEnabled={liveChatEnabled}
+            evaluationEnabled={flag('ticket_evaluation_enabled', true)}
+          />
         </TabsContent>
 
-        <TabsContent value="wiki" className="mt-4">
-          <WikiPanel />
-        </TabsContent>
+        {wikiEnabled && (
+          <TabsContent value="wiki" className="mt-4">
+            <WikiPanel />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
@@ -95,7 +116,17 @@ const TenantSupportPortal = () => {
 
 // ── Ticket Panel ──
 
-function TicketPanel({ tenantId, userId }: { tenantId: string; userId: string }) {
+function TicketPanel({
+  tenantId,
+  userId,
+  liveChatEnabled,
+  evaluationEnabled,
+}: {
+  tenantId: string;
+  userId: string;
+  liveChatEnabled: boolean;
+  evaluationEnabled: boolean;
+}) {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
@@ -128,6 +159,8 @@ function TicketPanel({ tenantId, userId }: { tenantId: string; userId: string })
         ticket={selectedTicket}
         userId={userId}
         tenantId={tenantId}
+        liveChatEnabled={liveChatEnabled}
+        evaluationEnabled={evaluationEnabled}
         onBack={() => { setSelectedTicket(null); loadTickets(); }}
       />
     );
@@ -356,7 +389,21 @@ function NewTicketForm({ tenantId, userId, onCreated }: { tenantId: string; user
 
 // ── Ticket Detail + Chat ──
 
-function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTicket; userId: string; tenantId: string; onBack: () => void }) {
+function TicketDetail({
+  ticket,
+  userId,
+  tenantId,
+  liveChatEnabled,
+  evaluationEnabled,
+  onBack,
+}: {
+  ticket: SupportTicket;
+  userId: string;
+  tenantId: string;
+  liveChatEnabled: boolean;
+  evaluationEnabled: boolean;
+  onBack: () => void;
+}) {
   const [messages, setMessages] = useState<TicketMessage[]>([]);
   const [newMsg, setNewMsg] = useState('');
   const [sending, setSending] = useState(false);
@@ -440,26 +487,30 @@ function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTic
       </Card>
 
       {/* Communication Tabs */}
-      <Tabs defaultValue="chat" className="w-full">
+      <Tabs defaultValue={liveChatEnabled ? 'chat' : 'messages'} className="w-full">
         <TabsList className="w-full justify-start">
-          <TabsTrigger value="chat" className="gap-2">
-            <Radio className="h-3.5 w-3.5" /> Chat ao Vivo
-          </TabsTrigger>
+          {liveChatEnabled && (
+            <TabsTrigger value="chat" className="gap-2">
+              <Radio className="h-3.5 w-3.5" /> Chat ao Vivo
+            </TabsTrigger>
+          )}
           <TabsTrigger value="messages" className="gap-2">
             <MessageSquare className="h-3.5 w-3.5" /> Mensagens
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="chat" className="mt-3">
-          <LiveChatWindow
-            ticketId={ticket.id}
-            tenantId={tenantId}
-            userId={userId}
-            senderType="tenant"
-            assignedAgentId={ticket.assigned_to}
-            ticketSubject={ticket.subject}
-          />
-        </TabsContent>
+        {liveChatEnabled && (
+          <TabsContent value="chat" className="mt-3">
+            <LiveChatWindow
+              ticketId={ticket.id}
+              tenantId={tenantId}
+              userId={userId}
+              senderType="tenant"
+              assignedAgentId={ticket.assigned_to}
+              ticketSubject={ticket.subject}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent value="messages" className="mt-3">
           <Card>
@@ -506,7 +557,7 @@ function TicketDetail({ ticket, userId, tenantId, onBack }: { ticket: SupportTic
                 </div>
               )}
 
-              {isResolved && !existingEval && (
+              {isResolved && !existingEval && evaluationEnabled && (
                 <div className="mt-4 pt-4 border-t">
                   <Dialog open={showEvalDialog} onOpenChange={setShowEvalDialog}>
                     <DialogTrigger asChild>
