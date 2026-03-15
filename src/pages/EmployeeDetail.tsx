@@ -10,7 +10,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { usePermissions } from '@/domains/security';
-import { useEmployee, useUpdateEmployee } from '@/domains/hooks';
+import { useEmployee, useUpdateEmployee, useCompaniesSimple, useDepartments, usePositions } from '@/domains/hooks';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,9 @@ export default function EmployeeDetail() {
   const { data: employee } = useEmployee(id!);
   const updateEmployee = useUpdateEmployee();
   const { canManageEmployees, canManageCompensation } = usePermissions();
+  const { data: companies = [] } = useCompaniesSimple();
+  const { data: departments = [] } = useDepartments();
+  const { data: positions = [] } = usePositions();
 
   // Edit employee state
   const [editOpen, setEditOpen] = useState(false);
@@ -40,6 +43,9 @@ export default function EmployeeDetail() {
   const [editCpf, setEditCpf] = useState('');
   const [editHireDate, setEditHireDate] = useState('');
   const [editStatus, setEditStatus] = useState('');
+  const [editCompanyId, setEditCompanyId] = useState('');
+  const [editDepartmentId, setEditDepartmentId] = useState('');
+  const [editPositionId, setEditPositionId] = useState('');
 
   const openEditDialog = () => {
     if (!employee) return;
@@ -49,6 +55,9 @@ export default function EmployeeDetail() {
     setEditCpf(employee.cpf || '');
     setEditHireDate(employee.hire_date ? employee.hire_date.split('T')[0] : '');
     setEditStatus(employee.status || 'active');
+    setEditCompanyId(employee.company_id || '');
+    setEditDepartmentId(employee.department_id || '');
+    setEditPositionId(employee.position_id || '');
     setEditOpen(true);
   };
 
@@ -62,6 +71,9 @@ export default function EmployeeDetail() {
       cpf: editCpf || null,
       hire_date: editHireDate || null,
       status: editStatus,
+      company_id: editCompanyId || null,
+      department_id: editDepartmentId || null,
+      position_id: editPositionId || null,
     }, {
       onSuccess: () => { toast({ title: 'Colaborador atualizado!' }); setEditOpen(false); },
       onError: (e: Error) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
@@ -181,6 +193,33 @@ export default function EmployeeDetail() {
                     <SelectItem value="inactive">Inativo</SelectItem>
                     <SelectItem value="on_leave">Afastado</SelectItem>
                     <SelectItem value="terminated">Desligado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Empresa</Label>
+                <Select value={editCompanyId} onValueChange={setEditCompanyId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {companies.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Departamento</Label>
+                <Select value={editDepartmentId} onValueChange={setEditDepartmentId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Cargo</Label>
+                <Select value={editPositionId} onValueChange={setEditPositionId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {positions.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
