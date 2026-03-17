@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
             .eq("id", msg.id);
 
           try {
-            const res = await fetch(`${TELEGRAM_API}${config.bot_token_encrypted}/sendMessage`, {
+            const res = await fetch(`${TELEGRAM_API}${config.bot_token}/sendMessage`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
