@@ -557,6 +557,7 @@ export default function PlatformLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [expandedNav, setExpandedNav] = useState<string | null>(null);
   const [expandedChild, setExpandedChild] = useState<string | null>(null);
+  const alertService = useAgentAlerts(user?.id ?? '');
   const isPlatformDashboard = location.pathname === '/platform/dashboard';
 
   const visibleSections = useMemo(() => {
