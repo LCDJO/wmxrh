@@ -155,6 +155,52 @@ function formatDate(value?: string | null) {
   return new Date(value).toLocaleDateString('pt-BR');
 }
 
+function formatDateTime(value?: string | null) {
+  if (!value) return 'Livre';
+  return new Date(value).toLocaleString('pt-BR');
+}
+
+function toDateTimeLocalValue(value?: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  const timezoneOffset = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+}
+
+function fromDateTimeLocalValue(value?: string) {
+  return value ? new Date(value).toISOString() : null;
+}
+
+function getCreativeDeliveryStatus(creative: AdsCreative) {
+  const now = Date.now();
+
+  if (!creative.is_active) {
+    return { label: 'Inativo', variant: 'secondary' as const, helper: 'Criativo desativado manualmente.' };
+  }
+
+  if (creative.starts_at && new Date(creative.starts_at).getTime() > now) {
+    return {
+      label: 'Agendado',
+      variant: 'outline' as const,
+      helper: `Entra no ar em ${formatDateTime(creative.starts_at)}.`,
+    };
+  }
+
+  if (creative.expires_at && new Date(creative.expires_at).getTime() < now) {
+    return {
+      label: 'Expirado',
+      variant: 'secondary' as const,
+      helper: `Validade encerrada em ${formatDateTime(creative.expires_at)}.`,
+    };
+  }
+
+  return {
+    label: 'Em exibição',
+    variant: 'default' as const,
+    helper: `Janela: ${formatDateTime(creative.starts_at)} até ${formatDateTime(creative.expires_at)}.`,
+  };
+}
+
 function metricDelta(current: number, previous: number) {
   if (!previous && !current) return '—';
   if (!previous) return 'Novo';
