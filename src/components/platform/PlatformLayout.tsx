@@ -195,11 +195,12 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         to: '/platform/marketing',
-        label: 'Analytics',
+        label: 'Marketing & Ads',
         icon: BarChart3,
         requiredPermission: 'security.view',
         children: [
           { to: '/platform/marketing/analytics', label: 'Analytics' },
+          { to: '/platform/marketing/ads', label: 'Ads Management' },
         ],
       },
       {
