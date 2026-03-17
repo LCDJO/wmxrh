@@ -13413,6 +13413,7 @@ export type Database = {
           session_id: string | null
           source: string | null
           tenant_created: boolean
+          tracked_at: string
           variant_id: string | null
           visitor_id: string | null
         }
@@ -13428,6 +13429,7 @@ export type Database = {
           session_id?: string | null
           source?: string | null
           tenant_created?: boolean
+          tracked_at?: string
           variant_id?: string | null
           visitor_id?: string | null
         }
@@ -13443,6 +13445,7 @@ export type Database = {
           session_id?: string | null
           source?: string | null
           tenant_created?: boolean
+          tracked_at?: string
           variant_id?: string | null
           visitor_id?: string | null
         }
