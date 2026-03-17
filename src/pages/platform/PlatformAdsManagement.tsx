@@ -702,9 +702,11 @@ function TargetingPanel({ campaigns, selectedCampaignId, onSelectCampaign }: {
   );
 }
 
-function MetricsPanel({ summary, daily, loading }: {
+function MetricsPanel({ summary, daily, bySlot, placements, loading }: {
   summary: any[];
   daily: any[];
+  bySlot: AdsSlotMetric[];
+  placements: AdsPlacement[];
   loading: boolean;
 }) {
   if (loading) {
@@ -714,6 +716,8 @@ function MetricsPanel({ summary, daily, loading }: {
       </div>
     );
   }
+
+  const placementMap = new Map(placements.map((placement) => [placement.name, placement]));
 
   return (
     <div className="space-y-6">
@@ -731,45 +735,104 @@ function MetricsPanel({ summary, daily, loading }: {
                 <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="impressions" name="Impressões" fill="hsl(210, 100%, 52%)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="clicks" name="Cliques" fill="hsl(160, 84%, 39%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="impressions" name="Impressões" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="clicks" name="Cliques" fill="hsl(var(--accent-foreground))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
       )}
 
-      {/* Summary table */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Performance por Campanha</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campanha</TableHead>
-                <TableHead>Impressões</TableHead>
-                <TableHead>Cliques</TableHead>
-                <TableHead>CTR</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {summary.map(s => (
-                <TableRow key={s.campaign_id}>
-                  <TableCell className="font-medium text-sm">{s.campaign_name}</TableCell>
-                  <TableCell className="font-mono text-sm">{s.impressions.toLocaleString()}</TableCell>
-                  <TableCell className="font-mono text-sm">{s.clicks.toLocaleString()}</TableCell>
-                  <TableCell className="font-mono text-sm">{s.ctr.toFixed(2)}%</TableCell>
+      {bySlot.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">CTR por local</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={bySlot.slice(0, 10)}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="slot_name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <Tooltip formatter={(v: number) => [`${v.toFixed(2)}%`, 'CTR']} />
+                <Bar dataKey="ctr" name="CTR" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Performance por Campanha</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Campanha</TableHead>
+                  <TableHead>Impressões</TableHead>
+                  <TableHead>Cliques</TableHead>
+                  <TableHead>CTR</TableHead>
                 </TableRow>
-              ))}
-              {summary.length === 0 && (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Sem dados de métricas</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {summary.map(s => (
+                  <TableRow key={s.campaign_id}>
+                    <TableCell className="font-medium text-sm">{s.campaign_name}</TableCell>
+                    <TableCell className="font-mono text-sm">{s.impressions.toLocaleString()}</TableCell>
+                    <TableCell className="font-mono text-sm">{s.clicks.toLocaleString()}</TableCell>
+                    <TableCell className="font-mono text-sm">{s.ctr.toFixed(2)}%</TableCell>
+                  </TableRow>
+                ))}
+                {summary.length === 0 && (
+                  <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Sem dados de métricas</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Performance por Local</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Local</TableHead>
+                  <TableHead>Impressões</TableHead>
+                  <TableHead>Cliques</TableHead>
+                  <TableHead>CTR</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bySlot.map(slotMetric => {
+                  const placement = placementMap.get(slotMetric.slot_name);
+                  return (
+                    <TableRow key={slotMetric.slot_name}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-sm text-foreground">{placement?.label ?? slotMetric.slot_name}</p>
+                          <p className="text-[11px] font-mono text-muted-foreground">{slotMetric.slot_name}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{slotMetric.impressions.toLocaleString()}</TableCell>
+                      <TableCell className="font-mono text-sm">{slotMetric.clicks.toLocaleString()}</TableCell>
+                      <TableCell className="font-mono text-sm">{slotMetric.ctr.toFixed(2)}%</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {bySlot.length === 0 && (
+                  <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Sem dados por local ainda</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
