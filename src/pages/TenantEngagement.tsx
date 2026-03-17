@@ -53,6 +53,8 @@ export default function TenantEngagement() {
   useEffect(() => {
     if (!userId || !tenantId) return;
 
+    const safeTenantId = tenantId;
+    const safeUserId = userId;
     const engine = getRevenueIntelligenceEngine();
 
     async function load() {
@@ -61,8 +63,8 @@ export default function TenantEngagement() {
       const { data: membership } = await supabase
         .from('tenant_memberships')
         .select('role')
-        .eq('tenant_id', tenantId)
-        .eq('user_id', userId)
+        .eq('tenant_id', safeTenantId)
+        .eq('user_id', safeUserId)
         .maybeSingle();
 
       const admin = (membership as any)?.role === 'admin' || (membership as any)?.role === 'owner';
@@ -71,8 +73,8 @@ export default function TenantEngagement() {
       const mineResult = await (supabase
         .from('tenant_user_engagement' as any)
         .select('total_points, actions_count, top_module, last_action_at')
-        .eq('tenant_id', tenantId)
-        .eq('user_id', userId)
+        .eq('tenant_id', safeTenantId)
+        .eq('user_id', safeUserId)
         .maybeSingle() as any);
 
       const mine = mineResult?.data as Partial<MyEngagement> | null;
@@ -84,7 +86,7 @@ export default function TenantEngagement() {
       });
 
       if (admin) {
-        const teamData = await engine.gamification.getTenantUserEngagement(tenantId, 20);
+        const teamData = await engine.gamification.getTenantUserEngagement(safeTenantId, 20);
         setTeam(teamData);
       }
 
