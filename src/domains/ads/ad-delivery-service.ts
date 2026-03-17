@@ -37,6 +37,12 @@ interface CachedAds {
 const CACHE_TTL_MS = 60_000;
 const FREQUENCY_CAP_HOURS = 24;
 
+function isWithinWindow(startsAt?: string | null, expiresAt?: string | null, now = new Date()): boolean {
+  if (startsAt && new Date(startsAt) > now) return false;
+  if (expiresAt && new Date(expiresAt) < now) return false;
+  return true;
+}
+
 class AdDeliveryService {
   private cache = new Map<string, CachedAds>();
 
@@ -54,7 +60,15 @@ class AdDeliveryService {
   }
 
   async getAdsForPlacement(ctx: AdContext): Promise<AdCreative[]> {
-    const cacheKey = `${ctx.placement}:${ctx.tenantId ?? ''}:${ctx.planName ?? ''}:${ctx.moduleKey ?? ''}`;
+    const cacheKey = [
+      ctx.placement,
+      ctx.tenantId ?? '',
+      ctx.planName ?? '',
+      ctx.userRole ?? '',
+      ctx.country ?? '',
+      ctx.deviceType ?? '',
+      ctx.moduleKey ?? '',
+    ].join(':');
     const cached = this.cache.get(cacheKey);
 
     if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
@@ -62,7 +76,8 @@ class AdDeliveryService {
     }
 
     try {
-      const now = new Date().toISOString();
+      const now = new Date();
+      const nowIso = now.toISOString();
 
       const { data: campaigns, error } = await supabase
         .from('ads_campaigns')
@@ -70,13 +85,13 @@ class AdDeliveryService {
           id, name, priority, status, start_date, end_date,
           ads_creatives!inner (
             id, type, title, image_url, video_url, html_content,
-            cta_text, cta_url, is_active, placement_id,
-            ads_placements ( name, module_key )
+            cta_text, cta_url, is_active, placement_id, starts_at, expires_at,
+            ads_placements ( name, module_key, is_active )
           ),
           ads_targeting ( tenant_id, plan_name, user_role, country, device_type, exclude_premium, module_key )
         `)
         .eq('status', 'active')
-        .lte('start_date', now);
+        .lte('start_date', nowIso);
 
       if (error) {
         console.error('[AdDelivery] fetch error:', error);
@@ -86,17 +101,20 @@ class AdDeliveryService {
       const results: AdCreative[] = [];
 
       for (const campaign of campaigns ?? []) {
-        if (campaign.end_date && new Date(campaign.end_date) < new Date()) continue;
+        if (!isWithinWindow(campaign.start_date, campaign.end_date, now)) continue;
 
         const creatives = (campaign as any).ads_creatives ?? [];
         const targeting = (campaign as any).ads_targeting ?? [];
 
         for (const creative of creatives) {
           if (!creative.is_active) continue;
+          if (!isWithinWindow(creative.starts_at, creative.expires_at, now)) continue;
 
           const placementName = creative.ads_placements?.name ?? null;
           const placementModuleKey = creative.ads_placements?.module_key ?? null;
+          const placementIsActive = creative.ads_placements?.is_active ?? true;
 
+          if (!placementIsActive) continue;
           if (placementName && placementName !== ctx.placement) continue;
           if (!placementName && ctx.placement) continue;
           if (placementModuleKey && placementModuleKey !== ctx.moduleKey) continue;

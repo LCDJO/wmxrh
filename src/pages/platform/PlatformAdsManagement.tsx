@@ -141,6 +141,8 @@ const defaultCreativeForm = {
   html_content: '',
   cta_text: '',
   cta_url: '',
+  starts_at: '',
+  expires_at: '',
   is_active: true,
 };
 
@@ -151,6 +153,52 @@ function fmt(value: number) {
 function formatDate(value?: string | null) {
   if (!value) return '—';
   return new Date(value).toLocaleDateString('pt-BR');
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return 'Livre';
+  return new Date(value).toLocaleString('pt-BR');
+}
+
+function toDateTimeLocalValue(value?: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  const timezoneOffset = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+}
+
+function fromDateTimeLocalValue(value?: string) {
+  return value ? new Date(value).toISOString() : null;
+}
+
+function getCreativeDeliveryStatus(creative: AdsCreative) {
+  const now = Date.now();
+
+  if (!creative.is_active) {
+    return { label: 'Inativo', variant: 'secondary' as const, helper: 'Criativo desativado manualmente.' };
+  }
+
+  if (creative.starts_at && new Date(creative.starts_at).getTime() > now) {
+    return {
+      label: 'Agendado',
+      variant: 'outline' as const,
+      helper: `Entra no ar em ${formatDateTime(creative.starts_at)}.`,
+    };
+  }
+
+  if (creative.expires_at && new Date(creative.expires_at).getTime() < now) {
+    return {
+      label: 'Expirado',
+      variant: 'secondary' as const,
+      helper: `Validade encerrada em ${formatDateTime(creative.expires_at)}.`,
+    };
+  }
+
+  return {
+    label: 'Em exibição',
+    variant: 'default' as const,
+    helper: `Janela: ${formatDateTime(creative.starts_at)} até ${formatDateTime(creative.expires_at)}.`,
+  };
 }
 
 function metricDelta(current: number, previous: number) {
@@ -670,8 +718,12 @@ function CreativesPanel({
   const [form, setForm] = useState(defaultCreativeForm);
 
   const filteredCreatives = useMemo(() => {
-    if (!showActiveOnly) return creatives;
-    return creatives.filter((creative) => creative.is_active);
+    const base = showActiveOnly ? creatives.filter((creative) => creative.is_active) : creatives;
+    return base.sort((a, b) => {
+      const aTime = a.starts_at ? new Date(a.starts_at).getTime() : 0;
+      const bTime = b.starts_at ? new Date(b.starts_at).getTime() : 0;
+      return bTime - aTime;
+    });
   }, [creatives, showActiveOnly]);
 
   const openCreate = () => {
@@ -692,6 +744,8 @@ function CreativesPanel({
       html_content: creative.html_content ?? '',
       cta_text: creative.cta_text ?? '',
       cta_url: creative.cta_url ?? '',
+      starts_at: toDateTimeLocalValue(creative.starts_at),
+      expires_at: toDateTimeLocalValue(creative.expires_at),
       is_active: creative.is_active,
     });
     setDialogOpen(true);
@@ -704,6 +758,18 @@ function CreativesPanel({
     }
     if (!form.title.trim()) {
       toast.error('Informe o título do criativo');
+      return;
+    }
+    if (!form.image_url.trim() && !form.video_url.trim() && !form.html_content.trim()) {
+      toast.error('Adicione imagem, vídeo ou HTML para o banner aparecer');
+      return;
+    }
+
+    const startsAt = fromDateTimeLocalValue(form.starts_at);
+    const expiresAt = fromDateTimeLocalValue(form.expires_at);
+
+    if (startsAt && expiresAt && new Date(startsAt) >= new Date(expiresAt)) {
+      toast.error('A validade final precisa ser maior que a data inicial');
       return;
     }
 
@@ -719,19 +785,21 @@ function CreativesPanel({
         html_content: form.html_content.trim() || null,
         cta_text: form.cta_text.trim() || null,
         cta_url: form.cta_url.trim() || null,
+        starts_at: startsAt,
+        expires_at: expiresAt,
         is_active: form.is_active,
       };
 
       if (editingCreative) {
         await updateCreative(editingCreative.id, payload);
-        toast.success('Criativo atualizado');
+        toast.success('Banner atualizado');
       } else {
         await createCreative(payload);
-        toast.success('Criativo criado');
+        toast.success('Banner criado');
       }
       setDialogOpen(false);
     } catch {
-      toast.error('Não foi possível salvar o criativo');
+      toast.error('Não foi possível salvar o banner');
     } finally {
       setSaving(false);
     }
@@ -759,36 +827,54 @@ function CreativesPanel({
             <span className="text-sm text-muted-foreground">Somente ativos</span>
           </div>
         </div>
-        <Button onClick={openCreate} className="gap-1.5"><Plus className="h-4 w-4" /> Novo criativo</Button>
+        <Button onClick={openCreate} className="gap-1.5"><Plus className="h-4 w-4" /> Novo banner</Button>
       </div>
+
+      <Card>
+        <CardContent className="grid gap-3 p-4 md:grid-cols-3">
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+            <p className="text-sm font-medium text-foreground">Quando o banner aparece</p>
+            <p className="mt-1 text-xs text-muted-foreground">Campanha ativa, criativo ativo, local ativo e dentro da janela de validade.</p>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+            <p className="text-sm font-medium text-foreground">Validade individual</p>
+            <p className="mt-1 text-xs text-muted-foreground">Cada banner pode entrar no ar e expirar sem depender só da campanha.</p>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+            <p className="text-sm font-medium text-foreground">Ações rápidas</p>
+            <p className="mt-1 text-xs text-muted-foreground">Agora a tabela mostra botões diretos para visualizar, editar, ativar e excluir.</p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Criativo</TableHead>
+                <TableHead>Banner</TableHead>
                 <TableHead>Campanha</TableHead>
                 <TableHead>Local</TableHead>
-                <TableHead>Tipo</TableHead>
+                <TableHead>Validade</TableHead>
+                <TableHead>Entrega</TableHead>
                 <TableHead>CTA</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[70px] text-right">Ações</TableHead>
+                <TableHead className="w-[180px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow><TableCell colSpan={7} className="py-10 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-primary" /></TableCell></TableRow>
               ) : filteredCreatives.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">Nenhum criativo encontrado.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">Nenhum banner encontrado.</TableCell></TableRow>
               ) : filteredCreatives.map((creative) => {
                 const campaign = campaigns.find((item) => item.id === creative.campaign_id);
+                const deliveryStatus = getCreativeDeliveryStatus(creative);
                 return (
                   <TableRow key={creative.id}>
                     <TableCell>
                       <div>
                         <p className="font-medium text-foreground">{creative.title}</p>
-                        <p className="text-xs text-muted-foreground">{creative.image_url || creative.video_url || 'HTML inline'}</p>
+                        <p className="text-xs text-muted-foreground">{creative.image_url || creative.video_url || 'HTML inline'} · {creative.type}</p>
                       </div>
                     </TableCell>
                     <TableCell>{campaign?.name ?? '—'}</TableCell>
@@ -798,32 +884,34 @@ function CreativesPanel({
                         <p className="text-[11px] font-mono text-muted-foreground">{creative.placement_name ?? '—'}</p>
                       </div>
                     </TableCell>
-                    <TableCell><Badge variant="outline">{creative.type}</Badge></TableCell>
-                    <TableCell>{creative.cta_text ?? '—'}</TableCell>
                     <TableCell>
-                      <Badge variant={creative.is_active ? 'default' : 'secondary'}>{creative.is_active ? 'Ativo' : 'Inativo'}</Badge>
+                      <div>
+                        <p className="text-sm text-foreground">{formatDateTime(creative.starts_at)}</p>
+                        <p className="text-[11px] text-muted-foreground">até {formatDateTime(creative.expires_at)}</p>
+                      </div>
                     </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <Badge variant={deliveryStatus.variant}>{deliveryStatus.label}</Badge>
+                        <p className="text-[11px] text-muted-foreground">{deliveryStatus.helper}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>{creative.cta_text ?? '—'}</TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setPreviewCreative(creative)}>
-                            <Eye className="mr-2 h-4 w-4" /> Visualizar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEdit(creative)}>
-                            <Pencil className="mr-2 h-4 w-4" /> Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleCreativeStatus(creative.id, creative.is_active)}>
-                            {creative.is_active ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-                            {creative.is_active ? 'Desativar' : 'Ativar'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(creative.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setPreviewCreative(creative)} title="Visualizar banner">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(creative)} title="Editar banner">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => toggleCreativeStatus(creative.id, creative.is_active)} title={creative.is_active ? 'Desativar banner' : 'Ativar banner'}>
+                          {creative.is_active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(creative.id)} title="Excluir banner">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -836,7 +924,7 @@ function CreativesPanel({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingCreative ? 'Editar criativo' : 'Novo criativo'}</DialogTitle>
+            <DialogTitle>{editingCreative ? 'Editar banner' : 'Novo banner'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
@@ -879,6 +967,17 @@ function CreativesPanel({
               </Select>
             </div>
             <div>
+              <Label>Início da exibição</Label>
+              <Input type="datetime-local" value={form.starts_at} onChange={(event) => setForm((current) => ({ ...current, starts_at: event.target.value }))} />
+            </div>
+            <div>
+              <Label>Validade final</Label>
+              <Input type="datetime-local" value={form.expires_at} onChange={(event) => setForm((current) => ({ ...current, expires_at: event.target.value }))} />
+            </div>
+            <div className="md:col-span-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
+              O banner só entra no ar se estiver ativo, dentro da validade e com a campanha/local habilitados.
+            </div>
+            <div>
               <Label>URL da imagem</Label>
               <Input value={form.image_url} onChange={(event) => setForm((current) => ({ ...current, image_url: event.target.value }))} placeholder="https://..." />
             </div>
@@ -888,7 +987,7 @@ function CreativesPanel({
             </div>
             <div className="md:col-span-2">
               <Label>HTML personalizado</Label>
-              <Textarea value={form.html_content} onChange={(event) => setForm((current) => ({ ...current, html_content: event.target.value }))} rows={4} placeholder="Opcional para creatives inline." />
+              <Textarea value={form.html_content} onChange={(event) => setForm((current) => ({ ...current, html_content: event.target.value }))} rows={4} placeholder="Opcional para banners inline." />
             </div>
             <div>
               <Label>Texto do CTA</Label>
@@ -900,11 +999,11 @@ function CreativesPanel({
             </div>
             <div className="md:col-span-2 flex items-center gap-2 rounded-lg border border-border/60 px-3 py-3">
               <Switch checked={form.is_active} onCheckedChange={(checked) => setForm((current) => ({ ...current, is_active: checked }))} />
-              <span className="text-sm text-muted-foreground">Criativo ativo para entrega</span>
+              <span className="text-sm text-muted-foreground">Banner ativo para entrega</span>
             </div>
           </div>
           <Button className="w-full" onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editingCreative ? 'Salvar alterações' : 'Criar criativo'}
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editingCreative ? 'Salvar banner' : 'Criar banner'}
           </Button>
         </DialogContent>
       </Dialog>
@@ -912,7 +1011,7 @@ function CreativesPanel({
       <Dialog open={!!previewCreative} onOpenChange={(open) => !open && setPreviewCreative(null)}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Pré-visualização do criativo</DialogTitle>
+            <DialogTitle>Pré-visualização do banner</DialogTitle>
           </DialogHeader>
           {previewCreative && (
             <div className="space-y-4">
@@ -924,14 +1023,16 @@ function CreativesPanel({
                 ) : previewCreative.html_content ? (
                   <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">Visualização de HTML disponível no conteúdo inline.</div>
                 ) : (
-                  <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">Criativo sem mídia vinculada.</div>
+                  <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">Banner sem mídia vinculada.</div>
                 )}
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 <InfoLine label="Título" value={previewCreative.title} />
                 <InfoLine label="Local" value={previewCreative.placement_label ?? previewCreative.placement_name ?? '—'} />
                 <InfoLine label="CTA" value={previewCreative.cta_text ?? '—'} />
                 <InfoLine label="URL CTA" value={previewCreative.cta_url ?? '—'} />
+                <InfoLine label="Início" value={formatDateTime(previewCreative.starts_at)} />
+                <InfoLine label="Validade" value={formatDateTime(previewCreative.expires_at)} />
               </div>
             </div>
           )}
