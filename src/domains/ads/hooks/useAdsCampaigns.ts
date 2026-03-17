@@ -327,6 +327,8 @@ export function useAdsCreatives(campaignId: string | null = null) {
       cta_text: creative.cta_text,
       cta_url: creative.cta_url,
       is_active: creative.is_active ?? true,
+      starts_at: creative.starts_at ?? null,
+      expires_at: creative.expires_at ?? null,
     });
     if (error) throw error;
     await fetch();

@@ -1011,7 +1011,7 @@ function CreativesPanel({
       <Dialog open={!!previewCreative} onOpenChange={(open) => !open && setPreviewCreative(null)}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Pré-visualização do criativo</DialogTitle>
+            <DialogTitle>Pré-visualização do banner</DialogTitle>
           </DialogHeader>
           {previewCreative && (
             <div className="space-y-4">
@@ -1023,14 +1023,16 @@ function CreativesPanel({
                 ) : previewCreative.html_content ? (
                   <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">Visualização de HTML disponível no conteúdo inline.</div>
                 ) : (
-                  <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">Criativo sem mídia vinculada.</div>
+                  <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">Banner sem mídia vinculada.</div>
                 )}
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 <InfoLine label="Título" value={previewCreative.title} />
                 <InfoLine label="Local" value={previewCreative.placement_label ?? previewCreative.placement_name ?? '—'} />
                 <InfoLine label="CTA" value={previewCreative.cta_text ?? '—'} />
                 <InfoLine label="URL CTA" value={previewCreative.cta_url ?? '—'} />
+                <InfoLine label="Início" value={formatDateTime(previewCreative.starts_at)} />
+                <InfoLine label="Validade" value={formatDateTime(previewCreative.expires_at)} />
               </div>
             </div>
           )}
