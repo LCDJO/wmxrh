@@ -141,6 +141,8 @@ const defaultCreativeForm = {
   html_content: '',
   cta_text: '',
   cta_url: '',
+  starts_at: '',
+  expires_at: '',
   is_active: true,
 };
 
