@@ -924,7 +924,7 @@ function CreativesPanel({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingCreative ? 'Editar criativo' : 'Novo criativo'}</DialogTitle>
+            <DialogTitle>{editingCreative ? 'Editar banner' : 'Novo banner'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
@@ -967,6 +967,17 @@ function CreativesPanel({
               </Select>
             </div>
             <div>
+              <Label>Início da exibição</Label>
+              <Input type="datetime-local" value={form.starts_at} onChange={(event) => setForm((current) => ({ ...current, starts_at: event.target.value }))} />
+            </div>
+            <div>
+              <Label>Validade final</Label>
+              <Input type="datetime-local" value={form.expires_at} onChange={(event) => setForm((current) => ({ ...current, expires_at: event.target.value }))} />
+            </div>
+            <div className="md:col-span-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
+              O banner só entra no ar se estiver ativo, dentro da validade e com a campanha/local habilitados.
+            </div>
+            <div>
               <Label>URL da imagem</Label>
               <Input value={form.image_url} onChange={(event) => setForm((current) => ({ ...current, image_url: event.target.value }))} placeholder="https://..." />
             </div>
@@ -976,7 +987,7 @@ function CreativesPanel({
             </div>
             <div className="md:col-span-2">
               <Label>HTML personalizado</Label>
-              <Textarea value={form.html_content} onChange={(event) => setForm((current) => ({ ...current, html_content: event.target.value }))} rows={4} placeholder="Opcional para creatives inline." />
+              <Textarea value={form.html_content} onChange={(event) => setForm((current) => ({ ...current, html_content: event.target.value }))} rows={4} placeholder="Opcional para banners inline." />
             </div>
             <div>
               <Label>Texto do CTA</Label>
@@ -988,11 +999,11 @@ function CreativesPanel({
             </div>
             <div className="md:col-span-2 flex items-center gap-2 rounded-lg border border-border/60 px-3 py-3">
               <Switch checked={form.is_active} onCheckedChange={(checked) => setForm((current) => ({ ...current, is_active: checked }))} />
-              <span className="text-sm text-muted-foreground">Criativo ativo para entrega</span>
+              <span className="text-sm text-muted-foreground">Banner ativo para entrega</span>
             </div>
           </div>
           <Button className="w-full" onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editingCreative ? 'Salvar alterações' : 'Criar criativo'}
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editingCreative ? 'Salvar banner' : 'Criar banner'}
           </Button>
         </DialogContent>
       </Dialog>
