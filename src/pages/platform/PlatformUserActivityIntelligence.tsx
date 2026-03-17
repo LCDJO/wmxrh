@@ -26,7 +26,7 @@ import { DeviceAnalyticsPanel } from '@/modules/user-activity/ui/DeviceAnalytics
 import { EnhancedSessionsPanel } from '@/modules/user-activity/ui/EnhancedSessionsPanel';
 
 export default function PlatformUserActivityIntelligence() {
-  const { sessions, stats, loading, refresh } = useActiveSessions();
+  const { sessions, mapSessions, stats, loading, refresh } = useActiveSessions();
   const [tab, setTab] = useState('overview');
 
   if (loading) {

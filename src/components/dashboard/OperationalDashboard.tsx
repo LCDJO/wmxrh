@@ -20,7 +20,7 @@ import { SecurityAlertsPanel } from '@/modules/user-activity/ui/SecurityAlertsPa
 import { EnhancedSessionsPanel } from '@/modules/user-activity/ui/EnhancedSessionsPanel';
 
 export function OperationalDashboard() {
-  const { sessions, stats, loading, refresh } = useActiveSessions();
+  const { sessions, mapSessions, stats, loading, refresh } = useActiveSessions();
 
   // Geo distribution
   const geoDistribution = useMemo(() => {
