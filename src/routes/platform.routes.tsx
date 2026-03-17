@@ -50,6 +50,7 @@ import PlatformEvents from '@/pages/platform/PlatformEvents';
 import PlatformModulesCatalog from '@/pages/platform/PlatformModulesCatalog';
 import PlatformRevenueIntelligence from '@/pages/platform/PlatformRevenueIntelligence';
 import PlatformReferrals from '@/pages/platform/PlatformReferrals';
+import PlatformGamification from '@/pages/platform/PlatformGamification';
 import PlatformGrowthAI from '@/pages/platform/PlatformGrowthAI';
 import GrowthInsights from '@/pages/platform/growth/GrowthInsights';
 import GrowthLandingPages from '@/pages/platform/growth/GrowthLandingPages';
@@ -307,6 +308,7 @@ export const platformRoutes: RouteObject[] = [
       },
       { path: 'iam', element: <PlatformGuard allowedRoles={securityAdmin}><PlatformIAM /></PlatformGuard> },
       { path: 'referrals', element: <PlatformGuard allowedRoles={marketingRoles}><PlatformReferrals /></PlatformGuard> },
+      { path: 'gamification', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformGamification /></PlatformGuard> },
       // ── APIs / Developers / Marketplace ──
       { path: 'apis/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformApiManagement /></PlatformGuard> },
       { path: 'developers', element: <PlatformGuard allowedRoles={marketplaceAdmin}><PlatformDevelopers /></PlatformGuard> },

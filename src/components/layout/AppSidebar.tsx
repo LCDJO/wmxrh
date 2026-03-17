@@ -199,6 +199,7 @@ const navSections: NavSection[] = [
     label: 'Marketing',
     items: [
       { to: '/referral', icon: Trophy, label: 'Indique e Ganhe', key: 'referral' },
+      { to: '/engajamento', icon: Zap, label: 'Meu Engajamento', key: 'referral' },
       { to: '/communication-center', icon: Send, label: 'Central de Comunicação', key: 'dashboard' },
     ],
   },

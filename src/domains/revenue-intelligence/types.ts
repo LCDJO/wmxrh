@@ -183,6 +183,33 @@ export interface GamificationPointEntry {
   created_at: string;
 }
 
+export interface TenantUsageScore {
+  tenant_id: string;
+  tenant_name?: string;
+  total_points: number;
+  employees_count: number;
+  companies_count: number;
+  departments_count: number;
+  positions_count: number;
+  salary_contracts_count: number;
+  ats_candidates_count: number;
+  performance_cycles_count: number;
+  automation_rules_count: number;
+  adoption_pct: number;         // 0.0 to 1.0
+  active_modules: string[];
+  plan_modules_count: number;
+  last_event_at: string | null;
+}
+
+export interface TenantUserEngagement {
+  tenant_id: string;
+  user_id: string;
+  total_points: number;
+  actions_count: number;
+  last_action_at: string | null;
+  top_module: string | null;
+}
+
 // ══════════════════════════════════════════════════════════════
 // Engine APIs
 // ══════════════════════════════════════════════════════════════
@@ -221,6 +248,9 @@ export interface GamificationEngineAPI {
   getProfile(userId: string): Promise<GamificationProfile | null>;
   awardPoints(userId: string, action: string, points: number, source: string, description?: string): Promise<void>;
   recalculateTier(userId: string): Promise<GamificationTier>;
+  // Engagement analytics
+  getTenantUsageRanking(limit?: number): Promise<TenantUsageScore[]>;
+  getTenantUserEngagement(tenantId: string, limit?: number): Promise<TenantUserEngagement[]>;
   // Config
   getLevels(): Promise<GamificationLevel[]>;
   createLevel(level: Omit<GamificationLevel, 'id' | 'created_at' | 'updated_at'>): Promise<GamificationLevel>;

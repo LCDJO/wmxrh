@@ -152,6 +152,7 @@ const NAV_SECTIONS: NavSection[] = [
         children: [
           { to: '/platform/revenue', label: 'Visão Geral' },
           { to: '/platform/referrals', label: 'Referrals' },
+          { to: '/platform/gamification', label: 'Engajamento de Tenants' },
           { to: '/platform/revenue/intelligence', label: 'Intelligence' },
         ],
       },
