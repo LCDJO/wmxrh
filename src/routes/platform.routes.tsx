@@ -149,7 +149,7 @@ export const platformRoutes: RouteObject[] = [
     children: [
       { index: true, element: <Navigate to="/platform/dashboard" replace /> },
       // Dashboard — accessible to any platform user
-      { path: 'dashboard', element: <PlatformDashboard /> },
+      { path: 'dashboard', element: <Dashboard /> },
 
       // ── Security section ── (shared securityAdmin guard)
       sectionGuard('security', securityAdmin, [
