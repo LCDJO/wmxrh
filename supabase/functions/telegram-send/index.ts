@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
         .from("telegram_bot_configs")
         .upsert({
           tenant_id,
-          bot_token_encrypted: bot_token, // In production, use pgp_sym_encrypt
+          bot_token: bot_token,
           bot_username: data.result.username,
           is_active: true,
           connection_status: "connected",
@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
       const config = await getBotConfig(supabase, tenant_id);
       if (!config) return json({ success: false, error: "Bot not configured" }, 400);
 
-      const res = await fetch(`${TELEGRAM_API}${config.bot_token_encrypted}/sendMessage`, {
+      const res = await fetch(`${TELEGRAM_API}${config.bot_token}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
             .eq("id", msg.id);
 
           try {
-            const res = await fetch(`${TELEGRAM_API}${config.bot_token_encrypted}/sendMessage`, {
+            const res = await fetch(`${TELEGRAM_API}${config.bot_token}/sendMessage`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
         .update({
           is_active: false,
           connection_status: "disconnected",
-          bot_token_encrypted: null,
+          bot_token: null,
           bot_username: null,
         })
         .eq("tenant_id", tenant_id);

@@ -89,8 +89,8 @@ Deno.serve(async (req) => {
     }
 
     // Send response if applicable
-    if (responseText && config.bot_token_encrypted) {
-      await fetch(`${TELEGRAM_API}${config.bot_token_encrypted}/sendMessage`, {
+    if (responseText && config.bot_token) {
+      await fetch(`${TELEGRAM_API}${config.bot_token}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
