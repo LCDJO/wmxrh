@@ -213,6 +213,7 @@ export const platformRoutes: RouteObject[] = [
       // ── Marketing / Landing ── (shared marketingRoles guard)
       sectionGuard('marketing', marketingRoles, [
         { path: 'analytics', element: <MarketingAnalytics /> },
+        { path: 'ads', element: <PlatformAdsManagement /> },
       ]),
       sectionGuard('landing', marketingRoles, [
         { path: 'home-editor', element: <LandingHomeEditor /> },
