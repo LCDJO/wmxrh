@@ -251,7 +251,7 @@ export async function startSession(
       getIpGeolocation(),
     ]);
 
-    const geo: GeoData = {
+    const mergedGeo: GeoData = {
       latitude: browserGeo?.latitude ?? ipGeo.latitude,
       longitude: browserGeo?.longitude ?? ipGeo.longitude,
       ip_address: ipGeo.ip_address,
@@ -262,6 +262,9 @@ export async function startSession(
       is_proxy: ipGeo.is_proxy,
       asn_name: ipGeo.asn_name,
     };
+
+    // Final sanity check: if merged coords don't match IP country, discard them
+    const geo = validateGeoCoherence(mergedGeo);
 
     // Fetch recent sessions for risk scoring
     const { data: history } = await supabase
