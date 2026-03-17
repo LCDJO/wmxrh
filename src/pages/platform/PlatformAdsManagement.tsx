@@ -68,7 +68,7 @@ export default function PlatformAdsManagement() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
 
   const { campaigns, placements, loading, refresh, createCampaign, updateCampaign, toggleCampaignStatus } = useAdsCampaigns();
-  const { summary, daily, loading: metricsLoading } = useAdsMetrics();
+  const { summary, daily, bySlot, loading: metricsLoading } = useAdsMetrics();
 
   // Totals
   const totalImpressions = useMemo(() => summary.reduce((s, m) => s + m.impressions, 0), [summary]);
