@@ -20,7 +20,7 @@ import { SecurityAlertsPanel } from '@/modules/user-activity/ui/SecurityAlertsPa
 import { EnhancedSessionsPanel } from '@/modules/user-activity/ui/EnhancedSessionsPanel';
 
 export function OperationalDashboard() {
-  const { sessions, stats, loading, refresh } = useActiveSessions();
+  const { sessions, mapSessions, stats, loading, refresh } = useActiveSessions();
 
   // Geo distribution
   const geoDistribution = useMemo(() => {
@@ -100,7 +100,7 @@ export function OperationalDashboard() {
       </div>
 
       {/* Map */}
-      <SessionLeafletMap sessions={sessions} />
+      <SessionLeafletMap sessions={mapSessions} />
 
       {/* Secondary panels */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
