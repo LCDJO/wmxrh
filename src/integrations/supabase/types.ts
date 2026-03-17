@@ -10559,6 +10559,7 @@ export type Database = {
           points: number
           source: string
           source_id: string | null
+          tenant_id: string | null
           user_id: string
         }
         Insert: {
@@ -10569,6 +10570,7 @@ export type Database = {
           points?: number
           source?: string
           source_id?: string | null
+          tenant_id?: string | null
           user_id: string
         }
         Update: {
@@ -10579,9 +10581,18 @@ export type Database = {
           points?: number
           source?: string
           source_id?: string | null
+          tenant_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "gamification_points_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gamification_profiles: {
         Row: {
@@ -21253,6 +21264,109 @@ export type Database = {
             foreignKeyName: "tenant_subscriptions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_usage_scores: {
+        Row: {
+          active_modules: string[]
+          adoption_pct: number
+          ats_candidates_count: number
+          automation_rules_count: number
+          companies_count: number
+          departments_count: number
+          employees_count: number
+          last_event_at: string | null
+          performance_cycles_count: number
+          plan_modules_count: number
+          positions_count: number
+          salary_contracts_count: number
+          tenant_id: string
+          total_points: number
+          updated_at: string
+        }
+        Insert: {
+          active_modules?: string[]
+          adoption_pct?: number
+          ats_candidates_count?: number
+          automation_rules_count?: number
+          companies_count?: number
+          departments_count?: number
+          employees_count?: number
+          last_event_at?: string | null
+          performance_cycles_count?: number
+          plan_modules_count?: number
+          positions_count?: number
+          salary_contracts_count?: number
+          tenant_id: string
+          total_points?: number
+          updated_at?: string
+        }
+        Update: {
+          active_modules?: string[]
+          adoption_pct?: number
+          ats_candidates_count?: number
+          automation_rules_count?: number
+          companies_count?: number
+          departments_count?: number
+          employees_count?: number
+          last_event_at?: string | null
+          performance_cycles_count?: number
+          plan_modules_count?: number
+          positions_count?: number
+          salary_contracts_count?: number
+          tenant_id?: string
+          total_points?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_usage_scores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_user_engagement: {
+        Row: {
+          actions_count: number
+          created_at: string
+          last_action_at: string | null
+          tenant_id: string
+          top_module: string | null
+          total_points: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actions_count?: number
+          created_at?: string
+          last_action_at?: string | null
+          tenant_id: string
+          top_module?: string | null
+          total_points?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actions_count?: number
+          created_at?: string
+          last_action_at?: string | null
+          tenant_id?: string
+          top_module?: string | null
+          total_points?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_user_engagement_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
