@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
+import { AdSlot } from '@/components/ads/AdSlot';
 import { cn } from '@/lib/utils';
 import { useState, useMemo } from 'react';
 import { useAgentAlerts } from '@/modules/support/ui/agent/AgentAlertService';
@@ -557,6 +558,7 @@ export default function PlatformLayout() {
   const [expandedNav, setExpandedNav] = useState<string | null>(null);
   const [expandedChild, setExpandedChild] = useState<string | null>(null);
   const alertService = useAgentAlerts(user?.id ?? '');
+  const isPlatformDashboard = location.pathname === '/platform/dashboard';
 
   const visibleSections = useMemo(() => {
     return NAV_SECTIONS.map(section => ({
@@ -633,6 +635,12 @@ export default function PlatformLayout() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(265_60%_50%/0.15)] border border-[hsl(265_60%_50%/0.25)]">
               <Zap className="h-3.5 w-3.5 text-[hsl(265_80%_70%)]" />
             </div>
+          </div>
+        )}
+
+        {isPlatformDashboard && !collapsed && (
+          <div className="px-3 pt-3">
+            <AdSlot slot="saas_dashboard_sidebar" />
           </div>
         )}
 
@@ -841,6 +849,7 @@ export default function PlatformLayout() {
 
         <main className="flex-1 overflow-y-auto">
           <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
+            {isPlatformDashboard && <AdSlot slot="saas_dashboard_top" className="mb-6" />}
             <Outlet />
           </div>
         </main>

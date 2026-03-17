@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AdSlot } from "@/components/ads/AdSlot";
 import { supabase } from "@/integrations/supabase/client";
 import type { HomeContent } from "@/pages/platform/landing/LandingHomeEditor";
 
@@ -310,12 +311,18 @@ export default function Landing() {
       <Navbar />
       <main>
         <Hero c={content.hero} />
+        <div className="max-w-6xl mx-auto px-6 pb-6">
+          <AdSlot slot="site_home_banner" />
+        </div>
         <Stats items={content.stats} />
         <Features c={content.features} />
         <Compliance c={content.compliance} />
         <Highlights c={content.highlights} />
         <CTA c={content.cta} />
       </main>
+      <div className="max-w-6xl mx-auto px-6 pb-6">
+        <AdSlot slot="site_footer" />
+      </div>
       <Footer />
     </div>
   );
