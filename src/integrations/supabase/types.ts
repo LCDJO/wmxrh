@@ -287,7 +287,10 @@ export type Database = {
           id: string
           is_active: boolean
           label: string
+          location_type: string | null
+          module_key: string | null
           name: string
+          slot_id: string | null
         }
         Insert: {
           created_at?: string
@@ -295,7 +298,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           label: string
+          location_type?: string | null
+          module_key?: string | null
           name: string
+          slot_id?: string | null
         }
         Update: {
           created_at?: string
@@ -303,6 +309,41 @@ export type Database = {
           id?: string
           is_active?: boolean
           label?: string
+          location_type?: string | null
+          module_key?: string | null
+          name?: string
+          slot_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_placements_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "ads_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_slots: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          location_type: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          location_type: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          location_type?: string
           name?: string
         }
         Relationships: []
@@ -315,6 +356,7 @@ export type Database = {
           device_type: string | null
           exclude_premium: boolean
           id: string
+          module_key: string | null
           plan_name: string | null
           tenant_id: string | null
           user_role: string | null
@@ -326,6 +368,7 @@ export type Database = {
           device_type?: string | null
           exclude_premium?: boolean
           id?: string
+          module_key?: string | null
           plan_name?: string | null
           tenant_id?: string | null
           user_role?: string | null
@@ -337,6 +380,7 @@ export type Database = {
           device_type?: string | null
           exclude_premium?: boolean
           id?: string
+          module_key?: string | null
           plan_name?: string | null
           tenant_id?: string | null
           user_role?: string | null
@@ -17812,6 +17856,7 @@ export type Database = {
       }
       saas_plans: {
         Row: {
+          ads_enabled: boolean
           allow_custom_domain: boolean
           allow_custom_reports: boolean
           allow_whitelabel: boolean
@@ -17837,6 +17882,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ads_enabled?: boolean
           allow_custom_domain?: boolean
           allow_custom_reports?: boolean
           allow_whitelabel?: boolean
@@ -17862,6 +17908,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ads_enabled?: boolean
           allow_custom_domain?: boolean
           allow_custom_reports?: boolean
           allow_whitelabel?: boolean
