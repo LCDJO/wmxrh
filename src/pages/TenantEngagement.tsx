@@ -43,13 +43,15 @@ const EMPTY_ENGAGEMENT: MyEngagement = {
 export default function TenantEngagement() {
   const { user } = useAuth();
   const { currentTenant } = useTenant();
+  const tenantId = currentTenant?.id ?? null;
+  const userId = user?.id ?? null;
   const [myData, setMyData] = useState<MyEngagement | null>(null);
   const [team, setTeam] = useState<TenantUserEngagement[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !currentTenant?.id) return;
+    if (!userId || !tenantId) return;
 
     const engine = getRevenueIntelligenceEngine();
 
@@ -59,8 +61,8 @@ export default function TenantEngagement() {
       const { data: membership } = await supabase
         .from('tenant_memberships')
         .select('role')
-        .eq('tenant_id', currentTenant.id)
-        .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
+        .eq('user_id', userId)
         .maybeSingle();
 
       const admin = (membership as any)?.role === 'admin' || (membership as any)?.role === 'owner';
@@ -69,8 +71,8 @@ export default function TenantEngagement() {
       const mineResult = await (supabase
         .from('tenant_user_engagement' as any)
         .select('total_points, actions_count, top_module, last_action_at')
-        .eq('tenant_id', currentTenant.id)
-        .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
+        .eq('user_id', userId)
         .maybeSingle() as any);
 
       const mine = mineResult?.data as Partial<MyEngagement> | null;
@@ -82,7 +84,7 @@ export default function TenantEngagement() {
       });
 
       if (admin) {
-        const teamData = await engine.gamification.getTenantUserEngagement(currentTenant.id, 20);
+        const teamData = await engine.gamification.getTenantUserEngagement(tenantId, 20);
         setTeam(teamData);
       }
 
@@ -93,7 +95,7 @@ export default function TenantEngagement() {
       setMyData(EMPTY_ENGAGEMENT);
       setLoading(false);
     });
-  }, [user, currentTenant?.id]);
+  }, [tenantId, userId]);
 
   if (loading) {
     return (
