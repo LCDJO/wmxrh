@@ -245,11 +245,13 @@ export type Database = {
           created_at: string
           cta_text: string | null
           cta_url: string | null
+          expires_at: string | null
           html_content: string | null
           id: string
           image_url: string | null
           is_active: boolean
           placement_id: string | null
+          starts_at: string | null
           title: string
           type: string
           updated_at: string
@@ -260,11 +262,13 @@ export type Database = {
           created_at?: string
           cta_text?: string | null
           cta_url?: string | null
+          expires_at?: string | null
           html_content?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           placement_id?: string | null
+          starts_at?: string | null
           title: string
           type?: string
           updated_at?: string
@@ -275,11 +279,13 @@ export type Database = {
           created_at?: string
           cta_text?: string | null
           cta_url?: string | null
+          expires_at?: string | null
           html_content?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           placement_id?: string | null
+          starts_at?: string | null
           title?: string
           type?: string
           updated_at?: string
