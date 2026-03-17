@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
         .from("telegram_bot_configs")
         .upsert({
           tenant_id,
-          bot_token_encrypted: bot_token, // In production, use pgp_sym_encrypt
+          bot_token: bot_token,
           bot_username: data.result.username,
           is_active: true,
           connection_status: "connected",
