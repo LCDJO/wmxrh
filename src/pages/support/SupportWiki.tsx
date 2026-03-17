@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { SafeHtml } from '@/components/ui/safe-html';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
