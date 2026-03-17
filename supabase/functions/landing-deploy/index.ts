@@ -140,10 +140,28 @@ Deno.serve(async (req) => {
         .eq('id', user.id)
         .single();
 
-      if (!platformUser || !['platform_super_admin', 'platform_operations', 'platform_marketing_team', 'platform_marketing_director'].includes(platformUser.role)) {
+      const ALLOWED_PLATFORM_ROLES = ['platform_super_admin', 'platform_operations', 'platform_marketing_team', 'platform_marketing_director'];
+      if (!platformUser || !ALLOWED_PLATFORM_ROLES.includes(platformUser.role)) {
         return new Response(JSON.stringify({ error: 'Forbidden' }), {
           status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+      }
+
+      // Fix #5: Tenant isolation — non-super-admins must be members of the target tenant
+      if (tenant_id && !['platform_super_admin', 'platform_operations'].includes(platformUser.role)) {
+        const { data: membership } = await supabase
+          .from('tenant_memberships')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('tenant_id', tenant_id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (!membership) {
+          return new Response(JSON.stringify({ error: 'Forbidden: not a member of this tenant' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
       }
     }
 

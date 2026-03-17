@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
         .update({
           is_active: false,
           connection_status: "disconnected",
-          bot_token_encrypted: null,
+          bot_token: null,
           bot_username: null,
         })
         .eq("tenant_id", tenant_id);
