@@ -75,6 +75,7 @@ import PlatformDevelopers from '@/pages/platform/PlatformDevelopers';
 import PlatformMarketplace from '@/pages/platform/PlatformMarketplace';
 import PlatformAppsReview from '@/pages/platform/PlatformAppsReview';
 import PlatformIntegrationAutomation from '@/pages/platform/PlatformIntegrationAutomation';
+import PlatformAdsManagement from '@/pages/platform/PlatformAdsManagement';
 import PlatformAIOperations from '@/pages/platform/PlatformAIOperations';
 import PlatformSupportAnalytics from '@/pages/platform/PlatformSupportAnalytics';
 import PlatformWorkTime from '@/pages/platform/PlatformWorkTime';
