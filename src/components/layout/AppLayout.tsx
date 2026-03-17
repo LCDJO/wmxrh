@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { AppBreadcrumbs } from './AppBreadcrumbs';
 import { ImpersonationBanner } from './ImpersonationBanner';
@@ -7,13 +7,17 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
 import { UserProfileDropdown } from './UserProfileDropdown';
 import { GlobalFooter } from './GlobalFooter';
+import { ContextualAdSlot } from '@/components/ads/ContextualAdSlot';
 import { useSecurityMonitor } from '@/domains/security/useSecurityMonitor';
 import { dualIdentityEngine } from '@/domains/security/kernel/dual-identity-engine';
 
 export function AppLayout() {
   useSecurityMonitor();
 
+  const location = useLocation();
   const isImpersonating = dualIdentityEngine.isImpersonating;
+  const isDashboard = location.pathname === '/';
+  const isModuleSurface = !isDashboard && location.pathname !== '/onboarding';
 
   return (
     <div className="flex min-h-screen">
@@ -38,9 +42,14 @@ export function AppLayout() {
             <UserProfileDropdown />
           </div>
         </header>
-        <main className={`flex-1 p-8 ${isImpersonating ? 'ring-2 ring-inset ring-[hsl(var(--impersonation-border))]/30' : ''}`}>
+        <main className={`flex-1 p-8 space-y-6 ${isImpersonating ? 'ring-2 ring-inset ring-[hsl(var(--impersonation-border))]/30' : ''}`}>
+          {isModuleSurface && <ContextualAdSlot slot="module_top_banner" />}
           <Outlet />
+          {isModuleSurface && <ContextualAdSlot slot="module_inline" />}
         </main>
+        <div className="px-8 pb-6">
+          <ContextualAdSlot slot="tenant_footer" />
+        </div>
         <GlobalFooter />
       </div>
     </div>

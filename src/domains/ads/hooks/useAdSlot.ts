@@ -7,13 +7,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
 
 interface UseAdSlotOptions {
-  placement: string;
+  placement?: string;
   planName?: string;
   userRole?: string;
+  moduleKey?: string;
   enabled?: boolean;
 }
 
-export function useAdSlot({ placement, planName, userRole, enabled = true }: UseAdSlotOptions) {
+export function useAdSlot({ placement, planName, userRole, moduleKey, enabled = true }: UseAdSlotOptions) {
   const [ad, setAd] = useState<AdCreative | null>(null);
   const [loading, setLoading] = useState(true);
   const impressionRecorded = useRef(false);
@@ -21,16 +22,18 @@ export function useAdSlot({ placement, planName, userRole, enabled = true }: Use
   const { currentTenant } = useTenant();
 
   const ctx: AdContext = {
-    placement,
+    placement: placement ?? '',
     tenantId: currentTenant?.id,
     planName,
     userRole,
     userId: user?.id,
-    deviceType: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+    moduleKey,
+    deviceType: typeof navigator !== 'undefined' && /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
   };
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !placement) {
+      setAd(null);
       setLoading(false);
       return;
     }
@@ -44,16 +47,17 @@ export function useAdSlot({ placement, planName, userRole, enabled = true }: Use
       setAd(result);
       setLoading(false);
 
-      // Record impression
       if (result && !impressionRecorded.current) {
         impressionRecorded.current = true;
         adDeliveryService.recordImpression(result, ctx);
       }
     });
 
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placement, enabled, currentTenant?.id, user?.id]);
+  }, [placement, enabled, currentTenant?.id, user?.id, moduleKey, planName, userRole]);
 
   const handleClick = useCallback(() => {
     if (!ad) return;
@@ -61,8 +65,7 @@ export function useAdSlot({ placement, planName, userRole, enabled = true }: Use
     if (ad.cta_url) {
       window.open(ad.cta_url, '_blank', 'noopener');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ad]);
+  }, [ad, ctx]);
 
   return { ad, loading, handleClick };
 }

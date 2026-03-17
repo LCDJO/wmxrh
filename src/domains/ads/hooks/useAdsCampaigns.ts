@@ -1,7 +1,7 @@
 /**
  * useAdsCampaigns — Hook for managing ads campaigns, creatives, targeting, and metrics.
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AdsCampaign {
@@ -45,6 +45,7 @@ export interface AdsTargeting {
   country: string | null;
   device_type: string | null;
   exclude_premium: boolean;
+  module_key?: string | null;
 }
 
 export interface AdsPlacement {
@@ -52,11 +53,21 @@ export interface AdsPlacement {
   name: string;
   label: string;
   is_active: boolean;
+  slot_id?: string | null;
+  location_type?: string | null;
+  module_key?: string | null;
 }
 
 export interface AdsMetricsSummary {
   campaign_id: string;
   campaign_name: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+}
+
+export interface AdsSlotMetric {
+  slot_name: string;
   impressions: number;
   clicks: number;
   ctr: number;
@@ -83,14 +94,10 @@ export function useAdsCampaigns() {
 
       if (error) throw error;
 
-      // Get metrics counts
-      const { data: metrics } = await supabase
-        .from('ads_metrics')
-        .select('campaign_id, event_type');
-
-      const { data: creatives } = await supabase
-        .from('ads_creatives')
-        .select('campaign_id');
+      const [{ data: metrics }, { data: creatives }] = await Promise.all([
+        supabase.from('ads_metrics').select('campaign_id, event_type'),
+        supabase.from('ads_creatives').select('campaign_id'),
+      ]);
 
       const metricsMap = new Map<string, { impressions: number; clicks: number }>();
       const creativesMap = new Map<string, number>();
@@ -106,14 +113,12 @@ export function useAdsCampaigns() {
         creativesMap.set(c.campaign_id, (creativesMap.get(c.campaign_id) ?? 0) + 1);
       });
 
-      const enriched = (data ?? []).map(c => ({
+      setCampaigns((data ?? []).map(c => ({
         ...c,
         creatives_count: creativesMap.get(c.id) ?? 0,
         impressions: metricsMap.get(c.id)?.impressions ?? 0,
         clicks: metricsMap.get(c.id)?.clicks ?? 0,
-      }));
-
-      setCampaigns(enriched);
+      })));
     } catch (err) {
       console.error('[useAdsCampaigns] fetch error:', err);
     } finally {
@@ -126,7 +131,7 @@ export function useAdsCampaigns() {
       .from('ads_placements')
       .select('*')
       .order('name');
-    setPlacements(data ?? []);
+    setPlacements((data ?? []) as AdsPlacement[]);
   }, []);
 
   useEffect(() => {
@@ -187,16 +192,18 @@ export function useAdsCreatives(campaignId: string | null) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setCreatives((data ?? []).map((c: any) => ({
-        ...c,
-        placement_name: c.ads_placements?.name ?? null,
+      setCreatives((data ?? []).map((creative: any) => ({
+        ...creative,
+        placement_name: creative.ads_placements?.name ?? null,
       })));
     } finally {
       setLoading(false);
     }
   }, [campaignId]);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
 
   const createCreative = useCallback(async (creative: Partial<AdsCreative>) => {
     const { error } = await supabase.from('ads_creatives').insert({
@@ -225,10 +232,12 @@ export function useAdsTargeting(campaignId: string | null) {
       .from('ads_targeting')
       .select('*')
       .eq('campaign_id', campaignId);
-    setRules(data ?? []);
+    setRules((data ?? []) as AdsTargeting[]);
   }, [campaignId]);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
 
   const addRule = useCallback(async (rule: Partial<AdsTargeting>) => {
     const { error } = await supabase.from('ads_targeting').insert({
@@ -239,6 +248,7 @@ export function useAdsTargeting(campaignId: string | null) {
       country: rule.country,
       device_type: rule.device_type,
       exclude_premium: rule.exclude_premium ?? false,
+      module_key: rule.module_key,
     });
     if (error) throw error;
     await fetch();
@@ -255,63 +265,78 @@ export function useAdsTargeting(campaignId: string | null) {
 export function useAdsMetrics() {
   const [summary, setSummary] = useState<AdsMetricsSummary[]>([]);
   const [daily, setDaily] = useState<DailyMetric[]>([]);
+  const [bySlot, setBySlot] = useState<AdsSlotMetric[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: metrics } = await supabase
-        .from('ads_metrics')
-        .select('campaign_id, event_type, created_at');
-
-      const { data: campaigns } = await supabase
-        .from('ads_campaigns')
-        .select('id, name');
+      const [{ data: metrics }, { data: campaigns }] = await Promise.all([
+        supabase.from('ads_metrics').select('campaign_id, event_type, created_at, placement'),
+        supabase.from('ads_campaigns').select('id, name'),
+      ]);
 
       const campaignNames = new Map<string, string>();
       (campaigns ?? []).forEach(c => campaignNames.set(c.id, c.name));
 
-      // Summary by campaign
       const sumMap = new Map<string, { impressions: number; clicks: number }>();
       const dailyMap = new Map<string, { impressions: number; clicks: number }>();
+      const slotMap = new Map<string, { impressions: number; clicks: number }>();
 
       (metrics ?? []).forEach(m => {
-        // Campaign summary
-        const entry = sumMap.get(m.campaign_id) ?? { impressions: 0, clicks: 0 };
-        if (m.event_type === 'impression') entry.impressions++;
-        else entry.clicks++;
-        sumMap.set(m.campaign_id, entry);
+        const campaignEntry = sumMap.get(m.campaign_id) ?? { impressions: 0, clicks: 0 };
+        if (m.event_type === 'impression') campaignEntry.impressions++;
+        else campaignEntry.clicks++;
+        sumMap.set(m.campaign_id, campaignEntry);
 
-        // Daily
         const day = m.created_at.slice(0, 10);
         const dayEntry = dailyMap.get(day) ?? { impressions: 0, clicks: 0 };
         if (m.event_type === 'impression') dayEntry.impressions++;
         else dayEntry.clicks++;
         dailyMap.set(day, dayEntry);
+
+        const slotName = m.placement ?? 'sem_slot';
+        const slotEntry = slotMap.get(slotName) ?? { impressions: 0, clicks: 0 };
+        if (m.event_type === 'impression') slotEntry.impressions++;
+        else slotEntry.clicks++;
+        slotMap.set(slotName, slotEntry);
       });
 
       setSummary(
-        Array.from(sumMap.entries()).map(([id, s]) => ({
+        Array.from(sumMap.entries()).map(([id, values]) => ({
           campaign_id: id,
           campaign_name: campaignNames.get(id) ?? id.slice(0, 8),
-          impressions: s.impressions,
-          clicks: s.clicks,
-          ctr: s.impressions > 0 ? (s.clicks / s.impressions) * 100 : 0,
+          impressions: values.impressions,
+          clicks: values.clicks,
+          ctr: values.impressions > 0 ? (values.clicks / values.impressions) * 100 : 0,
         })).sort((a, b) => b.impressions - a.impressions)
       );
 
       setDaily(
         Array.from(dailyMap.entries())
-          .map(([date, d]) => ({ date, ...d }))
+          .map(([date, values]) => ({ date, ...values }))
           .sort((a, b) => a.date.localeCompare(b.date))
           .slice(-30)
+      );
+
+      setBySlot(
+        Array.from(slotMap.entries())
+          .map(([slot_name, values]) => ({
+            slot_name,
+            impressions: values.impressions,
+            clicks: values.clicks,
+            ctr: values.impressions > 0 ? (values.clicks / values.impressions) * 100 : 0,
+          }))
+          .sort((a, b) => b.impressions - a.impressions)
       );
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
 
-  return { summary, daily, loading, refresh: fetch };
+  return { summary, daily, bySlot, loading, refresh: fetch };
 }

@@ -16,14 +16,14 @@ import { getRevenueIntelligenceEngine } from '@/domains/revenue-intelligence';
 import type { TenantUserEngagement } from '@/domains/revenue-intelligence';
 
 const MODULE_LABELS: Record<string, string> = {
-  employees:   'Funcionários',
-  companies:   'Empresas',
+  employees: 'Funcionários',
+  companies: 'Empresas',
   departments: 'Departamentos',
-  positions:   'Cargos',
-  compensation:'Salários',
-  ats:         'Recrutamento',
+  positions: 'Cargos',
+  compensation: 'Salários',
+  ats: 'Recrutamento',
   performance: 'Performance',
-  automation:  'Automação',
+  automation: 'Automação',
 };
 
 interface MyEngagement {
@@ -32,6 +32,13 @@ interface MyEngagement {
   top_module: string | null;
   last_action_at: string | null;
 }
+
+const EMPTY_ENGAGEMENT: MyEngagement = {
+  total_points: 0,
+  actions_count: 0,
+  top_module: null,
+  last_action_at: null,
+};
 
 export default function TenantEngagement() {
   const { user } = useAuth();
@@ -49,37 +56,43 @@ export default function TenantEngagement() {
     async function load() {
       setLoading(true);
 
-      // Check if admin
       const { data: membership } = await supabase
         .from('tenant_memberships')
         .select('role')
-        .eq('tenant_id', currentTenant!.id)
-        .eq('user_id', user!.id)
+        .eq('tenant_id', currentTenant.id)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       const admin = (membership as any)?.role === 'admin' || (membership as any)?.role === 'owner';
       setIsAdmin(admin);
 
-      // My own engagement record
-      const { data: mine } = await supabase
+      const mineResult = await (supabase
         .from('tenant_user_engagement' as any)
         .select('total_points, actions_count, top_module, last_action_at')
-        .eq('tenant_id', currentTenant!.id)
-        .eq('user_id', user!.id)
-        .maybeSingle();
+        .eq('tenant_id', currentTenant.id)
+        .eq('user_id', user.id)
+        .maybeSingle() as any);
 
-      setMyData((mine as MyEngagement) ?? { total_points: 0, actions_count: 0, top_module: null, last_action_at: null });
+      const mine = mineResult?.data as Partial<MyEngagement> | null;
+      setMyData({
+        total_points: typeof mine?.total_points === 'number' ? mine.total_points : 0,
+        actions_count: typeof mine?.actions_count === 'number' ? mine.actions_count : 0,
+        top_module: typeof mine?.top_module === 'string' ? mine.top_module : null,
+        last_action_at: typeof mine?.last_action_at === 'string' ? mine.last_action_at : null,
+      });
 
-      // Team leaderboard (only for admins)
       if (admin) {
-        const teamData = await engine.gamification.getTenantUserEngagement(currentTenant!.id, 20);
+        const teamData = await engine.gamification.getTenantUserEngagement(currentTenant.id, 20);
         setTeam(teamData);
       }
 
       setLoading(false);
     }
 
-    load().catch(() => setLoading(false));
+    load().catch(() => {
+      setMyData(EMPTY_ENGAGEMENT);
+      setLoading(false);
+    });
   }, [user, currentTenant?.id]);
 
   if (loading) {
@@ -99,7 +112,6 @@ export default function TenantEngagement() {
         <p className="text-sm text-muted-foreground mt-1">Acompanhe seus pontos e o engajamento da equipe.</p>
       </div>
 
-      {/* My stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-4 pb-3">
@@ -145,7 +157,6 @@ export default function TenantEngagement() {
         </Card>
       </div>
 
-      {/* Team leaderboard — admin only */}
       {isAdmin && (
         <Card>
           <CardHeader className="pb-3">
@@ -181,7 +192,10 @@ export default function TenantEngagement() {
                         )}
                       </div>
                     </div>
-                    <p className="text-sm font-bold shrink-0">{row.total_points} pts</p>
+                    <div className="text-right shrink-0">
+                      <p className="font-bold text-sm text-foreground">{row.total_points}</p>
+                      <p className="text-[10px] text-muted-foreground">pts</p>
+                    </div>
                   </div>
                 ))}
               </div>
