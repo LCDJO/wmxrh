@@ -189,8 +189,8 @@ export function SessionLeafletMap({ sessions }: Props) {
         `}</style>
         <div ref={mapRef} className="w-full rounded-lg overflow-hidden border border-border/30" style={{ height: 420 }} />
         <div className="flex items-center gap-4 mt-2 text-[10px] text-muted-foreground justify-center flex-wrap">
-          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Online ({onlineCount})</span>
-          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" /> Idle</span>
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" /> Online ({onlineCount})</span>
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-accent" /> Idle</span>
           <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-muted-foreground" /> Offline</span>
           <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-destructive" /> Suspeito</span>
         </div>
