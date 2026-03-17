@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { SafeHtml } from '@/components/ui/safe-html';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -639,9 +640,9 @@ function WikiPanel() {
             )}
           </CardHeader>
           <CardContent>
-            <div
+            <SafeHtml
+              html={selectedArticle.content_html}
               className="prose prose-sm dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: selectedArticle.content_html }}
             />
           </CardContent>
         </Card>

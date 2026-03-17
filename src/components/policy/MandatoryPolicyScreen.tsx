@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react';
+import { SafeHtml } from '@/components/ui/safe-html';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -98,9 +99,9 @@ export function MandatoryPolicyScreen({ pending, onAccepted }: Props) {
           )}
 
           <ScrollArea className="h-64 rounded-md border border-border bg-card p-4">
-            <div
+            <SafeHtml
+              html={current.currentVersion.content_html}
               className="prose prose-sm max-w-none text-foreground"
-              dangerouslySetInnerHTML={{ __html: current.currentVersion.content_html }}
             />
           </ScrollArea>
 

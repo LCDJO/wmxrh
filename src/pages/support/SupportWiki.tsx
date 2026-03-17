@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { SafeHtml } from '@/components/ui/safe-html';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -87,9 +88,9 @@ export default function SupportWiki() {
             </p>
           </CardHeader>
           <CardContent>
-            <div
+            <SafeHtml
+              html={selectedArticle.content_html}
               className="prose prose-sm dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: selectedArticle.content_html }}
             />
             {selectedArticle.tags && selectedArticle.tags.length > 0 && (
               <div className="flex gap-1.5 mt-6 flex-wrap border-t pt-4">
