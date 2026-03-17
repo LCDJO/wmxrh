@@ -539,7 +539,12 @@ function CreativesPanel({ campaigns, placements, selectedCampaignId, onSelectCam
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                     {placements.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>
+                        <div className="flex flex-col">
+                          <span>{p.label}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">{p.name}</span>
+                        </div>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
