@@ -718,8 +718,12 @@ function CreativesPanel({
   const [form, setForm] = useState(defaultCreativeForm);
 
   const filteredCreatives = useMemo(() => {
-    if (!showActiveOnly) return creatives;
-    return creatives.filter((creative) => creative.is_active);
+    const base = showActiveOnly ? creatives.filter((creative) => creative.is_active) : creatives;
+    return base.sort((a, b) => {
+      const aTime = a.starts_at ? new Date(a.starts_at).getTime() : 0;
+      const bTime = b.starts_at ? new Date(b.starts_at).getTime() : 0;
+      return bTime - aTime;
+    });
   }, [creatives, showActiveOnly]);
 
   const openCreate = () => {
@@ -740,6 +744,8 @@ function CreativesPanel({
       html_content: creative.html_content ?? '',
       cta_text: creative.cta_text ?? '',
       cta_url: creative.cta_url ?? '',
+      starts_at: toDateTimeLocalValue(creative.starts_at),
+      expires_at: toDateTimeLocalValue(creative.expires_at),
       is_active: creative.is_active,
     });
     setDialogOpen(true);
@@ -752,6 +758,18 @@ function CreativesPanel({
     }
     if (!form.title.trim()) {
       toast.error('Informe o título do criativo');
+      return;
+    }
+    if (!form.image_url.trim() && !form.video_url.trim() && !form.html_content.trim()) {
+      toast.error('Adicione imagem, vídeo ou HTML para o banner aparecer');
+      return;
+    }
+
+    const startsAt = fromDateTimeLocalValue(form.starts_at);
+    const expiresAt = fromDateTimeLocalValue(form.expires_at);
+
+    if (startsAt && expiresAt && new Date(startsAt) >= new Date(expiresAt)) {
+      toast.error('A validade final precisa ser maior que a data inicial');
       return;
     }
 
@@ -767,19 +785,21 @@ function CreativesPanel({
         html_content: form.html_content.trim() || null,
         cta_text: form.cta_text.trim() || null,
         cta_url: form.cta_url.trim() || null,
+        starts_at: startsAt,
+        expires_at: expiresAt,
         is_active: form.is_active,
       };
 
       if (editingCreative) {
         await updateCreative(editingCreative.id, payload);
-        toast.success('Criativo atualizado');
+        toast.success('Banner atualizado');
       } else {
         await createCreative(payload);
-        toast.success('Criativo criado');
+        toast.success('Banner criado');
       }
       setDialogOpen(false);
     } catch {
-      toast.error('Não foi possível salvar o criativo');
+      toast.error('Não foi possível salvar o banner');
     } finally {
       setSaving(false);
     }
