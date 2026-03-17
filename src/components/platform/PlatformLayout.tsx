@@ -637,6 +637,12 @@ export default function PlatformLayout() {
           </div>
         )}
 
+        {isPlatformDashboard && !collapsed && (
+          <div className="px-3 pt-3">
+            <AdSlot slot="saas_dashboard_sidebar" />
+          </div>
+        )}
+
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 overflow-y-auto">
           {visibleSections.map((section, sectionIdx) => (
