@@ -104,10 +104,10 @@ export function TemplateHtmlPreview({ contentHtml, title = 'Termo', companyName 
           </div>
 
           {/* Body — grows to fill the page */}
-          <div
+          <SafeHtml
+            html={previewHtml}
             className="px-10 py-6 text-xs leading-relaxed prose prose-sm max-w-none flex-1"
             style={{ color: '#222' }}
-            dangerouslySetInnerHTML={{ __html: previewHtml }}
           />
 
           {/* Footer — always at the bottom */}

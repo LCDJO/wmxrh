@@ -98,9 +98,9 @@ export function MandatoryPolicyScreen({ pending, onAccepted }: Props) {
           )}
 
           <ScrollArea className="h-64 rounded-md border border-border bg-card p-4">
-            <div
+            <SafeHtml
+              html={current.currentVersion.content_html}
               className="prose prose-sm max-w-none text-foreground"
-              dangerouslySetInnerHTML={{ __html: current.currentVersion.content_html }}
             />
           </ScrollArea>
 

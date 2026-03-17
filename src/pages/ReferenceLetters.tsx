@@ -409,7 +409,7 @@ export default function ReferenceLetters() {
 
               {/* Letter content */}
               {selectedLetter.content_html ? (
-                <div className="border border-border rounded-md p-4 bg-background" dangerouslySetInnerHTML={{ __html: selectedLetter.content_html }} />
+                <SafeHtml html={selectedLetter.content_html} className="border border-border rounded-md p-4 bg-background" />
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">Carta não gerada (colaborador inelegível).</p>
               )}

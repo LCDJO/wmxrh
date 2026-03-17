@@ -87,9 +87,9 @@ export default function SupportWiki() {
             </p>
           </CardHeader>
           <CardContent>
-            <div
+            <SafeHtml
+              html={selectedArticle.content_html}
               className="prose prose-sm dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: selectedArticle.content_html }}
             />
             {selectedArticle.tags && selectedArticle.tags.length > 0 && (
               <div className="flex gap-1.5 mt-6 flex-wrap border-t pt-4">

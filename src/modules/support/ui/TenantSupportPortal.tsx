@@ -639,9 +639,9 @@ function WikiPanel() {
             )}
           </CardHeader>
           <CardContent>
-            <div
+            <SafeHtml
+              html={selectedArticle.content_html}
               className="prose prose-sm dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: selectedArticle.content_html }}
             />
           </CardContent>
         </Card>
