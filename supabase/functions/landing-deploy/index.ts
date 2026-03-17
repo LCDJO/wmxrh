@@ -295,6 +295,13 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Verify page belongs to the requested tenant
+      if (page.tenant_id && page.tenant_id !== tenant_id) {
+        return new Response(JSON.stringify({ error: 'Page does not belong to this tenant' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       // ── SECURITY 1: Validate slug (strict) ──
       const RESERVED_SLUGS = ['www', 'api', 'app', 'admin', 'mail', 'ftp', 'ns1', 'ns2', 'cdn', 'staging', 'dev', 'test', 'builder'];
       if (!page.slug || page.slug.length < 2 || page.slug.length > 63 || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(page.slug)) {
