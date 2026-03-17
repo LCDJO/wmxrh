@@ -827,36 +827,54 @@ function CreativesPanel({
             <span className="text-sm text-muted-foreground">Somente ativos</span>
           </div>
         </div>
-        <Button onClick={openCreate} className="gap-1.5"><Plus className="h-4 w-4" /> Novo criativo</Button>
+        <Button onClick={openCreate} className="gap-1.5"><Plus className="h-4 w-4" /> Novo banner</Button>
       </div>
+
+      <Card>
+        <CardContent className="grid gap-3 p-4 md:grid-cols-3">
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+            <p className="text-sm font-medium text-foreground">Quando o banner aparece</p>
+            <p className="mt-1 text-xs text-muted-foreground">Campanha ativa, criativo ativo, local ativo e dentro da janela de validade.</p>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+            <p className="text-sm font-medium text-foreground">Validade individual</p>
+            <p className="mt-1 text-xs text-muted-foreground">Cada banner pode entrar no ar e expirar sem depender só da campanha.</p>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+            <p className="text-sm font-medium text-foreground">Ações rápidas</p>
+            <p className="mt-1 text-xs text-muted-foreground">Agora a tabela mostra botões diretos para visualizar, editar, ativar e excluir.</p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Criativo</TableHead>
+                <TableHead>Banner</TableHead>
                 <TableHead>Campanha</TableHead>
                 <TableHead>Local</TableHead>
-                <TableHead>Tipo</TableHead>
+                <TableHead>Validade</TableHead>
+                <TableHead>Entrega</TableHead>
                 <TableHead>CTA</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[70px] text-right">Ações</TableHead>
+                <TableHead className="w-[180px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow><TableCell colSpan={7} className="py-10 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-primary" /></TableCell></TableRow>
               ) : filteredCreatives.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">Nenhum criativo encontrado.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">Nenhum banner encontrado.</TableCell></TableRow>
               ) : filteredCreatives.map((creative) => {
                 const campaign = campaigns.find((item) => item.id === creative.campaign_id);
+                const deliveryStatus = getCreativeDeliveryStatus(creative);
                 return (
                   <TableRow key={creative.id}>
                     <TableCell>
                       <div>
                         <p className="font-medium text-foreground">{creative.title}</p>
-                        <p className="text-xs text-muted-foreground">{creative.image_url || creative.video_url || 'HTML inline'}</p>
+                        <p className="text-xs text-muted-foreground">{creative.image_url || creative.video_url || 'HTML inline'} · {creative.type}</p>
                       </div>
                     </TableCell>
                     <TableCell>{campaign?.name ?? '—'}</TableCell>
@@ -866,32 +884,34 @@ function CreativesPanel({
                         <p className="text-[11px] font-mono text-muted-foreground">{creative.placement_name ?? '—'}</p>
                       </div>
                     </TableCell>
-                    <TableCell><Badge variant="outline">{creative.type}</Badge></TableCell>
-                    <TableCell>{creative.cta_text ?? '—'}</TableCell>
                     <TableCell>
-                      <Badge variant={creative.is_active ? 'default' : 'secondary'}>{creative.is_active ? 'Ativo' : 'Inativo'}</Badge>
+                      <div>
+                        <p className="text-sm text-foreground">{formatDateTime(creative.starts_at)}</p>
+                        <p className="text-[11px] text-muted-foreground">até {formatDateTime(creative.expires_at)}</p>
+                      </div>
                     </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <Badge variant={deliveryStatus.variant}>{deliveryStatus.label}</Badge>
+                        <p className="text-[11px] text-muted-foreground">{deliveryStatus.helper}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>{creative.cta_text ?? '—'}</TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setPreviewCreative(creative)}>
-                            <Eye className="mr-2 h-4 w-4" /> Visualizar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEdit(creative)}>
-                            <Pencil className="mr-2 h-4 w-4" /> Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleCreativeStatus(creative.id, creative.is_active)}>
-                            {creative.is_active ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-                            {creative.is_active ? 'Desativar' : 'Ativar'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(creative.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setPreviewCreative(creative)} title="Visualizar banner">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(creative)} title="Editar banner">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => toggleCreativeStatus(creative.id, creative.is_active)} title={creative.is_active ? 'Desativar banner' : 'Ativar banner'}>
+                          {creative.is_active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(creative.id)} title="Excluir banner">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
