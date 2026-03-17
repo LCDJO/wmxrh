@@ -12,7 +12,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { PlatformGuard } from '@/domains/platform/PlatformGuard';
 import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import PlatformLayout from '@/components/platform/PlatformLayout';
-import PlatformDashboard from '@/pages/platform/PlatformDashboard';
+import Dashboard from '@/pages/Dashboard';
 import PlatformTenants from '@/pages/platform/PlatformTenants';
 import PlatformModules from '@/pages/platform/PlatformModules';
 import PlatformSecurity from '@/pages/platform/PlatformSecurity';
