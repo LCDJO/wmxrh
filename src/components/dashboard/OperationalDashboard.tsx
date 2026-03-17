@@ -100,7 +100,7 @@ export function OperationalDashboard() {
       </div>
 
       {/* Map */}
-      <SessionLeafletMap sessions={sessions} />
+      <SessionLeafletMap sessions={mapSessions} />
 
       {/* Secondary panels */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

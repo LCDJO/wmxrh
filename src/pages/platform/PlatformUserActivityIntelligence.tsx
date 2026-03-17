@@ -82,7 +82,7 @@ export default function PlatformUserActivityIntelligence() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <SessionLeafletMap sessions={sessions} />
+          <SessionLeafletMap sessions={mapSessions} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <EnhancedSessionsPanel
               sessions={sessions.filter(s => s.status === 'online' || s.status === 'idle')}
@@ -93,7 +93,7 @@ export default function PlatformUserActivityIntelligence() {
         </TabsContent>
 
         <TabsContent value="map">
-          <SessionLeafletMap sessions={sessions} />
+          <SessionLeafletMap sessions={mapSessions} />
         </TabsContent>
 
         <TabsContent value="sessions">
