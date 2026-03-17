@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
       const config = await getBotConfig(supabase, tenant_id);
       if (!config) return json({ success: false, error: "Bot not configured" }, 400);
 
-      const res = await fetch(`${TELEGRAM_API}${config.bot_token_encrypted}/sendMessage`, {
+      const res = await fetch(`${TELEGRAM_API}${config.bot_token}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
