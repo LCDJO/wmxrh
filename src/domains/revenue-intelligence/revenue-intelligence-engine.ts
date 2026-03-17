@@ -33,6 +33,8 @@ import type {
   GamificationLevel,
   GamificationPointWeight,
   GamificationProfile,
+  TenantUsageScore,
+  TenantUserEngagement,
 } from './types';
 
 // ══════════════════════════════════════════════════════════════
@@ -1033,6 +1035,28 @@ export function createGamificationEngine(): GamificationEngineAPI {
         .update({ ...updates, updated_at: new Date().toISOString() } as any)
         .eq('id', id);
       if (error) throw new Error(error.message);
+    },
+
+    async getTenantUsageRanking(limit = 20) {
+      const { data } = await supabase
+        .from('tenant_usage_scores' as any)
+        .select('*, tenants(name)')
+        .order('total_points', { ascending: false })
+        .limit(limit);
+      return ((data ?? []) as any[]).map(row => ({
+        ...row,
+        tenant_name: row.tenants?.name ?? row.tenant_id,
+      })) as unknown as TenantUsageScore[];
+    },
+
+    async getTenantUserEngagement(tenantId, limit = 20) {
+      const { data } = await supabase
+        .from('tenant_user_engagement' as any)
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('total_points', { ascending: false })
+        .limit(limit);
+      return (data ?? []) as unknown as TenantUserEngagement[];
     },
   };
 }
