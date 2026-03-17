@@ -12,7 +12,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { PlatformGuard } from '@/domains/platform/PlatformGuard';
 import type { PlatformRoleType } from '@/domains/platform/PlatformGuard';
 import PlatformLayout from '@/components/platform/PlatformLayout';
-import PlatformDashboard from '@/pages/platform/PlatformDashboard';
+import Dashboard from '@/pages/Dashboard';
 import PlatformTenants from '@/pages/platform/PlatformTenants';
 import PlatformModules from '@/pages/platform/PlatformModules';
 import PlatformSecurity from '@/pages/platform/PlatformSecurity';
@@ -50,7 +50,6 @@ import PlatformEvents from '@/pages/platform/PlatformEvents';
 import PlatformModulesCatalog from '@/pages/platform/PlatformModulesCatalog';
 import PlatformRevenueIntelligence from '@/pages/platform/PlatformRevenueIntelligence';
 import PlatformReferrals from '@/pages/platform/PlatformReferrals';
-import PlatformGamification from '@/pages/platform/PlatformGamification';
 import PlatformGrowthAI from '@/pages/platform/PlatformGrowthAI';
 import GrowthInsights from '@/pages/platform/growth/GrowthInsights';
 import GrowthLandingPages from '@/pages/platform/growth/GrowthLandingPages';
@@ -150,7 +149,7 @@ export const platformRoutes: RouteObject[] = [
     children: [
       { index: true, element: <Navigate to="/platform/dashboard" replace /> },
       // Dashboard — accessible to any platform user
-      { path: 'dashboard', element: <PlatformDashboard /> },
+      { path: 'dashboard', element: <Dashboard /> },
 
       // ── Security section ── (shared securityAdmin guard)
       sectionGuard('security', securityAdmin, [
@@ -308,7 +307,6 @@ export const platformRoutes: RouteObject[] = [
       },
       { path: 'iam', element: <PlatformGuard allowedRoles={securityAdmin}><PlatformIAM /></PlatformGuard> },
       { path: 'referrals', element: <PlatformGuard allowedRoles={marketingRoles}><PlatformReferrals /></PlatformGuard> },
-      { path: 'gamification', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformGamification /></PlatformGuard> },
       // ── APIs / Developers / Marketplace ──
       { path: 'apis/*', element: <PlatformGuard allowedRoles={opsAdmin}><PlatformApiManagement /></PlatformGuard> },
       { path: 'developers', element: <PlatformGuard allowedRoles={marketplaceAdmin}><PlatformDevelopers /></PlatformGuard> },

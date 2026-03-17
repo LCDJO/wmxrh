@@ -59,7 +59,6 @@ import TenantAppsIntegrations from '@/pages/TenantAppsIntegrations';
 import TelegramIntegration from '@/pages/TelegramIntegration';
 import TenantTraccarSettings from '@/modules/traccar/ui/TenantTraccarSettings';
 import ReferralPage from '@/pages/ReferralPage';
-import TenantEngagement from '@/pages/TenantEngagement';
 import FleetPolicies from '@/pages/FleetPolicies';
 import SupportNewTicket from '@/pages/support/SupportNewTicket';
 import SupportTickets from '@/pages/support/SupportTickets';
@@ -175,9 +174,8 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/settings/sso', element: pr('iam_users', <SsoSettings />) },
       { path: '/settings/scim', element: pr('iam_users', <ScimSettings />) },
       { path: '/settings/sessions', element: <MySessionsPage /> },
-      // ── Referral & Engajamento ──
+      // ── Referral ──
       { path: '/referral', element: pr('referral', <ReferralPage />) },
-      { path: '/engajamento', element: pr('referral', <TenantEngagement />) },
       // ── Support ──
       { path: '/support/chat', element: pr('support', <SupportLiveChat />) },
       { path: '/support/new', element: pr('support', <SupportNewTicket />) },

@@ -1,17 +1,15 @@
 /**
- * /platform/gamification — Gamification dashboard: tiers, referral leaderboard, e adoção de módulos.
+ * /platform/gamification — Gamification dashboard com leaderboard e tiers.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Star, Shield, Crown, Trophy, Zap, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { getRevenueIntelligenceEngine } from '@/domains/revenue-intelligence';
 import type { GamificationLevel } from '@/domains/revenue-intelligence';
 import TopReferrersLeaderboard from '@/components/platform/widgets/TopReferrersLeaderboard';
-import TenantUsageLeaderboard from '@/components/platform/widgets/TenantUsageLeaderboard';
 
 const TIER_ICONS: Record<string, typeof Star> = {
   bronze: Star,
@@ -54,7 +52,7 @@ export default function PlatformGamification() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold font-display text-foreground">Gamificação</h1>
-          <p className="text-sm text-muted-foreground mt-1">Engajamento, adoção de módulos e pontuação dos referrers.</p>
+          <p className="text-sm text-muted-foreground mt-1">Leaderboard, tiers e pontuação dos referrers.</p>
         </div>
         <Button variant="outline" size="sm" className="gap-2" onClick={() => { fetchAll(); toast.success('Atualizado'); }}>
           <RefreshCw className="h-3.5 w-3.5" /> Atualizar
@@ -84,19 +82,8 @@ export default function PlatformGamification() {
         </CardContent>
       </Card>
 
-      {/* Leaderboards */}
-      <Tabs defaultValue="adoption">
-        <TabsList>
-          <TabsTrigger value="adoption">Adoção por Tenant</TabsTrigger>
-          <TabsTrigger value="referrers">Top Referrers</TabsTrigger>
-        </TabsList>
-        <TabsContent value="adoption" className="mt-4">
-          <TenantUsageLeaderboard limit={20} />
-        </TabsContent>
-        <TabsContent value="referrers" className="mt-4">
-          <TopReferrersLeaderboard limit={20} />
-        </TabsContent>
-      </Tabs>
+      {/* Leaderboard Widget */}
+      <TopReferrersLeaderboard limit={20} />
     </div>
   );
 }

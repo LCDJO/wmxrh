@@ -15,8 +15,6 @@ export type {
   GamificationLeaderboardEntry,
   RewardMode,
   RewardResult,
-  TenantUsageScore,
-  TenantUserEngagement,
 } from './types';
 export {
   emitRevenueIntelligenceEvent,
