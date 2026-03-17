@@ -10,8 +10,10 @@ export {
 export type {
   AdsCampaign,
   AdsCreative,
+  AdsCreativeMetric,
   AdsTargeting,
   AdsPlacement,
+  AdsMetricsOverview,
   AdsMetricsSummary,
   AdsSlotMetric,
   DailyMetric,
