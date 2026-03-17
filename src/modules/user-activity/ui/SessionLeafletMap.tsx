@@ -18,7 +18,7 @@ const statusColors: Record<string, string> = {
   offline: '#6b7280',
 };
 
-const WORLD_BOUNDS = [[-85, -180], [85, 180]] as const;
+const WORLD_BOUNDS: [[number, number], [number, number]] = [[-85, -180], [85, 180]];
 const DEFAULT_CENTER: [number, number] = [-15, -50];
 const DEFAULT_ZOOM = 3;
 

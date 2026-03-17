@@ -122,7 +122,7 @@ export function useActiveSessions() {
             asn_name: row.asn_name ?? null,
             bytes_uploaded: null,
             bytes_downloaded: null,
-            tenant_name: null,
+            tenant_name: undefined,
             user_email: undefined,
             user_full_name: undefined,
             source: 'history',
