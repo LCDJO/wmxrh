@@ -75,6 +75,7 @@ import PlatformDevelopers from '@/pages/platform/PlatformDevelopers';
 import PlatformMarketplace from '@/pages/platform/PlatformMarketplace';
 import PlatformAppsReview from '@/pages/platform/PlatformAppsReview';
 import PlatformIntegrationAutomation from '@/pages/platform/PlatformIntegrationAutomation';
+import PlatformAdsManagement from '@/pages/platform/PlatformAdsManagement';
 import PlatformAIOperations from '@/pages/platform/PlatformAIOperations';
 import PlatformSupportAnalytics from '@/pages/platform/PlatformSupportAnalytics';
 import PlatformWorkTime from '@/pages/platform/PlatformWorkTime';
@@ -212,6 +213,7 @@ export const platformRoutes: RouteObject[] = [
       // ── Marketing / Landing ── (shared marketingRoles guard)
       sectionGuard('marketing', marketingRoles, [
         { path: 'analytics', element: <MarketingAnalytics /> },
+        { path: 'ads', element: <PlatformAdsManagement /> },
       ]),
       sectionGuard('landing', marketingRoles, [
         { path: 'home-editor', element: <LandingHomeEditor /> },
