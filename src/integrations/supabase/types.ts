@@ -88,6 +88,118 @@ export type Database = {
           },
         ]
       }
+      ads_ab_assignments: {
+        Row: {
+          ab_test_id: string
+          assigned_variant: Database["public"]["Enums"]["ads_ab_variant"]
+          created_at: string
+          creative_id: string
+          id: string
+          scope_key: string
+          tenant_id: string | null
+          user_id: string
+        }
+        Insert: {
+          ab_test_id: string
+          assigned_variant: Database["public"]["Enums"]["ads_ab_variant"]
+          created_at?: string
+          creative_id: string
+          id?: string
+          scope_key?: string
+          tenant_id?: string | null
+          user_id: string
+        }
+        Update: {
+          ab_test_id?: string
+          assigned_variant?: Database["public"]["Enums"]["ads_ab_variant"]
+          created_at?: string
+          creative_id?: string
+          id?: string
+          scope_key?: string
+          tenant_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_ab_assignments_ab_test_id_fkey"
+            columns: ["ab_test_id"]
+            isOneToOne: false
+            referencedRelation: "ads_ab_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_ab_assignments_creative_id_fkey"
+            columns: ["creative_id"]
+            isOneToOne: false
+            referencedRelation: "ads_creatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_ab_tests: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          slot_name: string | null
+          starts_at: string
+          traffic_split: number
+          updated_at: string
+          variant_a: string
+          variant_b: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          slot_name?: string | null
+          starts_at?: string
+          traffic_split?: number
+          updated_at?: string
+          variant_a: string
+          variant_b: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          slot_name?: string | null
+          starts_at?: string
+          traffic_split?: number
+          updated_at?: string
+          variant_a?: string
+          variant_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_ab_tests_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ads_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_ab_tests_variant_a_fkey"
+            columns: ["variant_a"]
+            isOneToOne: false
+            referencedRelation: "ads_creatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_ab_tests_variant_b_fkey"
+            columns: ["variant_b"]
+            isOneToOne: false
+            referencedRelation: "ads_creatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ads_campaigns: {
         Row: {
           created_at: string
@@ -324,6 +436,56 @@ export type Database = {
           },
         ]
       }
+      ads_rules_engine: {
+        Row: {
+          action: Json
+          campaign_id: string | null
+          condition: Json
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          priority: number
+          slot_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          action?: Json
+          campaign_id?: string | null
+          condition?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          priority?: number
+          slot_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action?: Json
+          campaign_id?: string | null
+          condition?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          priority?: number
+          slot_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_rules_engine_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ads_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ads_slots: {
         Row: {
           created_at: string
@@ -401,6 +563,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ads_user_behavior: {
+        Row: {
+          created_at: string
+          event_data: Json
+          event_type: Database["public"]["Enums"]["ads_behavior_event_type"]
+          id: string
+          module_key: string | null
+          slot_name: string | null
+          tenant_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_data?: Json
+          event_type: Database["public"]["Enums"]["ads_behavior_event_type"]
+          id?: string
+          module_key?: string | null
+          slot_name?: string | null
+          tenant_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_data?: Json
+          event_type?: Database["public"]["Enums"]["ads_behavior_event_type"]
+          id?: string
+          module_key?: string | null
+          slot_name?: string | null
+          tenant_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       agreement_assignment_rules: {
         Row: {
@@ -22359,6 +22554,51 @@ export type Database = {
           },
         ]
       }
+      user_behavior_profile: {
+        Row: {
+          created_at: string
+          engagement_score: number
+          id: string
+          last_active_modules: string[]
+          last_login: string | null
+          most_used_modules: string[]
+          preferred_features: string[]
+          risk_score: number
+          tenant_id: string | null
+          updated_at: string
+          usage_frequency: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          engagement_score?: number
+          id?: string
+          last_active_modules?: string[]
+          last_login?: string | null
+          most_used_modules?: string[]
+          preferred_features?: string[]
+          risk_score?: number
+          tenant_id?: string | null
+          updated_at?: string
+          usage_frequency?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          engagement_score?: number
+          id?: string
+          last_active_modules?: string[]
+          last_login?: string | null
+          most_used_modules?: string[]
+          preferred_features?: string[]
+          risk_score?: number
+          tenant_id?: string | null
+          updated_at?: string
+          usage_frequency?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_custom_roles: {
         Row: {
           assigned_at: string
@@ -24386,6 +24626,10 @@ export type Database = {
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
       purge_old_cognitive_events: { Args: never; Returns: undefined }
+      refresh_user_behavior_profile: {
+        Args: { p_tenant_id: string; p_user_id: string }
+        Returns: undefined
+      }
       scan_employee_compliance: {
         Args: { _tenant_id: string }
         Returns: {
@@ -25175,6 +25419,15 @@ export type Database = {
         | "suspended"
         | "banned"
         | "under_review"
+      ads_ab_variant: "a" | "b"
+      ads_behavior_event_type:
+        | "login"
+        | "logout"
+        | "page_view"
+        | "module_access"
+        | "feature_usage"
+        | "click"
+        | "conversion"
       announcement_category:
         | "maintenance"
         | "update"
@@ -25620,6 +25873,16 @@ export const Constants = {
         "suspended",
         "banned",
         "under_review",
+      ],
+      ads_ab_variant: ["a", "b"],
+      ads_behavior_event_type: [
+        "login",
+        "logout",
+        "page_view",
+        "module_access",
+        "feature_usage",
+        "click",
+        "conversion",
       ],
       announcement_category: [
         "maintenance",
