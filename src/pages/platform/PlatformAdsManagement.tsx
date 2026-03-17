@@ -310,6 +310,74 @@ function KPICard({ icon: Icon, label, value }: { icon: any; label: string; value
   );
 }
 
+function PlacementCatalogSection({ placements }: { placements: AdsPlacement[] }) {
+  const placementMap = new Map(placements.map((placement) => [placement.name, placement]));
+  const groupedSlots = ADS_SLOT_CATALOG.reduce<Record<string, ManagedAdsSlot[]>>((acc, slot) => {
+    if (!acc[slot.surface]) acc[slot.surface] = [];
+    acc[slot.surface].push(slot);
+    return acc;
+  }, {});
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Catálogo de locais de anúncio</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {Object.entries(groupedSlots).map(([surface, slots]) => {
+          const activeCount = slots.filter((slot) => placementMap.get(slot.name)?.is_active).length;
+
+          return (
+            <div key={surface} className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">{surface}</h3>
+                  <p className="text-xs text-muted-foreground">{slots.length} locais mapeados nesta superfície</p>
+                </div>
+                <Badge variant="outline" className="text-[10px]">
+                  {activeCount}/{slots.length} ativos
+                </Badge>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {slots.map((slot) => {
+                  const placement = placementMap.get(slot.name);
+
+                  return (
+                    <div key={slot.name} className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">{slot.label}</p>
+                          <p className="text-[11px] font-mono text-muted-foreground">{slot.name}</p>
+                        </div>
+                        <Badge variant={placement?.is_active ? 'default' : 'secondary'} className="text-[10px]">
+                          {placement ? (placement.is_active ? 'Ativo' : 'Inativo') : 'Pendente'}
+                        </Badge>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">{slot.description}</p>
+
+                      <div className="flex flex-wrap gap-1.5">
+                        <Badge variant="outline" className="text-[10px]">{slot.format}</Badge>
+                        {placement?.label && (
+                          <Badge variant="secondary" className="text-[10px]">{placement.label}</Badge>
+                        )}
+                        {placement?.location_type && (
+                          <Badge variant="secondary" className="text-[10px] capitalize">{placement.location_type}</Badge>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
 function CreateCampaignDialog({ onCreate, onRefresh }: { onCreate: (c: any) => Promise<void>; onRefresh: () => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
