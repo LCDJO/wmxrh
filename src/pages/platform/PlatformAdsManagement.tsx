@@ -128,6 +128,8 @@ export default function PlatformAdsManagement() {
             <KPICard icon={TrendingUp} label="CTR Médio" value={`${avgCtr}%`} />
           </div>
 
+          <PlacementCatalogSection placements={placements} />
+
           {/* Daily chart */}
           {daily.length > 0 && (
             <Card>
@@ -142,8 +144,8 @@ export default function PlatformAdsManagement() {
                     <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="impressions" name="Impressões" stroke="hsl(210, 100%, 52%)" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="clicks" name="Cliques" stroke="hsl(160, 84%, 39%)" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="impressions" name="Impressões" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="clicks" name="Cliques" stroke="hsl(var(--accent-foreground))" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -162,7 +164,7 @@ export default function PlatformAdsManagement() {
                     <XAxis dataKey="campaign_name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                     <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                     <Tooltip formatter={(v: number) => [`${v.toFixed(2)}%`, 'CTR']} />
-                    <Bar dataKey="ctr" fill="hsl(160, 84%, 39%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="ctr" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
