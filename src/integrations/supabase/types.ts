@@ -20282,7 +20282,7 @@ export type Database = {
       }
       telegram_bot_configs: {
         Row: {
-          bot_token_encrypted: string | null
+          bot_token: string | null
           bot_username: string | null
           connection_status: string | null
           created_at: string | null
@@ -20296,7 +20296,7 @@ export type Database = {
           webhook_secret: string | null
         }
         Insert: {
-          bot_token_encrypted?: string | null
+          bot_token?: string | null
           bot_username?: string | null
           connection_status?: string | null
           created_at?: string | null
@@ -20310,7 +20310,7 @@ export type Database = {
           webhook_secret?: string | null
         }
         Update: {
-          bot_token_encrypted?: string | null
+          bot_token?: string | null
           bot_username?: string | null
           connection_status?: string | null
           created_at?: string | null
