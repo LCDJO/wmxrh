@@ -88,6 +88,276 @@ export type Database = {
           },
         ]
       }
+      ads_campaigns: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          priority: number
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          priority?: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          priority?: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ads_creatives: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          cta_text: string | null
+          cta_url: string | null
+          html_content: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          placement_id: string | null
+          title: string
+          type: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          cta_text?: string | null
+          cta_url?: string | null
+          html_content?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          placement_id?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          cta_text?: string | null
+          cta_url?: string | null
+          html_content?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          placement_id?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_creatives_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ads_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_creatives_placement_id_fkey"
+            columns: ["placement_id"]
+            isOneToOne: false
+            referencedRelation: "ads_placements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_frequency_caps: {
+        Row: {
+          campaign_id: string
+          id: string
+          last_shown_at: string
+          show_count: number
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          id?: string
+          last_shown_at?: string
+          show_count?: number
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          id?: string
+          last_shown_at?: string
+          show_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_frequency_caps_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ads_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_metrics: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          creative_id: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          placement: string | null
+          tenant_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          creative_id: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          placement?: string | null
+          tenant_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          creative_id?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          placement?: string | null
+          tenant_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_metrics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ads_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_metrics_creative_id_fkey"
+            columns: ["creative_id"]
+            isOneToOne: false
+            referencedRelation: "ads_creatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_metrics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_placements: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          label: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      ads_targeting: {
+        Row: {
+          campaign_id: string
+          country: string | null
+          created_at: string
+          device_type: string | null
+          exclude_premium: boolean
+          id: string
+          plan_name: string | null
+          tenant_id: string | null
+          user_role: string | null
+        }
+        Insert: {
+          campaign_id: string
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          exclude_premium?: boolean
+          id?: string
+          plan_name?: string | null
+          tenant_id?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          exclude_premium?: boolean
+          id?: string
+          plan_name?: string | null
+          tenant_id?: string | null
+          user_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_targeting_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ads_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_targeting_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agreement_assignment_rules: {
         Row: {
           agente_risco: string | null
