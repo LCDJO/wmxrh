@@ -583,7 +583,7 @@ export default function PlatformLayout() {
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/auth/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   const roleLabel: Record<string, string> = {
