@@ -39,7 +39,7 @@ function inferModuleKey(pathname: string): string | undefined {
     'legal-intelligence': 'legal',
     'regulatory-dashboard': 'legal',
     agreements: 'agreements',
-    communication-center: 'communications',
+    'communication-center': 'communications',
     announcements: 'communications',
     apps: 'apps',
     integrations: 'integrations',
