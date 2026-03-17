@@ -4,6 +4,7 @@
  */
 
 import { useMemo, useState } from 'react';
+import { SafeHtml } from '@/components/ui/safe-html';
 import { QRCodeSVG } from 'qrcode.react';
 import { Eye, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
