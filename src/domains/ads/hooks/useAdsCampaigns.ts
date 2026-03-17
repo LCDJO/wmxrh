@@ -52,6 +52,7 @@ export interface AdsPlacement {
   id: string;
   name: string;
   label: string;
+  description?: string | null;
   is_active: boolean;
   slot_id?: string | null;
   location_type?: string | null;

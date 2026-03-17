@@ -27,6 +27,8 @@ import { toast } from 'sonner';
 import {
   useAdsCampaigns, useAdsCreatives, useAdsTargeting, useAdsMetrics,
   type AdsCampaign,
+  type AdsPlacement,
+  type AdsSlotMetric,
 } from '@/domains/ads';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -39,12 +41,34 @@ const statusColors: Record<string, string> = {
   archived: 'bg-muted text-muted-foreground border-border',
 };
 
+interface ManagedAdsSlot {
+  name: string;
+  label: string;
+  surface: string;
+  description: string;
+  format: string;
+}
+
+const ADS_SLOT_CATALOG: ManagedAdsSlot[] = [
+  { name: 'login_top_banner', label: 'Login — topo', surface: 'Autenticação', description: 'Faixa acima do cabeçalho do formulário de login.', format: 'Horizontal compacto' },
+  { name: 'login_bottom_banner', label: 'Login — base', surface: 'Autenticação', description: 'Faixa logo abaixo do formulário de autenticação.', format: 'Horizontal compacto' },
+  { name: 'site_home_banner', label: 'Site — home', surface: 'Site público', description: 'Banner principal entre hero e blocos da landing page.', format: 'Hero horizontal' },
+  { name: 'site_footer', label: 'Site — rodapé', surface: 'Site público', description: 'Faixa promocional antes do rodapé do site.', format: 'Rodapé horizontal' },
+  { name: 'saas_dashboard_top', label: 'SaaS — dashboard topo', surface: 'Plataforma', description: 'Anúncio principal acima do conteúdo do dashboard global.', format: 'Leaderboard' },
+  { name: 'saas_dashboard_sidebar', label: 'SaaS — dashboard lateral', surface: 'Plataforma', description: 'Slot lateral exibido no painel administrativo global.', format: 'Sidebar vertical' },
+  { name: 'tenant_dashboard_top', label: 'Tenant — dashboard topo', surface: 'Tenant', description: 'Banner de destaque no dashboard operacional do tenant.', format: 'Leaderboard' },
+  { name: 'tenant_dashboard_widget', label: 'Tenant — widget lateral', surface: 'Tenant', description: 'Área lateral para promoções, upsell e campanhas contextuais.', format: 'Widget vertical' },
+  { name: 'tenant_footer', label: 'Tenant — rodapé', surface: 'Tenant', description: 'Faixa persistente no rodapé das páginas do tenant.', format: 'Rodapé horizontal' },
+  { name: 'module_top_banner', label: 'Módulo — topo', surface: 'Módulos internos', description: 'Banner contextual no topo das telas internas dos módulos.', format: 'Topo contextual' },
+  { name: 'module_inline', label: 'Módulo — inline', surface: 'Módulos internos', description: 'Bloco inline entre conteúdos internos para campanhas inteligentes.', format: 'Inline responsivo' },
+];
+
 export default function PlatformAdsManagement() {
   const [tab, setTab] = useState('overview');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
 
   const { campaigns, placements, loading, refresh, createCampaign, updateCampaign, toggleCampaignStatus } = useAdsCampaigns();
-  const { summary, daily, loading: metricsLoading } = useAdsMetrics();
+  const { summary, daily, bySlot, loading: metricsLoading } = useAdsMetrics();
 
   // Totals
   const totalImpressions = useMemo(() => summary.reduce((s, m) => s + m.impressions, 0), [summary]);
@@ -104,6 +128,8 @@ export default function PlatformAdsManagement() {
             <KPICard icon={TrendingUp} label="CTR Médio" value={`${avgCtr}%`} />
           </div>
 
+          <PlacementCatalogSection placements={placements} />
+
           {/* Daily chart */}
           {daily.length > 0 && (
             <Card>
@@ -118,8 +144,8 @@ export default function PlatformAdsManagement() {
                     <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="impressions" name="Impressões" stroke="hsl(210, 100%, 52%)" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="clicks" name="Cliques" stroke="hsl(160, 84%, 39%)" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="impressions" name="Impressões" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="clicks" name="Cliques" stroke="hsl(var(--accent-foreground))" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -138,7 +164,7 @@ export default function PlatformAdsManagement() {
                     <XAxis dataKey="campaign_name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                     <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                     <Tooltip formatter={(v: number) => [`${v.toFixed(2)}%`, 'CTR']} />
-                    <Bar dataKey="ctr" fill="hsl(160, 84%, 39%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="ctr" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -259,7 +285,7 @@ export default function PlatformAdsManagement() {
 
         {/* METRICS TAB */}
         <TabsContent value="metrics" className="space-y-4 mt-6">
-          <MetricsPanel summary={summary} daily={daily} loading={metricsLoading} />
+          <MetricsPanel summary={summary} daily={daily} bySlot={bySlot} placements={placements} loading={metricsLoading} />
         </TabsContent>
       </Tabs>
     </div>
@@ -279,6 +305,74 @@ function KPICard({ icon: Icon, label, value }: { icon: any; label: string; value
           <p className="text-2xl font-bold text-foreground">{value}</p>
           <p className="text-xs text-muted-foreground">{label}</p>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PlacementCatalogSection({ placements }: { placements: AdsPlacement[] }) {
+  const placementMap = new Map(placements.map((placement) => [placement.name, placement]));
+  const groupedSlots = ADS_SLOT_CATALOG.reduce<Record<string, ManagedAdsSlot[]>>((acc, slot) => {
+    if (!acc[slot.surface]) acc[slot.surface] = [];
+    acc[slot.surface].push(slot);
+    return acc;
+  }, {});
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Catálogo de locais de anúncio</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {Object.entries(groupedSlots).map(([surface, slots]) => {
+          const activeCount = slots.filter((slot) => placementMap.get(slot.name)?.is_active).length;
+
+          return (
+            <div key={surface} className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">{surface}</h3>
+                  <p className="text-xs text-muted-foreground">{slots.length} locais mapeados nesta superfície</p>
+                </div>
+                <Badge variant="outline" className="text-[10px]">
+                  {activeCount}/{slots.length} ativos
+                </Badge>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {slots.map((slot) => {
+                  const placement = placementMap.get(slot.name);
+
+                  return (
+                    <div key={slot.name} className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">{slot.label}</p>
+                          <p className="text-[11px] font-mono text-muted-foreground">{slot.name}</p>
+                        </div>
+                        <Badge variant={placement?.is_active ? 'default' : 'secondary'} className="text-[10px]">
+                          {placement ? (placement.is_active ? 'Ativo' : 'Inativo') : 'Pendente'}
+                        </Badge>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">{slot.description}</p>
+
+                      <div className="flex flex-wrap gap-1.5">
+                        <Badge variant="outline" className="text-[10px]">{slot.format}</Badge>
+                        {placement?.label && (
+                          <Badge variant="secondary" className="text-[10px]">{placement.label}</Badge>
+                        )}
+                        {placement?.location_type && (
+                          <Badge variant="secondary" className="text-[10px] capitalize">{placement.location_type}</Badge>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </CardContent>
     </Card>
   );
@@ -445,7 +539,12 @@ function CreativesPanel({ campaigns, placements, selectedCampaignId, onSelectCam
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                     {placements.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>
+                        <div className="flex flex-col">
+                          <span>{p.label}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">{p.name}</span>
+                        </div>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -603,9 +702,11 @@ function TargetingPanel({ campaigns, selectedCampaignId, onSelectCampaign }: {
   );
 }
 
-function MetricsPanel({ summary, daily, loading }: {
+function MetricsPanel({ summary, daily, bySlot, placements, loading }: {
   summary: any[];
   daily: any[];
+  bySlot: AdsSlotMetric[];
+  placements: AdsPlacement[];
   loading: boolean;
 }) {
   if (loading) {
@@ -615,6 +716,8 @@ function MetricsPanel({ summary, daily, loading }: {
       </div>
     );
   }
+
+  const placementMap = new Map(placements.map((placement) => [placement.name, placement]));
 
   return (
     <div className="space-y-6">
@@ -632,45 +735,104 @@ function MetricsPanel({ summary, daily, loading }: {
                 <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="impressions" name="Impressões" fill="hsl(210, 100%, 52%)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="clicks" name="Cliques" fill="hsl(160, 84%, 39%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="impressions" name="Impressões" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="clicks" name="Cliques" fill="hsl(var(--accent-foreground))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
       )}
 
-      {/* Summary table */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Performance por Campanha</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campanha</TableHead>
-                <TableHead>Impressões</TableHead>
-                <TableHead>Cliques</TableHead>
-                <TableHead>CTR</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {summary.map(s => (
-                <TableRow key={s.campaign_id}>
-                  <TableCell className="font-medium text-sm">{s.campaign_name}</TableCell>
-                  <TableCell className="font-mono text-sm">{s.impressions.toLocaleString()}</TableCell>
-                  <TableCell className="font-mono text-sm">{s.clicks.toLocaleString()}</TableCell>
-                  <TableCell className="font-mono text-sm">{s.ctr.toFixed(2)}%</TableCell>
+      {bySlot.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">CTR por local</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={bySlot.slice(0, 10)}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="slot_name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <Tooltip formatter={(v: number) => [`${v.toFixed(2)}%`, 'CTR']} />
+                <Bar dataKey="ctr" name="CTR" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Performance por Campanha</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Campanha</TableHead>
+                  <TableHead>Impressões</TableHead>
+                  <TableHead>Cliques</TableHead>
+                  <TableHead>CTR</TableHead>
                 </TableRow>
-              ))}
-              {summary.length === 0 && (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Sem dados de métricas</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {summary.map(s => (
+                  <TableRow key={s.campaign_id}>
+                    <TableCell className="font-medium text-sm">{s.campaign_name}</TableCell>
+                    <TableCell className="font-mono text-sm">{s.impressions.toLocaleString()}</TableCell>
+                    <TableCell className="font-mono text-sm">{s.clicks.toLocaleString()}</TableCell>
+                    <TableCell className="font-mono text-sm">{s.ctr.toFixed(2)}%</TableCell>
+                  </TableRow>
+                ))}
+                {summary.length === 0 && (
+                  <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Sem dados de métricas</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Performance por Local</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Local</TableHead>
+                  <TableHead>Impressões</TableHead>
+                  <TableHead>Cliques</TableHead>
+                  <TableHead>CTR</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bySlot.map(slotMetric => {
+                  const placement = placementMap.get(slotMetric.slot_name);
+                  return (
+                    <TableRow key={slotMetric.slot_name}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-sm text-foreground">{placement?.label ?? slotMetric.slot_name}</p>
+                          <p className="text-[11px] font-mono text-muted-foreground">{slotMetric.slot_name}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{slotMetric.impressions.toLocaleString()}</TableCell>
+                      <TableCell className="font-mono text-sm">{slotMetric.clicks.toLocaleString()}</TableCell>
+                      <TableCell className="font-mono text-sm">{slotMetric.ctr.toFixed(2)}%</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {bySlot.length === 0 && (
+                  <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Sem dados por local ainda</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
