@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Shield, Mail, Lock, ArrowRight, Loader2, KeyRound, Building2, Crown, User, Phone, FileText } from 'lucide-react';
+import { AdSlot } from '@/components/ads/AdSlot';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 

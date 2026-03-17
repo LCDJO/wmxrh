@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { CognitivePanel } from './CognitivePanel';
 import { Button } from '@/components/ui/button';
+import { AdSlot } from '@/components/ads/AdSlot';
 import { cn } from '@/lib/utils';
 import { useState, useMemo } from 'react';
 import { useAgentAlerts } from '@/modules/support/ui/agent/AgentAlertService';
