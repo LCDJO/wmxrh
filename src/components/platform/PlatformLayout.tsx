@@ -848,6 +848,7 @@ export default function PlatformLayout() {
 
         <main className="flex-1 overflow-y-auto">
           <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
+            {isPlatformDashboard && <AdSlot slot="saas_dashboard_top" className="mb-6" />}
             <Outlet />
           </div>
         </main>
