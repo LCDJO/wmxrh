@@ -121,13 +121,42 @@ function getBrowserGeolocation(): Promise<GeoData | null> {
   });
 }
 
+// Country bounding-boxes for sanity-checking coordinates (lat_min, lat_max, lon_min, lon_max)
+const COUNTRY_BOUNDS: Record<string, [number, number, number, number]> = {
+  'Brazil':       [-34, 6, -74, -34],
+  'United States':[-50, 72, -180, -65],
+  'Argentina':    [-56, -21, -74, -53],
+  'Colombia':     [-5, 13, -82, -67],
+  'Mexico':       [14, 33, -118, -86],
+  'Portugal':     [36, 42, -10, -6],
+  'India':        [6, 36, 68, 98],
+  'Germany':      [47, 55, 5, 16],
+  'United Kingdom':[49, 61, -9, 2],
+};
+
+function validateGeoCoherence(geo: GeoData): GeoData {
+  if (!geo.country || geo.latitude == null || geo.longitude == null) return geo;
+  const bounds = COUNTRY_BOUNDS[geo.country];
+  if (!bounds) return geo; // unknown country, keep as-is
+  const [latMin, latMax, lonMin, lonMax] = bounds;
+  if (geo.latitude < latMin || geo.latitude > latMax || geo.longitude < lonMin || geo.longitude > lonMax) {
+    // Coordinates don't match the reported country — discard them
+    console.warn(`[SessionTracker] Geo mismatch: ${geo.country} but coords (${geo.latitude}, ${geo.longitude}) outside bounds. Discarding coords.`);
+    return { ...geo, latitude: null, longitude: null };
+  }
+  return geo;
+}
+
 async function getIpGeolocation(): Promise<GeoData> {
   const fallback: GeoData = { latitude: null, longitude: null };
+
+  // Provider 1: ipapi.co
   try {
     const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error('ipapi failed');
     const data = await res.json();
-    return {
+    if (data.error) throw new Error('ipapi error response');
+    const result: GeoData = {
       latitude: data.latitude ?? null,
       longitude: data.longitude ?? null,
       ip_address: data.ip ?? undefined,
@@ -138,27 +167,55 @@ async function getIpGeolocation(): Promise<GeoData> {
       is_proxy: false,
       asn_name: data.org ?? undefined,
     };
-  } catch {
-    try {
-      const res = await fetch('http://ip-api.com/json/?fields=status,country,regionName,city,lat,lon,proxy,hosting,query,isp', {
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!res.ok) return fallback;
-      const data = await res.json();
-      if (data.status !== 'success') return fallback;
-      return {
-        latitude: data.lat ?? null,
-        longitude: data.lon ?? null,
-        ip_address: data.query ?? undefined,
-        country: data.country ?? undefined,
-        state: data.regionName ?? undefined,
-        city: data.city ?? undefined,
-        is_vpn: data.proxy ?? false,
-        is_proxy: data.hosting ?? false,
-        asn_name: data.isp ?? undefined,
-      };
-    } catch { return fallback; }
-  }
+    const validated = validateGeoCoherence(result);
+    // If coords were discarded, try next provider
+    if (result.latitude != null && validated.latitude == null) throw new Error('coords mismatch');
+    return validated;
+  } catch { /* fall through */ }
+
+  // Provider 2: ipwho.is (free, HTTPS, no key needed)
+  try {
+    const res = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error('ipwho.is failed');
+    const data = await res.json();
+    if (!data.success) throw new Error('ipwho.is unsuccessful');
+    const result: GeoData = {
+      latitude: data.latitude ?? null,
+      longitude: data.longitude ?? null,
+      ip_address: data.ip ?? undefined,
+      country: data.country ?? undefined,
+      state: data.region ?? undefined,
+      city: data.city ?? undefined,
+      is_vpn: data.security?.vpn ?? false,
+      is_proxy: data.security?.proxy ?? false,
+      asn_name: data.connection?.isp ?? undefined,
+    };
+    const validated = validateGeoCoherence(result);
+    if (result.latitude != null && validated.latitude == null) throw new Error('coords mismatch');
+    return validated;
+  } catch { /* fall through */ }
+
+  // Provider 3: ip-api.com (HTTP only — last resort, may be blocked on HTTPS pages)
+  try {
+    const res = await fetch('http://ip-api.com/json/?fields=status,country,regionName,city,lat,lon,proxy,hosting,query,isp', {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return fallback;
+    const data = await res.json();
+    if (data.status !== 'success') return fallback;
+    const result: GeoData = {
+      latitude: data.lat ?? null,
+      longitude: data.lon ?? null,
+      ip_address: data.query ?? undefined,
+      country: data.country ?? undefined,
+      state: data.regionName ?? undefined,
+      city: data.city ?? undefined,
+      is_vpn: data.proxy ?? false,
+      is_proxy: data.hosting ?? false,
+      asn_name: data.isp ?? undefined,
+    };
+    return validateGeoCoherence(result);
+  } catch { return fallback; }
 }
 
 // ════════════════════════════════════
