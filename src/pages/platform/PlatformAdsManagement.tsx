@@ -285,7 +285,7 @@ export default function PlatformAdsManagement() {
 
         {/* METRICS TAB */}
         <TabsContent value="metrics" className="space-y-4 mt-6">
-          <MetricsPanel summary={summary} daily={daily} loading={metricsLoading} />
+          <MetricsPanel summary={summary} daily={daily} bySlot={bySlot} placements={placements} loading={metricsLoading} />
         </TabsContent>
       </Tabs>
     </div>
