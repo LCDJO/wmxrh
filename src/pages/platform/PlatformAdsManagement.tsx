@@ -27,6 +27,8 @@ import { toast } from 'sonner';
 import {
   useAdsCampaigns, useAdsCreatives, useAdsTargeting, useAdsMetrics,
   type AdsCampaign,
+  type AdsPlacement,
+  type AdsSlotMetric,
 } from '@/domains/ads';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -38,6 +40,28 @@ const statusColors: Record<string, string> = {
   paused: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
   archived: 'bg-muted text-muted-foreground border-border',
 };
+
+interface ManagedAdsSlot {
+  name: string;
+  label: string;
+  surface: string;
+  description: string;
+  format: string;
+}
+
+const ADS_SLOT_CATALOG: ManagedAdsSlot[] = [
+  { name: 'login_top_banner', label: 'Login — topo', surface: 'Autenticação', description: 'Faixa acima do cabeçalho do formulário de login.', format: 'Horizontal compacto' },
+  { name: 'login_bottom_banner', label: 'Login — base', surface: 'Autenticação', description: 'Faixa logo abaixo do formulário de autenticação.', format: 'Horizontal compacto' },
+  { name: 'site_home_banner', label: 'Site — home', surface: 'Site público', description: 'Banner principal entre hero e blocos da landing page.', format: 'Hero horizontal' },
+  { name: 'site_footer', label: 'Site — rodapé', surface: 'Site público', description: 'Faixa promocional antes do rodapé do site.', format: 'Rodapé horizontal' },
+  { name: 'saas_dashboard_top', label: 'SaaS — dashboard topo', surface: 'Plataforma', description: 'Anúncio principal acima do conteúdo do dashboard global.', format: 'Leaderboard' },
+  { name: 'saas_dashboard_sidebar', label: 'SaaS — dashboard lateral', surface: 'Plataforma', description: 'Slot lateral exibido no painel administrativo global.', format: 'Sidebar vertical' },
+  { name: 'tenant_dashboard_top', label: 'Tenant — dashboard topo', surface: 'Tenant', description: 'Banner de destaque no dashboard operacional do tenant.', format: 'Leaderboard' },
+  { name: 'tenant_dashboard_widget', label: 'Tenant — widget lateral', surface: 'Tenant', description: 'Área lateral para promoções, upsell e campanhas contextuais.', format: 'Widget vertical' },
+  { name: 'tenant_footer', label: 'Tenant — rodapé', surface: 'Tenant', description: 'Faixa persistente no rodapé das páginas do tenant.', format: 'Rodapé horizontal' },
+  { name: 'module_top_banner', label: 'Módulo — topo', surface: 'Módulos internos', description: 'Banner contextual no topo das telas internas dos módulos.', format: 'Topo contextual' },
+  { name: 'module_inline', label: 'Módulo — inline', surface: 'Módulos internos', description: 'Bloco inline entre conteúdos internos para campanhas inteligentes.', format: 'Inline responsivo' },
+];
 
 export default function PlatformAdsManagement() {
   const [tab, setTab] = useState('overview');
