@@ -160,6 +160,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/apps', element: pr('iam_users', <TenantAppsIntegrations />) },
       { path: '/integrations/telegram', element: pr('integrations', <TelegramIntegration />) },
       { path: '/integrations/traccar', element: pr('integrations', <TenantTraccarSettings />) },
+      { path: '/integrations/document-signature', element: pr('integrations', <TenantDocumentSignatureIntegration />) },
       { path: '/fleet-policies', element: pr('fleet', <FleetPolicies />) },
       { path: '/plans', element: pr('iam_users', <TenantPlansPage />) },
       { path: '/notifications', element: pr('dashboard', <Notifications />) },

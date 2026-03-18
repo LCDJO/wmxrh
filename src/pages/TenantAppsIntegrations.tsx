@@ -152,6 +152,23 @@ export default function TenantAppsIntegrations() {
         <p className="text-sm text-muted-foreground">Instale apps, gerencie permissões e revogue acessos.</p>
       </div>
 
+      <Card>
+        <CardContent className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <FileSignature className="h-4 w-4" />
+              Assinatura Digital (DocuSign)
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Habilite no tenant, configure credenciais JWT e webhook de assinatura.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => navigate('/integrations/document-signature')}>
+            Configurar assinatura
+          </Button>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="installed">
         <TabsList>
           <TabsTrigger value="installed">Instalados ({installations.length})</TabsTrigger>
