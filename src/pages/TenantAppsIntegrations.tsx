@@ -8,13 +8,14 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePXE } from '@/hooks/use-pxe';
 import { getPlanAllowedSignatureProviders, SIGNATURE_PROVIDER_LABELS } from '@/domains/employee-agreement/signature-provider-governance';
 import type { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Store, Download, ShieldCheck, Trash2, ExternalLink, FileSignature, IdCard } from 'lucide-react';
+import { Store, Download, ShieldCheck, Trash2, ExternalLink, FileSignature, IdCard, Bot, Car } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Installation = Tables<'developer_app_installations'> & {
