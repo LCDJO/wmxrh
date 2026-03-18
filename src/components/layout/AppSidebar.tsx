@@ -216,7 +216,7 @@ const navSections: NavSection[] = [
         key: 'iam_users' as NavKey,
         children: [
           { to: '/apps', icon: Store, label: 'Visão Geral', key: 'iam_users' as NavKey },
-          { to: '/integrations/telegram', icon: Bot, label: 'Telegram', key: 'integrations' as NavKey },
+          { to: '/integrations/telegram', icon: Bot, label: 'Telegram', key: 'integrations' as NavKey, moduleKey: 'telegram' },
           { to: '/integrations/traccar', icon: Car, label: 'Traccar (GPS)', key: 'integrations' as NavKey, moduleKey: 'fleet' },
           { to: '/integrations/document-signature', icon: FileSignature, label: 'Assinatura Digital', key: 'integrations' as NavKey, moduleKey: 'agreements' },
         ],
