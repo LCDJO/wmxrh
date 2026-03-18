@@ -477,6 +477,13 @@ function PersonalDataSection({
   const [open, setOpen] = useState(false);
   const [cpfLookupLoading, setCpfLookupLoading] = useState(false);
   const [lastResolvedCpf, setLastResolvedCpf] = useState<string | null>(null);
+  const [cpfLookupStatus, setCpfLookupStatus] = useState<'resolved' | 'pending_manual' | 'integration_off' | 'lookup_failed' | 'not_attempted'>(
+    personalData?.cpf_lookup_status ?? 'not_attempted'
+  );
+  const [cpfLookupPendingReason, setCpfLookupPendingReason] = useState<string | null>(
+    personalData?.cpf_lookup_pending_reason ?? null
+  );
+  const [cpfLookupSource, setCpfLookupSource] = useState<string | null>(personalData?.cpf_lookup_source ?? null);
   const [form, setForm] = useState({
     nome_completo: '',
     nome_social: '',
