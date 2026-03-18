@@ -14,10 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Store, Download, ShieldCheck, Trash2, ExternalLink, FileSignature } from 'lucide-react';
+import { Store, Download, ShieldCheck, Trash2, ExternalLink, FileSignature, IdCard } from 'lucide-react';
 import { toast } from 'sonner';
-
-// ── Derived types from Supabase select projections ──
 
 type Installation = Tables<'developer_app_installations'> & {
   developer_apps: Pick<Tables<'developer_apps'>, 'name' | 'slug' | 'icon_url' | 'description' | 'version'> | null;
@@ -39,7 +37,6 @@ export default function TenantAppsIntegrations() {
   const tenantId = currentTenant?.id;
   const navigate = useNavigate();
 
-  // Installed apps
   const { data: installations = [], isLoading: loadingInstalled } = useQuery({
     queryKey: ['tenant-installations', tenantId],
     queryFn: async () => {
@@ -55,7 +52,6 @@ export default function TenantAppsIntegrations() {
     enabled: !!tenantId,
   });
 
-  // Active subscriptions with granted scopes
   const { data: subscriptions = [] } = useQuery({
     queryKey: ['tenant-api-subscriptions', tenantId],
     queryFn: async () => {
@@ -71,7 +67,6 @@ export default function TenantAppsIntegrations() {
     enabled: !!tenantId,
   });
 
-  // Available marketplace apps
   const { data: marketplace = [], isLoading: loadingMarket } = useQuery({
     queryKey: ['marketplace-available'],
     queryFn: async () => {
@@ -112,7 +107,6 @@ export default function TenantAppsIntegrations() {
     },
   });
 
-  // Uninstall mutation
   const uninstallMutation = useMutation({
     mutationFn: async (installationId: string) => {
       const { error } = await supabase
@@ -128,7 +122,6 @@ export default function TenantAppsIntegrations() {
     onError: () => toast.error('Erro ao desinstalar app.'),
   });
 
-  // Install mutation
   const installMutation = useMutation({
     mutationFn: async (appId: string) => {
       const { error } = await supabase
@@ -149,7 +142,6 @@ export default function TenantAppsIntegrations() {
     onError: () => toast.error('Erro ao instalar app.'),
   });
 
-  // Revoke subscription mutation
   const revokeMutation = useMutation({
     mutationFn: async (subscriptionId: string) => {
       const { error } = await supabase
@@ -181,7 +173,7 @@ export default function TenantAppsIntegrations() {
       </div>
 
       <Card>
-        <CardContent className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <CardContent className="pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
               <FileSignature className="h-4 w-4" />
@@ -199,6 +191,23 @@ export default function TenantAppsIntegrations() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardContent className="pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <IdCard className="h-4 w-4" />
+              Consulta de CPF para admissão
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Configure as credenciais do provedor para preencher nome e data de nascimento automaticamente ao informar o CPF.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => navigate('/integrations/cpf')}>
+            Configurar consulta CPF
+          </Button>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="installed">
         <TabsList>
           <TabsTrigger value="installed">Instalados ({installations.length})</TabsTrigger>
@@ -206,7 +215,6 @@ export default function TenantAppsIntegrations() {
           <TabsTrigger value="permissions">Permissões & Scopes</TabsTrigger>
         </TabsList>
 
-        {/* ── Installed Apps ── */}
         <TabsContent value="installed">
           {loadingInstalled ? (
             <p className="text-sm text-muted-foreground p-4">Carregando...</p>
@@ -218,7 +226,7 @@ export default function TenantAppsIntegrations() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {installations.map((inst) => {
                 const app = inst.developer_apps;
                 return (
@@ -232,7 +240,7 @@ export default function TenantAppsIntegrations() {
                           <div className="flex items-center gap-2">
                             <h3 className="font-medium text-foreground truncate">{app?.name || 'App'}</h3>
                             <Badge variant="outline" className="text-[10px]">v{app?.version || '?'}</Badge>
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px]">{inst.status}</Badge>
+                            <Badge variant="outline" className="text-[10px]">{inst.status}</Badge>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{app?.description || '—'}</p>
                           <p className="text-[10px] text-muted-foreground mt-1">Instalado em {new Date(inst.installed_at).toLocaleDateString('pt-BR')}</p>
@@ -255,12 +263,11 @@ export default function TenantAppsIntegrations() {
           )}
         </TabsContent>
 
-        {/* ── Marketplace ── */}
         <TabsContent value="marketplace">
           {loadingMarket ? (
             <p className="text-sm text-muted-foreground p-4">Carregando...</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {marketplace.map((app) => {
                 const alreadyInstalled = installedAppIds.has(app.id);
                 return (
@@ -281,7 +288,7 @@ export default function TenantAppsIntegrations() {
                           <span>★ {app.rating_avg?.toFixed(1) || '—'}</span>
                         </div>
                         {alreadyInstalled ? (
-                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Instalado</Badge>
+                          <Badge variant="outline">Instalado</Badge>
                         ) : (
                           <Button
                             size="sm"
@@ -303,7 +310,6 @@ export default function TenantAppsIntegrations() {
           )}
         </TabsContent>
 
-        {/* ── Permissions & Scopes ── */}
         <TabsContent value="permissions">
           <Card>
             <CardHeader><CardTitle className="text-base">Permissões Concedidas</CardTitle></CardHeader>
@@ -339,7 +345,7 @@ export default function TenantAppsIntegrations() {
                               )}
                             </div>
                           </td>
-                          <td className="py-2.5"><Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">{sub.status}</Badge></td>
+                          <td className="py-2.5"><Badge variant="outline">{sub.status}</Badge></td>
                           <td className="py-2.5">
                             <Button
                               variant="ghost"

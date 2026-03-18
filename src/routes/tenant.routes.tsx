@@ -60,6 +60,7 @@ import TenantAppsIntegrations from '@/pages/TenantAppsIntegrations';
 import TenantDocumentSignatureIntegration from '@/pages/TenantDocumentSignatureIntegration';
 import TelegramIntegration from '@/pages/TelegramIntegration';
 import TenantTraccarSettings from '@/modules/traccar/ui/TenantTraccarSettings';
+import CpfIntegrationSettings from '@/pages/CpfIntegrationSettings';
 import ReferralPage from '@/pages/ReferralPage';
 import TenantEngagement from '@/pages/TenantEngagement';
 import FleetPolicies from '@/pages/FleetPolicies';
@@ -77,7 +78,6 @@ import TenantPersonalization from '@/pages/settings/TenantPersonalization';
 import LgpdCompliance from '@/pages/LgpdCompliance';
 import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
 import EmployeeLiveDashboard from '@/pages/EmployeeLiveDashboard';
-
 import SsoSettings from '@/pages/SsoSettings';
 import ScimSettings from '@/pages/ScimSettings';
 import MySessionsPage from '@/pages/tenant/MySessionsPage';
@@ -85,7 +85,6 @@ import MySessionsPage from '@/pages/tenant/MySessionsPage';
 const TenantOnboarding = lazy(() => import('@/pages/TenantOnboarding'));
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
 
-/** Helper to wrap with ProtectedRoute */
 function pr(navKey: NavKey, element: React.ReactNode) {
   return <ProtectedRoute navKey={navKey}>{element}</ProtectedRoute>;
 }
@@ -96,7 +95,6 @@ export const tenantRoutes: RouteObject[] = [
     children: [
       { path: '/', element: pr('dashboard', <Dashboard />) },
       { path: '/onboarding', element: <Suspense fallback={SuspenseFallback}><TenantOnboarding /></Suspense> },
-      // ── People ──
       { path: '/employees', element: pr('employees', <Employees />) },
       { path: '/employees/:id', element: pr('employees', <EmployeeDetail />) },
       { path: '/employees/:id/live', element: pr('employees', <EmployeeLiveDashboard />) },
@@ -111,78 +109,62 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/positions', element: pr('positions', <Positions />) },
       { path: '/compensation', element: pr('compensation', <Compensation />) },
       { path: '/departments', element: pr('departments', <Departments />) },
-      // ── Compliance & Benefits ──
       { path: '/compliance', element: pr('compliance', <Compliance />) },
       { path: '/benefits', element: pr('benefits', <Benefits />) },
       { path: '/health', element: pr('health', <Health />) },
-      // ── Labor ──
       { path: '/labor-dashboard', element: pr('labor_dashboard', <LaborDashboard />) },
       { path: '/labor-compliance', element: pr('labor_compliance', <LaborCompliance />) },
       { path: '/labor-rules', element: pr('labor_rules', <LaborRules />) },
-      // ── Legal ──
       { path: '/legal-dashboard', element: pr('legal_dashboard', <LegalDashboard />) },
       { path: '/regulatory-dashboard', element: pr('legal_dashboard', <RegulatoryDashboard />) },
       { path: '/legal-intelligence', element: pr('legal_dashboard', <LegalIntelligenceDashboard />) },
       { path: '/agreement-compliance', element: pr('legal_dashboard', <AgreementComplianceDashboard />) },
-      // ── eSocial ──
       { path: '/esocial', element: pr('esocial', <ESocialDashboard />) },
       { path: '/esocial-governance', element: pr('esocial', <EsocialGovernanceDashboard />) },
-      // ── Payroll / Intelligence ──
       { path: '/payroll-simulation', element: pr('payroll', <PayrollSimulation />) },
       { path: '/workforce-intelligence', element: pr('intelligence', <WorkforceIntelligence />) },
       { path: '/strategic-intelligence', element: pr('intelligence', <StrategicIntelligence />) },
       { path: '/executive-dashboard', element: pr('intelligence', <ExecutiveDashboard />) },
       { path: '/talent-hub', element: pr('intelligence', <TalentHub />) },
-      // ── Occupational Safety ──
       { path: '/occupational-compliance', element: pr('health', <OccupationalCompliance />) },
       { path: '/nr-compliance', element: pr('health', <NrComplianceDashboard />) },
       { path: '/safety-automation', element: pr('health', <SafetyAutomation />) },
-      // ── EPI ──
       { path: '/epi-catalog', element: pr('health', <EpiCatalog />) },
       { path: '/epi-delivery', element: pr('health', <EpiDelivery />) },
       { path: '/epi-dashboard', element: pr('health', <EpiDashboard />) },
       { path: '/epi-audit', element: pr('health', <EpiAuditLog />) },
-      // ── PCCS ──
       { path: '/pccs-dashboard', element: pr('positions', <PccsDashboard />) },
       { path: '/pccs-wizard', element: pr('positions', <PccsWizard />) },
-      // ── Fleet ──
       { path: '/fleet-dashboard', element: pr('fleet', <FleetDashboard />) },
       { path: '/fleet-live', element: pr('fleet', <FleetLiveView />) },
       { path: '/fleet-analytics', element: pr('fleet', <FleetAnalyticsView />) },
       { path: '/fleet-behavior-profile', element: pr('fleet', <FleetEmployeeBehaviorProfile />) },
-      // ── Live Display ──
       { path: '/live-display', element: pr('live_display', <LiveDisplayAdmin />) },
       { path: '/command-center', element: pr('operations', <OperationalCommandCenter />) },
-      // ── Agreements / Communication ──
       { path: '/agreements', element: pr('employees', <AgreementManagement />) },
       { path: '/document-validation', element: pr('audit', <DocumentValidationDashboard />) },
       { path: '/communication-center', element: pr('dashboard', <TenantCommunicationCenter />) },
       { path: '/announcements', element: pr('dashboard', <TenantAnnouncements />) },
-      // ── Apps / Plans / Notifications ──
       { path: '/apps', element: pr('iam_users', <TenantAppsIntegrations />) },
       { path: '/integrations/telegram', element: pr('integrations', <TelegramIntegration />) },
       { path: '/integrations/traccar', element: pr('integrations', <TenantTraccarSettings />) },
       { path: '/integrations/document-signature', element: pr('integrations', <TenantDocumentSignatureIntegration />) },
+      { path: '/integrations/cpf', element: pr('integrations', <CpfIntegrationSettings />) },
       { path: '/fleet-policies', element: pr('fleet', <FleetPolicies />) },
       { path: '/plans', element: pr('iam_users', <TenantPlansPage />) },
       { path: '/notifications', element: pr('dashboard', <Notifications />) },
       { path: '/audit', element: pr('audit', <Audit />) },
-      // ── Settings ──
       { path: '/settings/personalization', element: pr('iam_users', <TenantPersonalization />) },
       { path: '/settings/pdf-layout', element: pr('iam_users', <PdfLayoutSettings />) },
-      // Legacy redirect — /iam is referenced by notification-event-listener, onboarding-experience-bridge, and experience-orchestrator
       { path: '/iam', element: <Navigate to="/settings/users" replace /> },
       { path: '/settings/users', element: pr('iam_users', <SettingsUsers />) },
       { path: '/settings/roles', element: pr('iam_roles', <SettingsRoles />) },
       { path: '/settings/webhooks', element: pr('iam_users', <WebhookSettings />) },
-      
       { path: '/settings/sso', element: pr('iam_users', <SsoSettings />) },
       { path: '/settings/scim', element: pr('iam_users', <ScimSettings />) },
       { path: '/settings/sessions', element: <MySessionsPage /> },
-      // ── Referral & Engajamento ──
       { path: '/referral', element: pr('referral', <ReferralPage />) },
       { path: '/engajamento', element: pr('referral', <TenantEngagement />) },
-      // ── Support ──
       { path: '/support/chat', element: pr('support', <SupportLiveChat />) },
       { path: '/support/new', element: pr('support', <SupportNewTicket />) },
       { path: '/support/tickets', element: pr('support', <SupportTickets />) },
