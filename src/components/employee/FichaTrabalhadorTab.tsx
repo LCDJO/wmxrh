@@ -690,6 +690,14 @@ function PersonalDataSection({
           <div><p className="text-xs text-muted-foreground">Sexo</p><p className="text-sm text-card-foreground">{SEXO_LABELS[personalData.sexo as EmployeeSexo]}</p></div>
           <div><p className="text-xs text-muted-foreground">Estado Civil</p><p className="text-sm text-card-foreground">{ESTADO_CIVIL_LABELS[personalData.estado_civil as EmployeeEstadoCivil]}</p></div>
           <div><p className="text-xs text-muted-foreground">Nacionalidade</p><p className="text-sm text-card-foreground">{personalData.nacionalidade}</p></div>
+          {personalData.cpf_lookup_status && personalData.cpf_lookup_status !== 'resolved' && personalData.cpf_lookup_status !== 'not_attempted' && (
+            <div className="sm:col-span-2">
+              <p className="text-xs text-muted-foreground">Pendência da consulta CPF</p>
+              <Badge variant="outline" className="mt-1 text-xs">
+                {personalData.cpf_lookup_pending_reason ?? 'Validação manual pendente'}
+              </Badge>
+            </div>
+          )}
           {personalData.uf_nascimento && <div><p className="text-xs text-muted-foreground">UF/Município Nasc.</p><p className="text-sm text-card-foreground">{personalData.municipio_nascimento ? `${personalData.municipio_nascimento}/` : ''}{personalData.uf_nascimento}</p></div>}
           {personalData.nome_mae && <div><p className="text-xs text-muted-foreground">Nome da Mãe</p><p className="text-sm text-card-foreground">{personalData.nome_mae}</p></div>}
           {personalData.nome_pai && <div><p className="text-xs text-muted-foreground">Nome do Pai</p><p className="text-sm text-card-foreground">{personalData.nome_pai}</p></div>}
