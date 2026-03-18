@@ -3,12 +3,14 @@
  *
  * Calls the `external-data-resolver` edge function for:
  *   1. Receita Federal CNPJ resolution (server-side, admin only)
- *   2. SERPRO CPF resolution for admission flows
+ *   2. SERPRO / CPFHub CPF resolution for admission flows
  *   3. IBGE CNAE catalog lookup
  *   4. NR version updates check
  */
 
 import { supabase } from '@/integrations/supabase/client';
+
+export type CpfProvider = 'serpro' | 'cpfhub';
 
 export interface ExternalCnpjResult {
   cnpj: string;
@@ -28,15 +30,16 @@ export interface ExternalCpfResult {
   nome: string | null;
   data_nascimento: string | null;
   situacao_cadastral: string | null;
-  source: 'serpro';
+  source: CpfProvider;
   resolved_at: string;
 }
 
 export interface CpfIntegrationConfig {
-  provider: 'serpro';
+  provider: CpfProvider;
   is_active: boolean;
   has_consumer_key: boolean;
   has_consumer_secret: boolean;
+  has_api_key: boolean;
   api_base_url: string;
   endpoint_path_template: string;
   docs_url: string;
@@ -94,7 +97,7 @@ export const externalDataService = {
   },
 
   /**
-   * Resolve CPF via configured SERPRO integration.
+   * Resolve CPF via configured provider (SERPRO or CPFHub).
    */
   async resolveCpf(cpf: string, tenantId: string): Promise<ExternalCpfResult> {
     return invoke<ExternalCpfResult>({
@@ -119,8 +122,10 @@ export const externalDataService = {
    */
   async saveCpfConfig(input: {
     tenantId: string;
+    provider: CpfProvider;
     consumerKey?: string;
     consumerSecret?: string;
+    apiKey?: string;
     apiBaseUrl?: string;
     endpointPathTemplate?: string;
     isActive: boolean;
@@ -128,8 +133,10 @@ export const externalDataService = {
     return invoke<CpfIntegrationConfig>({
       action: 'save_cpf_config',
       tenant_id: input.tenantId,
+      provider: input.provider,
       consumer_key: input.consumerKey,
       consumer_secret: input.consumerSecret,
+      api_key: input.apiKey,
       api_base_url: input.apiBaseUrl,
       endpoint_path_template: input.endpointPathTemplate,
       is_active: input.isActive,
