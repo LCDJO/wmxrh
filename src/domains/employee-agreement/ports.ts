@@ -11,6 +11,8 @@ import type { EmployeeAgreement, SignatureProvider } from './types';
 // ── Signature Provider Port ──
 
 export interface SignatureRequest {
+  /** Tenant owner of the signature flow */
+  tenant_id?: string;
   /** Nome do colaborador */
   employee_nome: string;
   /** E-mail do colaborador */
@@ -52,13 +54,13 @@ export interface ISignatureProvider {
   sendForSignature(request: SignatureRequest): Promise<SignatureResponse>;
 
   /** Check current status of a sent document */
-  checkStatus(externalDocumentId: string): Promise<SignatureStatusResponse>;
+  checkStatus(externalDocumentId: string, tenantId?: string): Promise<SignatureStatusResponse>;
 
   /** Cancel a pending signature request */
-  cancelSignature(externalDocumentId: string): Promise<boolean>;
+  cancelSignature(externalDocumentId: string, tenantId?: string): Promise<boolean>;
 
   /** Download the signed document as a Blob/Buffer */
-  downloadSignedDocument(externalDocumentId: string): Promise<Blob | null>;
+  downloadSignedDocument(externalDocumentId: string, tenantId?: string): Promise<Blob | null>;
 }
 
 // ── Provider Registry ──

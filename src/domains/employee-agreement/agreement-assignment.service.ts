@@ -14,6 +14,7 @@ import { emitAgreementEvent } from './events';
 import { digitalSignatureAdapter } from './digital-signature-adapter';
 import { documentVault } from './document-vault';
 import { agreementTemplateService } from './agreement-template.service';
+import { resolveTenantSignatureProvider } from './tenant-signature-provider.service';
 import { registerPrecomputedHash } from '@/domains/blockchain-registry';
 import type {
   EmployeeAgreement,
@@ -61,10 +62,11 @@ export const agreementAssignmentService = {
       .single();
     if (!employee) throw new Error('Colaborador não encontrado.');
 
-    const providerName: SignatureProvider = dto.provider ?? 'simulation';
+    const providerName = await resolveTenantSignatureProvider(ctx.tenant_id, dto.provider ?? null);
 
     const callbackUrl = `${window.location.origin}/api/agreement-webhook`;
     const signResult = await digitalSignatureAdapter.send(providerName, {
+      tenant_id: ctx.tenant_id,
       employee_nome: employee.name,
       employee_email: employee.email ?? '',
       documento_html: version.content_html,
@@ -149,6 +151,7 @@ export const agreementAssignmentService = {
             dto.agreement_id,
             dto.external_document_id,
             (agr as any).signature_provider,
+            (agr as any).tenant_id,
           );
           if (storagePath) update.signed_document_url = storagePath;
         }
@@ -276,7 +279,7 @@ export const agreementAssignmentService = {
     if (a.status === 'signed') throw new Error('Não é possível cancelar um documento já assinado. Use revogação.');
 
     if (a.external_document_id && a.signature_provider) {
-      await digitalSignatureAdapter.cancel(a.signature_provider, a.external_document_id);
+      await digitalSignatureAdapter.cancel(a.signature_provider, a.external_document_id, ctx.tenant_id);
     }
 
     const { error } = await supabase

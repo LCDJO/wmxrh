@@ -30,7 +30,6 @@ export const digitalSignatureAdapter = {
   ): Promise<SignatureResponse> {
     const provider = getSignatureProvider(providerName);
     if (!provider) {
-      // Fallback: return pending status if provider not registered
       console.warn(`[DigitalSignature] Provider "${providerName}" not registered. Returning pending.`);
       return {
         provider: providerName,
@@ -48,12 +47,13 @@ export const digitalSignatureAdapter = {
   async checkStatus(
     providerName: SignatureProvider,
     externalDocumentId: string,
+    tenantId?: string,
   ): Promise<SignatureStatusResponse> {
     const provider = getSignatureProvider(providerName);
     if (!provider) {
       return { external_document_id: externalDocumentId, status: 'pending' };
     }
-    return provider.checkStatus(externalDocumentId);
+    return provider.checkStatus(externalDocumentId, tenantId);
   },
 
   /**
@@ -62,10 +62,11 @@ export const digitalSignatureAdapter = {
   async cancel(
     providerName: SignatureProvider,
     externalDocumentId: string,
+    tenantId?: string,
   ): Promise<boolean> {
     const provider = getSignatureProvider(providerName);
     if (!provider) return false;
-    return provider.cancelSignature(externalDocumentId);
+    return provider.cancelSignature(externalDocumentId, tenantId);
   },
 
   /**
@@ -74,10 +75,11 @@ export const digitalSignatureAdapter = {
   async download(
     providerName: SignatureProvider,
     externalDocumentId: string,
+    tenantId?: string,
   ): Promise<Blob | null> {
     const provider = getSignatureProvider(providerName);
     if (!provider) return null;
-    return provider.downloadSignedDocument(externalDocumentId);
+    return provider.downloadSignedDocument(externalDocumentId, tenantId);
   },
 
   /** Re-export registry helpers */
