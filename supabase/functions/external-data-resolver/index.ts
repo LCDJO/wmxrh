@@ -44,7 +44,7 @@ const CPF_PROVIDER_DEFAULTS = {
     has_api_key: false,
     api_base_url: 'https://api.cpfhub.io',
     endpoint_path_template: '/cpf/{cpf}',
-    docs_url: 'https://cpfhub.io/documentacao/api-reference/cpf',
+    docs_url: 'https://app.cpfhub.io/docs',
   },
 } as const;
 
