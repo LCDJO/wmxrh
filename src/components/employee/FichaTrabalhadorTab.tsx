@@ -592,6 +592,10 @@ function PersonalDataSection({
         conta: form.conta || null,
         tipo_conta: form.tipo_conta || null,
         chave_pix: form.chave_pix || null,
+        cpf_lookup_status: cpfLookupStatus,
+        cpf_lookup_pending_reason: cpfLookupPendingReason,
+        cpf_lookup_checked_at: cpfLookupStatus === 'not_attempted' ? null : new Date().toISOString(),
+        cpf_lookup_source: cpfLookupSource,
       },
       {
         onSuccess: () => {
