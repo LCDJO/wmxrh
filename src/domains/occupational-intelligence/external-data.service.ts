@@ -68,6 +68,9 @@ async function invoke<T>(body: Record<string, unknown>): Promise<T> {
     body,
   });
   if (error) throw new Error(error.message ?? 'Edge function error');
+  if (data?.errorCode === 'CPF_INTEGRATION_DISABLED') {
+    throw new CpfLookupDisabledError(data.error);
+  }
   if (data?.error) throw new Error(data.error);
   return data.data as T;
 }
