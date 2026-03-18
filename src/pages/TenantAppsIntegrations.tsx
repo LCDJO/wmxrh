@@ -36,6 +36,7 @@ export default function TenantAppsIntegrations() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const tenantId = currentTenant?.id;
+  const navigate = useNavigate();
 
   // Installed apps
   const { data: installations = [], isLoading: loadingInstalled } = useQuery({
