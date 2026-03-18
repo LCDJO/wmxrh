@@ -17,7 +17,7 @@ import {
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
   Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook, Store, Bot,
   HardHat, Activity, Stethoscope, Car, Monitor, Radio, UserMinus, PanelBottom,
-  Shield, Crown,
+  Shield, Crown, IdCard,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
