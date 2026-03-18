@@ -258,6 +258,46 @@ async function resolveTenantProviderSecrets(
   return ((data as ProviderSecretRow[] | null) ?? [])[0] ?? null;
 }
 
+async function resolveTenantPlanFeatureFlags(tenantId: string): Promise<string[] | null> {
+  const { data: tenantPlan, error: tenantPlanError } = await admin
+    .from("tenant_plans")
+    .select("plan_id")
+    .eq("tenant_id", tenantId)
+    .in("status", ["active", "trial"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (tenantPlanError) {
+    console.error("[agreement-signature] Tenant plan lookup failed:", tenantPlanError.message);
+    return null;
+  }
+
+  if (!tenantPlan?.plan_id) {
+    return null;
+  }
+
+  const { data: plan, error: planError } = await admin
+    .from("saas_plans")
+    .select("feature_flags")
+    .eq("id", tenantPlan.plan_id)
+    .maybeSingle();
+
+  if (planError) {
+    console.error("[agreement-signature] Plan feature flags lookup failed:", planError.message);
+    return null;
+  }
+
+  return (plan?.feature_flags as string[] | null) ?? null;
+}
+
+function getAllowedPlanProviders(featureFlags: string[] | null): string[] {
+  return (featureFlags ?? [])
+    .filter((flag) => flag.startsWith("signature_provider:"))
+    .map((flag) => flag.replace("signature_provider:", ""))
+    .filter((provider) => PLAN_SCOPED_SIGNATURE_PROVIDERS.includes(provider as (typeof PLAN_SCOPED_SIGNATURE_PROVIDERS)[number]));
+}
+
 function normalizeBaseUrl(baseUrl: string | null, provider: string): string {
   if (baseUrl && baseUrl.trim()) {
     return baseUrl.replace(/\/$/, "");
