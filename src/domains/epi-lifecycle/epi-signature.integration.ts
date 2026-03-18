@@ -139,7 +139,7 @@ export async function sendEpiDeliveryForSignature(input: SendForSignatureInput):
   signingUrl?: string;
   error?: string;
 }> {
-  const provider = input.provider ?? DEFAULT_PROVIDER;
+  const provider = await resolveTenantSignatureProvider(input.tenantId, input.provider ?? DEFAULT_PROVIDER);
 
   // 1. Generate the termo HTML
   const termoHtml = generateTermoHtml({
@@ -155,6 +155,7 @@ export async function sendEpiDeliveryForSignature(input: SendForSignatureInput):
   // 2. Send to Digital Signature Provider
   const callbackUrl = `${window.location.origin}/api/epi-signature-webhook`;
   const signResult = await digitalSignatureAdapter.send(provider, {
+    tenant_id: input.tenantId,
     employee_nome: input.employeeName,
     employee_email: input.employeeEmail,
     documento_html: termoHtml,
