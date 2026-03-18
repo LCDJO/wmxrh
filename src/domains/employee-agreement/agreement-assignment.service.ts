@@ -14,6 +14,7 @@ import { emitAgreementEvent } from './events';
 import { digitalSignatureAdapter } from './digital-signature-adapter';
 import { documentVault } from './document-vault';
 import { agreementTemplateService } from './agreement-template.service';
+import { resolveTenantSignatureProvider } from './tenant-signature-provider.service';
 import { registerPrecomputedHash } from '@/domains/blockchain-registry';
 import type {
   EmployeeAgreement,
