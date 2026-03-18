@@ -175,21 +175,57 @@ export default function TenantAppsIntegrations() {
       </div>
 
       <Card>
-        <CardContent className="pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-              <FileSignature className="h-4 w-4" />
-              Assinatura Digital
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              O plano atual libera: {signaturePlanProviders.length > 0
-                ? signaturePlanProviders.map((provider) => SIGNATURE_PROVIDER_LABELS[provider]).join(', ')
-                : 'nenhum provider específico configurado — fallback liberado'}.
-            </p>
+        <CardContent className="pt-6 grid gap-4 lg:grid-cols-3">
+          <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+            <div>
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                <Bot className="h-4 w-4" />
+                Telegram
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {isModuleAccessible('telegram')
+                  ? 'Liberado no plano atual para configuração do bot, destinos e templates.'
+                  : 'Não liberado no plano atual.'}
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/integrations/telegram')} disabled={!isModuleAccessible('telegram')}>
+              Configurar Telegram
+            </Button>
           </div>
-          <Button variant="outline" onClick={() => navigate('/integrations/document-signature')}>
-            Configurar assinatura
-          </Button>
+
+          <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+            <div>
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                <Car className="h-4 w-4" />
+                Traccar (GPS)
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {isModuleAccessible('fleet')
+                  ? 'Liberado no plano atual para rastreamento e configuração da integração de frota.'
+                  : 'Não liberado no plano atual.'}
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/integrations/traccar')} disabled={!isModuleAccessible('fleet')}>
+              Configurar Traccar
+            </Button>
+          </div>
+
+          <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+            <div>
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                <FileSignature className="h-4 w-4" />
+                Assinatura Digital
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                O plano atual libera: {signaturePlanProviders.length > 0
+                  ? signaturePlanProviders.map((provider) => SIGNATURE_PROVIDER_LABELS[provider]).join(', ')
+                  : 'nenhum provider específico configurado — fallback liberado'}.
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/integrations/document-signature')} disabled={!isModuleAccessible('agreements')}>
+              Configurar assinatura
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -203,8 +239,16 @@ export default function TenantAppsIntegrations() {
             <p className="text-sm text-muted-foreground mt-1">
               Configure as credenciais do provedor para preencher nome e data de nascimento automaticamente ao informar o CPF.
             </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Badge variant={isModuleAccessible('cpf_lookup_serpro') ? 'outline' : 'secondary'}>SERPRO</Badge>
+              <Badge variant={isModuleAccessible('cpf_lookup_cpfhub') ? 'outline' : 'secondary'}>CPFHub</Badge>
+            </div>
           </div>
-          <Button variant="outline" onClick={() => navigate('/integrations/cpf')}>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/integrations/cpf')}
+            disabled={!isModuleAccessible('cpf_lookup_serpro') && !isModuleAccessible('cpf_lookup_cpfhub')}
+          >
             Configurar consulta CPF
           </Button>
         </CardContent>

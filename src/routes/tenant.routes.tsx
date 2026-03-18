@@ -149,7 +149,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/integrations/telegram', element: <ProtectedRoute navKey="integrations" moduleKey="telegram"><TelegramIntegration /></ProtectedRoute> },
       { path: '/integrations/traccar', element: <ProtectedRoute navKey="integrations" moduleKey="fleet"><TenantTraccarSettings /></ProtectedRoute> },
       { path: '/integrations/document-signature', element: <ProtectedRoute navKey="integrations" moduleKey="agreements"><TenantDocumentSignatureIntegration /></ProtectedRoute> },
-      { path: '/integrations/cpf', element: pr('integrations', <CpfIntegrationSettings />) },
+      { path: '/integrations/cpf', element: <ProtectedRoute navKey="integrations" moduleKey="cpf_lookup_cpfhub"><CpfIntegrationSettings /></ProtectedRoute> },
       { path: '/fleet-policies', element: pr('fleet', <FleetPolicies />) },
       { path: '/plans', element: pr('iam_users', <TenantPlansPage />) },
       { path: '/notifications', element: pr('dashboard', <Notifications />) },
