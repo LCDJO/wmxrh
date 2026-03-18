@@ -97,8 +97,8 @@ function normalizeOpenSign(body: Record<string, unknown>): WebhookPayload {
 function normalizeGeneric(body: Record<string, unknown>, provider: string): WebhookPayload {
   return {
     provider,
-    external_document_id: String(body.external_document_id || body.document_id || ""),
-    status: mapProviderStatus(String(body.status || "")),
+    external_document_id: String(body.external_document_id || body.document_id || body.envelopeId || ""),
+    status: mapProviderStatus(String(body.status || body.envelopeStatus || "")),
     signed_document_url: body.signed_document_url as string | undefined,
     signed_document_hash: body.signed_document_hash as string | undefined,
     rejection_reason: body.rejection_reason as string | undefined,
@@ -108,10 +108,10 @@ function normalizeGeneric(body: Record<string, unknown>, provider: string): Webh
 
 function mapProviderStatus(raw: string): "signed" | "rejected" | "expired" {
   const lower = raw.toLowerCase();
-  if (lower.includes("sign") || lower.includes("completed") || lower.includes("closed")) return "signed";
-  if (lower.includes("refus") || lower.includes("reject") || lower.includes("declined")) return "rejected";
+  if (lower.includes("sign") || lower.includes("completed") || lower.includes("closed") || lower.includes("deliver")) return "signed";
+  if (lower.includes("refus") || lower.includes("reject") || lower.includes("declined") || lower.includes("void")) return "rejected";
   if (lower.includes("expir") || lower.includes("cancel")) return "expired";
-  return "signed"; // default optimistic
+  return "signed";
 }
 
 function detectProvider(req: Request, body: Record<string, unknown>): string {
@@ -121,6 +121,7 @@ function detectProvider(req: Request, body: Record<string, unknown>): string {
   if (body.action && body.document && (body.document as any)?.id) return "autentique";
   if (body.doc_token || body.token) return "zapsign";
   if (body.provider === "opensign") return "opensign";
+  if (body.envelopeId || body.envelopeStatus) return "docusign";
   return "unknown";
 }
 
