@@ -62,10 +62,11 @@ export const agreementAssignmentService = {
       .single();
     if (!employee) throw new Error('Colaborador não encontrado.');
 
-    const providerName: SignatureProvider = dto.provider ?? 'simulation';
+    const providerName = await resolveTenantSignatureProvider(ctx.tenant_id, dto.provider ?? null);
 
     const callbackUrl = `${window.location.origin}/api/agreement-webhook`;
     const signResult = await digitalSignatureAdapter.send(providerName, {
+      tenant_id: ctx.tenant_id,
       employee_nome: employee.name,
       employee_email: employee.email ?? '',
       documento_html: version.content_html,
