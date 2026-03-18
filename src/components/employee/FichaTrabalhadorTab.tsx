@@ -621,13 +621,32 @@ function PersonalDataSection({
         data_nascimento: result.data_nascimento ?? prev.data_nascimento,
       }));
       setLastResolvedCpf(cleanedCpf);
+      setCpfLookupStatus('resolved');
+      setCpfLookupPendingReason(null);
+      setCpfLookupSource(result.source);
       toast({
         title: 'CPF consultado',
         description: 'Nome e data de nascimento foram preenchidos automaticamente.',
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível consultar o CPF.';
-      toast({ title: 'Falha ao consultar CPF', description: message, variant: 'destructive' });
+      const isIntegrationOff = error instanceof Error && error.name === 'CpfLookupDisabledError';
+
+      setCpfLookupStatus(isIntegrationOff ? 'integration_off' : 'lookup_failed');
+      setCpfLookupPendingReason(
+        isIntegrationOff
+          ? 'Consulta automática de CPF desativada; validação manual pendente.'
+          : 'Consulta automática de CPF não concluída; validação manual pendente.'
+      );
+      setCpfLookupSource(null);
+
+      toast({
+        title: isIntegrationOff ? 'Consulta automática desativada' : 'Falha ao consultar CPF',
+        description: isIntegrationOff
+          ? 'Você pode continuar o cadastro, mas a ficha ficará sinalizada com pendência.'
+          : message,
+        variant: isIntegrationOff ? 'default' : 'destructive',
+      });
     } finally {
       setCpfLookupLoading(false);
     }
