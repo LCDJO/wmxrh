@@ -4,6 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Store, Download, ShieldCheck, Trash2, ExternalLink } from 'lucide-react';
+import { Store, Download, ShieldCheck, Trash2, ExternalLink, FileSignature } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ── Derived types from Supabase select projections ──
@@ -35,6 +36,7 @@ export default function TenantAppsIntegrations() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const tenantId = currentTenant?.id;
+  const navigate = useNavigate();
 
   // Installed apps
   const { data: installations = [], isLoading: loadingInstalled } = useQuery({
@@ -149,6 +151,23 @@ export default function TenantAppsIntegrations() {
         <h1 className="text-2xl font-bold text-foreground">Apps & Integrações</h1>
         <p className="text-sm text-muted-foreground">Instale apps, gerencie permissões e revogue acessos.</p>
       </div>
+
+      <Card>
+        <CardContent className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <FileSignature className="h-4 w-4" />
+              Assinatura Digital (DocuSign)
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Habilite no tenant, configure credenciais JWT e webhook de assinatura.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => navigate('/integrations/document-signature')}>
+            Configurar assinatura
+          </Button>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="installed">
         <TabsList>

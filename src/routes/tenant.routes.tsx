@@ -56,6 +56,7 @@ import SettingsRoles from '@/pages/SettingsRoles';
 import WebhookSettings from '@/pages/WebhookSettings';
 import TenantPlansPage from '@/pages/TenantPlansPage';
 import TenantAppsIntegrations from '@/pages/TenantAppsIntegrations';
+import TenantDocumentSignatureIntegration from '@/pages/TenantDocumentSignatureIntegration';
 import TelegramIntegration from '@/pages/TelegramIntegration';
 import TenantTraccarSettings from '@/modules/traccar/ui/TenantTraccarSettings';
 import ReferralPage from '@/pages/ReferralPage';
@@ -159,6 +160,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/apps', element: pr('iam_users', <TenantAppsIntegrations />) },
       { path: '/integrations/telegram', element: pr('integrations', <TelegramIntegration />) },
       { path: '/integrations/traccar', element: pr('integrations', <TenantTraccarSettings />) },
+      { path: '/integrations/document-signature', element: pr('integrations', <TenantDocumentSignatureIntegration />) },
       { path: '/fleet-policies', element: pr('fleet', <FleetPolicies />) },
       { path: '/plans', element: pr('iam_users', <TenantPlansPage />) },
       { path: '/notifications', element: pr('dashboard', <Notifications />) },

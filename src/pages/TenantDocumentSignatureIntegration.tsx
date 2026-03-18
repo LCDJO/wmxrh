@@ -1,0 +1,307 @@
+import { useMemo, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/contexts/TenantContext';
+import { usePermissions } from '@/domains/security/use-permissions';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
+import { FileSignature, Save, Loader2, KeyRound } from 'lucide-react';
+import { buildAgreementWebhookUrl } from '@/domains/employee-agreement/signature-webhook-url';
+
+const formSchema = z.object({
+  integrationKey: z.string().trim().min(1, 'Integration Key é obrigatória.').max(255),
+  userId: z.string().trim().min(1, 'User ID é obrigatório.').max(255),
+  accountId: z.string().trim().min(1, 'Account ID é obrigatório.').max(255),
+  authServer: z.string().trim().min(1, 'Auth Server é obrigatório.').max(255),
+  baseUrl: z
+    .string()
+    .trim()
+    .max(255)
+    .optional()
+    .transform((v) => (v ? v.replace(/\/$/, '') : '')),
+  webhookSecret: z.string().max(500).optional(),
+  privateKey: z.string().max(12000).optional(),
+  isEnabled: z.boolean(),
+  isDefault: z.boolean(),
+});
+
+function AccessDenied() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Acesso restrito</CardTitle>
+        <CardDescription>Apenas admins/owners do tenant podem gerenciar credenciais de assinatura.</CardDescription>
+      </CardHeader>
+    </Card>
+  );
+}
+
+export default function TenantDocumentSignatureIntegration() {
+  const { currentTenant } = useTenant();
+  const { hasRole, isTenantAdmin, loading: permissionsLoading } = usePermissions();
+  const tenantId = currentTenant?.id ?? null;
+  const queryClient = useQueryClient();
+
+  const isAdmin = isTenantAdmin || hasRole('owner', 'admin');
+
+  const [integrationKey, setIntegrationKey] = useState('');
+  const [userId, setUserId] = useState('');
+  const [accountId, setAccountId] = useState('');
+  const [authServer, setAuthServer] = useState('account-d.docusign.com');
+  const [baseUrl, setBaseUrl] = useState('https://demo.docusign.net/restapi');
+  const [webhookSecret, setWebhookSecret] = useState('');
+  const [privateKey, setPrivateKey] = useState('');
+  const [isEnabled, setIsEnabled] = useState(true);
+  const [isDefault, setIsDefault] = useState(false);
+
+  const [hasApiKeyStored, setHasApiKeyStored] = useState(false);
+  const [hasWebhookSecretStored, setHasWebhookSecretStored] = useState(false);
+  const [privateKeyConfigured, setPrivateKeyConfigured] = useState(false);
+
+  const { isLoading } = useQuery({
+    queryKey: ['tenant-signature-docusign', tenantId],
+    enabled: Boolean(tenantId && isAdmin),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_tenant_signature_integrations', {
+        _tenant_id: tenantId!,
+      });
+
+      if (error) throw error;
+
+      const integration = (data ?? []).find((item) => item.provider_name === 'docusign');
+      if (!integration) {
+        return null;
+      }
+
+      const cfg = (integration.config ?? {}) as Record<string, unknown>;
+
+      setIntegrationKey(String(cfg.client_id ?? ''));
+      setUserId(String(cfg.user_id ?? ''));
+      setAccountId(String(integration.account_id ?? ''));
+      setAuthServer(String(cfg.auth_server ?? 'account-d.docusign.com'));
+      setBaseUrl(String(integration.base_url ?? 'https://demo.docusign.net/restapi'));
+      setIsEnabled(Boolean(integration.is_enabled));
+      setIsDefault(Boolean(integration.is_default));
+      setHasApiKeyStored(Boolean(integration.has_api_key));
+      setHasWebhookSecretStored(Boolean(integration.has_webhook_secret));
+      setPrivateKeyConfigured(Boolean(cfg.private_key_configured));
+
+      return integration;
+    },
+  });
+
+  const callbackUrl = useMemo(() => {
+    try {
+      return buildAgreementWebhookUrl();
+    } catch {
+      return 'URL indisponível (configure VITE_SUPABASE_PROJECT_ID)';
+    }
+  }, []);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const parsed = formSchema.parse({
+        integrationKey,
+        userId,
+        accountId,
+        authServer,
+        baseUrl,
+        webhookSecret,
+        privateKey,
+        isEnabled,
+        isDefault,
+      });
+
+      const trimmedPrivateKey = parsed.privateKey?.trim() ?? '';
+      const trimmedWebhookSecret = parsed.webhookSecret?.trim() ?? '';
+
+      if (parsed.isEnabled) {
+        const hasIntegrationConfigured = parsed.integrationKey.trim().length > 0 && parsed.userId.trim().length > 0 && parsed.accountId.trim().length > 0;
+        if (!hasIntegrationConfigured) {
+          throw new Error('Para habilitar, informe Integration Key, User ID e Account ID.');
+        }
+
+        if (!trimmedPrivateKey && !privateKeyConfigured) {
+          throw new Error('Informe a RSA Private Key na primeira configuração do DocuSign.');
+        }
+      }
+
+      const providerMetadata = {
+        client_id: parsed.integrationKey.trim(),
+        user_id: parsed.userId.trim(),
+        auth_server: parsed.authServer.trim(),
+        private_key_configured: privateKeyConfigured || Boolean(trimmedPrivateKey),
+      };
+
+      const { error } = await supabase.rpc('upsert_tenant_signature_integration', {
+        _tenant_id: tenantId!,
+        _provider_name: 'docusign',
+        _account_id: parsed.accountId.trim(),
+        _client_id: parsed.integrationKey.trim(),
+        _is_enabled: parsed.isEnabled,
+        _is_default: parsed.isDefault,
+        _provider_metadata: providerMetadata,
+        _api_key: parsed.integrationKey.trim(),
+        _webhook_secret: trimmedWebhookSecret || undefined,
+        _private_key: trimmedPrivateKey || undefined,
+      });
+
+      if (error) throw error;
+
+      setWebhookSecret('');
+      setPrivateKey('');
+      setHasApiKeyStored(true);
+      setHasWebhookSecretStored(hasWebhookSecretStored || Boolean(trimmedWebhookSecret));
+      setPrivateKeyConfigured(privateKeyConfigured || Boolean(trimmedPrivateKey));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-signature-docusign'] });
+      toast.success('Configuração do DocuSign salva com sucesso.');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Falha ao salvar configuração do DocuSign.';
+      toast.error(message);
+    },
+  });
+
+  if (permissionsLoading || isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Carregando integração de assinatura...
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return <AccessDenied />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <FileSignature className="h-6 w-6" />
+            Assinatura Digital (DocuSign)
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Habilite no tenant e configure credenciais JWT de produção.</p>
+        </div>
+        <Badge variant={isEnabled ? 'default' : 'secondary'}>{isEnabled ? 'Habilitado' : 'Desabilitado'}</Badge>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Estado da integração</CardTitle>
+          <CardDescription>Os segredos ficam criptografados e não são exibidos após salvar.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <div className="rounded-md border border-border p-3">
+            <p className="text-muted-foreground">Integration Key</p>
+            <p className="font-medium text-foreground">{hasApiKeyStored ? 'Configurada' : 'Não configurada'}</p>
+          </div>
+          <div className="rounded-md border border-border p-3">
+            <p className="text-muted-foreground">Webhook Secret</p>
+            <p className="font-medium text-foreground">{hasWebhookSecretStored ? 'Configurado' : 'Não configurado'}</p>
+          </div>
+          <div className="rounded-md border border-border p-3">
+            <p className="text-muted-foreground">RSA Private Key</p>
+            <p className="font-medium text-foreground">{privateKeyConfigured ? 'Configurada' : 'Não configurada'}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><KeyRound className="h-4 w-4" /> Credenciais DocuSign</CardTitle>
+          <CardDescription>Preencha os dados do app JWT do seu tenant.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="integration-key">Integration Key (Client ID)</Label>
+              <Input id="integration-key" value={integrationKey} onChange={(e) => setIntegrationKey(e.target.value)} maxLength={255} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="user-id">User ID (GUID)</Label>
+              <Input id="user-id" value={userId} onChange={(e) => setUserId(e.target.value)} maxLength={255} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="account-id">Account ID</Label>
+              <Input id="account-id" value={accountId} onChange={(e) => setAccountId(e.target.value)} maxLength={255} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="auth-server">Auth Server</Label>
+              <Input id="auth-server" value={authServer} onChange={(e) => setAuthServer(e.target.value)} maxLength={255} />
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label htmlFor="base-url">Base URL (REST API)</Label>
+              <Input id="base-url" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} maxLength={255} />
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="webhook-secret">Webhook Secret (opcional)</Label>
+              <Input id="webhook-secret" type="password" value={webhookSecret} onChange={(e) => setWebhookSecret(e.target.value)} maxLength={500} />
+              <p className="text-xs text-muted-foreground">Deixe vazio para manter o valor já salvo.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="private-key">RSA Private Key (PEM)</Label>
+              <Textarea
+                id="private-key"
+                value={privateKey}
+                onChange={(e) => setPrivateKey(e.target.value)}
+                rows={8}
+                maxLength={12000}
+                placeholder="-----BEGIN RSA PRIVATE KEY-----"
+              />
+              <p className="text-xs text-muted-foreground">Obrigatória no primeiro setup. Depois pode deixar vazio para manter.</p>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Habilitar DocuSign</p>
+                <p className="text-xs text-muted-foreground">Permite envio de assinatura por este provider.</p>
+              </div>
+              <Switch checked={isEnabled} onCheckedChange={setIsEnabled} />
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Definir como padrão</p>
+                <p className="text-xs text-muted-foreground">Torna o DocuSign o default do tenant.</p>
+              </div>
+              <Switch checked={isDefault} onCheckedChange={setIsDefault} />
+            </div>
+          </div>
+
+          <div className="rounded-md border border-border p-3">
+            <p className="text-sm font-medium text-foreground">Webhook callback</p>
+            <p className="text-xs text-muted-foreground break-all mt-1">{callbackUrl}</p>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !tenantId}>
+              {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Salvar configuração
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
