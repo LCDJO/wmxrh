@@ -132,6 +132,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/workforce-intelligence', element: pr('intelligence', <WorkforceIntelligence />) },
       { path: '/strategic-intelligence', element: pr('intelligence', <StrategicIntelligence />) },
       { path: '/executive-dashboard', element: pr('intelligence', <ExecutiveDashboard />) },
+      { path: '/talent-hub', element: pr('intelligence', <TalentHub />) },
       // ── Occupational Safety ──
       { path: '/occupational-compliance', element: pr('health', <OccupationalCompliance />) },
       { path: '/nr-compliance', element: pr('health', <NrComplianceDashboard />) },

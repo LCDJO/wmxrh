@@ -163,6 +163,7 @@ const navSections: NavSection[] = [
     label: 'Recrutamento',
     items: [
       { to: '/workforce-intelligence', icon: Brain, label: 'Inteligência RH', key: 'intelligence', moduleKey: 'workforce_intelligence' },
+      { to: '/talent-hub', icon: Users, label: 'Banco de Talentos', key: 'intelligence', moduleKey: 'workforce_intelligence' },
       { to: '/strategic-intelligence', icon: Sparkles, label: 'IA Estratégica', key: 'intelligence', moduleKey: 'workforce_intelligence' },
     ],
   },
