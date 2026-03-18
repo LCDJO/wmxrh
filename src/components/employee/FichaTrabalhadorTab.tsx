@@ -548,8 +548,14 @@ function PersonalDataSection({
         chave_pix: personalData.chave_pix || '',
       });
       setLastResolvedCpf((personalData.cpf || '').replace(/\D/g, '').slice(0, 11) || null);
+      setCpfLookupStatus(personalData.cpf_lookup_status ?? 'not_attempted');
+      setCpfLookupPendingReason(personalData.cpf_lookup_pending_reason ?? null);
+      setCpfLookupSource(personalData.cpf_lookup_source ?? null);
     } else {
       setLastResolvedCpf(null);
+      setCpfLookupStatus('not_attempted');
+      setCpfLookupPendingReason(null);
+      setCpfLookupSource(null);
     }
     setOpen(true);
   };
