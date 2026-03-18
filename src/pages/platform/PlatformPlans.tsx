@@ -4,6 +4,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PLATFORM_MODULES } from '@/domains/platform/platform-modules';
+import {
+  PLAN_SCOPED_SIGNATURE_PROVIDERS,
+  SIGNATURE_PROVIDER_LABELS,
+  toPlanSignatureProviderFlag,
+} from '@/domains/employee-agreement/signature-provider-governance';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +29,7 @@ import {
 import {
   Package, Plus, Pencil, Trash2, CreditCard, Puzzle, Flag,
   AlertTriangle, Check, X, DollarSign, ToggleLeft, Users,
-  Link2, Info, RefreshCw, Palette,
+  Link2, Info, RefreshCw, Palette, FileSignature,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
