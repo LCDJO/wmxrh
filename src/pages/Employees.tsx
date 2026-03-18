@@ -1,17 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
-import { useEmployees, useCompaniesSimple, useCreateEmployee, useDeleteEmployee } from '@/domains/hooks';
+import { useEmployees, useCompaniesSimple, useDeleteEmployee } from '@/domains/hooks';
 import { usePermissions } from '@/domains/security';
-import { useEmployeeLimit } from '@/hooks/use-employee-limit';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { EmployeeLimitBanner } from '@/components/shared/EmployeeLimitBanner';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Search, Plus, Filter, Pencil, Trash2, Rocket } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Search, Filter, Pencil, Trash2, Rocket, UserMinus, UserPlus, ArrowRightLeft } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -25,47 +23,13 @@ export default function Employees() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [companyFilter, setCompanyFilter] = useState<string>('all');
-  const [open, setOpen] = useState(false);
-  const [formName, setFormName] = useState('');
-  const [formEmail, setFormEmail] = useState('');
-  const [formPhone, setFormPhone] = useState('');
-  const [formCompany, setFormCompany] = useState('');
-  const [formSalary, setFormSalary] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [hiringOpen, setHiringOpen] = useState(false);
 
   const { data: employees = [] } = useEmployees();
   const { data: companies = [] } = useCompaniesSimple();
-  const createMutation = useCreateEmployee();
   const deleteMutation = useDeleteEmployee();
   const { canManageEmployees } = usePermissions();
-  const { canAddMore, maxAllowed } = useEmployeeLimit();
-
-  const handleCreate = () => {
-    if (!canAddMore) {
-      toast({ title: `Limite de ${maxAllowed} colaboradores atingido`, description: 'Faça upgrade do plano para adicionar mais.', variant: 'destructive' });
-      return;
-    }
-    if (!tenantId || !formCompany) { toast({ title: 'Erro', description: 'Preencha os campos obrigatórios', variant: 'destructive' }); return; }
-    const salary = parseFloat(formSalary) || 0;
-    createMutation.mutate({
-      tenant_id: tenantId,
-      company_id: formCompany,
-      name: formName,
-      email: formEmail || null,
-      phone: formPhone || null,
-      base_salary: salary,
-      current_salary: salary,
-      hire_date: new Date().toISOString().split('T')[0],
-    }, {
-      onSuccess: () => {
-        toast({ title: 'Funcionário cadastrado!' });
-        setOpen(false);
-        setFormName(''); setFormEmail(''); setFormPhone(''); setFormCompany(''); setFormSalary('');
-      },
-      onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
-    });
-  };
 
   const handleDelete = () => {
     if (!deleteId) return;
@@ -87,54 +51,98 @@ export default function Employees() {
     });
   }, [employees, search, statusFilter, companyFilter]);
 
+  const activeEmployees = employees.filter((employee) => employee.status === 'active').length;
+  const inactiveEmployees = employees.filter((employee) => employee.status === 'inactive').length;
+
   return (
     <div className="space-y-6">
       <EmployeeLimitBanner />
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold font-display text-foreground">Funcionários</h1>
-          <p className="text-muted-foreground mt-1">{employees.length} cadastrados</p>
+          <h1 className="text-2xl font-bold font-display text-foreground">Colaboradores</h1>
+          <p className="mt-1 text-muted-foreground">
+            Centralize admissão, contratação e demissão no fluxo certo do colaborador.
+          </p>
         </div>
-        {canManageEmployees && (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" className="gap-2" onClick={() => setHiringOpen(true)}>
-              <Rocket className="h-4 w-4" />
-              Nova Admissão
-            </Button>
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2" disabled={!canAddMore}><Plus className="h-4 w-4" />Novo Funcionário</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Novo Funcionário</DialogTitle></DialogHeader>
-                <form onSubmit={e => { e.preventDefault(); handleCreate(); }} className="space-y-4">
-                  <div className="space-y-2"><Label>Nome *</Label><Input value={formName} onChange={e => setFormName(e.target.value)} required /></div>
-                  <div className="space-y-2"><Label>Email</Label><Input type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Telefone</Label><Input value={formPhone} onChange={e => setFormPhone(e.target.value)} /></div>
-                  <div className="space-y-2">
-                    <Label>Empresa *</Label>
-                    <Select value={formCompany} onValueChange={setFormCompany}>
-                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>{companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2"><Label>Salário</Label><Input type="number" value={formSalary} onChange={e => setFormSalary(e.target.value)} placeholder="0.00" /></div>
-                  <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? 'Salvando...' : 'Cadastrar'}</Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{employees.length} registros</span>
+          <span className="text-border">•</span>
+          <span>{activeEmployees} ativos</span>
+          <span className="text-border">•</span>
+          <span>{inactiveEmployees} inativos</span>
+        </div>
       </div>
+
+      {canManageEmployees && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="overflow-hidden border-border bg-card shadow-card">
+            <CardContent className="flex h-full flex-col gap-5 p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <UserPlus className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold font-display text-card-foreground">Admissão</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Inicie a contratação com workflow guiado, validações e etapas obrigatórias.
+                    </p>
+                  </div>
+                </div>
+                <Rocket className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <span className="rounded-full bg-secondary px-2.5 py-1">Pré-cadastro</span>
+                <span className="rounded-full bg-secondary px-2.5 py-1">Compliance</span>
+                <span className="rounded-full bg-secondary px-2.5 py-1">eSocial</span>
+                <span className="rounded-full bg-secondary px-2.5 py-1">Ativação</span>
+              </div>
+              <Button className="mt-auto gap-2" onClick={() => setHiringOpen(true)}>
+                <UserPlus className="h-4 w-4" />
+                Iniciar admissão
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden border-border bg-card shadow-card">
+            <CardContent className="flex h-full flex-col gap-5 p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+                    <UserMinus className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold font-display text-card-foreground">Demissão</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Abra o workflow de desligamento para cálculo rescisório, documentos e encerramento.
+                    </p>
+                  </div>
+                </div>
+                <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <span className="rounded-full bg-secondary px-2.5 py-1">Rescisão</span>
+                <span className="rounded-full bg-secondary px-2.5 py-1">Checklist</span>
+                <span className="rounded-full bg-secondary px-2.5 py-1">Documentos</span>
+                <span className="rounded-full bg-secondary px-2.5 py-1">Arquivo</span>
+              </div>
+              <Button variant="outline" className="mt-auto gap-2" onClick={() => navigate('/offboarding')}>
+                <UserMinus className="h-4 w-4" />
+                Iniciar demissão
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 bg-card border-border" />
+          <Input placeholder="Buscar colaborador..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 bg-card border-border" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px] bg-card"><Filter className="h-4 w-4 mr-2 text-muted-foreground" /><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-[150px] bg-card"><Filter className="mr-2 h-4 w-4 text-muted-foreground" /><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="active">Ativos</SelectItem>
@@ -157,18 +165,18 @@ export default function Employees() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Funcionário</th>
-              <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Cargo</th>
-              <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Empresa</th>
-              <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Salário</th>
-              <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-              {canManageEmployees && <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ações</th>}
+              <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Colaborador</th>
+              <th className="hidden px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Cargo</th>
+              <th className="hidden px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">Empresa</th>
+              <th className="hidden px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">Salário</th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+              {canManageEmployees && <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ações</th>}
             </tr>
           </thead>
           <tbody>
             {filtered.map(emp => (
-              <tr key={emp.id} onClick={() => navigate(`/employees/${emp.id}`)} className="border-b border-border/50 last:border-0 hover:bg-secondary/50 cursor-pointer transition-colors">
-                <td className="py-3.5 px-5">
+              <tr key={emp.id} onClick={() => navigate(`/employees/${emp.id}`)} className="cursor-pointer border-b border-border/50 transition-colors last:border-0 hover:bg-secondary/50">
+                <td className="px-5 py-3.5">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9"><AvatarFallback className="bg-accent text-accent-foreground text-xs font-semibold">{emp.name.split(' ').map(n => n[0]).slice(0, 2).join('')}</AvatarFallback></Avatar>
                     <div>
@@ -177,12 +185,12 @@ export default function Employees() {
                     </div>
                   </div>
                 </td>
-                <td className="py-3.5 px-5 hidden md:table-cell text-sm text-card-foreground">{emp.positions?.title || '—'}</td>
-                <td className="py-3.5 px-5 hidden lg:table-cell text-sm text-muted-foreground">{emp.companies?.name || '—'}</td>
-                <td className="py-3.5 px-5 hidden lg:table-cell text-sm font-medium text-card-foreground">R$ {(emp.current_salary || 0).toLocaleString('pt-BR')}</td>
-                <td className="py-3.5 px-5"><StatusBadge status={emp.status} /></td>
+                <td className="hidden px-5 py-3.5 text-sm text-card-foreground md:table-cell">{emp.positions?.title || '—'}</td>
+                <td className="hidden px-5 py-3.5 text-sm text-muted-foreground lg:table-cell">{emp.companies?.name || '—'}</td>
+                <td className="hidden px-5 py-3.5 text-sm font-medium text-card-foreground lg:table-cell">R$ {(emp.current_salary || 0).toLocaleString('pt-BR')}</td>
+                <td className="px-5 py-3.5"><StatusBadge status={emp.status} /></td>
                 {canManageEmployees && (
-                  <td className="py-3.5 px-5">
+                  <td className="px-5 py-3.5">
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); navigate(`/employees/${emp.id}`); }}>
                         <Pencil className="h-4 w-4 text-muted-foreground" />
@@ -197,7 +205,7 @@ export default function Employees() {
             ))}
           </tbody>
         </table>
-        {filtered.length === 0 && <div className="py-12 text-center text-muted-foreground">Nenhum funcionário encontrado.</div>}
+        {filtered.length === 0 && <div className="py-12 text-center text-muted-foreground">Nenhum colaborador encontrado.</div>}
       </div>
 
       <AlertDialog open={!!deleteId} onOpenChange={(v) => !v && setDeleteId(null)}>
