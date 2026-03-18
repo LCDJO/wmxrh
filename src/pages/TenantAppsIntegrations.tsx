@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { getPlanAllowedSignatureProviders, SIGNATURE_PROVIDER_LABELS } from '@/domains/employee-agreement/signature-provider-governance';
 import type { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -84,6 +85,33 @@ export default function TenantAppsIntegrations() {
     },
   });
 
+  const { data: signaturePlanProviders = [] } = useQuery({
+    queryKey: ['tenant-signature-plan-providers', tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data: tenantPlan, error: tenantPlanError } = await supabase
+        .from('tenant_plans')
+        .select('plan_id')
+        .eq('tenant_id', tenantId!)
+        .in('status', ['active', 'trial'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (tenantPlanError) throw tenantPlanError;
+      if (!tenantPlan?.plan_id) return [];
+
+      const { data: plan, error: planError } = await supabase
+        .from('saas_plans')
+        .select('feature_flags')
+        .eq('id', tenantPlan.plan_id)
+        .maybeSingle();
+
+      if (planError) throw planError;
+      return getPlanAllowedSignatureProviders((plan?.feature_flags ?? []) as string[]);
+    },
+  });
+
   // Uninstall mutation
   const uninstallMutation = useMutation({
     mutationFn: async (installationId: string) => {
@@ -157,10 +185,12 @@ export default function TenantAppsIntegrations() {
           <div>
             <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
               <FileSignature className="h-4 w-4" />
-              Assinatura Digital (DocuSign)
+              Assinatura Digital
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Habilite no tenant, configure credenciais JWT e webhook de assinatura.
+              O plano atual libera: {signaturePlanProviders.length > 0
+                ? signaturePlanProviders.map((provider) => SIGNATURE_PROVIDER_LABELS[provider]).join(', ')
+                : 'nenhum provider específico configurado — fallback liberado'}.
             </p>
           </div>
           <Button variant="outline" onClick={() => navigate('/integrations/document-signature')}>
