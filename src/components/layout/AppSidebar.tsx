@@ -177,7 +177,6 @@ const navSections: NavSection[] = [
       { to: '/fleet-dashboard', icon: Car, label: 'Frota & Compliance', key: 'fleet' as NavKey, moduleKey: 'fleet' },
       { to: '/live-display', icon: Monitor, label: 'Live Display (TV)', key: 'live_display' as NavKey, moduleKey: 'fleet' },
       { to: '/command-center', icon: Radio, label: 'Command Center', key: 'operations' as NavKey, moduleKey: 'fleet' },
-      { to: '/apps', icon: Store, label: 'Apps & Integrações', key: 'iam_users' as NavKey },
       { to: '/integrations/telegram', icon: Bot, label: 'Telegram', key: 'integrations' as NavKey },
       { to: '/integrations/traccar', icon: Car, label: 'Traccar (GPS)', key: 'integrations' as NavKey, moduleKey: 'fleet' },
       { to: '/integrations/document-signature', icon: FileSignature, label: 'Assinatura Digital', key: 'integrations' as NavKey, moduleKey: 'agreements' },
@@ -213,6 +212,7 @@ const navSections: NavSection[] = [
     label: 'Configurações',
     items: [
       { to: '/plans', icon: Crown, label: 'Meu Plano', key: 'iam_users' },
+      { to: '/apps', icon: Store, label: 'Apps & Integrações', key: 'iam_users' as NavKey },
       {
         to: '/settings/personalization',
         icon: Sparkles,
