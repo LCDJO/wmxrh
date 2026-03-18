@@ -159,6 +159,19 @@ async function handleTenantExternalProvider(
     }, 400);
   }
 
+  const planFeatureFlags = await resolveTenantPlanFeatureFlags(tenantId);
+  const allowedPlanProviders = getAllowedPlanProviders(planFeatureFlags);
+
+  if (allowedPlanProviders.length > 0 && !allowedPlanProviders.includes(provider)) {
+    return jsonResponse({
+      error: `Provider '${provider}' is not liberado no plano atual do tenant.`,
+      provider,
+      status: "error",
+      plan_restricted: true,
+      allowed_providers: allowedPlanProviders,
+    }, 403);
+  }
+
   const integration = await resolveTenantProviderIntegration(tenantId, provider);
   const secrets = await resolveTenantProviderSecrets(tenantId, provider);
   const apiKey = secrets?.api_key ?? null;
