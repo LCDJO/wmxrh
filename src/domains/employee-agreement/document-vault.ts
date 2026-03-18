@@ -71,9 +71,10 @@ export const documentVault = {
     agreementId: string,
     externalDocumentId: string,
     providerName: SignatureProvider,
+    signatureTenantId?: string,
   ): Promise<string | null> {
     try {
-      const blob = await digitalSignatureAdapter.download(providerName, externalDocumentId);
+      const blob = await digitalSignatureAdapter.download(providerName, externalDocumentId, signatureTenantId ?? tenantId);
       if (!blob) return null;
 
       const path = `${tenantId}/${agreementId}/signed_${agreementId}.pdf`;
