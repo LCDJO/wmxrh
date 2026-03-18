@@ -115,6 +115,13 @@ const MODULE_TREE_GROUPS: ModuleTreeGroup[] = [
     ],
   },
   {
+    label: 'Inteligência de Dados',
+    trees: [
+      { key: 'cpf_lookup_serpro', children: [] },
+      { key: 'cpf_lookup_cpfhub', children: [] },
+    ],
+  },
+  {
     label: 'Plataforma SaaS',
     trees: [
       { key: 'iam', children: [] },
@@ -162,6 +169,8 @@ const CROSS_TREE_DEPS: Record<string, string[]> = {
   employees: ['core_hr'],
   labor_compliance: ['labor_rules'],
   fleet_traccar: ['fleet'],
+  cpf_lookup_serpro: ['core_hr', 'employees'],
+  cpf_lookup_cpfhub: ['core_hr', 'employees'],
 };
 
 const ALL_PAYMENT_METHODS = [

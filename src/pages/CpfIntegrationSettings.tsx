@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
 import { usePermissions } from '@/domains/security/use-permissions';
-import { externalDataService, type CpfIntegrationConfig } from '@/domains/occupational-intelligence/external-data.service';
+import { usePXE } from '@/hooks/use-pxe';
+import { externalDataService, type CpfIntegrationConfig, type CpfProvider } from '@/domains/occupational-intelligence/external-data.service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,17 +10,41 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, IdCard, KeyRound, ExternalLink, ShieldAlert, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
-const DEFAULT_CONFIG: CpfIntegrationConfig = {
-  provider: 'serpro',
-  is_active: false,
-  has_consumer_key: false,
-  has_consumer_secret: false,
-  api_base_url: 'https://gateway.apiserpro.serpro.gov.br',
-  endpoint_path_template: '/consulta-cpf-df-trial/v1/cpf/{cpf}',
-  docs_url: 'https://apicenter.estaleiro.serpro.gov.br/documentacao/consulta-cpf/',
+const PROVIDER_DEFAULTS: Record<CpfProvider, CpfIntegrationConfig> = {
+  serpro: {
+    provider: 'serpro',
+    is_active: false,
+    has_consumer_key: false,
+    has_consumer_secret: false,
+    has_api_key: false,
+    api_base_url: 'https://gateway.apiserpro.serpro.gov.br',
+    endpoint_path_template: '/consulta-cpf-df-trial/v1/cpf/{cpf}',
+    docs_url: 'https://apicenter.estaleiro.serpro.gov.br/documentacao/consulta-cpf/',
+  },
+  cpfhub: {
+    provider: 'cpfhub',
+    is_active: false,
+    has_consumer_key: false,
+    has_consumer_secret: false,
+    has_api_key: false,
+    api_base_url: 'https://api.cpfhub.io',
+    endpoint_path_template: '/cpf/{cpf}',
+    docs_url: 'https://cpfhub.io/documentacao/api-reference/cpf',
+  },
+};
+
+const PROVIDER_LABELS: Record<CpfProvider, string> = {
+  serpro: 'SERPRO',
+  cpfhub: 'CPFHub',
+};
+
+const PROVIDER_DESCRIPTIONS: Record<CpfProvider, string> = {
+  serpro: 'Indicado para operações maiores com credenciais contratuais do SERPRO.',
+  cpfhub: 'Opção simplificada para pequenas empresas usando API Key do CPFHub.',
 };
 
 function AccessDenied() {
@@ -39,26 +64,37 @@ function AccessDenied() {
 export default function CpfIntegrationSettings() {
   const { currentTenant } = useTenant();
   const { hasRole, isTenantAdmin, loading: permissionsLoading } = usePermissions();
+  const { ready: pxeReady, isModuleAccessible } = usePXE();
   const tenantId = currentTenant?.id ?? null;
   const isAdmin = isTenantAdmin || hasRole('owner', 'admin');
 
+  const availableProviders = useMemo<CpfProvider[]>(() => {
+    const providers: CpfProvider[] = [];
+    if (isModuleAccessible('cpf_lookup_serpro')) providers.push('serpro');
+    if (isModuleAccessible('cpf_lookup_cpfhub')) providers.push('cpfhub');
+    return providers;
+  }, [isModuleAccessible]);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [config, setConfig] = useState<CpfIntegrationConfig>(DEFAULT_CONFIG);
+  const [config, setConfig] = useState<CpfIntegrationConfig>(PROVIDER_DEFAULTS.serpro);
+  const [provider, setProvider] = useState<CpfProvider>('serpro');
   const [consumerKey, setConsumerKey] = useState('');
   const [consumerSecret, setConsumerSecret] = useState('');
-  const [apiBaseUrl, setApiBaseUrl] = useState(DEFAULT_CONFIG.api_base_url);
-  const [endpointPathTemplate, setEndpointPathTemplate] = useState(DEFAULT_CONFIG.endpoint_path_template);
+  const [apiKey, setApiKey] = useState('');
+  const [apiBaseUrl, setApiBaseUrl] = useState(PROVIDER_DEFAULTS.serpro.api_base_url);
+  const [endpointPathTemplate, setEndpointPathTemplate] = useState(PROVIDER_DEFAULTS.serpro.endpoint_path_template);
   const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
-    if (!tenantId || !isAdmin) return;
+    if (!tenantId || !isAdmin || !pxeReady) return;
 
     const load = async () => {
       setLoading(true);
       try {
         const data = await externalDataService.getCpfConfig(tenantId);
         setConfig(data);
+        setProvider(data.provider);
         setApiBaseUrl(data.api_base_url);
         setEndpointPathTemplate(data.endpoint_path_template);
         setIsActive(data.is_active);
@@ -71,7 +107,18 @@ export default function CpfIntegrationSettings() {
     };
 
     void load();
-  }, [tenantId, isAdmin]);
+  }, [tenantId, isAdmin, pxeReady]);
+
+  function handleProviderChange(nextProvider: CpfProvider) {
+    const defaults = PROVIDER_DEFAULTS[nextProvider];
+    setProvider(nextProvider);
+    setIsActive(false);
+    setApiBaseUrl(defaults.api_base_url);
+    setEndpointPathTemplate(defaults.endpoint_path_template);
+    setConsumerKey('');
+    setConsumerSecret('');
+    setApiKey('');
+  }
 
   async function handleSave() {
     if (!tenantId) return;
@@ -79,19 +126,23 @@ export default function CpfIntegrationSettings() {
     try {
       const data = await externalDataService.saveCpfConfig({
         tenantId,
+        provider,
         consumerKey: consumerKey || undefined,
         consumerSecret: consumerSecret || undefined,
+        apiKey: apiKey || undefined,
         apiBaseUrl,
         endpointPathTemplate,
         isActive,
       });
 
       setConfig(data);
+      setProvider(data.provider);
       setApiBaseUrl(data.api_base_url);
       setEndpointPathTemplate(data.endpoint_path_template);
       setIsActive(data.is_active);
       setConsumerKey('');
       setConsumerSecret('');
+      setApiKey('');
       toast.success('Integração de CPF salva com sucesso.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha ao salvar integração de CPF.';
@@ -101,7 +152,7 @@ export default function CpfIntegrationSettings() {
     }
   }
 
-  if (permissionsLoading || loading) {
+  if (permissionsLoading || !pxeReady || loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -113,6 +164,11 @@ export default function CpfIntegrationSettings() {
   if (!isAdmin) {
     return <AccessDenied />;
   }
+
+  const selectedDefaults = PROVIDER_DEFAULTS[provider];
+  const providerAvailable = availableProviders.includes(provider);
+  const hasAnyProvider = availableProviders.length > 0;
+  const usingSerpro = provider === 'serpro';
 
   return (
     <div className="space-y-6">
@@ -126,24 +182,60 @@ export default function CpfIntegrationSettings() {
             Configure a busca automática de nome e data de nascimento durante a admissão.
           </p>
         </div>
-        <Badge variant={config.is_active ? 'default' : 'secondary'}>
-          {config.is_active ? 'Ativa' : 'Inativa'}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline">Provider: {PROVIDER_LABELS[provider]}</Badge>
+          <Badge variant={config.is_active ? 'default' : 'secondary'}>
+            {config.is_active ? 'Ativa' : 'Inativa'}
+          </Badge>
+        </div>
       </div>
+
+      {!hasAnyProvider ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Nenhum provider liberado no plano</CardTitle>
+            <CardDescription>
+              Libere os módulos <strong>Consulta CPF — SERPRO</strong> ou <strong>Consulta CPF — CPFHub</strong> na gestão SaaS para este tenant.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
+
+      {hasAnyProvider && !providerAvailable ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Provider salvo não está liberado no plano atual
+            </CardTitle>
+            <CardDescription>
+              Selecione um provider habilitado para este tenant antes de ativar novamente a consulta automática.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
           <CardTitle>Estado da integração</CardTitle>
           <CardDescription>Os segredos não são reexibidos após o salvamento.</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <div className="rounded-md border border-border p-3">
+            <p className="text-sm text-muted-foreground">Provider atual</p>
+            <p className="mt-1 font-medium text-foreground">{PROVIDER_LABELS[config.provider]}</p>
+          </div>
           <div className="rounded-md border border-border p-3">
             <p className="text-sm text-muted-foreground">Consumer Key</p>
             <p className="mt-1 font-medium text-foreground">{config.has_consumer_key ? 'Configurada' : 'Não configurada'}</p>
           </div>
           <div className="rounded-md border border-border p-3">
-            <p className="text-sm text-muted-foreground">Consumer Secret</p>
-            <p className="mt-1 font-medium text-foreground">{config.has_consumer_secret ? 'Configurado' : 'Não configurado'}</p>
+            <p className="text-sm text-muted-foreground">Consumer Secret / API Key</p>
+            <p className="mt-1 font-medium text-foreground">
+              {usingSerpro
+                ? (config.has_consumer_secret ? 'Configurado' : 'Não configurado')
+                : (config.has_api_key ? 'Configurada' : 'Não configurada')}
+            </p>
           </div>
           <div className="rounded-md border border-border p-3">
             <p className="text-sm text-muted-foreground">Endpoint atual</p>
@@ -156,35 +248,65 @@ export default function CpfIntegrationSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <KeyRound className="h-4 w-4" />
-            Credenciais SERPRO
+            Configuração do provider
           </CardTitle>
-          <CardDescription>Informe as credenciais do contrato e, se necessário, ajuste o endpoint contratado.</CardDescription>
+          <CardDescription>{PROVIDER_DESCRIPTIONS[provider]}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="consumer-key">Consumer Key</Label>
-              <Input
-                id="consumer-key"
-                type="password"
-                placeholder={config.has_consumer_key ? '••••••••••••••••' : 'Cole a Consumer Key'}
-                value={consumerKey}
-                onChange={(e) => setConsumerKey(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">Deixe em branco para manter o valor já salvo.</p>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label htmlFor="provider">Provider</Label>
+              <Select value={provider} onValueChange={(value) => handleProviderChange(value as CpfProvider)}>
+                <SelectTrigger id="provider">
+                  <SelectValue placeholder="Selecione o provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableProviders.map((item) => (
+                    <SelectItem key={item} value={item}>{PROVIDER_LABELS[item]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="consumer-secret">Consumer Secret</Label>
-              <Input
-                id="consumer-secret"
-                type="password"
-                placeholder={config.has_consumer_secret ? '••••••••••••••••' : 'Cole a Consumer Secret'}
-                value={consumerSecret}
-                onChange={(e) => setConsumerSecret(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">Deixe em branco para manter o valor já salvo.</p>
-            </div>
+            {usingSerpro ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="consumer-key">Consumer Key</Label>
+                  <Input
+                    id="consumer-key"
+                    type="password"
+                    placeholder={config.has_consumer_key ? '••••••••••••••••' : 'Cole a Consumer Key'}
+                    value={consumerKey}
+                    onChange={(e) => setConsumerKey(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">Deixe em branco para manter o valor já salvo.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="consumer-secret">Consumer Secret</Label>
+                  <Input
+                    id="consumer-secret"
+                    type="password"
+                    placeholder={config.has_consumer_secret ? '••••••••••••••••' : 'Cole a Consumer Secret'}
+                    value={consumerSecret}
+                    onChange={(e) => setConsumerSecret(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">Deixe em branco para manter o valor já salvo.</p>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="api-key">API Key</Label>
+                <Input
+                  id="api-key"
+                  type="password"
+                  placeholder={config.has_api_key ? '••••••••••••••••' : 'Cole a API Key'}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Deixe em branco para manter o valor já salvo.</p>
+              </div>
+            )}
 
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="api-base-url">API Base URL</Label>
@@ -205,6 +327,9 @@ export default function CpfIntegrationSettings() {
               <p className="text-xs text-muted-foreground">
                 Use <span className="font-mono">{'{cpf}'}</span> no ponto em que o documento deve ser inserido.
               </p>
+              <p className="text-xs text-muted-foreground">
+                Padrão sugerido para {PROVIDER_LABELS[provider]}: {selectedDefaults.api_base_url}{selectedDefaults.endpoint_path_template}
+              </p>
             </div>
           </div>
 
@@ -215,11 +340,11 @@ export default function CpfIntegrationSettings() {
               <p className="text-sm font-medium text-foreground">Ativar consulta automática</p>
               <p className="text-xs text-muted-foreground">Quando ativa, a admissão tenta preencher nome e data de nascimento ao informar o CPF.</p>
             </div>
-            <Switch checked={isActive} onCheckedChange={setIsActive} />
+            <Switch checked={isActive} onCheckedChange={setIsActive} disabled={!providerAvailable} />
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={saving || !tenantId}>
+            <Button onClick={handleSave} disabled={saving || !tenantId || !providerAvailable}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Salvar configuração
             </Button>
@@ -237,25 +362,31 @@ export default function CpfIntegrationSettings() {
             <div className="rounded-md border border-border p-3">
               <p className="text-sm font-medium text-foreground">1. Contratação</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Acesse a área do cliente do SERPRO, contrate a API Consulta CPF e localize as credenciais do contrato.
+                {usingSerpro
+                  ? 'Acesse a área do cliente do SERPRO, contrate a API Consulta CPF e localize as credenciais do contrato.'
+                  : 'Crie sua conta no CPFHub e gere a API Key do projeto para começar a consultar CPFs.'}
               </p>
             </div>
             <div className="rounded-md border border-border p-3">
               <p className="text-sm font-medium text-foreground">2. Credenciais</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Copie a <strong>Consumer Key</strong> e a <strong>Consumer Secret</strong> exibidas na área do cliente.
+                {usingSerpro
+                  ? <>Copie a <strong>Consumer Key</strong> e a <strong>Consumer Secret</strong> exibidas na área do cliente.</>
+                  : <>Copie a <strong>API Key</strong> exibida no painel do CPFHub.</>}
               </p>
             </div>
             <div className="rounded-md border border-border p-3">
-              <p className="text-sm font-medium text-foreground">3. Homologação</p>
+              <p className="text-sm font-medium text-foreground">3. Endpoint</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                O endpoint padrão desta tela usa o ambiente de demonstração/homologação. Se seu contrato for produtivo, ajuste o endpoint conforme a referência da API contratada.
+                {usingSerpro
+                  ? 'O endpoint padrão desta tela usa o ambiente de demonstração/homologação. Se seu contrato for produtivo, ajuste o endpoint conforme a referência da API contratada.'
+                  : 'O endpoint padrão do CPFHub usa o formato /cpf/{cpf}. Ajuste somente se sua conta tiver uma rota diferente.'}
               </p>
             </div>
             <div className="rounded-md border border-border p-3">
-              <p className="text-sm font-medium text-foreground">4. Token de acesso</p>
+              <p className="text-sm font-medium text-foreground">4. Segurança</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                O sistema gera automaticamente o token OAuth no backend usando as credenciais configuradas, sem expor as chaves no navegador.
+                O sistema consulta a API pelo backend, sem expor as credenciais no navegador.
               </p>
             </div>
           </div>
@@ -270,7 +401,7 @@ export default function CpfIntegrationSettings() {
             </p>
             <div className="mt-3">
               <Button asChild variant="outline">
-                <a href={config.docs_url} target="_blank" rel="noreferrer">
+                <a href={PROVIDER_DEFAULTS[provider].docs_url} target="_blank" rel="noreferrer">
                   <ExternalLink className="mr-2 h-4 w-4" />
                   Abrir documentação
                 </a>

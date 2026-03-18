@@ -42,6 +42,8 @@ export const PLATFORM_MODULES: readonly PlatformModule[] = [
   { key: 'compensation_engine', label: 'Motor de Compensação', description: 'Simulações salariais, reajustes em massa e tabelas de compensação', icon: 'TrendingUp',     category: 'domain' },
   { key: 'support_module', label: 'Suporte',               description: 'Módulo versionado de atendimento — Tenant Experience + Platform Console + Chat ao Vivo + Wiki + Analytics', icon: 'Headphones', category: 'domain' },
   { key: 'fleet_traccar',  label: 'Traccar (GPS/Frota)',   description: 'Rastreamento GPS, compliance de frota, geofencing e políticas disciplinares via Traccar', icon: 'Car', category: 'domain' },
+  { key: 'cpf_lookup_serpro', label: 'Consulta CPF — SERPRO', description: 'Consulta automática de CPF com credenciais SERPRO para operações de maior escala', icon: 'IdCard', category: 'domain' },
+  { key: 'cpf_lookup_cpfhub', label: 'Consulta CPF — CPFHub', description: 'Consulta automática de CPF com CPFHub, indicada para pequenas empresas', icon: 'IdCard', category: 'domain' },
 
   // ── Platform: Infraestrutura SaaS ───────────────────────────
   { key: 'iam',              label: 'IAM',                  description: 'Gestão de usuários, roles, permissões e políticas de acesso',            icon: 'Key',            category: 'platform' },
