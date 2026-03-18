@@ -151,6 +151,7 @@ export const agreementAssignmentService = {
             dto.agreement_id,
             dto.external_document_id,
             (agr as any).signature_provider,
+            (agr as any).tenant_id,
           );
           if (storagePath) update.signed_document_url = storagePath;
         }
