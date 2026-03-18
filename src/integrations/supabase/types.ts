@@ -21722,6 +21722,106 @@ export type Database = {
           },
         ]
       }
+      tenant_signature_integration_secrets: {
+        Row: {
+          api_key_encrypted: string | null
+          created_at: string
+          id: string
+          provider_name: string
+          tenant_id: string
+          updated_at: string
+          webhook_secret_encrypted: string | null
+        }
+        Insert: {
+          api_key_encrypted?: string | null
+          created_at?: string
+          id?: string
+          provider_name: string
+          tenant_id: string
+          updated_at?: string
+          webhook_secret_encrypted?: string | null
+        }
+        Update: {
+          api_key_encrypted?: string | null
+          created_at?: string
+          id?: string
+          provider_name?: string
+          tenant_id?: string
+          updated_at?: string
+          webhook_secret_encrypted?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_signature_integration_secrets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_signature_integrations: {
+        Row: {
+          account_id: string | null
+          base_url: string | null
+          config: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          is_enabled: boolean
+          last_error: string | null
+          last_test_status: string | null
+          last_tested_at: string | null
+          provider_name: string
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          base_url?: string | null
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          is_enabled?: boolean
+          last_error?: string | null
+          last_test_status?: string | null
+          last_tested_at?: string | null
+          provider_name: string
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          base_url?: string | null
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          is_enabled?: boolean
+          last_error?: string | null
+          last_test_status?: string | null
+          last_tested_at?: string | null
+          provider_name?: string
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_signature_integrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_subscriptions: {
         Row: {
           billing_cycle: string
@@ -24562,9 +24662,35 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      is_tenant_signature_admin: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_tenant_superadmin: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
+      }
+      list_tenant_signature_integrations: {
+        Args: { _tenant_id: string }
+        Returns: {
+          account_id: string
+          base_url: string
+          config: Json
+          created_at: string
+          created_by: string
+          has_api_key: boolean
+          has_webhook_secret: boolean
+          id: string
+          is_default: boolean
+          is_enabled: boolean
+          last_error: string
+          last_test_status: string
+          last_tested_at: string
+          provider_name: string
+          tenant_id: string
+          updated_at: string
+          updated_by: string
+        }[]
       }
       log_safety_automation_action: {
         Args: {
@@ -24638,6 +24764,10 @@ export type Database = {
       refresh_user_behavior_profile: {
         Args: { p_tenant_id: string; p_user_id: string }
         Returns: undefined
+      }
+      remove_tenant_signature_integration: {
+        Args: { _provider_name: string; _tenant_id: string }
+        Returns: boolean
       }
       scan_employee_compliance: {
         Args: { _tenant_id: string }
@@ -25358,6 +25488,42 @@ export type Database = {
           table_name: string
         }
         Returns: string
+      }
+      upsert_tenant_signature_integration: {
+        Args: {
+          _account_id?: string
+          _api_key?: string
+          _base_url?: string
+          _config?: Json
+          _is_default?: boolean
+          _is_enabled?: boolean
+          _provider_name: string
+          _tenant_id: string
+          _webhook_secret?: string
+        }
+        Returns: {
+          account_id: string | null
+          base_url: string | null
+          config: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          is_enabled: boolean
+          last_error: string | null
+          last_test_status: string | null
+          last_tested_at: string | null
+          provider_name: string
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tenant_signature_integrations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       user_can_see_notification: {
         Args: {
