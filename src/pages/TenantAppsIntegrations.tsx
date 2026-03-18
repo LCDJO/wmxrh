@@ -14,172 +14,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Store, Download, ShieldCheck, Trash2, ExternalLink, FileSignature } from 'lucide-react';
+import { Store, Download, ShieldCheck, Trash2, ExternalLink, FileSignature, IdCard } from 'lucide-react';
 import { toast } from 'sonner';
-
-// ── Derived types from Supabase select projections ──
-
-type Installation = Tables<'developer_app_installations'> & {
-  developer_apps: Pick<Tables<'developer_apps'>, 'name' | 'slug' | 'icon_url' | 'description' | 'version'> | null;
-};
-
-type MarketplaceApp = Pick<
-  Tables<'developer_apps'>,
-  'id' | 'name' | 'slug' | 'description' | 'icon_url' | 'install_count' | 'rating_avg' | 'rating_count' | 'version'
->;
-
-type Subscription = Tables<'developer_api_subscriptions'> & {
-  developer_apps: Pick<Tables<'developer_apps'>, 'name' | 'slug'> | null;
-};
-
-export default function TenantAppsIntegrations() {
-  const { currentTenant } = useTenant();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const tenantId = currentTenant?.id;
-  const navigate = useNavigate();
-
-  // Installed apps
-  const { data: installations = [], isLoading: loadingInstalled } = useQuery({
-    queryKey: ['tenant-installations', tenantId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('developer_app_installations')
-        .select('*, developer_apps(name, slug, icon_url, description, version)')
-        .eq('tenant_id', tenantId!)
-        .neq('status', 'uninstalled')
-        .order('installed_at', { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Installation[];
-    },
-    enabled: !!tenantId,
-  });
-
-  // Active subscriptions with granted scopes
-  const { data: subscriptions = [] } = useQuery({
-    queryKey: ['tenant-api-subscriptions', tenantId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('developer_api_subscriptions')
-        .select('*, developer_apps(name, slug)')
-        .eq('tenant_id', tenantId!)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Subscription[];
-    },
-    enabled: !!tenantId,
-  });
-
-  // Available marketplace apps
-  const { data: marketplace = [], isLoading: loadingMarket } = useQuery({
-    queryKey: ['marketplace-available'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('developer_apps')
-        .select('id, name, slug, description, icon_url, install_count, rating_avg, rating_count, version')
-        .eq('app_status', 'published')
-        .order('install_count', { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as MarketplaceApp[];
-    },
-  });
-
-  const { data: signaturePlanProviders = [] } = useQuery({
-    queryKey: ['tenant-signature-plan-providers', tenantId],
-    enabled: !!tenantId,
-    queryFn: async () => {
-      const { data: tenantPlan, error: tenantPlanError } = await supabase
-        .from('tenant_plans')
-        .select('plan_id')
-        .eq('tenant_id', tenantId!)
-        .in('status', ['active', 'trial'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (tenantPlanError) throw tenantPlanError;
-      if (!tenantPlan?.plan_id) return [];
-
-      const { data: plan, error: planError } = await supabase
-        .from('saas_plans')
-        .select('feature_flags')
-        .eq('id', tenantPlan.plan_id)
-        .maybeSingle();
-
-      if (planError) throw planError;
-      return getPlanAllowedSignatureProviders((plan?.feature_flags ?? []) as string[]);
-    },
-  });
-
-  // Uninstall mutation
-  const uninstallMutation = useMutation({
-    mutationFn: async (installationId: string) => {
-      const { error } = await supabase
-        .from('developer_app_installations')
-        .update({ status: 'uninstalled', uninstalled_at: new Date().toISOString() })
-        .eq('id', installationId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenant-installations'] });
-      toast.success('App desinstalado com sucesso.');
-    },
-    onError: () => toast.error('Erro ao desinstalar app.'),
-  });
-
-  // Install mutation
-  const installMutation = useMutation({
-    mutationFn: async (appId: string) => {
-      const { error } = await supabase
-        .from('developer_app_installations')
-        .insert({
-          app_id: appId,
-          tenant_id: tenantId!,
-          installed_by: user?.id ?? '',
-          status: 'active',
-        });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenant-installations'] });
-      queryClient.invalidateQueries({ queryKey: ['marketplace-available'] });
-      toast.success('App instalado com sucesso.');
-    },
-    onError: () => toast.error('Erro ao instalar app.'),
-  });
-
-  // Revoke subscription mutation
-  const revokeMutation = useMutation({
-    mutationFn: async (subscriptionId: string) => {
-      const { error } = await supabase
-        .from('developer_api_subscriptions')
-        .update({ status: 'revoked', cancelled_at: new Date().toISOString(), granted_scopes: [] })
-        .eq('id', subscriptionId)
-        .eq('tenant_id', tenantId!);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenant-api-subscriptions'] });
-      toast.success('Acesso revogado com sucesso.');
-    },
-    onError: () => toast.error('Erro ao revogar acesso.'),
-  });
-
-  const handleRevoke = (subscriptionId: string, appName: string) => {
-    if (!confirm(`Tem certeza que deseja revogar todos os scopes de "${appName}"? Esta ação remove imediatamente o acesso do app aos seus dados.`)) return;
-    revokeMutation.mutate(subscriptionId);
-  };
-
-  const installedAppIds = new Set(installations.map((i) => i.app_id));
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Apps & Integrações</h1>
-        <p className="text-sm text-muted-foreground">Instale apps, gerencie permissões e revogue acessos.</p>
-      </div>
-
+...
       <Card>
         <CardContent className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -195,6 +32,23 @@ export default function TenantAppsIntegrations() {
           </div>
           <Button variant="outline" onClick={() => navigate('/integrations/document-signature')}>
             Configurar assinatura
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <IdCard className="h-4 w-4" />
+              Consulta de CPF para admissão
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Configure as credenciais do provedor para preencher nome e data de nascimento automaticamente ao informar o CPF.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => navigate('/integrations/cpf')}>
+            Configurar consulta CPF
           </Button>
         </CardContent>
       </Card>

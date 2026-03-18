@@ -426,6 +426,8 @@ function PersonalDataSection({
   canEdit: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [cpfLookupLoading, setCpfLookupLoading] = useState(false);
+  const [lastResolvedCpf, setLastResolvedCpf] = useState<string | null>(null);
   const [form, setForm] = useState({
     nome_completo: '',
     nome_social: '',
@@ -489,6 +491,9 @@ function PersonalDataSection({
         tipo_conta: personalData.tipo_conta || 'corrente',
         chave_pix: personalData.chave_pix || '',
       });
+      setLastResolvedCpf((personalData.cpf || '').replace(/\D/g, '').slice(0, 11) || null);
+    } else {
+      setLastResolvedCpf(null);
     }
     setOpen(true);
   };
@@ -527,13 +532,55 @@ function PersonalDataSection({
         chave_pix: form.chave_pix || null,
       },
       {
-        onSuccess: () => { toast({ title: 'Dados pessoais salvos!' }); setOpen(false); },
+        onSuccess: () => {
+          toast({ title: 'Dados pessoais salvos!' });
+          setOpen(false);
+        },
         onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
       }
     );
   };
 
-  const f = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, [key]: e.target.value }));
+  const resolveCpf = async (cpfValue: string) => {
+    const cleanedCpf = cpfValue.replace(/\D/g, '').slice(0, 11);
+    if (cleanedCpf.length !== 11 || cleanedCpf === lastResolvedCpf || cpfLookupLoading) return;
+
+    setCpfLookupLoading(true);
+    try {
+      const result = await externalDataService.resolveCpf(cleanedCpf, tenantId);
+      setForm((prev) => ({
+        ...prev,
+        cpf: cleanedCpf,
+        nome_completo: result.nome ?? prev.nome_completo,
+        data_nascimento: result.data_nascimento ?? prev.data_nascimento,
+      }));
+      setLastResolvedCpf(cleanedCpf);
+      toast({
+        title: 'CPF consultado',
+        description: 'Nome e data de nascimento foram preenchidos automaticamente.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível consultar o CPF.';
+      toast({ title: 'Falha ao consultar CPF', description: message, variant: 'destructive' });
+    } finally {
+      setCpfLookupLoading(false);
+    }
+  };
+
+  const f = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setForm((p) => ({ ...p, [key]: value }));
+
+    if (key === 'cpf') {
+      const cleaned = value.replace(/\D/g, '').slice(0, 11);
+      if (cleaned !== lastResolvedCpf) {
+        setLastResolvedCpf(null);
+      }
+      if (cleaned.length === 11) {
+        void resolveCpf(cleaned);
+      }
+    }
+  };
 
   if (personalData && !open) {
     return (
@@ -557,7 +604,6 @@ function PersonalDataSection({
           {personalData.nome_mae && <div><p className="text-xs text-muted-foreground">Nome da Mãe</p><p className="text-sm text-card-foreground">{personalData.nome_mae}</p></div>}
           {personalData.nome_pai && <div><p className="text-xs text-muted-foreground">Nome do Pai</p><p className="text-sm text-card-foreground">{personalData.nome_pai}</p></div>}
         </div>
-        {/* Documentação */}
         {(personalData.rg_numero || personalData.cnh_numero || personalData.passaporte || personalData.rne_rnm) && (
           <>
             <h4 className="text-sm font-semibold text-card-foreground mt-4">Documentação</h4>
@@ -571,7 +617,6 @@ function PersonalDataSection({
             </div>
           </>
         )}
-        {/* Dados Bancários */}
         {(personalData.banco || personalData.agencia || personalData.conta || personalData.chave_pix) && (
           <>
             <h4 className="text-sm font-semibold text-card-foreground mt-4">Dados Bancários</h4>
@@ -605,7 +650,20 @@ function PersonalDataSection({
               <div className="space-y-2"><Label>Nome Social</Label><Input value={form.nome_social} onChange={f('nome_social')} /></div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-2"><Label>CPF *</Label><Input value={form.cpf} onChange={f('cpf')} placeholder="000.000.000-00" required /></div>
+              <div className="space-y-2">
+                <Label>CPF *</Label>
+                <div className="relative">
+                  <Input
+                    value={form.cpf}
+                    onChange={f('cpf')}
+                    onBlur={() => void resolveCpf(form.cpf)}
+                    placeholder="000.000.000-00"
+                    required
+                  />
+                  {cpfLookupLoading && <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />}
+                </div>
+                <p className="text-xs text-muted-foreground">Ao informar um CPF válido, o sistema tenta preencher nome e data de nascimento automaticamente.</p>
+              </div>
               <div className="space-y-2"><Label>PIS/PASEP/NIT</Label><Input value={form.pis_pasep_nit} onChange={f('pis_pasep_nit')} /></div>
               <div className="space-y-2"><Label>Data Nascimento *</Label><Input type="date" value={form.data_nascimento} onChange={f('data_nascimento')} required /></div>
             </div>
