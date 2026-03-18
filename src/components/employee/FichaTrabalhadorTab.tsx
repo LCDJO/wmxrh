@@ -477,6 +477,13 @@ function PersonalDataSection({
   const [open, setOpen] = useState(false);
   const [cpfLookupLoading, setCpfLookupLoading] = useState(false);
   const [lastResolvedCpf, setLastResolvedCpf] = useState<string | null>(null);
+  const [cpfLookupStatus, setCpfLookupStatus] = useState<'resolved' | 'pending_manual' | 'integration_off' | 'lookup_failed' | 'not_attempted'>(
+    personalData?.cpf_lookup_status ?? 'not_attempted'
+  );
+  const [cpfLookupPendingReason, setCpfLookupPendingReason] = useState<string | null>(
+    personalData?.cpf_lookup_pending_reason ?? null
+  );
+  const [cpfLookupSource, setCpfLookupSource] = useState<string | null>(personalData?.cpf_lookup_source ?? null);
   const [form, setForm] = useState({
     nome_completo: '',
     nome_social: '',
@@ -541,8 +548,14 @@ function PersonalDataSection({
         chave_pix: personalData.chave_pix || '',
       });
       setLastResolvedCpf((personalData.cpf || '').replace(/\D/g, '').slice(0, 11) || null);
+      setCpfLookupStatus(personalData.cpf_lookup_status ?? 'not_attempted');
+      setCpfLookupPendingReason(personalData.cpf_lookup_pending_reason ?? null);
+      setCpfLookupSource(personalData.cpf_lookup_source ?? null);
     } else {
       setLastResolvedCpf(null);
+      setCpfLookupStatus('not_attempted');
+      setCpfLookupPendingReason(null);
+      setCpfLookupSource(null);
     }
     setOpen(true);
   };
@@ -579,6 +592,10 @@ function PersonalDataSection({
         conta: form.conta || null,
         tipo_conta: form.tipo_conta || null,
         chave_pix: form.chave_pix || null,
+        cpf_lookup_status: cpfLookupStatus,
+        cpf_lookup_pending_reason: cpfLookupPendingReason,
+        cpf_lookup_checked_at: cpfLookupStatus === 'not_attempted' ? null : new Date().toISOString(),
+        cpf_lookup_source: cpfLookupSource,
       },
       {
         onSuccess: () => {
@@ -604,13 +621,32 @@ function PersonalDataSection({
         data_nascimento: result.data_nascimento ?? prev.data_nascimento,
       }));
       setLastResolvedCpf(cleanedCpf);
+      setCpfLookupStatus('resolved');
+      setCpfLookupPendingReason(null);
+      setCpfLookupSource(result.source);
       toast({
         title: 'CPF consultado',
         description: 'Nome e data de nascimento foram preenchidos automaticamente.',
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível consultar o CPF.';
-      toast({ title: 'Falha ao consultar CPF', description: message, variant: 'destructive' });
+      const isIntegrationOff = error instanceof Error && error.name === 'CpfLookupDisabledError';
+
+      setCpfLookupStatus(isIntegrationOff ? 'integration_off' : 'lookup_failed');
+      setCpfLookupPendingReason(
+        isIntegrationOff
+          ? 'Consulta automática de CPF desativada; validação manual pendente.'
+          : 'Consulta automática de CPF não concluída; validação manual pendente.'
+      );
+      setCpfLookupSource(null);
+
+      toast({
+        title: isIntegrationOff ? 'Consulta automática desativada' : 'Falha ao consultar CPF',
+        description: isIntegrationOff
+          ? 'Você pode continuar o cadastro, mas a ficha ficará sinalizada com pendência.'
+          : message,
+        variant: isIntegrationOff ? 'default' : 'destructive',
+      });
     } finally {
       setCpfLookupLoading(false);
     }
@@ -625,6 +661,11 @@ function PersonalDataSection({
       if (cleaned !== lastResolvedCpf) {
         setLastResolvedCpf(null);
       }
+      setCpfLookupStatus(cleaned.length === 11 ? 'pending_manual' : 'not_attempted');
+      setCpfLookupPendingReason(
+        cleaned.length === 11 ? 'Consulta automática de CPF ainda não concluída.' : null
+      );
+      setCpfLookupSource(null);
       if (cleaned.length === 11) {
         void resolveCpf(cleaned);
       }
@@ -649,6 +690,14 @@ function PersonalDataSection({
           <div><p className="text-xs text-muted-foreground">Sexo</p><p className="text-sm text-card-foreground">{SEXO_LABELS[personalData.sexo as EmployeeSexo]}</p></div>
           <div><p className="text-xs text-muted-foreground">Estado Civil</p><p className="text-sm text-card-foreground">{ESTADO_CIVIL_LABELS[personalData.estado_civil as EmployeeEstadoCivil]}</p></div>
           <div><p className="text-xs text-muted-foreground">Nacionalidade</p><p className="text-sm text-card-foreground">{personalData.nacionalidade}</p></div>
+          {personalData.cpf_lookup_status && personalData.cpf_lookup_status !== 'resolved' && personalData.cpf_lookup_status !== 'not_attempted' && (
+            <div className="sm:col-span-2">
+              <p className="text-xs text-muted-foreground">Pendência da consulta CPF</p>
+              <Badge variant="outline" className="mt-1 text-xs">
+                {personalData.cpf_lookup_pending_reason ?? 'Validação manual pendente'}
+              </Badge>
+            </div>
+          )}
           {personalData.uf_nascimento && <div><p className="text-xs text-muted-foreground">UF/Município Nasc.</p><p className="text-sm text-card-foreground">{personalData.municipio_nascimento ? `${personalData.municipio_nascimento}/` : ''}{personalData.uf_nascimento}</p></div>}
           {personalData.nome_mae && <div><p className="text-xs text-muted-foreground">Nome da Mãe</p><p className="text-sm text-card-foreground">{personalData.nome_mae}</p></div>}
           {personalData.nome_pai && <div><p className="text-xs text-muted-foreground">Nome do Pai</p><p className="text-sm text-card-foreground">{personalData.nome_pai}</p></div>}
@@ -712,6 +761,11 @@ function PersonalDataSection({
                   {cpfLookupLoading && <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />}
                 </div>
                 <p className="text-xs text-muted-foreground">Ao informar um CPF válido, o sistema tenta preencher nome e data de nascimento automaticamente.</p>
+                {cpfLookupStatus !== 'resolved' && cpfLookupStatus !== 'not_attempted' && cpfLookupPendingReason && (
+                  <Badge variant="outline" className="w-fit text-xs">
+                    {cpfLookupPendingReason}
+                  </Badge>
+                )}
               </div>
               <div className="space-y-2"><Label>PIS/PASEP/NIT</Label><Input value={form.pis_pasep_nit} onChange={f('pis_pasep_nit')} /></div>
               <div className="space-y-2"><Label>Data Nascimento *</Label><Input type="date" value={form.data_nascimento} onChange={f('data_nascimento')} required /></div>

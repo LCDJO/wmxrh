@@ -100,6 +100,7 @@ export function FichaStatusIndicators({ record, employeeId, exams }: Props) {
   if (!currentContract?.cbo_code) pendencias.push('CBO');
   if (!record?.personalData?.pis_pasep_nit) pendencias.push('PIS/PASEP');
   if (!record?.personalData?.cpf) pendencias.push('CPF');
+  if (record?.personalData?.cpf_lookup_status && !['resolved', 'not_attempted'].includes(record.personalData.cpf_lookup_status)) pendencias.push('Consulta CPF');
   if (!currentContract?.esocial_category) pendencias.push('Cat. eSocial');
   if ((record?.documents?.length ?? 0) === 0) pendencias.push('Documentos');
 

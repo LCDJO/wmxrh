@@ -264,7 +264,10 @@ async function handleResolveCpf(
   const config = normalizeCpfConfig(configRow?.config ?? null);
 
   if (!config.is_active) {
-    return json({ error: 'Integração de CPF não está ativa para este tenant.' }, 400);
+    return json({
+      error: 'Integração de CPF desativada para este tenant.',
+      errorCode: 'CPF_INTEGRATION_DISABLED',
+    }, 200);
   }
   if (!config.consumer_key || !config.consumer_secret) {
     return json({ error: 'Credenciais de CPF não configuradas.' }, 400);

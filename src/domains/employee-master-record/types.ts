@@ -381,6 +381,10 @@ export interface EmployeePersonalData {
   conta: string | null;
   tipo_conta: string | null;
   chave_pix: string | null;
+  cpf_lookup_status: 'resolved' | 'pending_manual' | 'integration_off' | 'lookup_failed' | 'not_attempted';
+  cpf_lookup_pending_reason: string | null;
+  cpf_lookup_checked_at: string | null;
+  cpf_lookup_source: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -417,6 +421,10 @@ export interface CreateEmployeePersonalDataDTO {
   conta?: string | null;
   tipo_conta?: string | null;
   chave_pix?: string | null;
+  cpf_lookup_status?: 'resolved' | 'pending_manual' | 'integration_off' | 'lookup_failed' | 'not_attempted';
+  cpf_lookup_pending_reason?: string | null;
+  cpf_lookup_checked_at?: string | null;
+  cpf_lookup_source?: string | null;
 }
 
 // ════════════════════════════════════════

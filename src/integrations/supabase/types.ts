@@ -7136,6 +7136,10 @@ export type Database = {
           cnh_validade: string | null
           conta: string | null
           cpf: string
+          cpf_lookup_checked_at: string | null
+          cpf_lookup_pending_reason: string | null
+          cpf_lookup_source: string | null
+          cpf_lookup_status: string
           created_at: string
           data_nascimento: string
           deleted_at: string | null
@@ -7171,6 +7175,10 @@ export type Database = {
           cnh_validade?: string | null
           conta?: string | null
           cpf: string
+          cpf_lookup_checked_at?: string | null
+          cpf_lookup_pending_reason?: string | null
+          cpf_lookup_source?: string | null
+          cpf_lookup_status?: string
           created_at?: string
           data_nascimento: string
           deleted_at?: string | null
@@ -7206,6 +7214,10 @@ export type Database = {
           cnh_validade?: string | null
           conta?: string | null
           cpf?: string
+          cpf_lookup_checked_at?: string | null
+          cpf_lookup_pending_reason?: string | null
+          cpf_lookup_source?: string | null
+          cpf_lookup_status?: string
           created_at?: string
           data_nascimento?: string
           deleted_at?: string | null
