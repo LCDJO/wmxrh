@@ -94,6 +94,7 @@ export type { AgreementEventType, AgreementDomainEvent } from './events';
 
 // ── Adapters ──
 export { simulationSignerAdapter } from './adapters/simulation-signer';
+export { createExternalSignatureAdapter } from './adapters/create-external-signature-adapter';
 export { openSignAdapter } from './adapters/opensign-adapter';
 export { clicksignAdapter } from './adapters/clicksign-adapter';
 export { autentiqueAdapter } from './adapters/autentique-adapter';
