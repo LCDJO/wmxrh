@@ -17,7 +17,7 @@ import {
   GraduationCap, ShieldAlert, Globe, Layers, Pin, PinOff, Lock, Megaphone,
   Zap, Trophy, Gift, Headphones, MessageSquarePlus, BookOpen, Webhook, Store, Bot,
   HardHat, Activity, Stethoscope, Car, Monitor, Radio, UserMinus, PanelBottom,
-  Shield, Crown,
+  Shield, Crown, IdCard,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAnnouncements } from '@/hooks/use-announcements';
@@ -219,6 +219,7 @@ const navSections: NavSection[] = [
           { to: '/integrations/telegram', icon: Bot, label: 'Telegram', key: 'integrations' as NavKey, moduleKey: 'telegram' },
           { to: '/integrations/traccar', icon: Car, label: 'Traccar (GPS)', key: 'integrations' as NavKey, moduleKey: 'fleet' },
           { to: '/integrations/document-signature', icon: FileSignature, label: 'Assinatura Digital', key: 'integrations' as NavKey, moduleKey: 'agreements' },
+          { to: '/integrations/cpf', icon: IdCard, label: 'Parâmetros CPF', key: 'integrations' as NavKey, moduleKey: 'cpf_lookup_cpfhub' },
         ],
       },
       {
