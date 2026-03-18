@@ -115,8 +115,9 @@ const MODULE_TREE_GROUPS: ModuleTreeGroup[] = [
     ],
   },
   {
-    label: 'Inteligência de Dados',
+    label: 'Apps & Integrações',
     trees: [
+      { key: 'telegram', children: [] },
       { key: 'cpf_lookup_serpro', children: [] },
       { key: 'cpf_lookup_cpfhub', children: [] },
     ],
