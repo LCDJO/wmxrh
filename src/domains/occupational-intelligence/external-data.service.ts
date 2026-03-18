@@ -42,6 +42,15 @@ export interface CpfIntegrationConfig {
   docs_url: string;
 }
 
+export class CpfLookupDisabledError extends Error {
+  readonly code = 'CPF_LOOKUP_DISABLED';
+
+  constructor(message = 'Integração de CPF desativada.') {
+    super(message);
+    this.name = 'CpfLookupDisabledError';
+  }
+}
+
 export interface CnaeDivision {
   id: string;
   descricao: string;
