@@ -6,7 +6,7 @@
  *   - Autentique
  *   - ZapSign
  *   - OpenSign
- *   - DocuSign (futuro)
+ *   - DocuSign
  *
  * Fluxo:
  *   1. Identifica o provider pelo header ou body
