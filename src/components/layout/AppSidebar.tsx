@@ -213,10 +213,18 @@ const navSections: NavSection[] = [
     label: 'Configurações',
     items: [
       { to: '/plans', icon: Crown, label: 'Meu Plano', key: 'iam_users' },
-      { to: '/settings/personalization', icon: Sparkles, label: 'Personalização', key: 'iam_users' },
+      {
+        to: '/settings/personalization',
+        icon: Sparkles,
+        label: 'Personalização',
+        key: 'iam_users',
+        children: [
+          { to: '/settings/personalization', icon: Sparkles, label: 'Visão Geral', key: 'iam_users' },
+          { to: '/settings/pdf-layout', icon: FileText, label: 'Layout do PDF', key: 'iam_users' },
+        ],
+      },
       { to: '/settings/users', icon: Users, label: 'Usuários', key: 'iam_users' },
       { to: '/settings/roles', icon: ShieldCheck, label: 'Cargos & Permissões', key: 'iam_roles' },
-      { to: '/settings/pdf-layout', icon: FileText, label: 'Layout do PDF', key: 'iam_users' },
       { to: '/settings/webhooks', icon: Webhook, label: 'Webhooks', key: 'iam_users' },
       { to: '/settings/sso', icon: Shield, label: 'SSO / Federação', key: 'iam_users', moduleKey: 'iam' },
       { to: '/settings/scim', icon: Shield, label: 'SCIM Provisioning', key: 'iam_users', moduleKey: 'iam' },
@@ -271,10 +279,11 @@ export function AppSidebar() {
     .filter(section => section.items.length > 0);
 
   const renderNavItem = (item: NavItem) => {
-    const active = isActive(item.to);
-    const lockInfo = isPathLocked(item.to);
     const hasChildren = item.children && item.children.length > 0;
-    const isExpanded = expandedNav === item.to || (hasChildren && item.children!.some(c => isActive(c.to)));
+    const childIsActive = hasChildren && item.children!.some(c => isActive(c.to));
+    const active = isActive(item.to) || childIsActive;
+    const lockInfo = isPathLocked(item.to);
+    const isExpanded = expandedNav === item.to || childIsActive;
     const isCriticalHighlight = item.to === '/announcements' && hasCriticalAnnouncement;
     const visibility = getItemVisibility(item);
 
