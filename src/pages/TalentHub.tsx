@@ -41,6 +41,9 @@ import { TalentTopNav } from '@/modules/talent-hub/TalentTopNav';
 import { TalentFiltersBar } from '@/modules/talent-hub/TalentFiltersBar';
 import { RiskBadge } from '@/modules/talent-hub/RiskBadge';
 import { PipelineStageBadge } from '@/modules/talent-hub/PipelineStageBadge';
+import { TalentMonetizationView } from '@/modules/talent-hub/TalentMonetizationView';
+import { TalentUsageBanner } from '@/modules/talent-hub/TalentUsageBanner';
+import { talentUsageSnapshot } from '@/modules/talent-hub/monetization-data';
 import { talentAiSignals, talentCandidates, talentJobs, talentPipelineDistribution, talentTrend } from '@/modules/talent-hub/mock-data';
 import type { Candidate, CandidateStage, Job, TalentView } from '@/modules/talent-hub/types';
 import { cn } from '@/lib/utils';
@@ -64,6 +67,13 @@ const stageSurfaceClass: Record<CandidateStage, string> = {
 };
 
 const chartPalette = ['hsl(var(--secondary-foreground))', 'hsl(var(--accent-foreground))', 'hsl(var(--primary))', 'hsl(var(--warning))', 'hsl(var(--success))'];
+
+function normalizeText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
 
 function scoreRadarData(candidate: Candidate) {
   return [
@@ -321,7 +331,7 @@ function CandidateModal({ candidate, open, onOpenChange }: { candidate: Candidat
   );
 }
 
-function DashboardView({ candidates, onOpenCandidate }: { candidates: Candidate[]; onOpenCandidate: (candidate: Candidate) => void }) {
+function DashboardView({ candidates, onOpenCandidate, onOpenMonetization }: { candidates: Candidate[]; onOpenCandidate: (candidate: Candidate) => void; onOpenMonetization: () => void }) {
   const totalCandidates = candidates.length;
   const avgScore = Math.round(candidates.reduce((acc, candidate) => acc + candidate.score.total, 0) / candidates.length);
   const averageRisk = Math.round(candidates.reduce((acc, candidate) => acc + candidate.score.risk, 0) / candidates.length);
@@ -329,6 +339,7 @@ function DashboardView({ candidates, onOpenCandidate }: { candidates: Candidate[
   return (
     <div className="space-y-6">
       <TalentHero totalCandidates={totalCandidates} avgScore={avgScore} />
+      <TalentUsageBanner snapshot={talentUsageSnapshot} onOpenMonetization={onOpenMonetization} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatsCard title="Total de candidatos" value={totalCandidates} subtitle="Base ativa do tenant" icon={Users} trend={{ value: 12, label: 'vs. último mês' }} />
@@ -855,11 +866,11 @@ export default function TalentHub() {
   const [candidateModalOpen, setCandidateModalOpen] = useState(false);
 
   const filteredCandidates = useMemo(() => {
-    const term = search.trim().toLowerCase();
+    const term = normalizeText(search.trim());
     if (!term) return talentCandidates;
 
     return talentCandidates.filter((candidate) => {
-      const haystack = [
+      const haystack = normalizeText([
         candidate.name,
         candidate.role,
         candidate.city,
@@ -867,9 +878,7 @@ export default function TalentHub() {
         candidate.origin,
         candidate.summary,
         ...candidate.skills,
-      ]
-        .join(' ')
-        .toLowerCase();
+      ].join(' '));
 
       return haystack.includes(term);
     });
@@ -887,7 +896,7 @@ export default function TalentHub() {
           <p className="text-sm font-medium text-primary">Recrutamento / Talent Intelligence</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Banco de Talentos</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-            Workspace moderno para {currentTenant?.name ?? 'o tenant atual'} com dashboard, lista, perfil, pipeline, vagas e governança do banco de talentos.
+            Workspace moderno para {currentTenant?.name ?? 'o tenant atual'} com dashboard, lista, perfil, pipeline, vagas, monetização e governança do banco de talentos.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -898,12 +907,17 @@ export default function TalentHub() {
 
       <TalentTopNav active={activeView} onChange={setActiveView} />
 
-      {activeView === 'dashboard' && <DashboardView candidates={filteredCandidates} onOpenCandidate={openCandidate} />}
+      {activeView === 'dashboard' && <DashboardView candidates={filteredCandidates} onOpenCandidate={openCandidate} onOpenMonetization={() => setActiveView('settings')} />}
       {activeView === 'candidates' && <CandidatesView candidates={filteredCandidates} search={search} onSearch={setSearch} onOpenCandidate={openCandidate} />}
       {activeView === 'profile' && selectedCandidate && <ProfileView candidate={selectedCandidate} onOpenCandidate={openCandidate} />}
       {activeView === 'pipeline' && <PipelineView candidates={filteredCandidates} onOpenCandidate={openCandidate} />}
       {activeView === 'jobs' && <JobsView jobs={talentJobs} candidates={talentCandidates} />}
-      {activeView === 'settings' && <SettingsView />}
+      {activeView === 'settings' && (
+        <div className="space-y-6">
+          <TalentMonetizationView currentPlan={talentUsageSnapshot} />
+          <SettingsView />
+        </div>
+      )}
 
       <CandidateModal candidate={selectedCandidate} open={candidateModalOpen} onOpenChange={setCandidateModalOpen} />
     </div>
