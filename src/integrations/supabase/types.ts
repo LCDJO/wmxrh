@@ -25514,80 +25514,43 @@ export type Database = {
         }
         Returns: string
       }
-      upsert_tenant_signature_integration:
-        | {
-            Args: {
-              _account_id?: string
-              _api_key?: string
-              _base_url?: string
-              _config?: Json
-              _is_default?: boolean
-              _is_enabled?: boolean
-              _private_key?: string
-              _provider_name: string
-              _tenant_id: string
-              _webhook_secret?: string
-            }
-            Returns: {
-              account_id: string | null
-              base_url: string | null
-              config: Json
-              created_at: string
-              created_by: string | null
-              id: string
-              is_default: boolean
-              is_enabled: boolean
-              last_error: string | null
-              last_test_status: string | null
-              last_tested_at: string | null
-              provider_name: string
-              tenant_id: string
-              updated_at: string
-              updated_by: string | null
-            }[]
-            SetofOptions: {
-              from: "*"
-              to: "tenant_signature_integrations"
-              isOneToOne: false
-              isSetofReturn: true
-            }
-          }
-        | {
-            Args: {
-              _account_id?: string
-              _api_key?: string
-              _base_url?: string
-              _config?: Json
-              _is_default?: boolean
-              _is_enabled?: boolean
-              _provider_name: string
-              _tenant_id: string
-              _webhook_secret?: string
-            }
-            Returns: {
-              account_id: string | null
-              base_url: string | null
-              config: Json
-              created_at: string
-              created_by: string | null
-              id: string
-              is_default: boolean
-              is_enabled: boolean
-              last_error: string | null
-              last_test_status: string | null
-              last_tested_at: string | null
-              provider_name: string
-              tenant_id: string
-              updated_at: string
-              updated_by: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "tenant_signature_integrations"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      upsert_tenant_signature_integration: {
+        Args: {
+          _account_id?: string
+          _api_key?: string
+          _client_id?: string
+          _is_default?: boolean
+          _is_enabled?: boolean
+          _private_key?: string
+          _provider_metadata?: Json
+          _provider_name: string
+          _tenant_id: string
+          _webhook_secret?: string
+        }
+        Returns: {
+          account_id: string | null
+          base_url: string | null
+          config: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          is_enabled: boolean
+          last_error: string | null
+          last_test_status: string | null
+          last_tested_at: string | null
+          provider_name: string
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tenant_signature_integrations"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       user_can_see_notification: {
         Args: {
           _company_id: string
