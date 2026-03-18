@@ -169,6 +169,8 @@ export default function CpfIntegrationSettings() {
   const providerAvailable = availableProviders.includes(provider);
   const hasAnyProvider = availableProviders.length > 0;
   const usingSerpro = provider === 'serpro';
+  const usingCpfhub = provider === 'cpfhub';
+  const cpfhubEndpointExample = `${PROVIDER_DEFAULTS.cpfhub.api_base_url}${PROVIDER_DEFAULTS.cpfhub.endpoint_path_template}`;
 
   return (
     <div className="space-y-6">
@@ -244,6 +246,35 @@ export default function CpfIntegrationSettings() {
         </CardContent>
       </Card>
 
+      {usingCpfhub ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Campos necessários para CPFHub</CardTitle>
+            <CardDescription>Preencha os dados mínimos para autenticar e montar a URL de consulta.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="rounded-md border border-border p-3">
+              <p className="text-sm font-medium text-foreground">1. API Key</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Chave privada gerada no painel do CPFHub. É o campo obrigatório para autenticação.
+              </p>
+            </div>
+            <div className="rounded-md border border-border p-3">
+              <p className="text-sm font-medium text-foreground">2. API Base URL</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Use a URL base do serviço. Padrão sugerido: <span className="font-mono">https://api.cpfhub.io</span>.
+              </p>
+            </div>
+            <div className="rounded-md border border-border p-3">
+              <p className="text-sm font-medium text-foreground">3. Endpoint da consulta</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Informe a rota com o placeholder <span className="font-mono">{'{cpf}'}</span>. Exemplo: <span className="font-mono">/cpf/{'{cpf}'}</span>.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -295,17 +326,31 @@ export default function CpfIntegrationSettings() {
                 </div>
               </>
             ) : (
-              <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="api-key">API Key</Label>
-                <Input
-                  id="api-key"
-                  type="password"
-                  placeholder={config.has_api_key ? '••••••••••••••••' : 'Cole a API Key'}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Deixe em branco para manter o valor já salvo.</p>
-              </div>
+              <>
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label htmlFor="api-key">API Key do CPFHub</Label>
+                  <Input
+                    id="api-key"
+                    type="password"
+                    placeholder={config.has_api_key ? '••••••••••••••••' : 'Cole a API Key gerada no CPFHub'}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Deixe em branco para manter o valor já salvo. Esta chave fica protegida no backend e não é exposta no navegador.
+                  </p>
+                </div>
+
+                <div className="rounded-md border border-border p-3 md:col-span-2">
+                  <p className="text-sm font-medium text-foreground">Resumo rápido do CPFHub</p>
+                  <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                    <li>• Campo obrigatório: <strong>API Key</strong>.</li>
+                    <li>• URL base sugerida: <span className="font-mono">https://api.cpfhub.io</span>.</li>
+                    <li>• Endpoint sugerido: <span className="font-mono">/cpf/{'{cpf}'}</span>.</li>
+                    <li>• URL final esperada: <span className="font-mono break-all">{cpfhubEndpointExample}</span>.</li>
+                  </ul>
+                </div>
+              </>
             )}
 
             <div className="space-y-1.5 md:col-span-2">
@@ -315,6 +360,11 @@ export default function CpfIntegrationSettings() {
                 value={apiBaseUrl}
                 onChange={(e) => setApiBaseUrl(e.target.value)}
               />
+              {usingCpfhub ? (
+                <p className="text-xs text-muted-foreground">
+                  Para CPFHub, normalmente mantenha <span className="font-mono">https://api.cpfhub.io</span>.
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
@@ -354,39 +404,43 @@ export default function CpfIntegrationSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Manual: onde obter as chaves</CardTitle>
-          <CardDescription>Passo a passo para contratar e configurar a API de consulta de CPF.</CardDescription>
+          <CardTitle>{usingCpfhub ? 'Manual CPFHub: como obter a API Key' : 'Manual: onde obter as chaves'}</CardTitle>
+          <CardDescription>
+            {usingCpfhub
+              ? 'Passo a passo para localizar a chave da API e preencher corretamente a integração.'
+              : 'Passo a passo para contratar e configurar a API de consulta de CPF.'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div className="rounded-md border border-border p-3">
-              <p className="text-sm font-medium text-foreground">1. Contratação</p>
+              <p className="text-sm font-medium text-foreground">1. Acesse a documentação/painel</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {usingSerpro
                   ? 'Acesse a área do cliente do SERPRO, contrate a API Consulta CPF e localize as credenciais do contrato.'
-                  : 'Crie sua conta no CPFHub e gere a API Key do projeto para começar a consultar CPFs.'}
+                  : 'Abra a documentação do CPFHub e entre na sua conta para acessar o painel administrativo do projeto.'}
               </p>
             </div>
             <div className="rounded-md border border-border p-3">
-              <p className="text-sm font-medium text-foreground">2. Credenciais</p>
+              <p className="text-sm font-medium text-foreground">2. Gere ou copie a credencial</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {usingSerpro
                   ? <>Copie a <strong>Consumer Key</strong> e a <strong>Consumer Secret</strong> exibidas na área do cliente.</>
-                  : <>Copie a <strong>API Key</strong> exibida no painel do CPFHub.</>}
+                  : <>No CPFHub, localize a área de credenciais do projeto e copie a <strong>API Key</strong> gerada para uso servidor a servidor.</>}
               </p>
             </div>
             <div className="rounded-md border border-border p-3">
-              <p className="text-sm font-medium text-foreground">3. Endpoint</p>
+              <p className="text-sm font-medium text-foreground">3. Preencha os campos nesta tela</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {usingSerpro
-                  ? 'O endpoint padrão desta tela usa o ambiente de demonstração/homologação. Se seu contrato for produtivo, ajuste o endpoint conforme a referência da API contratada.'
-                  : 'O endpoint padrão do CPFHub usa o formato /cpf/{cpf}. Ajuste somente se sua conta tiver uma rota diferente.'}
+                  ? 'Cole as credenciais do contrato e ajuste o endpoint conforme o ambiente contratado.'
+                  : <>Preencha <strong>API Key</strong>, mantenha a <strong>API Base URL</strong> padrão e confirme o endpoint <span className="font-mono">/cpf/{'{cpf}'}</span>, salvo orientação diferente no seu contrato.</>}
               </p>
             </div>
             <div className="rounded-md border border-border p-3">
-              <p className="text-sm font-medium text-foreground">4. Segurança</p>
+              <p className="text-sm font-medium text-foreground">4. Segurança e ativação</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                O sistema consulta a API pelo backend, sem expor as credenciais no navegador.
+                O sistema consulta a API pelo backend, sem expor as credenciais no navegador. Depois de salvar, ative a integração para uso nas admissões.
               </p>
             </div>
           </div>
@@ -397,15 +451,22 @@ export default function CpfIntegrationSettings() {
               Link oficial da documentação
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Use a documentação oficial para confirmar o endpoint do seu contrato e validar a versão correta da API.
+              {usingCpfhub
+                ? 'Use a documentação oficial do CPFHub para localizar a área de credenciais e validar o endpoint da sua conta.'
+                : 'Use a documentação oficial para confirmar o endpoint do seu contrato e validar a versão correta da API.'}
             </p>
-            <div className="mt-3">
+            <div className="mt-3 flex flex-wrap gap-3">
               <Button asChild variant="outline">
                 <a href={PROVIDER_DEFAULTS[provider].docs_url} target="_blank" rel="noreferrer">
                   <ExternalLink className="mr-2 h-4 w-4" />
                   Abrir documentação
                 </a>
               </Button>
+              {usingCpfhub ? (
+                <div className="rounded-md border border-border px-3 py-2 text-xs text-muted-foreground">
+                  Referência sugerida: <span className="font-mono">{cpfhubEndpointExample}</span>
+                </div>
+              ) : null}
             </div>
           </div>
         </CardContent>
