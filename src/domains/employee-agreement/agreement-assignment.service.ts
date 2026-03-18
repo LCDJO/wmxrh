@@ -65,7 +65,7 @@ export const agreementAssignmentService = {
 
     const providerName = await resolveTenantSignatureProvider(ctx.tenant_id, dto.provider ?? null);
 
-    const callbackUrl = `${window.location.origin}/api/agreement-webhook`;
+    const callbackUrl = buildAgreementWebhookUrl();
     const signResult = await digitalSignatureAdapter.send(providerName, {
       tenant_id: ctx.tenant_id,
       employee_nome: employee.name,

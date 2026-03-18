@@ -154,7 +154,7 @@ export async function sendEpiDeliveryForSignature(input: SendForSignatureInput):
   });
 
   // 2. Send to Digital Signature Provider
-  const callbackUrl = `${window.location.origin}/api/epi-signature-webhook`;
+  const callbackUrl = buildAgreementWebhookUrl();
   const signResult = await digitalSignatureAdapter.send(provider, {
     tenant_id: input.tenantId,
     employee_nome: input.employeeName,

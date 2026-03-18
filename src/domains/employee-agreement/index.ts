@@ -99,6 +99,7 @@ export { openSignAdapter } from './adapters/opensign-adapter';
 export { clicksignAdapter } from './adapters/clicksign-adapter';
 export { autentiqueAdapter } from './adapters/autentique-adapter';
 export { zapsignAdapter } from './adapters/zapsign-adapter';
+export { docusignAdapter } from './adapters/docusign-adapter';
 export { documentStorageAdapter } from './adapters/document-storage';
 
 // ── Provider Bootstrap ──
