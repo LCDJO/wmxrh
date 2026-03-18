@@ -48,6 +48,13 @@ type ProviderIntegrationRow = {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(supabaseUrl, serviceRoleKey);
+const PLAN_SCOPED_SIGNATURE_PROVIDERS = [
+  "clicksign",
+  "autentique",
+  "zapsign",
+  "docusign",
+  "opensign",
+] as const;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
