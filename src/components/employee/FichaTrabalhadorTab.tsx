@@ -761,6 +761,11 @@ function PersonalDataSection({
                   {cpfLookupLoading && <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />}
                 </div>
                 <p className="text-xs text-muted-foreground">Ao informar um CPF válido, o sistema tenta preencher nome e data de nascimento automaticamente.</p>
+                {cpfLookupStatus !== 'resolved' && cpfLookupStatus !== 'not_attempted' && cpfLookupPendingReason && (
+                  <Badge variant="outline" className="w-fit text-xs">
+                    {cpfLookupPendingReason}
+                  </Badge>
+                )}
               </div>
               <div className="space-y-2"><Label>PIS/PASEP/NIT</Label><Input value={form.pis_pasep_nit} onChange={f('pis_pasep_nit')} /></div>
               <div className="space-y-2"><Label>Data Nascimento *</Label><Input type="date" value={form.data_nascimento} onChange={f('data_nascimento')} required /></div>
