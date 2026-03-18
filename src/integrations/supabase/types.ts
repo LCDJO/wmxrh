@@ -1360,66 +1360,100 @@ export type Database = {
       }
       ats_candidates: {
         Row: {
+          consent_status: string
+          consented_at: string | null
           created_at: string
+          current_score: number | null
           email: string
+          enrichment_status: string
           hired_at: string | null
           id: string
           interview_feedback: Json
+          last_enriched_at: string | null
           name: string
           notes: string | null
           phone: string | null
+          pipeline_metadata: Json
+          public_page_id: string | null
           rejected_at: string | null
           rejection_reason: string | null
           requisition_id: string
+          resume_storage_path: string | null
           resume_url: string | null
           score: number | null
           source: string | null
           stage: string
           stage_history: Json
+          tags: string[]
           tenant_id: string
           updated_at: string
         }
         Insert: {
+          consent_status?: string
+          consented_at?: string | null
           created_at?: string
+          current_score?: number | null
           email: string
+          enrichment_status?: string
           hired_at?: string | null
           id?: string
           interview_feedback?: Json
+          last_enriched_at?: string | null
           name: string
           notes?: string | null
           phone?: string | null
+          pipeline_metadata?: Json
+          public_page_id?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
           requisition_id: string
+          resume_storage_path?: string | null
           resume_url?: string | null
           score?: number | null
           source?: string | null
           stage?: string
           stage_history?: Json
+          tags?: string[]
           tenant_id: string
           updated_at?: string
         }
         Update: {
+          consent_status?: string
+          consented_at?: string | null
           created_at?: string
+          current_score?: number | null
           email?: string
+          enrichment_status?: string
           hired_at?: string | null
           id?: string
           interview_feedback?: Json
+          last_enriched_at?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
+          pipeline_metadata?: Json
+          public_page_id?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
           requisition_id?: string
+          resume_storage_path?: string | null
           resume_url?: string | null
           score?: number | null
           source?: string | null
           stage?: string
           stage_history?: Json
+          tags?: string[]
           tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ats_candidates_public_page_id_fkey"
+            columns: ["public_page_id"]
+            isOneToOne: false
+            referencedRelation: "talent_public_pages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ats_candidates_requisition_id_fkey"
             columns: ["requisition_id"]
@@ -1487,6 +1521,9 @@ export type Database = {
           description: string | null
           headcount: number
           id: string
+          intake_page_id: string | null
+          is_talent_pool: boolean
+          metadata: Json
           position_id: string | null
           priority: string
           requested_by: string
@@ -1508,6 +1545,9 @@ export type Database = {
           description?: string | null
           headcount?: number
           id?: string
+          intake_page_id?: string | null
+          is_talent_pool?: boolean
+          metadata?: Json
           position_id?: string | null
           priority?: string
           requested_by: string
@@ -1529,6 +1569,9 @@ export type Database = {
           description?: string | null
           headcount?: number
           id?: string
+          intake_page_id?: string | null
+          is_talent_pool?: boolean
+          metadata?: Json
           position_id?: string | null
           priority?: string
           requested_by?: string
@@ -1554,6 +1597,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ats_requisitions_intake_page_id_fkey"
+            columns: ["intake_page_id"]
+            isOneToOne: false
+            referencedRelation: "talent_public_pages"
             referencedColumns: ["id"]
           },
           {
@@ -20696,6 +20746,689 @@ export type Database = {
         }
         Relationships: []
       }
+      talent_candidate_consents: {
+        Row: {
+          candidate_id: string | null
+          consent_payload: Json
+          consent_source: Database["public"]["Enums"]["talent_consent_source"]
+          consent_text_snapshot: string
+          consent_version: string
+          consented: boolean
+          consented_at: string
+          created_at: string
+          id: string
+          intake_submission_id: string | null
+          ip_hash: string | null
+          public_page_id: string | null
+          revoked_at: string | null
+          tenant_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          consent_payload?: Json
+          consent_source: Database["public"]["Enums"]["talent_consent_source"]
+          consent_text_snapshot: string
+          consent_version: string
+          consented?: boolean
+          consented_at?: string
+          created_at?: string
+          id?: string
+          intake_submission_id?: string | null
+          ip_hash?: string | null
+          public_page_id?: string | null
+          revoked_at?: string | null
+          tenant_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          candidate_id?: string | null
+          consent_payload?: Json
+          consent_source?: Database["public"]["Enums"]["talent_consent_source"]
+          consent_text_snapshot?: string
+          consent_version?: string
+          consented?: boolean
+          consented_at?: string
+          created_at?: string
+          id?: string
+          intake_submission_id?: string | null
+          ip_hash?: string | null
+          public_page_id?: string | null
+          revoked_at?: string | null
+          tenant_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_candidate_consents_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "ats_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_candidate_consents_intake_submission_id_fkey"
+            columns: ["intake_submission_id"]
+            isOneToOne: false
+            referencedRelation: "talent_intake_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_candidate_consents_public_page_id_fkey"
+            columns: ["public_page_id"]
+            isOneToOne: false
+            referencedRelation: "talent_public_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_candidate_consents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      talent_candidate_dossiers: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          dossier: Json
+          generated_at: string | null
+          id: string
+          pdf_file_path: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          dossier?: Json
+          generated_at?: string | null
+          id?: string
+          pdf_file_path?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          dossier?: Json
+          generated_at?: string | null
+          id?: string
+          pdf_file_path?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_candidate_dossiers_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: true
+            referencedRelation: "ats_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_candidate_dossiers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      talent_candidate_enrichments: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          fetched_at: string | null
+          id: string
+          provider: Database["public"]["Enums"]["talent_enrichment_provider"]
+          raw_payload: Json
+          risk_flags: Json
+          status: string
+          structured_payload: Json
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          fetched_at?: string | null
+          id?: string
+          provider: Database["public"]["Enums"]["talent_enrichment_provider"]
+          raw_payload?: Json
+          risk_flags?: Json
+          status?: string
+          structured_payload?: Json
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          fetched_at?: string | null
+          id?: string
+          provider?: Database["public"]["Enums"]["talent_enrichment_provider"]
+          raw_payload?: Json
+          risk_flags?: Json
+          status?: string
+          structured_payload?: Json
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_candidate_enrichments_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "ats_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_candidate_enrichments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      talent_candidate_events: {
+        Row: {
+          actor_id: string | null
+          candidate_id: string | null
+          created_at: string
+          event_payload: Json
+          event_type: string
+          id: string
+          intake_submission_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          candidate_id?: string | null
+          created_at?: string
+          event_payload?: Json
+          event_type: string
+          id?: string
+          intake_submission_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          candidate_id?: string | null
+          created_at?: string
+          event_payload?: Json
+          event_type?: string
+          id?: string
+          intake_submission_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_candidate_events_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "ats_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_candidate_events_intake_submission_id_fkey"
+            columns: ["intake_submission_id"]
+            isOneToOne: false
+            referencedRelation: "talent_intake_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_candidate_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      talent_candidate_profiles: {
+        Row: {
+          ai_profile: Json
+          ai_summary: string | null
+          candidate_id: string
+          created_at: string
+          current_score: number | null
+          dossier_status: string
+          enrichment_status: string
+          id: string
+          intake_submission_id: string | null
+          internal_data: Json
+          last_enriched_at: string | null
+          metadata: Json
+          parsed_cv: Json
+          search_keywords: string[]
+          tags: string[]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_profile?: Json
+          ai_summary?: string | null
+          candidate_id: string
+          created_at?: string
+          current_score?: number | null
+          dossier_status?: string
+          enrichment_status?: string
+          id?: string
+          intake_submission_id?: string | null
+          internal_data?: Json
+          last_enriched_at?: string | null
+          metadata?: Json
+          parsed_cv?: Json
+          search_keywords?: string[]
+          tags?: string[]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_profile?: Json
+          ai_summary?: string | null
+          candidate_id?: string
+          created_at?: string
+          current_score?: number | null
+          dossier_status?: string
+          enrichment_status?: string
+          id?: string
+          intake_submission_id?: string | null
+          internal_data?: Json
+          last_enriched_at?: string | null
+          metadata?: Json
+          parsed_cv?: Json
+          search_keywords?: string[]
+          tags?: string[]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_candidate_profiles_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: true
+            referencedRelation: "ats_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_candidate_profiles_intake_submission_id_fkey"
+            columns: ["intake_submission_id"]
+            isOneToOne: false
+            referencedRelation: "talent_intake_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_candidate_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      talent_candidate_scores: {
+        Row: {
+          breakdown: Json
+          candidate_id: string
+          created_at: string
+          id: string
+          model_id: string | null
+          rationale: string | null
+          tenant_id: string
+          total_score: number
+        }
+        Insert: {
+          breakdown?: Json
+          candidate_id: string
+          created_at?: string
+          id?: string
+          model_id?: string | null
+          rationale?: string | null
+          tenant_id: string
+          total_score?: number
+        }
+        Update: {
+          breakdown?: Json
+          candidate_id?: string
+          created_at?: string
+          id?: string
+          model_id?: string | null
+          rationale?: string | null
+          tenant_id?: string
+          total_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_candidate_scores_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "ats_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_candidate_scores_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "talent_scoring_models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_candidate_scores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      talent_enrichment_jobs: {
+        Row: {
+          attempts: number
+          candidate_id: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          intake_submission_id: string | null
+          job_type: Database["public"]["Enums"]["talent_job_type"]
+          last_error: string | null
+          payload: Json
+          priority: number
+          provider:
+            | Database["public"]["Enums"]["talent_enrichment_provider"]
+            | null
+          result: Json
+          scheduled_at: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["talent_job_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          candidate_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          intake_submission_id?: string | null
+          job_type: Database["public"]["Enums"]["talent_job_type"]
+          last_error?: string | null
+          payload?: Json
+          priority?: number
+          provider?:
+            | Database["public"]["Enums"]["talent_enrichment_provider"]
+            | null
+          result?: Json
+          scheduled_at?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["talent_job_status"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          candidate_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          intake_submission_id?: string | null
+          job_type?: Database["public"]["Enums"]["talent_job_type"]
+          last_error?: string | null
+          payload?: Json
+          priority?: number
+          provider?:
+            | Database["public"]["Enums"]["talent_enrichment_provider"]
+            | null
+          result?: Json
+          scheduled_at?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["talent_job_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_enrichment_jobs_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "ats_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_enrichment_jobs_intake_submission_id_fkey"
+            columns: ["intake_submission_id"]
+            isOneToOne: false
+            referencedRelation: "talent_intake_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_enrichment_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      talent_intake_submissions: {
+        Row: {
+          ats_candidate_id: string | null
+          city: string | null
+          cpf: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          linkedin_url: string | null
+          parsed_cv: Json
+          phone: string | null
+          processed_at: string | null
+          public_page_id: string | null
+          raw_form_data: Json
+          resume_file_name: string | null
+          resume_storage_path: string | null
+          source: string
+          state: string | null
+          status: Database["public"]["Enums"]["talent_submission_status"]
+          submitted_at: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          ats_candidate_id?: string | null
+          city?: string | null
+          cpf?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          linkedin_url?: string | null
+          parsed_cv?: Json
+          phone?: string | null
+          processed_at?: string | null
+          public_page_id?: string | null
+          raw_form_data?: Json
+          resume_file_name?: string | null
+          resume_storage_path?: string | null
+          source?: string
+          state?: string | null
+          status?: Database["public"]["Enums"]["talent_submission_status"]
+          submitted_at?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          ats_candidate_id?: string | null
+          city?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          linkedin_url?: string | null
+          parsed_cv?: Json
+          phone?: string | null
+          processed_at?: string | null
+          public_page_id?: string | null
+          raw_form_data?: Json
+          resume_file_name?: string | null
+          resume_storage_path?: string | null
+          source?: string
+          state?: string | null
+          status?: Database["public"]["Enums"]["talent_submission_status"]
+          submitted_at?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_intake_submissions_ats_candidate_id_fkey"
+            columns: ["ats_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "ats_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_intake_submissions_public_page_id_fkey"
+            columns: ["public_page_id"]
+            isOneToOne: false
+            referencedRelation: "talent_public_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "talent_intake_submissions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      talent_public_pages: {
+        Row: {
+          branding: Json
+          consent_text: string
+          consent_version: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          form_config: Json
+          headline: string | null
+          hero_config: Json
+          id: string
+          is_active: boolean
+          published_at: string | null
+          slug: string
+          subheadline: string | null
+          success_message: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          branding?: Json
+          consent_text: string
+          consent_version?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          form_config?: Json
+          headline?: string | null
+          hero_config?: Json
+          id?: string
+          is_active?: boolean
+          published_at?: string | null
+          slug: string
+          subheadline?: string | null
+          success_message?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          branding?: Json
+          consent_text?: string
+          consent_version?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          form_config?: Json
+          headline?: string | null
+          hero_config?: Json
+          id?: string
+          is_active?: boolean
+          published_at?: string | null
+          slug?: string
+          subheadline?: string | null
+          success_message?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_public_pages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      talent_scoring_models: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_default: boolean
+          name: string
+          tenant_id: string
+          thresholds: Json
+          updated_at: string
+          weights: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          tenant_id: string
+          thresholds?: Json
+          updated_at?: string
+          weights?: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          tenant_id?: string
+          thresholds?: Json
+          updated_at?: string
+          weights?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_scoring_models_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_brackets: {
         Row: {
           bracket_order: number
@@ -25913,6 +26646,30 @@ export type Database = {
         | "resolved"
         | "closed"
         | "cancelled"
+      talent_consent_source:
+        | "public_landing"
+        | "internal_import"
+        | "manual_admin"
+      talent_enrichment_provider:
+        | "receita_federal"
+        | "tst"
+        | "cnj"
+        | "ceis"
+        | "trabalho_escravo"
+        | "custom"
+      talent_job_status:
+        | "pending"
+        | "running"
+        | "completed"
+        | "failed"
+        | "cancelled"
+      talent_job_type: "cv_parse" | "enrichment" | "scoring" | "dossier"
+      talent_submission_status:
+        | "received"
+        | "processing"
+        | "qualified"
+        | "rejected"
+        | "archived"
       tenant_role:
         | "owner"
         | "admin"
@@ -26396,6 +27153,34 @@ export const Constants = {
         "resolved",
         "closed",
         "cancelled",
+      ],
+      talent_consent_source: [
+        "public_landing",
+        "internal_import",
+        "manual_admin",
+      ],
+      talent_enrichment_provider: [
+        "receita_federal",
+        "tst",
+        "cnj",
+        "ceis",
+        "trabalho_escravo",
+        "custom",
+      ],
+      talent_job_status: [
+        "pending",
+        "running",
+        "completed",
+        "failed",
+        "cancelled",
+      ],
+      talent_job_type: ["cv_parse", "enrichment", "scoring", "dossier"],
+      talent_submission_status: [
+        "received",
+        "processing",
+        "qualified",
+        "rejected",
+        "archived",
       ],
       tenant_role: [
         "owner",
