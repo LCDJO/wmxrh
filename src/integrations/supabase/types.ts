@@ -24599,6 +24599,13 @@ export type Database = {
       get_pccs_dashboard_stats: { Args: { p_tenant_id: string }; Returns: Json }
       get_platform_extended_metrics: { Args: never; Returns: Json }
       get_platform_metrics: { Args: never; Returns: Json }
+      get_tenant_signature_provider_secret: {
+        Args: { _provider_name: string; _tenant_id: string }
+        Returns: {
+          api_key: string
+          webhook_secret: string
+        }[]
+      }
       get_user_tenant_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_type_from_jwt: { Args: never; Returns: string }
       get_webhook_secret: { Args: { _webhook_id: string }; Returns: string }
@@ -24768,6 +24775,20 @@ export type Database = {
       remove_tenant_signature_integration: {
         Args: { _provider_name: string; _tenant_id: string }
         Returns: boolean
+      }
+      resolve_tenant_signature_provider: {
+        Args: { _tenant_id: string }
+        Returns: {
+          account_id: string
+          base_url: string
+          config: Json
+          has_api_key: boolean
+          has_webhook_secret: boolean
+          is_default: boolean
+          is_enabled: boolean
+          provider_name: string
+          tenant_id: string
+        }[]
       }
       scan_employee_compliance: {
         Args: { _tenant_id: string }
