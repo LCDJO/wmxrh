@@ -2966,6 +2966,351 @@ export type Database = {
           },
         ]
       }
+      candidate_documents: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          metadata_json: Json
+          tenant_id: string
+          tipo: Database["public"]["Enums"]["candidate_document_type"]
+          updated_at: string
+          url_arquivo: string
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          metadata_json?: Json
+          tenant_id: string
+          tipo: Database["public"]["Enums"]["candidate_document_type"]
+          updated_at?: string
+          url_arquivo: string
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          metadata_json?: Json
+          tenant_id?: string
+          tipo?: Database["public"]["Enums"]["candidate_document_type"]
+          updated_at?: string
+          url_arquivo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_documents_candidate_fk"
+            columns: ["tenant_id", "candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "candidate_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_enrichment: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          dados_json: Json
+          data_consulta: string
+          deleted_at: string | null
+          fonte: Database["public"]["Enums"]["enrichment_source_type"]
+          id: string
+          score_risco: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          dados_json?: Json
+          data_consulta?: string
+          deleted_at?: string | null
+          fonte: Database["public"]["Enums"]["enrichment_source_type"]
+          id?: string
+          score_risco?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          dados_json?: Json
+          data_consulta?: string
+          deleted_at?: string | null
+          fonte?: Database["public"]["Enums"]["enrichment_source_type"]
+          id?: string
+          score_risco?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_enrichment_candidate_fk"
+            columns: ["tenant_id", "candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "candidate_enrichment_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_logs: {
+        Row: {
+          acao: string
+          candidate_id: string
+          created_at: string
+          deleted_at: string | null
+          descricao: string | null
+          id: string
+          metadata_json: Json
+          tenant_id: string
+          updated_at: string
+          usuario_id: string | null
+        }
+        Insert: {
+          acao: string
+          candidate_id: string
+          created_at?: string
+          deleted_at?: string | null
+          descricao?: string | null
+          id?: string
+          metadata_json?: Json
+          tenant_id: string
+          updated_at?: string
+          usuario_id?: string | null
+        }
+        Update: {
+          acao?: string
+          candidate_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          descricao?: string | null
+          id?: string
+          metadata_json?: Json
+          tenant_id?: string
+          updated_at?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_logs_candidate_fk"
+            columns: ["tenant_id", "candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "candidate_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_pipeline: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          job_id: string | null
+          observacoes: string | null
+          responsavel_id: string | null
+          score: number
+          status: Database["public"]["Enums"]["pipeline_status_type"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          job_id?: string | null
+          observacoes?: string | null
+          responsavel_id?: string | null
+          score?: number
+          status?: Database["public"]["Enums"]["pipeline_status_type"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          job_id?: string | null
+          observacoes?: string | null
+          responsavel_id?: string | null
+          score?: number
+          status?: Database["public"]["Enums"]["pipeline_status_type"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_pipeline_candidate_fk"
+            columns: ["tenant_id", "candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "candidate_pipeline_job_fk"
+            columns: ["tenant_id", "job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "candidate_pipeline_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_scores: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          deleted_at: string | null
+          detalhes_json: Json
+          id: string
+          score_comportamental: number
+          score_risco: number
+          score_tecnico: number
+          score_total: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          deleted_at?: string | null
+          detalhes_json?: Json
+          id?: string
+          score_comportamental?: number
+          score_risco?: number
+          score_tecnico?: number
+          score_total?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          detalhes_json?: Json
+          id?: string
+          score_comportamental?: number
+          score_risco?: number
+          score_tecnico?: number
+          score_total?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_scores_candidate_fk"
+            columns: ["tenant_id", "candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "candidate_scores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidates: {
+        Row: {
+          cidade: string | null
+          consentimento_data: string | null
+          consentimento_lgpd: boolean
+          cpf_hash: string
+          created_at: string
+          data_nascimento: string | null
+          deleted_at: string | null
+          email: string
+          estado: string | null
+          id: string
+          metadata_json: Json
+          nome: string
+          origem: Database["public"]["Enums"]["candidate_origin_type"]
+          telefone: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cidade?: string | null
+          consentimento_data?: string | null
+          consentimento_lgpd?: boolean
+          cpf_hash: string
+          created_at?: string
+          data_nascimento?: string | null
+          deleted_at?: string | null
+          email: string
+          estado?: string | null
+          id?: string
+          metadata_json?: Json
+          nome: string
+          origem?: Database["public"]["Enums"]["candidate_origin_type"]
+          telefone?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cidade?: string | null
+          consentimento_data?: string | null
+          consentimento_lgpd?: boolean
+          cpf_hash?: string
+          created_at?: string
+          data_nascimento?: string | null
+          deleted_at?: string | null
+          email?: string
+          estado?: string | null
+          id?: string
+          metadata_json?: Json
+          nome?: string
+          origem?: Database["public"]["Enums"]["candidate_origin_type"]
+          telefone?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       career_legal_mappings: {
         Row: {
           adicional_aplicavel: string | null
@@ -4507,6 +4852,60 @@ export type Database = {
           },
           {
             foreignKeyName: "compliance_violations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consent_logs: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          data_consentimento: string
+          deleted_at: string | null
+          id: string
+          ip: string | null
+          tenant_id: string
+          termo_versao: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          data_consentimento?: string
+          deleted_at?: string | null
+          id?: string
+          ip?: string | null
+          tenant_id: string
+          termo_versao: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          data_consentimento?: string
+          deleted_at?: string | null
+          id?: string
+          ip?: string | null
+          tenant_id?: string
+          termo_versao?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_logs_candidate_fk"
+            columns: ["tenant_id", "candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "consent_logs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -13146,6 +13545,56 @@ export type Database = {
           },
           {
             foreignKeyName: "invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          descricao: string | null
+          id: string
+          metadata_json: Json
+          requisitos: Json
+          salario: number | null
+          status: Database["public"]["Enums"]["job_status_type"]
+          tenant_id: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          descricao?: string | null
+          id?: string
+          metadata_json?: Json
+          requisitos?: Json
+          salario?: number | null
+          status?: Database["public"]["Enums"]["job_status_type"]
+          tenant_id: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          descricao?: string | null
+          id?: string
+          metadata_json?: Json
+          requisitos?: Json
+          salario?: number | null
+          status?: Database["public"]["Enums"]["job_status_type"]
+          tenant_id?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -26372,6 +26821,14 @@ export type Database = {
       announcement_priority: "low" | "medium" | "high" | "critical"
       assist_mode: "silent" | "visible"
       benefit_type: "va" | "vr" | "vt" | "health" | "dental" | "cesta" | "flex"
+      candidate_document_type: "curriculo" | "certificado" | "outros"
+      candidate_origin_type:
+        | "site"
+        | "linkedin"
+        | "importacao"
+        | "indicacao"
+        | "manual"
+        | "outro"
       checklist_item_status:
         | "pending"
         | "in_progress"
@@ -26444,6 +26901,11 @@ export type Database = {
         | "desligado"
       employee_sexo: "masculino" | "feminino" | "intersexo" | "nao_informado"
       employee_status: "active" | "inactive" | "on_leave"
+      enrichment_source_type:
+        | "receita_federal"
+        | "justica"
+        | "serasa"
+        | "social"
       escalation_level: "l1" | "l2" | "l3" | "management" | "executive"
       esocial_category:
         | "101"
@@ -26515,6 +26977,7 @@ export type Database = {
       idp_status: "draft" | "active" | "suspended" | "archived"
       incident_severity: "sev1" | "sev2" | "sev3" | "sev4"
       incident_status: "open" | "investigating" | "mitigated" | "resolved"
+      job_status_type: "draft" | "open" | "paused" | "closed" | "cancelled"
       jornada_tipo: "integral" | "parcial" | "escala" | "12x36" | "flexivel"
       labor_rule_calc_type:
         | "percentage"
@@ -26574,6 +27037,13 @@ export type Database = {
       payroll_item_nature: "fixed" | "variable" | "informational"
       payroll_item_type: "provento" | "desconto"
       permission_scope: "tenant" | "company_group" | "company"
+      pipeline_status_type:
+        | "novo"
+        | "triagem"
+        | "entrevista"
+        | "proposta"
+        | "contratado"
+        | "rejeitado"
       platform_role:
         | "platform_super_admin"
         | "platform_support"
@@ -26853,6 +27323,15 @@ export const Constants = {
       announcement_priority: ["low", "medium", "high", "critical"],
       assist_mode: ["silent", "visible"],
       benefit_type: ["va", "vr", "vt", "health", "dental", "cesta", "flex"],
+      candidate_document_type: ["curriculo", "certificado", "outros"],
+      candidate_origin_type: [
+        "site",
+        "linkedin",
+        "importacao",
+        "indicacao",
+        "manual",
+        "outro",
+      ],
       checklist_item_status: [
         "pending",
         "in_progress",
@@ -26933,6 +27412,12 @@ export const Constants = {
       ],
       employee_sexo: ["masculino", "feminino", "intersexo", "nao_informado"],
       employee_status: ["active", "inactive", "on_leave"],
+      enrichment_source_type: [
+        "receita_federal",
+        "justica",
+        "serasa",
+        "social",
+      ],
       escalation_level: ["l1", "l2", "l3", "management", "executive"],
       esocial_category: [
         "101",
@@ -27009,6 +27494,7 @@ export const Constants = {
       idp_status: ["draft", "active", "suspended", "archived"],
       incident_severity: ["sev1", "sev2", "sev3", "sev4"],
       incident_status: ["open", "investigating", "mitigated", "resolved"],
+      job_status_type: ["draft", "open", "paused", "closed", "cancelled"],
       jornada_tipo: ["integral", "parcial", "escala", "12x36", "flexivel"],
       labor_rule_calc_type: [
         "percentage",
@@ -27073,6 +27559,14 @@ export const Constants = {
       payroll_item_nature: ["fixed", "variable", "informational"],
       payroll_item_type: ["provento", "desconto"],
       permission_scope: ["tenant", "company_group", "company"],
+      pipeline_status_type: [
+        "novo",
+        "triagem",
+        "entrevista",
+        "proposta",
+        "contratado",
+        "rejeitado",
+      ],
       platform_role: [
         "platform_super_admin",
         "platform_support",
