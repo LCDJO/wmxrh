@@ -177,6 +177,7 @@ const COMMON_FEATURE_FLAGS = [
   'basic_dashboard', 'advanced_filters', 'export_reports', 'bulk_actions',
   'custom_branding', 'api_access', 'sso', 'audit_trail', 'cognitive_hints',
   'workforce_ai', 'custom_roles', 'multi_company',
+  ...PLAN_SCOPED_SIGNATURE_PROVIDERS.map(toPlanSignatureProviderFlag),
 ];
 
 interface SaasPlan {
