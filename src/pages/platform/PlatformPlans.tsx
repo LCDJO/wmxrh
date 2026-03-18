@@ -824,7 +824,7 @@ export default function PlatformPlans() {
                 <Label className="text-sm font-semibold">Feature Flags</Label>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {COMMON_FEATURE_FLAGS.map(ff => (
+                {COMMON_FEATURE_FLAGS.filter((ff) => !ff.startsWith('signature_provider:')).map(ff => (
                   <button
                     key={ff}
                     type="button"
@@ -842,6 +842,40 @@ export default function PlatformPlans() {
                     {ff}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <FileSignature className="h-4 w-4 text-primary" />
+                <Label className="text-sm font-semibold">Provedores de assinatura liberados no plano</Label>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {PLAN_SCOPED_SIGNATURE_PROVIDERS.map((provider) => {
+                  const flag = toPlanSignatureProviderFlag(provider);
+                  const selected = form.feature_flags.includes(flag);
+
+                  return (
+                    <button
+                      key={provider}
+                      type="button"
+                      onClick={() => toggleArrayItem('feature_flags', flag)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                        selected
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-muted-foreground hover:border-primary/30'
+                      }`}
+                    >
+                      {selected
+                        ? <Check className="h-3 w-3" />
+                        : <X className="h-3 w-3 opacity-30" />
+                      }
+                      {SIGNATURE_PROVIDER_LABELS[provider]}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
