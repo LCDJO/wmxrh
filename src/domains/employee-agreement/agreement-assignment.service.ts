@@ -279,7 +279,7 @@ export const agreementAssignmentService = {
     if (a.status === 'signed') throw new Error('Não é possível cancelar um documento já assinado. Use revogação.');
 
     if (a.external_document_id && a.signature_provider) {
-      await digitalSignatureAdapter.cancel(a.signature_provider, a.external_document_id);
+      await digitalSignatureAdapter.cancel(a.signature_provider, a.external_document_id, ctx.tenant_id);
     }
 
     const { error } = await supabase

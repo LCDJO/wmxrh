@@ -205,6 +205,7 @@ export async function processSignedEpiDelivery(deliveryId: string): Promise<bool
   const statusResult = await digitalSignatureAdapter.checkStatus(
     d.signature_provider as SignatureProvider,
     d.external_document_id,
+    d.tenant_id,
   );
 
   if (statusResult.status !== 'signed') return false;
@@ -215,6 +216,7 @@ export async function processSignedEpiDelivery(deliveryId: string): Promise<bool
     deliveryId,
     d.external_document_id,
     d.signature_provider as SignatureProvider,
+    d.tenant_id,
   );
 
   // 4. Generate hash of the signed document content
