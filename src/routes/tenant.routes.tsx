@@ -8,6 +8,7 @@ import { ProtectedRoute } from '@/domains/security';
 import type { NavKey } from '@/domains/security/permissions';
 import { AppLayout } from '@/components/layout/AppLayout';
 import Dashboard from '@/pages/Dashboard';
+import TalentHub from '@/pages/TalentHub';
 import Employees from '@/pages/Employees';
 import EmployeeDetail from '@/pages/EmployeeDetail';
 import Companies from '@/pages/Companies';
@@ -131,6 +132,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/workforce-intelligence', element: pr('intelligence', <WorkforceIntelligence />) },
       { path: '/strategic-intelligence', element: pr('intelligence', <StrategicIntelligence />) },
       { path: '/executive-dashboard', element: pr('intelligence', <ExecutiveDashboard />) },
+      { path: '/talent-hub', element: pr('intelligence', <TalentHub />) },
       // ── Occupational Safety ──
       { path: '/occupational-compliance', element: pr('health', <OccupationalCompliance />) },
       { path: '/nr-compliance', element: pr('health', <NrComplianceDashboard />) },
