@@ -85,6 +85,33 @@ export default function TenantAppsIntegrations() {
     },
   });
 
+  const { data: signaturePlanProviders = [] } = useQuery({
+    queryKey: ['tenant-signature-plan-providers', tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data: tenantPlan, error: tenantPlanError } = await supabase
+        .from('tenant_plans')
+        .select('plan_id')
+        .eq('tenant_id', tenantId!)
+        .in('status', ['active', 'trial'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (tenantPlanError) throw tenantPlanError;
+      if (!tenantPlan?.plan_id) return [];
+
+      const { data: plan, error: planError } = await supabase
+        .from('saas_plans')
+        .select('feature_flags')
+        .eq('id', tenantPlan.plan_id)
+        .maybeSingle();
+
+      if (planError) throw planError;
+      return getPlanAllowedSignatureProviders((plan?.feature_flags ?? []) as string[]);
+    },
+  });
+
   // Uninstall mutation
   const uninstallMutation = useMutation({
     mutationFn: async (installationId: string) => {
