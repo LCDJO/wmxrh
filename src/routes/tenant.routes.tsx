@@ -8,6 +8,7 @@ import { ProtectedRoute } from '@/domains/security';
 import type { NavKey } from '@/domains/security/permissions';
 import { AppLayout } from '@/components/layout/AppLayout';
 import Dashboard from '@/pages/Dashboard';
+import TalentHub from '@/pages/TalentHub';
 import Employees from '@/pages/Employees';
 import EmployeeDetail from '@/pages/EmployeeDetail';
 import Companies from '@/pages/Companies';
