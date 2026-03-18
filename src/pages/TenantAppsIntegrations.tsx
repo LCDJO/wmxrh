@@ -34,6 +34,7 @@ type Subscription = Tables<'developer_api_subscriptions'> & {
 export default function TenantAppsIntegrations() {
   const { currentTenant } = useTenant();
   const { user } = useAuth();
+  const { isModuleAccessible } = usePXE();
   const queryClient = useQueryClient();
   const tenantId = currentTenant?.id;
   const navigate = useNavigate();
