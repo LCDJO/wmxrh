@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Store, Download, ShieldCheck, Trash2, ExternalLink } from 'lucide-react';
+import { Store, Download, ShieldCheck, Trash2, ExternalLink, FileSignature } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ── Derived types from Supabase select projections ──
