@@ -14,7 +14,56 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Plus, FileText, MapPin, Users, Briefcase, Loader2, User, IdCard, DollarSign, ShieldAlert, Scale, Lock, Building2, FileCheck, Banknote, ScrollText, Gift, Calculator, GraduationCap, HardHat, Clock, Activity } from 'lucide-react';
 import { RemuneracaoSection } from './RemuneracaoSection';
-...
+import { SSTSection } from './SSTSection';
+import { DisciplinarySection } from './DisciplinarySection';
+import { ComplianceValidationBanner } from './ComplianceValidationBanner';
+import { LGPDSection } from './LGPDSection';
+import { FichaStatusIndicators } from './FichaStatusIndicators';
+import { SignedDocumentsSection } from './SignedDocumentsSection';
+import { FinanceiroSection } from './FinanceiroSection';
+import { EmployeeAuditLogSection } from './EmployeeAuditLogSection';
+import { SalaryCompositionSection } from './SalaryCompositionSection';
+import { BenefitsSection } from './BenefitsSection';
+import { HealthExamsSection } from './HealthExamsSection';
+import { RiskExposuresSection } from './RiskExposuresSection';
+import { UnifiedTimelineSection } from './UnifiedTimelineSection';
+import { BehavioralProfileSection } from './BehavioralProfileSection';
+import { EmployeeEventsSection } from './EmployeeEventsSection';
+import { DocumentosTab } from './DocumentosTab';
+import { TermosDocumentosTab } from './TermosDocumentosTab';
+import { TreinamentosNrTab } from './TreinamentosNrTab';
+import { CorrectiveActionsTab } from './CorrectiveActionsTab';
+import { EpisTab } from './EpisTab';
+import { CareerPositionSection } from './CareerPositionSection';
+import { SimulacaoTrabalhistaTab } from './SimulacaoTrabalhistaTab';
+import { AddEpiDeliveryDialog } from './AddEpiDeliveryDialog';
+import { AddNrTrainingDialog } from './AddNrTrainingDialog';
+import { AddRiskExposureDialog } from './AddRiskExposureDialog';
+import { AutoProvisionDocumentsButton } from './AutoProvisionDocumentsButton';
+import { useToast } from '@/hooks/use-toast';
+import {
+  useEmployeeMasterRecord,
+  useCreateEmployeeDocument,
+  useCreateEmployeeAddress,
+  useCreateEmployeeDependent,
+  useCreateEmployeeContract,
+  useUpsertEmployeePersonalData,
+  useCreateEmployeeRecord,
+  useHealthExams,
+} from '@/domains/hooks';
+import {
+  DOCUMENT_TYPE_LABELS,
+  DEPENDENT_TYPE_LABELS,
+  CONTRACT_TYPE_LABELS,
+  WORK_REGIME_LABELS,
+  FGTS_REGIME_LABELS,
+  RECORD_STATUS_LABELS,
+  SEXO_LABELS,
+  ESTADO_CIVIL_LABELS,
+  TIPO_SALARIO_LABELS,
+  FORMA_PAGAMENTO_LABELS,
+  JORNADA_TIPO_LABELS,
+} from '@/domains/employee-master-record';
 import type {
   EmployeeDocumentType,
   EmployeeDependentType,
