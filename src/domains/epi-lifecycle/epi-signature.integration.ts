@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { digitalSignatureAdapter } from '@/domains/employee-agreement/digital-signature-adapter';
 import { documentVault } from '@/domains/employee-agreement/document-vault';
 import { resolveTenantSignatureProvider } from '@/domains/employee-agreement/tenant-signature-provider.service';
+import { buildAgreementWebhookUrl } from '@/domains/employee-agreement/signature-webhook-url';
 import type { SignatureProvider } from '@/domains/employee-agreement/types';
 
 const DEFAULT_PROVIDER: SignatureProvider = 'simulation';
@@ -153,7 +154,7 @@ export async function sendEpiDeliveryForSignature(input: SendForSignatureInput):
   });
 
   // 2. Send to Digital Signature Provider
-  const callbackUrl = `${window.location.origin}/api/epi-signature-webhook`;
+  const callbackUrl = buildAgreementWebhookUrl();
   const signResult = await digitalSignatureAdapter.send(provider, {
     tenant_id: input.tenantId,
     employee_nome: input.employeeName,

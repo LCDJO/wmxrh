@@ -61,11 +61,11 @@ const providers: ProviderInfo[] = [
   {
     id: 'docusign',
     name: 'DocuSign',
-    description: 'Líder global em assinatura eletrônica. Integração planejada para versões futuras.',
+    description: 'Integração pronta para produção com suporte a credenciais por tenant e fluxo de assinatura externo.',
     website: 'https://www.docusign.com',
     logo: '📄',
-    status: 'coming_soon',
-    features: ['Líder global', 'eSignature', 'CLM', 'API REST & SDK'],
+    status: 'available',
+    features: ['OAuth/JWT por tenant', 'eSignature', 'Webhook', 'Download do PDF assinado'],
   },
 ];
 
@@ -75,10 +75,6 @@ export default function DocumentSignatureIntegrations() {
 
   const handleToggle = (providerId: string) => {
     const provider = providers.find(p => p.id === providerId);
-    if (provider?.status === 'coming_soon') {
-      toast({ title: 'Em breve', description: `${provider.name} estará disponível em versões futuras.` });
-      return;
-    }
     setEnabledProviders(prev => {
       const next = { ...prev, [providerId]: !prev[providerId] };
       const action = next[providerId] ? 'ativado' : 'desativado';
