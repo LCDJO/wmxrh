@@ -661,6 +661,11 @@ function PersonalDataSection({
       if (cleaned !== lastResolvedCpf) {
         setLastResolvedCpf(null);
       }
+      setCpfLookupStatus(cleaned.length === 11 ? 'pending_manual' : 'not_attempted');
+      setCpfLookupPendingReason(
+        cleaned.length === 11 ? 'Consulta automática de CPF ainda não concluída.' : null
+      );
+      setCpfLookupSource(null);
       if (cleaned.length === 11) {
         void resolveCpf(cleaned);
       }
