@@ -6,7 +6,7 @@
  */
 
 import { useMemo } from 'react';
-import { usePXE } from './use-pxe';
+import { usePXE } from '@/hooks/core/use-pxe';
 import { createPlatformBillingCore } from '@/domains/billing-core';
 import type { PlatformBillingCoreAPI } from '@/domains/billing-core';
 
