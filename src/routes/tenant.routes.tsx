@@ -63,7 +63,7 @@ import TenantTraccarSettings from '@/modules/traccar/ui/TenantTraccarSettings';
 import CpfIntegrationSettings from '@/pages/CpfIntegrationSettings';
 import ReferralPage from '@/pages/ReferralPage';
 import TenantEngagement from '@/pages/TenantEngagement';
-import FleetPolicies from '@/pages/FleetPolicies';
+import FleetPolicies from '@/pages/fleet/FleetPolicies';
 import SupportNewTicket from '@/pages/support/SupportNewTicket';
 import SupportTickets from '@/pages/support/SupportTickets';
 import SupportWiki from '@/pages/support/SupportWiki';
