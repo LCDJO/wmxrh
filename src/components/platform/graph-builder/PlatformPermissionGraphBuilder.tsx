@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Maximize2, Minimize2, RotateCcw, Info } from 'lucide-react';
-import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission, PlatformAccessScope } from '@/pages/platform/PlatformSecurity';
+import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission, PlatformAccessScope } from '@/pages/platform/security/PlatformSecurity';
 import type { GraphNode, GraphEdge } from './types';
 import { useGraphLayout } from './useGraphLayout';
 import { GraphCanvas } from './GraphCanvas';

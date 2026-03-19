@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { PlatformUsersTab } from '@/components/platform/PlatformUsersTab';
 import { Button } from '@/components/ui/button';
 import { Users, KeyRound } from 'lucide-react';
-import type { PlatformUser, PlatformRole } from './PlatformSecurity';
+import type { PlatformUser, PlatformRole } from './security/PlatformSecurity';
 
 export default function PlatformUsers() {
   const { user } = useAuth();

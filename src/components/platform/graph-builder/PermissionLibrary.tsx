@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import {
   Search, Shield, Zap, Eye, Wallet, Settings, Lock, Headphones, ChevronDown, ChevronRight,
 } from 'lucide-react';
-import type { PlatformPermissionDef, PlatformRole, PlatformRolePermission } from '@/pages/platform/PlatformSecurity';
+import type { PlatformPermissionDef, PlatformRole, PlatformRolePermission } from '@/pages/platform/security/PlatformSecurity';
 
 const MODULE_LABELS: Record<string, string> = {
   tenants: 'Tenants', modulos: 'Módulos', auditoria: 'Auditoria',

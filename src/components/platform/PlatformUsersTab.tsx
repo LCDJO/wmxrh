@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { PlatformUser, PlatformRole } from '@/pages/platform/PlatformSecurity';
+import type { PlatformUser, PlatformRole } from '@/pages/platform/security/PlatformSecurity';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

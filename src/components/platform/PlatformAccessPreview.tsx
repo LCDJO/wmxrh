@@ -14,7 +14,7 @@ import {
   Search, User, ArrowRight, ChevronDown, ChevronRight,
   CheckCircle, Network, Zap, GitBranch,
 } from 'lucide-react';
-import type { PlatformUser, PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/PlatformSecurity';
+import type { PlatformUser, PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/security/PlatformSecurity';
 
 const ROLE_META: Record<string, { icon: typeof Shield; color: string; bg: string }> = {
   platform_super_admin: { icon: Lock, color: 'text-destructive', bg: 'bg-destructive/10' },
