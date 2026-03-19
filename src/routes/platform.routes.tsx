@@ -15,7 +15,7 @@ import PlatformLayout from '@/components/platform/PlatformLayout';
 import PlatformDashboard from '@/pages/platform/PlatformDashboard';
 import PlatformTenants from '@/pages/platform/PlatformTenants';
 import PlatformModules from '@/pages/platform/PlatformModules';
-import PlatformSecurity from '@/pages/platform/PlatformSecurity';
+import PlatformSecurity from '@/pages/platform/security/PlatformSecurity';
 import PlatformCommunications from '@/pages/platform/PlatformCommunications';
 import PlatformUsers from '@/pages/platform/PlatformUsers';
 import PlatformUsersDashboard from '@/pages/platform/PlatformUsersDashboard';
