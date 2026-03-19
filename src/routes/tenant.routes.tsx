@@ -43,7 +43,7 @@ import FleetDashboard from '@/pages/fleet/FleetDashboard';
 import FleetLiveView from '@/pages/fleet/FleetLiveView';
 import FleetAnalyticsView from '@/pages/fleet/FleetAnalyticsView';
 import FleetEmployeeBehaviorProfile from '@/pages/fleet/FleetEmployeeBehaviorProfile';
-import LiveDisplayAdmin from '@/pages/LiveDisplayAdmin';
+import LiveDisplayAdmin from '@/pages/public/LiveDisplayAdmin';
 import OperationalCommandCenter from '@/pages/operations/OperationalCommandCenter';
 import DocumentValidationDashboard from '@/pages/documents/DocumentValidationDashboard';
 import EpiCatalog from '@/pages/epi/EpiCatalog';
