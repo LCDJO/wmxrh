@@ -47,7 +47,7 @@ export function useGraphLayout({ roles, permissions, rolePerms, scopes }: Layout
 
       // Inheritance edges
       if (role.inherits_role_ids?.length) {
-        role.inherits_role_ids.forEach(parentId => {
+        role.inherits_role_ids.forEach((parentId: string) => {
           edges.push({
             id: `inherit-${role.id}-${parentId}`,
             type: 'inherits_role',

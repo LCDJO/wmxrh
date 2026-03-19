@@ -102,7 +102,7 @@ export function PlatformAccessPreview({ users, roles, permissions, rolePerms }: 
     const role = roleById.get(roleId);
     if (!role) return [];
     const chain = [role];
-    role.inherits_role_ids?.forEach(parentId => {
+    role.inherits_role_ids?.forEach((parentId: string) => {
       chain.push(...getInheritanceChain(parentId, visited));
     });
     return chain;

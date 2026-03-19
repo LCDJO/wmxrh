@@ -64,7 +64,7 @@ export function PlatformRoleGraphCanvas({ roles, permissions, rolePerms }: Props
   const inheritEdges = useMemo(() => {
     const edges: Array<{ from: string; to: string }> = [];
     roles.forEach(role => {
-      role.inherits_role_ids?.forEach(parentId => {
+      role.inherits_role_ids?.forEach((parentId: string) => {
         edges.push({ from: role.id, to: parentId });
       });
     });
