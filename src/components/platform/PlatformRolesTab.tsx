@@ -3,7 +3,7 @@
  */
 import { useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/PlatformSecurity';
+import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/security/PlatformSecurity';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

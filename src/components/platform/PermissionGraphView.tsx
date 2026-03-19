@@ -11,7 +11,7 @@ import {
   Shield, Lock, Eye, Headphones, Wallet, Settings,
   ChevronDown, ChevronRight, Zap, Network,
 } from 'lucide-react';
-import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/PlatformSecurity';
+import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/security/PlatformSecurity';
 
 const ROLE_STYLE: Record<string, { icon: typeof Shield; color: string }> = {
   platform_super_admin: { icon: Lock, color: 'bg-destructive/15 text-destructive border-destructive/30' },

@@ -2,7 +2,7 @@
  * useGraphLayout — Converts platform data into positioned graph nodes and edges.
  */
 import { useMemo } from 'react';
-import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission, PlatformAccessScope } from '@/pages/platform/PlatformSecurity';
+import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission, PlatformAccessScope } from '@/pages/platform/security/PlatformSecurity';
 import type { GraphNode, GraphEdge } from './types';
 
 interface LayoutInput {

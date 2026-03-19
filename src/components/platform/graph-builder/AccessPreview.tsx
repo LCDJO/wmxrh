@@ -10,7 +10,7 @@ import {
   Shield, Lock, Eye, CheckCircle2, ArrowRight, Globe, Layers,
 } from 'lucide-react';
 import type { GraphNode, GraphEdge } from './types';
-import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission, PlatformAccessScope } from '@/pages/platform/PlatformSecurity';
+import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission, PlatformAccessScope } from '@/pages/platform/security/PlatformSecurity';
 
 const MODULE_LABELS: Record<string, string> = {
   tenants: 'Tenants', modulos: 'Módulos', auditoria: 'Auditoria',

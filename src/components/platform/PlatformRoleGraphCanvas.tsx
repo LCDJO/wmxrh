@@ -11,7 +11,7 @@ import {
   Shield, Lock, Eye, Headphones, Wallet, Settings,
   Maximize2, Minimize2, RotateCcw, Network, Zap,
 } from 'lucide-react';
-import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/PlatformSecurity';
+import type { PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/security/PlatformSecurity';
 
 // ── Platform role styles ─────────────────────────────────────
 

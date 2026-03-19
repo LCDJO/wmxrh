@@ -12,7 +12,7 @@ import {
   User, Shield, Lock, Eye, Headphones, Wallet, Settings,
   ChevronDown, ChevronRight, Search, Network, ArrowRight,
 } from 'lucide-react';
-import type { PlatformUser, PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/PlatformSecurity';
+import type { PlatformUser, PlatformRole, PlatformPermissionDef, PlatformRolePermission } from '@/pages/platform/security/PlatformSecurity';
 
 // ── Role display metadata by slug ───────────────────────────────
 
