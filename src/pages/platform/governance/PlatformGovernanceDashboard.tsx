@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { getGovernanceAIService } from '@/domains/governance-ai';
 import { buildAccessRiskProfiles } from '@/domains/governance-ai/access-risk-analyzer';
 import { buildOptimizationHints } from '@/domains/governance-ai/role-optimization-advisor';

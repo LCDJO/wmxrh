@@ -28,14 +28,14 @@ import {
 import { cn } from '@/lib/utils';
 import { buildDisplayMockData } from '@/lib/displayMockData';
 import { QRCodeSVG } from 'qrcode.react';
-import { useDisplayRealtime, type ConnectionStatus } from '@/hooks/useDisplayRealtime';
-import { useDisplayEventQueue } from '@/hooks/useDisplayEventQueue';
-import { useDisplayEventPipeline } from '@/hooks/useDisplayEventPipeline';
-import { useDisplayGateway, type GatewayStatus } from '@/hooks/useDisplayGateway';
-import { useDisplayCache } from '@/hooks/useDisplayCache';
-import { useRenderThrottle } from '@/hooks/useRenderThrottle';
-import { useDisplayScalability } from '@/hooks/useDisplayScalability';
-import { useFailsafeMode } from '@/hooks/useFailsafeMode';
+import { useDisplayRealtime, type ConnectionStatus } from '@/hooks/display/useDisplayRealtime';
+import { useDisplayEventQueue } from '@/hooks/display/useDisplayEventQueue';
+import { useDisplayEventPipeline } from '@/hooks/display/useDisplayEventPipeline';
+import { useDisplayGateway, type GatewayStatus } from '@/hooks/display/useDisplayGateway';
+import { useDisplayCache } from '@/hooks/display/useDisplayCache';
+import { useRenderThrottle } from '@/hooks/display/useRenderThrottle';
+import { useDisplayScalability } from '@/hooks/display/useDisplayScalability';
+import { useFailsafeMode } from '@/hooks/display/useFailsafeMode';
 import {
   type DisplayData,
   KpiTile,
@@ -48,7 +48,7 @@ import {
   useAnimatedNumber,
 } from '@/components/tv/TVComponents';
 import { TVMapCenter } from '@/components/tv/TVMapCenter';
-import { useRotationMode, VIEW_LABELS, type RotationView } from '@/hooks/useRotationMode';
+import { useRotationMode, VIEW_LABELS, type RotationView } from '@/hooks/display/useRotationMode';
 import {
   FleetLiveView,
   RiskHeatmapView,

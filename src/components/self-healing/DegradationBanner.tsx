@@ -7,7 +7,7 @@
 
 import { AlertTriangle, X } from 'lucide-react';
 import { useState } from 'react';
-import { useSelfHealingStatus } from '@/hooks/use-self-healing-status';
+import { useSelfHealingStatus } from '@/hooks/platform/use-self-healing-status';
 
 export function DegradationBanner() {
   const { showDegradationBanner, degradedModules, activeIncidents } = useSelfHealingStatus();

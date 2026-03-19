@@ -18,7 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LiveDisplayPreview from '@/components/tv/LiveDisplayPreview';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { Monitor, Plus, QrCode, Trash2, Copy, Tv, AlertTriangle, CheckCircle2, WifiOff, RotateCw, Link2, Eye, Pencil, Power } from 'lucide-react';
 import { format } from 'date-fns';
 import { DISPLAY_TIPOS } from '@/modules/live-display';

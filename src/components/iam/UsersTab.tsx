@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { Plus, Trash2, Mail, UserPlus, Building2, Network } from 'lucide-react';
 
 const ROLE_LABELS: Record<string, string> = { owner: 'Proprietário', admin: 'Admin', manager: 'Gestor', viewer: 'Visualizador' };

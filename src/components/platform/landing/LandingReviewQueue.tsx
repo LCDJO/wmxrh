@@ -24,7 +24,7 @@ import {
   TrendingUp, Users, MousePointerClick, Timer, ArrowUpDown,
   Info, Brain, Sparkles, Ban, ThumbsUp
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { cn } from '@/lib/utils';
 
 // ── Subcomponents ───────────────────────────────────────────

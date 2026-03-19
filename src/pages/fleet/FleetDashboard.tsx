@@ -8,11 +8,11 @@ import {
   Car, AlertTriangle, MapPin, Gauge, Clock, Shield, Users, Activity, Wifi, WifiOff, RefreshCw, Maximize2, Minimize2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { useFleetRealtime } from '@/hooks/useFleetRealtime';
-import type { RealtimeEventType, ConnectionStatus } from '@/hooks/useFleetRealtime';
-import { useFleetCache } from '@/hooks/useFleetCache';
-import { useFleetSecurity } from '@/hooks/useFleetSecurity';
-import { useTraccarFleet, type TraccarVehicle } from '@/hooks/useTraccarFleet';
+import { useFleetRealtime } from '@/hooks/fleet/useFleetRealtime';
+import type { RealtimeEventType, ConnectionStatus } from '@/hooks/fleet/useFleetRealtime';
+import { useFleetCache } from '@/hooks/fleet/useFleetCache';
+import { useFleetSecurity } from '@/hooks/fleet/useFleetSecurity';
+import { useTraccarFleet, type TraccarVehicle } from '@/hooks/fleet/useTraccarFleet';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import L from 'leaflet';

@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import { usePlatformCognitive } from '@/domains/platform/use-platform-cognitive';
-import { useNavigationPins, type PinnedItem } from '@/hooks/use-navigation-pins';
+import { useNavigationPins, type PinnedItem } from '@/hooks/platform/use-navigation-pins';
 import type { CognitiveSuggestion } from '@/domains/platform-cognitive/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

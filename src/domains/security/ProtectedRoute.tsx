@@ -8,7 +8,7 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useSecurityKernel } from './use-security-kernel';
-import { usePXE } from '@/hooks/use-pxe';
+import { usePXE } from '@/hooks/core/use-pxe';
 import type { PermissionEntity, PermissionAction, NavKey } from './permissions';
 import type { FeatureKey } from './feature-flags';
 import { ShieldX, Lock } from 'lucide-react';

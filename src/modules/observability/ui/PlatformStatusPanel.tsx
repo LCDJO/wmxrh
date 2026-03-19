@@ -18,7 +18,7 @@ import {
   RefreshCw, Loader2, Shield, Bug, Cpu, Heart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 
 const statusConfig: Record<HealthStatus, { label: string; color: string; icon: typeof Heart }> = {
   healthy: { label: 'Saudável', color: 'text-emerald-500', icon: CheckCircle2 },

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, Shield, ShieldAlert, RefreshCw, CheckCircle2 } from 'lucide-react';
-import { useCouponGovernance } from '@/hooks/use-coupon-governance';
+import { useCouponGovernance } from '@/hooks/billing/use-coupon-governance';
 
 const RISK_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: typeof Shield }> = {
   low: { label: 'Baixo', variant: 'secondary', icon: CheckCircle2 },

@@ -40,7 +40,7 @@ import { AddEpiDeliveryDialog } from './AddEpiDeliveryDialog';
 import { AddNrTrainingDialog } from './AddNrTrainingDialog';
 import { AddRiskExposureDialog } from './AddRiskExposureDialog';
 import { AutoProvisionDocumentsButton } from './AutoProvisionDocumentsButton';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import {
   useEmployeeMasterRecord,
   useCreateEmployeeDocument,

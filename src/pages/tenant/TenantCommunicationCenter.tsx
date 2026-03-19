@@ -13,8 +13,8 @@
  */
 
 import { useState, useMemo } from 'react';
-import { useAnnouncements } from '@/hooks/use-announcements';
-import { useNotifications } from '@/hooks/use-notifications';
+import { useAnnouncements } from '@/hooks/core/use-announcements';
+import { useNotifications } from '@/hooks/core/use-notifications';
 import {
   ALERT_TYPE_CONFIG,
   SEVERITY_CONFIG,

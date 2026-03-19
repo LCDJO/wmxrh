@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePXE } from '@/hooks/use-pxe';
+import { usePXE } from '@/hooks/core/use-pxe';
 import { getPlanAllowedSignatureProviders, SIGNATURE_PROVIDER_LABELS } from '@/domains/employee-agreement/signature-provider-governance';
 import type { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

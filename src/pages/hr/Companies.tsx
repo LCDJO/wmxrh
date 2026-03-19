@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Building2, ShieldCheck, Pencil, Trash2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { CnpjConsultaPanel } from '@/components/company/CnpjConsultaPanel';
 import { occupationalComplianceGenerator } from '@/domains/occupational-intelligence/occupational-compliance-generator';
 import { getApplicableNrs } from '@/domains/occupational-intelligence/nr-training-mapper';

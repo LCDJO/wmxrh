@@ -4,8 +4,8 @@
  */
 
 import { useState, useMemo } from 'react';
-import { useNotifications } from '@/hooks/use-notifications';
-import { useNotificationNavigator } from '@/hooks/use-notification-navigator';
+import { useNotifications } from '@/hooks/core/use-notifications';
+import { useNotificationNavigator } from '@/hooks/core/use-notification-navigator';
 import {
   TYPE_CONFIG,
   getUnreadByType,

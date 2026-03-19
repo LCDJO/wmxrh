@@ -11,7 +11,7 @@ import { offboardingService } from '@/domains/automated-offboarding';
 import type { OffboardingWorkflow, CreateOffboardingDTO, OffboardingType, AvisoPrevioType, ChecklistItemStatus } from '@/domains/automated-offboarding';
 import { OFFBOARDING_TYPE_LABELS, OFFBOARDING_STATUS_LABELS, CHECKLIST_CATEGORY_LABELS, AVISO_PREVIO_LABELS } from '@/domains/automated-offboarding';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

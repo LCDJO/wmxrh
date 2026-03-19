@@ -12,7 +12,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { StatsCard } from '@/components/shared/StatsCard';
-import { useGrowthInsights } from '@/hooks/use-growth-insights';
+import { useGrowthInsights } from '@/hooks/platform/use-growth-insights';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
   PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend,

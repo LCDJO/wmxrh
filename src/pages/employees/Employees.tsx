@@ -12,7 +12,7 @@ import { Search, Filter, Pencil, Trash2, Rocket, UserMinus, UserPlus, ArrowRight
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { StartHiringDialog } from '@/components/hiring/StartHiringDialog';
 
 export default function Employees() {

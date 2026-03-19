@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { History, Loader2, MapPin, AlertTriangle, Route, Gauge, Clock, X } from 'lucide-react';
 import { RouteReplayPanel } from './btie/RouteReplayPanel';
-import type { TraccarVehicle } from '@/hooks/useTraccarFleet';
+import type { TraccarVehicle } from '@/hooks/fleet/useTraccarFleet';
 
 interface DeviceHistoryReplayProps {
   tenantId: string;

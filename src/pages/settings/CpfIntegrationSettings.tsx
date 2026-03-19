@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
 import { usePermissions } from '@/domains/security/use-permissions';
-import { usePXE } from '@/hooks/use-pxe';
+import { usePXE } from '@/hooks/core/use-pxe';
 import { externalDataService, type CpfIntegrationConfig, type CpfProvider } from '@/domains/occupational-intelligence/external-data.service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

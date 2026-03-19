@@ -7,7 +7,7 @@
 
 import { Brain, Activity, TrendingUp, Shield, Loader2, RefreshCw } from 'lucide-react';
 import { StatsCard } from '@/components/shared/StatsCard';
-import { useAIOperationsData } from '@/hooks/useAIOperationsData';
+import { useAIOperationsData } from '@/hooks/platform/useAIOperationsData';
 import { AutomationSuggestionsPanel } from '@/components/platform/ai-operations/AutomationSuggestionsPanel';
 import { RiskPredictionHeatmap } from '@/components/platform/ai-operations/RiskPredictionHeatmap';
 import { RevenueOptimizationCards } from '@/components/platform/ai-operations/RevenueOptimizationCards';

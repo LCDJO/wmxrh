@@ -17,7 +17,7 @@ import {
   AnimatedGauge,
   FlashingAlert,
 } from '@/components/tv/TVComponents';
-import { useRotationMode } from '@/hooks/useRotationMode';
+import { useRotationMode } from '@/hooks/display/useRotationMode';
 import {
   FleetLiveView,
   RiskHeatmapView,
@@ -26,7 +26,7 @@ import {
   ExecutiveOverviewView,
 } from '@/components/tv/TVRotationViews';
 import { buildDisplayMockData } from '@/lib/displayMockData';
-import type { RotationView } from '@/hooks/useRotationMode';
+import type { RotationView } from '@/hooks/display/useRotationMode';
 
 /** Map display board tipo → rotation view */
 const TIPO_TO_VIEW: Record<string, RotationView> = {

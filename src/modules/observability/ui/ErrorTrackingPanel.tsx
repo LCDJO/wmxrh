@@ -13,7 +13,7 @@ import { getErrorTracker } from '@/domains/observability/error-tracker';
 import type { ErrorSummary, TrackedError, ErrorSeverity } from '@/domains/observability/types';
 import { Bug, RefreshCw, CheckCircle2, Trash2, Info, AlertTriangle, XCircle, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 
 const severityConfig: Record<ErrorSeverity, { label: string; color: string; bg: string; icon: typeof Info; variant: 'destructive' | 'secondary' | 'outline' | 'default' }> = {
   info:     { label: 'Info',     color: 'text-primary',            bg: 'bg-primary/10',     icon: Info,          variant: 'outline' },

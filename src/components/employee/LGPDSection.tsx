@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Eye, Clock, Shield, AlertTriangle, FileText, UserX, CheckCircle } from 'lucide-react';
 import { lgpdService, DEFAULT_LEGAL_BASIS } from '@/domains/security';
 import type { DataAccessLog, LegalBasisRecord, AnonymizationRequest } from '@/domains/security';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 

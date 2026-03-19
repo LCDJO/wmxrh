@@ -4,7 +4,7 @@
  */
 
 import { type ReactNode } from 'react';
-import { usePlanLimit, type PlanLimitKey } from '@/hooks/use-plan-limit';
+import { usePlanLimit, type PlanLimitKey } from '@/hooks/billing/use-plan-limit';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, ArrowUpRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useGoogleMapsKey } from './useGoogleMapsKey';
 import { loadGoogleMaps } from './loadGoogleMaps';
 import { useDefaultMapCenter } from './useDefaultMapCenter';
-import type { TraccarVehicle } from '@/hooks/useTraccarFleet';
+import type { TraccarVehicle } from '@/hooks/fleet/useTraccarFleet';
 
 interface FleetMapProps {
   vehicles: TraccarVehicle[];

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 
 const PROGRAM_LABELS: Record<string, string> = { pcmso: 'PCMSO', pgr: 'PGR', ltcat: 'LTCAT', ppra: 'PPRA' };
 const EXAM_LABELS: Record<string, string> = { admissional: 'Admissional', periodico: 'Periódico', demissional: 'Demissional', mudanca_funcao: 'Mudança Função', retorno_trabalho: 'Retorno' };

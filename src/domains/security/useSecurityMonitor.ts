@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import {
   onSecurityEvent, type SecurityEventPayload,
   onIBLEvent, type IBLDomainEvent,

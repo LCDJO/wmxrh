@@ -3,7 +3,7 @@
  * Shows incident_id, affected module, recovery actions, and status.
  */
 import { useState, useEffect, useCallback } from 'react';
-import { useSelfHealingStatus } from '@/hooks/use-self-healing-status';
+import { useSelfHealingStatus } from '@/hooks/platform/use-self-healing-status';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
