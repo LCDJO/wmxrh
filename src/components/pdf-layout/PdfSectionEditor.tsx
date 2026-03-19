@@ -27,7 +27,7 @@ import {
   Droplets,
   Lock,
 } from 'lucide-react';
-import type { PdfLayoutConfig } from '@/pages/PdfLayoutSettings';
+import type { PdfLayoutConfig } from '@/pages/documents/PdfLayoutSettings';
 
 const FONT_OPTIONS = [
   'Helvetica Neue, Arial, sans-serif',

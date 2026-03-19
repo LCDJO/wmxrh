@@ -3,7 +3,7 @@
  */
 import { PAGE_SIZES } from '@/services/pdfDocumentGenerator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { PdfLayoutConfig } from '@/pages/PdfLayoutSettings';
+import type { PdfLayoutConfig } from '@/pages/documents/PdfLayoutSettings';
 
 interface Props {
   config: Partial<PdfLayoutConfig>;
