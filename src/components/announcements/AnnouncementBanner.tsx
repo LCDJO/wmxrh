@@ -3,7 +3,7 @@
  * Shows announcements with blocking_level 'banner' or 'restricted_access'.
  */
 
-import { useAnnouncements } from '@/hooks/use-announcements';
+import { useAnnouncements } from '@/hooks/core/use-announcements';
 import {
   ALERT_TYPE_CONFIG,
   SEVERITY_CONFIG,

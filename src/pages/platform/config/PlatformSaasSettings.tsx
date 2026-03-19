@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { Settings, Save, Loader2, RotateCcw } from 'lucide-react';
 import CloudflareConnectCard from '@/components/platform/CloudflareConnectCard';
 import TraccarConnectCard from '@/components/platform/TraccarConnectCard';

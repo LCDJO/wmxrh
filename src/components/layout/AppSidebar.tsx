@@ -20,15 +20,15 @@ import {
   Shield, Crown, IdCard,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useAnnouncements } from '@/hooks/use-announcements';
+import { useAnnouncements } from '@/hooks/core/use-announcements';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSecurityKernel } from '@/domains/security/use-security-kernel';
 import { useIdentityIntelligence } from '@/domains/security/kernel/identity-intelligence';
-import { useNavigationPins } from '@/hooks/use-navigation-pins';
-import { useOnboardingStatus } from '@/hooks/use-onboarding-status';
-import { useExperienceProfile } from '@/hooks/use-experience-profile';
-import { usePXE } from '@/hooks/use-pxe';
+import { useNavigationPins } from '@/hooks/platform/use-navigation-pins';
+import { useOnboardingStatus } from '@/hooks/core/use-onboarding-status';
+import { useExperienceProfile } from '@/hooks/platform/use-experience-profile';
+import { usePXE } from '@/hooks/core/use-pxe';
 // NavigationSuggestionsPanel moved to NotificationBell flyout
 import { Progress } from '@/components/ui/progress';
 import { ContextSelector } from './ContextSelector';

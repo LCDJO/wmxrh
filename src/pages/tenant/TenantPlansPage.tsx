@@ -7,8 +7,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
-import { usePXE } from '@/hooks/use-pxe';
-import { useEmployeeLimit } from '@/hooks/use-employee-limit';
+import { usePXE } from '@/hooks/core/use-pxe';
+import { useEmployeeLimit } from '@/hooks/billing/use-employee-limit';
 import { PlanBadge } from '@/components/shared/PlanBadge';
 import { PLATFORM_MODULES } from '@/domains/platform/platform-modules';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
-import { useTraccarFleet, type TraccarVehicle } from '@/hooks/useTraccarFleet';
+import { useTraccarFleet, type TraccarVehicle } from '@/hooks/fleet/useTraccarFleet';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

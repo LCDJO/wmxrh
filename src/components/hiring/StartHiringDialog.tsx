@@ -12,10 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { Loader2, Rocket, AlertTriangle } from 'lucide-react';
 import { HIRING_STEPS, type HiringStepState } from '@/domains/automated-hiring/types';
-import { useEmployeeLimit } from '@/hooks/use-employee-limit';
+import { useEmployeeLimit } from '@/hooks/billing/use-employee-limit';
 import { CpfLookupDisabledError, externalDataService } from '@/domains/occupational-intelligence/external-data.service';
 
 interface Props {

@@ -14,11 +14,11 @@ import {
   ShieldCheck, AlertTriangle, Package, FileWarning, PenTool, Trophy,
   Warehouse, CalendarClock, DollarSign, User, TrendingDown
 } from 'lucide-react';
-import { useEpiCompanyStats, useEpiCompanyRanking } from '@/hooks/useEpiDashboard';
+import { useEpiCompanyStats, useEpiCompanyRanking } from '@/hooks/epi/useEpiDashboard';
 import {
   useInventoryStock, useLotsByExpiry, useCostByDepartment,
   useAssetsInUse, useCompanyCostRanking, useStockRuptureRisk,
-} from '@/hooks/useEpiInventoryDashboard';
+} from '@/hooks/epi/useEpiInventoryDashboard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 const LOT_COLORS: Record<string, string> = {

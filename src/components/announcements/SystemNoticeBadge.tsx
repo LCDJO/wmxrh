@@ -10,7 +10,7 @@
  */
 
 import { useMemo } from 'react';
-import { useAnnouncements } from '@/hooks/use-announcements';
+import { useAnnouncements } from '@/hooks/core/use-announcements';
 import { cn } from '@/lib/utils';
 import type { Severity } from '@/domains/announcements/announcement-hub';
 

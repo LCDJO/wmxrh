@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
-import { usePXE } from '@/hooks/use-pxe';
+import { usePXE } from '@/hooks/core/use-pxe';
 import { AdSlot } from '@/components/ads/AdSlot';
 
 interface ContextualAdSlotProps {

@@ -10,7 +10,7 @@ import { useTenant } from '@/contexts/TenantContext';
 import { usePermissions } from '@/domains/security';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { usePlatformFooterDefaults } from '@/hooks/use-footer-defaults';
+import { usePlatformFooterDefaults } from '@/hooks/platform/use-footer-defaults';
 const currentYear = new Date().getFullYear();
 
 /* ── helpers ── */

@@ -12,7 +12,7 @@ import {
   CheckCircle2, XCircle, ArrowUpCircle, RefreshCw, BarChart3, Building2, Trophy,
 } from 'lucide-react';
 import { runEscalationScan, getEscalationSummary } from '@/domains/safety-automation';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 
 // ═══════════════════════════════════════════════════════
 // TYPES

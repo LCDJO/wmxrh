@@ -22,7 +22,7 @@ import {
   TrendingUp, CreditCard, RefreshCw, BarChart3,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useBillingCore } from '@/hooks/use-billing-core';
+import { useBillingCore } from '@/hooks/billing/use-billing-core';
 import type { Invoice, RevenueMetrics } from '@/domains/billing-core';
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {

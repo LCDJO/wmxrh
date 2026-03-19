@@ -18,7 +18,7 @@ import { conversionPredictionService } from '@/domains/platform-growth';
 import { landingPageBuilder } from '@/domains/platform-growth';
 import { tagManagerIntegration } from '@/domains/platform-growth';
 import { conversionTrackingService } from '@/domains/platform-growth';
-import { useGrowthInsights } from '@/hooks/use-growth-insights';
+import { useGrowthInsights } from '@/hooks/platform/use-growth-insights';
 
 const IMPACT_COLORS: Record<string, string> = {
   low: 'bg-blue-500/10 text-blue-400 border-blue-500/20',

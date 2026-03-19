@@ -4,7 +4,7 @@
  */
 
 import { AlertTriangle, ArrowUpRight } from 'lucide-react';
-import { useEmployeeLimit } from '@/hooks/use-employee-limit';
+import { useEmployeeLimit } from '@/hooks/billing/use-employee-limit';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 

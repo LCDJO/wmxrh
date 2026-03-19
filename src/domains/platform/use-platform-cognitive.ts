@@ -4,7 +4,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { CognitiveInsightsService } from '@/domains/platform-cognitive/cognitive-insights.service';
 import type { CognitiveIntent, CognitiveResponse } from '@/domains/platform-cognitive/types';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { useLocation } from 'react-router-dom';
 
 // Singleton so behaviour tracking persists across mounts

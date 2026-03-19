@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useSalaryIntelligence } from '@/hooks/use-salary-intelligence';
-import { useExportReport } from '@/hooks/use-export-report';
+import { useSalaryIntelligence } from '@/hooks/core/use-salary-intelligence';
+import { useExportReport } from '@/hooks/core/use-export-report';
 import { useTenant } from '@/contexts/TenantContext';
 
 export default function StrategicIntelligencePage() {

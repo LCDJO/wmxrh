@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Brain, Zap, ShieldAlert, TrendingUp, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAIOperationsData } from '@/hooks/useAIOperationsData';
+import { useAIOperationsData } from '@/hooks/platform/useAIOperationsData';
 import type { AutomationSuggestion, PredictedRisk, RevenueOptimization } from '@/domains/autonomous-operations/types';
 
 export function AIOperationsCenterWidget() {

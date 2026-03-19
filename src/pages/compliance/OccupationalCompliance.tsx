@@ -6,7 +6,7 @@ import { cboSuggestionService } from '@/domains/occupational-intelligence/cbo-su
 import { nrTrainingRequirementService } from '@/domains/occupational-intelligence/nr-training-requirement.service';
 import { cnpjDataResolverService } from '@/domains/occupational-intelligence/cnpj-data-resolver.service';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

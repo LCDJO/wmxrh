@@ -17,9 +17,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EventDetailPanel, type EventDetail } from '@/components/fleet/EventDetailPanel';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { useTenant } from '@/contexts/TenantContext';
-import { useTraccarFleet, type TraccarVehicle } from '@/hooks/useTraccarFleet';
+import { useTraccarFleet, type TraccarVehicle } from '@/hooks/fleet/useTraccarFleet';
 
 // ── Unified Vehicle type ──
 interface FleetVehicle {

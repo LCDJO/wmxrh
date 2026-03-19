@@ -6,14 +6,14 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
-import { usePlatformFooterDefaults } from '@/hooks/use-footer-defaults';
+import { usePlatformFooterDefaults } from '@/hooks/platform/use-footer-defaults';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { Loader2, Plus, Trash2, Save, PanelBottom, ExternalLink, Shield, Headphones } from 'lucide-react';
 interface SupportLink {
   label: string;

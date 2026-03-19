@@ -35,7 +35,7 @@ import {
   Loader2, Save, Send, CheckCircle2, Globe, Plus, Trash2,
   History, Home, XCircle, RefreshCw, Clock, ExternalLink, Zap,
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 
 // ─── Tipos de conteúdo da home ────────────────────────────────────────────────
 

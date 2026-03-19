@@ -17,7 +17,7 @@ import {
 import { FileText, Shield, Globe, ShoppingBag, Code, Plus, MoreVertical, Pencil, Trash2, History, Upload } from 'lucide-react';
 import { getPlatformPolicyGovernanceEngine } from '@/domains/platform-policy-governance';
 import type { PlatformPolicy, PolicyScope } from '@/domains/platform-policy-governance/types';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { PolicyFormDialog } from '@/components/platform/governance/PolicyFormDialog';
 import { PublishVersionDialog } from '@/components/platform/governance/PublishVersionDialog';
 import { PolicyVersionsDialog } from '@/components/platform/governance/PolicyVersionsDialog';

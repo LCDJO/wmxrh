@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { X, Car, MapPin, Gauge, Clock, AlertTriangle, Shield, TrendingUp, Cpu, Navigation } from 'lucide-react';
-import type { TraccarVehicle } from '@/hooks/useTraccarFleet';
+import type { TraccarVehicle } from '@/hooks/fleet/useTraccarFleet';
 import { getBehaviorSummary, type BehaviorSummary } from '../services/behavior-engine.service';
 import { getComplianceSummary, type ComplianceSummary } from '../services/compliance.service';
 

@@ -29,7 +29,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import {
   Building2, Plus, Search, Ban, CheckCircle, Eye, Puzzle, Package,
   Loader2, MoreHorizontal, Users, Calendar, UserCog, Shield, Clock,

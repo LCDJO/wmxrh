@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { getGovernanceAIService } from '@/domains/governance-ai';
 import type { GovernanceInsight, GovernanceAIResponse, InsightSeverity } from '@/domains/governance-ai/types';
 import {

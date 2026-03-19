@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import {
   Loader2, Megaphone, CheckCircle2, ExternalLink,
   ChevronRight, ChevronLeft, User, Users, DollarSign, Rocket,

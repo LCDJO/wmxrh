@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { planOptimizationAdvisor } from '@/domains/platform-growth';
-import { useGrowthInsights } from '@/hooks/use-growth-insights';
+import { useGrowthInsights } from '@/hooks/platform/use-growth-insights';
 import type { PlanOptimizationSuggestion } from '@/domains/platform-growth/types';
 
 const IMPACT_COLORS: Record<string, string> = {

@@ -5,8 +5,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useNotifications } from '@/hooks/use-notifications';
-import { useNotificationNavigator } from '@/hooks/use-notification-navigator';
+import { useNotifications } from '@/hooks/core/use-notifications';
+import { useNotificationNavigator } from '@/hooks/core/use-notification-navigator';
 import { NotificationFlyout } from './NotificationFlyout';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Bell } from 'lucide-react';

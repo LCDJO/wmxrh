@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, X, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 import { generateDocumentPdf } from '@/services/pdfDocumentGenerator';
 import { replaceVariables, TemplateHtmlPreview } from './TemplateHtmlPreview';
 

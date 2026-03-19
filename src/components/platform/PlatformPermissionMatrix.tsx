@@ -15,7 +15,7 @@ import {
   Shield, Lock, Eye, Headphones, Wallet, Settings,
   Search, Loader2, Zap, CheckCircle, XCircle,
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/core/use-toast';
 
 const ROLE_META: Record<string, { icon: typeof Shield; accent: string }> = {
   platform_super_admin: { icon: Lock, accent: 'text-destructive' },
