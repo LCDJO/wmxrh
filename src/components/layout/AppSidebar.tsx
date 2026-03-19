@@ -233,6 +233,15 @@ const navSections: NavSection[] = [
         ],
       },
       {
+        to: '/settings/esocial',
+        icon: Send,
+        label: 'eSocial',
+        key: 'esocial' as NavKey,
+        children: [
+          { to: '/settings/esocial', icon: Send, label: 'Parâmetros', key: 'esocial' as NavKey },
+        ],
+      },
+      {
         to: '/settings/users',
         icon: Users,
         label: 'Usuários',
