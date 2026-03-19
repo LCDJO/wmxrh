@@ -75,6 +75,7 @@ import TimeTrackingPage from '@/pages/TimeTrackingPage';
 import TerminationSimulatorPage from '@/pages/TerminationSimulatorPage';
 import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
 import TenantPersonalization from '@/pages/settings/TenantPersonalization';
+import ESocialSettings from '@/pages/settings/ESocialSettings';
 import LgpdCompliance from '@/pages/LgpdCompliance';
 import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
 import EmployeeLiveDashboard from '@/pages/EmployeeLiveDashboard';
