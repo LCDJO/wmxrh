@@ -25,7 +25,7 @@ import LaborRules from '@/pages/compliance/LaborRules';
 import LegalDashboard from '@/pages/compliance/LegalDashboard';
 import RegulatoryDashboard from '@/pages/compliance/RegulatoryDashboard';
 import Audit from '@/pages/Audit';
-import PayrollSimulation from '@/pages/PayrollSimulation';
+import PayrollSimulation from '@/pages/hr/PayrollSimulation';
 import Notifications from '@/pages/Notifications';
 import WorkforceIntelligence from '@/pages/WorkforceIntelligence';
 import StrategicIntelligence from '@/pages/StrategicIntelligence';
