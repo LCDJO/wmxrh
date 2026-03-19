@@ -78,7 +78,7 @@ export const esocialSettingsService = {
       const { error: updateError } = await supabase
         .from('tenant_integration_configs')
         .update({
-          config: nextConfig,
+          config: nextConfig as any,
           is_active: isActive,
         })
         .eq('id', existing.id);
@@ -92,7 +92,7 @@ export const esocialSettingsService = {
         .insert({
           tenant_id: tenantId,
           integration_key: ESOCIAL_INTEGRATION_KEY,
-          config: nextConfig as never,
+          config: nextConfig as any,
           is_active: isActive,
         });
 

@@ -157,6 +157,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/audit', element: pr('audit', <Audit />) },
       { path: '/settings/personalization', element: pr('iam_users', <TenantPersonalization />) },
       { path: '/settings/pdf-layout', element: pr('iam_users', <PdfLayoutSettings />) },
+      { path: '/settings/esocial', element: pr('esocial', <ESocialSettings />) },
       { path: '/iam', element: <Navigate to="/settings/users" replace /> },
       { path: '/settings/users', element: pr('iam_users', <SettingsUsers />) },
       { path: '/settings/roles', element: pr('iam_roles', <SettingsRoles />) },
