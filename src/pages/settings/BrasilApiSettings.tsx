@@ -209,7 +209,7 @@ export default function BrasilApiSettings() {
               </button>
             </div>
             {hasApiKey && !apiKey && (
-              <div className="flex items-center gap-1.5 text-xs text-green-600">
+              <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="h-3 w-3" />
                 Chave salva
               </div>
