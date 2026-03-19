@@ -19,7 +19,7 @@ import PlatformSecurity from '@/pages/platform/security/PlatformSecurity';
 import PlatformCommunications from '@/pages/platform/PlatformCommunications';
 import PlatformUsers from '@/pages/platform/PlatformUsers';
 import PlatformUsersDashboard from '@/pages/platform/PlatformUsersDashboard';
-import PlatformSecurityDashboard from '@/pages/platform/PlatformSecurityDashboard';
+import PlatformSecurityDashboard from '@/pages/platform/security/PlatformSecurityDashboard';
 import PlatformPlans from '@/pages/platform/PlatformPlans';
 import PlatformIAM from '@/pages/platform/PlatformIAM';
 import PlatformSecurityRoles from '@/pages/platform/PlatformSecurityRoles';
