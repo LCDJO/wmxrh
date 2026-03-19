@@ -79,7 +79,7 @@ import ESocialSettings from '@/pages/settings/ESocialSettings';
 import BrasilApiSettings from '@/pages/settings/BrasilApiSettings';
 import LgpdCompliance from '@/pages/compliance/LgpdCompliance';
 import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
-import EmployeeLiveDashboard from '@/pages/EmployeeLiveDashboard';
+import EmployeeLiveDashboard from '@/pages/employees/EmployeeLiveDashboard';
 import SsoSettings from '@/pages/SsoSettings';
 import ScimSettings from '@/pages/ScimSettings';
 import MySessionsPage from '@/pages/tenant/MySessionsPage';
