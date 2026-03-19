@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, IdCard, KeyRound, ExternalLink, ShieldAlert, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Loader2, IdCard, KeyRound, ExternalLink, ShieldAlert, CheckCircle2, AlertTriangle, Bot, Car, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PROVIDER_DEFAULTS: Record<CpfProvider, CpfIntegrationConfig> = {
@@ -82,6 +82,7 @@ export default function CpfIntegrationSettings() {
   const [consumerKey, setConsumerKey] = useState('');
   const [consumerSecret, setConsumerSecret] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
   const [apiBaseUrl, setApiBaseUrl] = useState(PROVIDER_DEFAULTS.serpro.api_base_url);
   const [endpointPathTemplate, setEndpointPathTemplate] = useState(PROVIDER_DEFAULTS.serpro.endpoint_path_template);
   const [isActive, setIsActive] = useState(false);
@@ -118,6 +119,7 @@ export default function CpfIntegrationSettings() {
     setConsumerKey('');
     setConsumerSecret('');
     setApiKey('');
+    setShowApiKey(false);
   }
 
   async function handleSave() {
@@ -143,6 +145,7 @@ export default function CpfIntegrationSettings() {
       setConsumerKey('');
       setConsumerSecret('');
       setApiKey('');
+      setShowApiKey(false);
       toast.success('Integração de CPF salva com sucesso.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha ao salvar integração de CPF.';
@@ -329,13 +332,26 @@ export default function CpfIntegrationSettings() {
               <>
                 <div className="space-y-1.5 md:col-span-2">
                   <Label htmlFor="api-key">API Key do CPFHub</Label>
-                  <Input
-                    id="api-key"
-                    type="password"
-                    placeholder={config.has_api_key ? '••••••••••••••••' : 'Cole a API Key gerada no CPFHub'}
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="api-key"
+                      type={showApiKey ? 'text' : 'password'}
+                      placeholder={config.has_api_key ? '••••••••••••••••' : 'Cole a API Key gerada no CPFHub'}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      className="pr-12"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+                      onClick={() => setShowApiKey((prev) => !prev)}
+                      aria-label={showApiKey ? 'Ocultar chave' : 'Exibir chave'}
+                    >
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Deixe em branco para manter o valor já salvo. Esta chave fica protegida no backend e não é exposta no navegador.
                   </p>
