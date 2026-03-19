@@ -57,7 +57,7 @@ import SettingsRoles from '@/pages/SettingsRoles';
 import WebhookSettings from '@/pages/WebhookSettings';
 import TenantPlansPage from '@/pages/TenantPlansPage';
 import TenantAppsIntegrations from '@/pages/TenantAppsIntegrations';
-import TenantDocumentSignatureIntegration from '@/pages/TenantDocumentSignatureIntegration';
+import TenantDocumentSignatureIntegration from '@/pages/documents/TenantDocumentSignatureIntegration';
 import TelegramIntegration from '@/pages/TelegramIntegration';
 import TenantTraccarSettings from '@/modules/traccar/ui/TenantTraccarSettings';
 import CpfIntegrationSettings from '@/pages/CpfIntegrationSettings';
