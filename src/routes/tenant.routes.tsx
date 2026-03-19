@@ -78,10 +78,10 @@ import TenantPersonalization from '@/pages/settings/TenantPersonalization';
 import ESocialSettings from '@/pages/settings/ESocialSettings';
 import BrasilApiSettings from '@/pages/settings/BrasilApiSettings';
 import LgpdCompliance from '@/pages/compliance/LgpdCompliance';
-import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
+import ExecutiveDashboard from '@/pages/dashboard/ExecutiveDashboard';
 import EmployeeLiveDashboard from '@/pages/employees/EmployeeLiveDashboard';
-import SsoSettings from '@/pages/SsoSettings';
-import ScimSettings from '@/pages/ScimSettings';
+import SsoSettings from '@/pages/settings/SsoSettings';
+import ScimSettings from '@/pages/settings/ScimSettings';
 import MySessionsPage from '@/pages/tenant/MySessionsPage';
 
 const TenantOnboarding = lazy(() => import('@/pages/TenantOnboarding'));
