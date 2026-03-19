@@ -77,7 +77,7 @@ import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
 import TenantPersonalization from '@/pages/settings/TenantPersonalization';
 import ESocialSettings from '@/pages/settings/ESocialSettings';
 import BrasilApiSettings from '@/pages/settings/BrasilApiSettings';
-import LgpdCompliance from '@/pages/LgpdCompliance';
+import LgpdCompliance from '@/pages/compliance/LgpdCompliance';
 import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
 import EmployeeLiveDashboard from '@/pages/EmployeeLiveDashboard';
 import SsoSettings from '@/pages/SsoSettings';
