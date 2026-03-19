@@ -75,6 +75,8 @@ export default function CpfIntegrationSettings() {
     return providers;
   }, [isModuleAccessible]);
 
+  const MASKED_SECRET_VALUE = '••••••••••••••••';
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<CpfIntegrationConfig>(PROVIDER_DEFAULTS.serpro);
@@ -83,6 +85,7 @@ export default function CpfIntegrationSettings() {
   const [consumerSecret, setConsumerSecret] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeyJustSaved, setApiKeyJustSaved] = useState(false);
   const [apiBaseUrl, setApiBaseUrl] = useState(PROVIDER_DEFAULTS.serpro.api_base_url);
   const [endpointPathTemplate, setEndpointPathTemplate] = useState(PROVIDER_DEFAULTS.serpro.endpoint_path_template);
   const [isActive, setIsActive] = useState(false);
@@ -99,6 +102,7 @@ export default function CpfIntegrationSettings() {
         setApiBaseUrl(data.api_base_url);
         setEndpointPathTemplate(data.endpoint_path_template);
         setIsActive(data.is_active);
+        setApiKeyJustSaved(false);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Falha ao carregar integração de CPF.';
         toast.error(message);
@@ -120,10 +124,13 @@ export default function CpfIntegrationSettings() {
     setConsumerSecret('');
     setApiKey('');
     setShowApiKey(false);
+    setApiKeyJustSaved(false);
   }
 
   async function handleSave() {
     if (!tenantId) return;
+
+    const hasNewApiKey = provider === 'cpfhub' && apiKey.trim().length > 0;
     setSaving(true);
     try {
       const data = await externalDataService.saveCpfConfig({
@@ -146,6 +153,7 @@ export default function CpfIntegrationSettings() {
       setConsumerSecret('');
       setApiKey('');
       setShowApiKey(false);
+      setApiKeyJustSaved(hasNewApiKey);
       toast.success('Integração de CPF salva com sucesso.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha ao salvar integração de CPF.';
@@ -174,6 +182,7 @@ export default function CpfIntegrationSettings() {
   const usingSerpro = provider === 'serpro';
   const usingCpfhub = provider === 'cpfhub';
   const cpfhubEndpointExample = `${PROVIDER_DEFAULTS.cpfhub.api_base_url}${PROVIDER_DEFAULTS.cpfhub.endpoint_path_template}`;
+  const showMaskedSavedApiKey = usingCpfhub && !apiKey && config.has_api_key;
 
   return (
     <div className="space-y-6">
@@ -331,14 +340,26 @@ export default function CpfIntegrationSettings() {
             ) : (
               <>
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="api-key">API Key do CPFHub</Label>
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="api-key">API Key do CPFHub</Label>
+                    {showMaskedSavedApiKey ? <Badge variant="outline">Chave salva</Badge> : null}
+                  </div>
                   <div className="relative">
                     <Input
                       id="api-key"
                       type={showApiKey ? 'text' : 'password'}
                       placeholder={config.has_api_key ? '••••••••••••••••' : 'Cole a API Key gerada no CPFHub'}
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
+                      value={showMaskedSavedApiKey ? MASKED_SECRET_VALUE : apiKey}
+                      onFocus={() => {
+                        if (showMaskedSavedApiKey) {
+                          setApiKey('');
+                          setApiKeyJustSaved(false);
+                        }
+                      }}
+                      onChange={(e) => {
+                        setApiKeyJustSaved(false);
+                        setApiKey(e.target.value === MASKED_SECRET_VALUE ? '' : e.target.value);
+                      }}
                       className="pr-12"
                     />
                     <Button
@@ -353,7 +374,11 @@ export default function CpfIntegrationSettings() {
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Deixe em branco para manter o valor já salvo. Esta chave fica protegida no backend e não é exposta no navegador.
+                    {apiKeyJustSaved
+                      ? 'Chave salva agora e mascarada para conferência visual; clique no campo para substituir por outra.'
+                      : config.has_api_key
+                        ? 'A chave já está salva e aparece mascarada para indicar persistência; clique no campo para substituir.'
+                        : 'Deixe em branco para manter o valor já salvo. Esta chave fica protegida no backend e não é exposta no navegador.'}
                   </p>
                 </div>
 
