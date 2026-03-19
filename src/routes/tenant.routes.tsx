@@ -30,7 +30,7 @@ import Notifications from '@/pages/Notifications';
 import WorkforceIntelligence from '@/pages/WorkforceIntelligence';
 import StrategicIntelligence from '@/pages/StrategicIntelligence';
 import ESocialDashboard from '@/pages/compliance/ESocialDashboard';
-import AgreementManagement from '@/pages/AgreementManagement';
+import AgreementManagement from '@/pages/documents/AgreementManagement';
 import TenantCommunicationCenter from '@/pages/TenantCommunicationCenter';
 import TenantAnnouncements from '@/pages/TenantAnnouncements';
 import OccupationalCompliance from '@/pages/compliance/OccupationalCompliance';
