@@ -45,6 +45,7 @@ export const PLATFORM_MODULES: readonly PlatformModule[] = [
   { key: 'telegram',       label: 'Telegram',              description: 'Integração com bot do Telegram, destinos, templates e fila de mensagens', icon: 'Bot', category: 'domain' },
   { key: 'cpf_lookup_serpro', label: 'Consulta CPF — SERPRO', description: 'Consulta automática de CPF com credenciais SERPRO para operações de maior escala', icon: 'IdCard', category: 'domain' },
   { key: 'cpf_lookup_cpfhub', label: 'Consulta CPF — CPFHub', description: 'Consulta automática de CPF com CPFHub, indicada para pequenas empresas', icon: 'IdCard', category: 'domain' },
+  { key: 'brasilapi', label: 'BrasilAPI', description: 'Validação de CNPJ, CEP, CNAE e dados públicos via BrasilAPI', icon: 'Globe', category: 'domain' },
 
   // ── Platform: Infraestrutura SaaS ───────────────────────────
   { key: 'iam',              label: 'IAM',                  description: 'Gestão de usuários, roles, permissões e políticas de acesso',            icon: 'Key',            category: 'platform' },
