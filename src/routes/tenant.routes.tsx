@@ -84,7 +84,7 @@ import SsoSettings from '@/pages/settings/SsoSettings';
 import ScimSettings from '@/pages/settings/ScimSettings';
 import MySessionsPage from '@/pages/tenant/MySessionsPage';
 
-const TenantOnboarding = lazy(() => import('@/pages/TenantOnboarding'));
+const TenantOnboarding = lazy(() => import('@/pages/tenant/TenantOnboarding'));
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
 
 function pr(navKey: NavKey, element: React.ReactNode) {

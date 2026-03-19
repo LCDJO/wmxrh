@@ -18,7 +18,7 @@ import { usePendingPolicies } from "./hooks/use-pending-policies";
 import { useBanCheck } from "./hooks/use-ban-check";
 import { MandatoryPolicyScreen } from "./components/policy/MandatoryPolicyScreen";
 import { BannedAccountScreen } from "./components/enforcement/BannedAccountScreen";
-import ResetPassword from "./pages/ResetPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Landing from "./pages/Landing";
 import LandingPagePreview from "./pages/landing/LandingPagePreview";
