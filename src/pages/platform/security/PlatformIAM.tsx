@@ -18,7 +18,7 @@ import { PlatformRolesTab } from '@/components/platform/PlatformRolesTab';
 import { PermissionGraphView } from '@/components/platform/PermissionGraphView';
 import { AccessGraphView } from '@/components/platform/AccessGraphView';
 import { PlatformPermissionGraphBuilder } from '@/components/platform/graph-builder/PlatformPermissionGraphBuilder';
-import type { PlatformUser, PlatformRole, PlatformPermissionDef, PlatformRolePermission, PlatformAccessScope } from './security/PlatformSecurity';
+import type { PlatformUser, PlatformRole, PlatformPermissionDef, PlatformRolePermission, PlatformAccessScope } from './PlatformSecurity';
 
 export default function PlatformIAM() {
   const { user } = useAuth();
