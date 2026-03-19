@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
-import { usePXE } from './use-pxe';
+import { usePXE } from '@/hooks/core/use-pxe';
 
 interface EmployeeLimitState {
   loading: boolean;
