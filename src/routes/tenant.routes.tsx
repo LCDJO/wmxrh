@@ -73,7 +73,7 @@ import TerminatedEmployees from '@/pages/TerminatedEmployees';
 import ReferenceLetters from '@/pages/ReferenceLetters';
 import TimeTrackingPage from '@/pages/TimeTrackingPage';
 import TerminationSimulatorPage from '@/pages/TerminationSimulatorPage';
-import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
+import PdfLayoutSettings from '@/pages/documents/PdfLayoutSettings';
 import TenantPersonalization from '@/pages/settings/TenantPersonalization';
 import ESocialSettings from '@/pages/settings/ESocialSettings';
 import BrasilApiSettings from '@/pages/settings/BrasilApiSettings';
