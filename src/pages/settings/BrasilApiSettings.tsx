@@ -345,7 +345,7 @@ export default function BrasilApiSettings() {
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Salvar configurações
         </Button>
-        <Button variant="outline" onClick={handleTest} disabled={testing || !isActive} className="gap-2">
+        <Button variant="outline" onClick={handleTest} disabled={testing} className="gap-2">
           {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
           Testar conexão
         </Button>
