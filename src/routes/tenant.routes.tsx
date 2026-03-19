@@ -44,7 +44,7 @@ import FleetLiveView from '@/pages/fleet/FleetLiveView';
 import FleetAnalyticsView from '@/pages/fleet/FleetAnalyticsView';
 import FleetEmployeeBehaviorProfile from '@/pages/fleet/FleetEmployeeBehaviorProfile';
 import LiveDisplayAdmin from '@/pages/LiveDisplayAdmin';
-import OperationalCommandCenter from '@/pages/OperationalCommandCenter';
+import OperationalCommandCenter from '@/pages/operations/OperationalCommandCenter';
 import DocumentValidationDashboard from '@/pages/documents/DocumentValidationDashboard';
 import EpiCatalog from '@/pages/epi/EpiCatalog';
 import EpiDelivery from '@/pages/epi/EpiDelivery';
