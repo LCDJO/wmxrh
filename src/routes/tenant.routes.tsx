@@ -76,6 +76,7 @@ import TerminationSimulatorPage from '@/pages/TerminationSimulatorPage';
 import PdfLayoutSettings from '@/pages/PdfLayoutSettings';
 import TenantPersonalization from '@/pages/settings/TenantPersonalization';
 import ESocialSettings from '@/pages/settings/ESocialSettings';
+import BrasilApiSettings from '@/pages/settings/BrasilApiSettings';
 import LgpdCompliance from '@/pages/LgpdCompliance';
 import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
 import EmployeeLiveDashboard from '@/pages/EmployeeLiveDashboard';
@@ -158,6 +159,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/settings/personalization', element: pr('iam_users', <TenantPersonalization />) },
       { path: '/settings/pdf-layout', element: pr('iam_users', <PdfLayoutSettings />) },
       { path: '/settings/esocial', element: pr('esocial', <ESocialSettings />) },
+      { path: '/settings/brasilapi', element: pr('iam_users', <BrasilApiSettings />) },
       { path: '/iam', element: <Navigate to="/settings/users" replace /> },
       { path: '/settings/users', element: pr('iam_users', <SettingsUsers />) },
       { path: '/settings/roles', element: pr('iam_roles', <SettingsRoles />) },

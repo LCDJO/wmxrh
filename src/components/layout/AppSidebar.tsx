@@ -220,6 +220,7 @@ const navSections: NavSection[] = [
           { to: '/integrations/traccar', icon: Car, label: 'Traccar (GPS)', key: 'integrations' as NavKey, moduleKey: 'fleet' },
           { to: '/integrations/document-signature', icon: FileSignature, label: 'Assinatura Digital', key: 'integrations' as NavKey, moduleKey: 'agreements' },
           { to: '/integrations/cpf', icon: IdCard, label: 'Parâmetros CPF', key: 'integrations' as NavKey, moduleKey: 'cpf_lookup_cpfhub' },
+          { to: '/settings/brasilapi', icon: Globe, label: 'BrasilAPI', key: 'integrations' as NavKey, moduleKey: 'brasilapi' },
         ],
       },
       {
