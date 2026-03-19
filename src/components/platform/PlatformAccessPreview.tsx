@@ -71,7 +71,7 @@ export function PlatformAccessPreview({ users, roles, permissions, rolePerms }: 
     const inherited = new Set<string>();
 
     // BFS role inheritance
-    role?.inherits_role_ids?.forEach(parentId => {
+    role?.inherits_role_ids?.forEach((parentId: string) => {
       const parentPerms = getEffectivePerms(parentId, visited);
       parentPerms.forEach(p => inherited.add(p.id));
     });
@@ -102,7 +102,7 @@ export function PlatformAccessPreview({ users, roles, permissions, rolePerms }: 
     const role = roleById.get(roleId);
     if (!role) return [];
     const chain = [role];
-    role.inherits_role_ids?.forEach(parentId => {
+    role.inherits_role_ids?.forEach((parentId: string) => {
       chain.push(...getInheritanceChain(parentId, visited));
     });
     return chain;
