@@ -9202,6 +9202,108 @@ export type Database = {
           },
         ]
       }
+      esocial_certificates: {
+        Row: {
+          certificate_password_encrypted: string
+          certificate_path: string
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          is_active: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          certificate_password_encrypted: string
+          certificate_path: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          certificate_password_encrypted?: string
+          certificate_path?: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "esocial_certificates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "esocial_certificates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      esocial_event_logs: {
+        Row: {
+          action: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          event_id: string
+          id: string
+          metadata: Json
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_id: string
+          id?: string
+          metadata?: Json
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_id?: string
+          id?: string
+          metadata?: Json
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "esocial_event_logs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "esocial_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "esocial_event_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       esocial_event_mappings: {
         Row: {
           auto_generate: boolean
@@ -9261,74 +9363,120 @@ export type Database = {
       esocial_events: {
         Row: {
           category: Database["public"]["Enums"]["esocial_event_category"]
+          certificate_id: string | null
           company_group_id: string | null
           company_id: string | null
           created_at: string
           created_by: string | null
+          dispatched_at: string | null
           effective_date: string | null
           entity_id: string | null
           entity_type: string | null
           error_message: string | null
           event_type: string
+          government_status_checked_at: string | null
           id: string
+          last_error_at: string | null
+          last_retry_at: string | null
+          next_retry_at: string | null
           payload: Json
+          payload_json: Json
           processed_at: string | null
+          protocol_number: string | null
           receipt_number: string | null
           reference_period: string | null
           response_payload: Json | null
+          retries: number
           retry_count: number
           sent_at: string | null
+          source_provider: string | null
           status: Database["public"]["Enums"]["esocial_event_status"]
           tenant_id: string
           updated_at: string
+          xml_generated: string | null
+          xml_schema_version: string
+          xml_signed: string | null
         }
         Insert: {
           category: Database["public"]["Enums"]["esocial_event_category"]
+          certificate_id?: string | null
           company_group_id?: string | null
           company_id?: string | null
           created_at?: string
           created_by?: string | null
+          dispatched_at?: string | null
           effective_date?: string | null
           entity_id?: string | null
           entity_type?: string | null
           error_message?: string | null
           event_type: string
+          government_status_checked_at?: string | null
           id?: string
+          last_error_at?: string | null
+          last_retry_at?: string | null
+          next_retry_at?: string | null
           payload?: Json
+          payload_json?: Json
           processed_at?: string | null
+          protocol_number?: string | null
           receipt_number?: string | null
           reference_period?: string | null
           response_payload?: Json | null
+          retries?: number
           retry_count?: number
           sent_at?: string | null
+          source_provider?: string | null
           status?: Database["public"]["Enums"]["esocial_event_status"]
           tenant_id: string
           updated_at?: string
+          xml_generated?: string | null
+          xml_schema_version?: string
+          xml_signed?: string | null
         }
         Update: {
           category?: Database["public"]["Enums"]["esocial_event_category"]
+          certificate_id?: string | null
           company_group_id?: string | null
           company_id?: string | null
           created_at?: string
           created_by?: string | null
+          dispatched_at?: string | null
           effective_date?: string | null
           entity_id?: string | null
           entity_type?: string | null
           error_message?: string | null
           event_type?: string
+          government_status_checked_at?: string | null
           id?: string
+          last_error_at?: string | null
+          last_retry_at?: string | null
+          next_retry_at?: string | null
           payload?: Json
+          payload_json?: Json
           processed_at?: string | null
+          protocol_number?: string | null
           receipt_number?: string | null
           reference_period?: string | null
           response_payload?: Json | null
+          retries?: number
           retry_count?: number
           sent_at?: string | null
+          source_provider?: string | null
           status?: Database["public"]["Enums"]["esocial_event_status"]
           tenant_id?: string
           updated_at?: string
+          xml_generated?: string | null
+          xml_schema_version?: string
+          xml_signed?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "esocial_events_certificate_id_fkey"
+            columns: ["certificate_id"]
+            isOneToOne: false
+            referencedRelation: "esocial_certificates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "esocial_events_company_group_id_fkey"
             columns: ["company_group_id"]
@@ -25573,6 +25721,16 @@ export type Database = {
         Returns: undefined
       }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      esocial_append_event_log: {
+        Args: {
+          p_action: string
+          p_description?: string
+          p_event_id: string
+          p_metadata?: Json
+          p_tenant_id: string
+        }
+        Returns: string
+      }
       expire_inactive_display_sessions: { Args: never; Returns: number }
       expire_stale_sessions: { Args: never; Returns: number }
       find_profiles_for_anonymization: {
