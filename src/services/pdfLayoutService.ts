@@ -3,7 +3,7 @@
  * Always returns a usable config (falls back to hardcoded defaults if none in DB).
  */
 import { supabase } from '@/integrations/supabase/client';
-import type { PdfLayoutConfig } from '@/pages/PdfLayoutSettings';
+import type { PdfLayoutConfig } from '@/pages/documents/PdfLayoutSettings';
 import type { PdfLayoutOverrides } from '@/services/pdfDocumentGenerator';
 
 const FALLBACK_DEFAULTS: PdfLayoutOverrides = {
