@@ -319,6 +319,7 @@ export default function Landing() {
         <Features c={content.features} />
         <Compliance c={content.compliance} />
         <Highlights c={content.highlights} />
+        <ContactFormSection />
         <CTA c={content.cta} />
       </main>
       <div className="max-w-6xl mx-auto px-6 pb-6">
