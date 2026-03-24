@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,11 +28,21 @@ export function ContactFormSection() {
       return;
     }
     setSubmitting(true);
-    // Simulate submission (can be wired to an edge function later)
-    await new Promise(r => setTimeout(r, 1200));
-    setSubmitting(false);
-    setSubmitted(true);
-    toast.success("Mensagem enviada com sucesso!");
+    try {
+      const { error } = await supabase.from("contact_messages").insert({
+        name: result.data.name,
+        email: result.data.email,
+        company: result.data.company || null,
+        message: result.data.message,
+      });
+      if (error) throw error;
+      setSubmitted(true);
+      toast.success("Mensagem enviada com sucesso!");
+    } catch {
+      toast.error("Erro ao enviar mensagem. Tente novamente.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const update = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>

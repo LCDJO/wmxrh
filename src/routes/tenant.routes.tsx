@@ -83,6 +83,7 @@ import EmployeeLiveDashboard from '@/pages/employees/EmployeeLiveDashboard';
 import SsoSettings from '@/pages/settings/SsoSettings';
 import ScimSettings from '@/pages/settings/ScimSettings';
 import MySessionsPage from '@/pages/tenant/MySessionsPage';
+import ContactMessages from '@/pages/tenant/ContactMessages';
 
 const TenantOnboarding = lazy(() => import('@/pages/tenant/TenantOnboarding'));
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
@@ -167,6 +168,7 @@ export const tenantRoutes: RouteObject[] = [
       { path: '/settings/sso', element: pr('iam_users', <SsoSettings />) },
       { path: '/settings/scim', element: pr('iam_users', <ScimSettings />) },
       { path: '/settings/sessions', element: <MySessionsPage /> },
+      { path: '/contact-messages', element: pr('dashboard', <ContactMessages />) },
       { path: '/referral', element: pr('referral', <ReferralPage />) },
       { path: '/engajamento', element: pr('referral', <TenantEngagement />) },
       { path: '/support/chat', element: pr('support', <SupportLiveChat />) },
