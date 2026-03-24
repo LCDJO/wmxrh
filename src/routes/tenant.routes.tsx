@@ -83,6 +83,7 @@ import EmployeeLiveDashboard from '@/pages/employees/EmployeeLiveDashboard';
 import SsoSettings from '@/pages/settings/SsoSettings';
 import ScimSettings from '@/pages/settings/ScimSettings';
 import MySessionsPage from '@/pages/tenant/MySessionsPage';
+import ContactMessages from '@/pages/tenant/ContactMessages';
 
 const TenantOnboarding = lazy(() => import('@/pages/tenant/TenantOnboarding'));
 const SuspenseFallback = <div className="p-8 text-muted-foreground">Carregando...</div>;
