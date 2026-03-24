@@ -50,7 +50,7 @@ function normalizeClicksign(body: Record<string, unknown>): WebhookPayload {
     provider: "clicksign",
     external_document_id: String(doc?.key || body.document_key || ""),
     status,
-    signed_document_url: doc?.downloads?.signed_file_url as string | undefined,
+    signed_document_url: (doc?.downloads as Record<string, unknown>)?.signed_file_url as string | undefined,
     signer_ip: body.ip as string | undefined,
     raw: body,
   };
@@ -64,7 +64,7 @@ function normalizeAutentique(body: Record<string, unknown>): WebhookPayload {
     provider: "autentique",
     external_document_id: String(doc?.id || body.document_id || ""),
     status,
-    signed_document_url: doc?.file?.signed as string | undefined,
+    signed_document_url: (doc?.file as Record<string, unknown>)?.signed as string | undefined,
     raw: body,
   };
 }

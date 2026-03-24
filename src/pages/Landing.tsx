@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AdSlot } from "@/components/ads/AdSlot";
+import { ContactFormSection } from "@/components/landing/ContactFormSection";
 import { supabase } from "@/integrations/supabase/client";
 import type { HomeContent } from "@/pages/platform/landing/LandingHomeEditor";
 
@@ -119,6 +120,7 @@ function Navbar() {
           <a href="#features" className="hover:text-foreground transition-colors">Funcionalidades</a>
           <a href="#compliance" className="hover:text-foreground transition-colors">Conformidade</a>
           <a href="#sobre" className="hover:text-foreground transition-colors">Sobre</a>
+          <a href="#contato" className="hover:text-foreground transition-colors">Contato</a>
         </nav>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
@@ -318,6 +320,7 @@ export default function Landing() {
         <Features c={content.features} />
         <Compliance c={content.compliance} />
         <Highlights c={content.highlights} />
+        <ContactFormSection />
         <CTA c={content.cta} />
       </main>
       <div className="max-w-6xl mx-auto px-6 pb-6">

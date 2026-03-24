@@ -63,7 +63,10 @@ function resolveUrl(template: string, identifier: string): string {
 }
 
 class MockProvider implements Provider {
-  constructor(private readonly keyName: string) {}
+  key: string;
+  constructor(private readonly keyName: string) {
+    this.key = keyName;
+  }
 
   async execute(ctx: ProviderExecutionContext): Promise<ProviderResult> {
     const seed = `${this.keyName}:${ctx.candidate.id}:${ctx.identifier ?? ctx.candidate.email}`;

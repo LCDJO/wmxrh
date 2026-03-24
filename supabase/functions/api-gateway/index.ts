@@ -26,7 +26,7 @@ serve(async (req: Request) => {
   const startTime = Date.now();
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const supabase = createClient<any>(supabaseUrl, supabaseKey);
 
   try {
     const body = await req.json();
