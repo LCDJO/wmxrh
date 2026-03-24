@@ -120,6 +120,7 @@ function Navbar() {
           <a href="#features" className="hover:text-foreground transition-colors">Funcionalidades</a>
           <a href="#compliance" className="hover:text-foreground transition-colors">Conformidade</a>
           <a href="#sobre" className="hover:text-foreground transition-colors">Sobre</a>
+          <a href="#contato" className="hover:text-foreground transition-colors">Contato</a>
         </nav>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
