@@ -4913,6 +4913,45 @@ export type Database = {
           },
         ]
       }
+      contact_messages: {
+        Row: {
+          company: string | null
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          notes: string | null
+          read_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          notes?: string | null
+          read_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          notes?: string | null
+          read_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coupon_redemptions: {
         Row: {
           billing_cycles_remaining: number | null
