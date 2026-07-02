@@ -26,7 +26,7 @@ function rowToLandingPage(row: Record<string, unknown>): LandingPage {
     referral_program_id: (row.referral_program_id as string) ?? null,
     gtm_container_id: (row.gtm_container_id as string) ?? null,
     blocks: (row.blocks ?? []) as FABBlock[],
-    analytics: (row.analytics ?? DEFAULT_ANALYTICS) as LandingPageAnalytics,
+    analytics: { ...DEFAULT_ANALYTICS, ...((row.analytics ?? {}) as Partial<LandingPageAnalytics>) } as LandingPageAnalytics,
     created_by: (row.created_by as string) ?? null,
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
