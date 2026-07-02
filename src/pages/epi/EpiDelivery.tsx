@@ -257,7 +257,7 @@ export default function EpiDelivery() {
   const handleViewDocument = async (deliveryId: string) => {
     const url = await getSignedDocumentUrl(deliveryId);
     if (url) {
-      window.open(url, '_blank');
+      window.open(url, '_blank', 'noopener,noreferrer');
     } else {
       toast.error('Documento não encontrado');
     }

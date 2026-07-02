@@ -80,7 +80,7 @@ export function AnnouncementBanner() {
 
   const handleAction = (url: string) => {
     if (url.startsWith('http')) {
-      window.open(url, '_blank');
+      window.open(url, '_blank', 'noopener,noreferrer');
     } else {
       window.location.href = url;
     }

@@ -103,7 +103,7 @@ function AnnouncementCard({
                   className={cn('h-auto p-0 text-xs gap-1', type.color)}
                   onClick={() => {
                     if (a.action_url!.startsWith('http')) {
-                      window.open(a.action_url!, '_blank');
+                      window.open(a.action_url!, '_blank', 'noopener,noreferrer');
                     } else {
                       window.location.href = a.action_url!;
                     }

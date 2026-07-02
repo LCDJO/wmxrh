@@ -195,27 +195,9 @@ async function getIpGeolocation(): Promise<GeoData> {
     return validated;
   } catch { /* fall through */ }
 
-  // Provider 3: ip-api.com (HTTP only — last resort, may be blocked on HTTPS pages)
-  try {
-    const res = await fetch('http://ip-api.com/json/?fields=status,country,regionName,city,lat,lon,proxy,hosting,query,isp', {
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return fallback;
-    const data = await res.json();
-    if (data.status !== 'success') return fallback;
-    const result: GeoData = {
-      latitude: data.lat ?? null,
-      longitude: data.lon ?? null,
-      ip_address: data.query ?? undefined,
-      country: data.country ?? undefined,
-      state: data.regionName ?? undefined,
-      city: data.city ?? undefined,
-      is_vpn: data.proxy ?? false,
-      is_proxy: data.hosting ?? false,
-      asn_name: data.isp ?? undefined,
-    };
-    return validateGeoCoherence(result);
-  } catch { return fallback; }
+  // No plaintext-HTTP fallback: leaking the user's IP/location over HTTP
+  // is worse than missing geolocation for one session.
+  return fallback;
 }
 
 // ════════════════════════════════════

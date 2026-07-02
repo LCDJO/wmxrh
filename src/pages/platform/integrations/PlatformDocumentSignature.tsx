@@ -176,7 +176,7 @@ export default function DocumentSignatureIntegrations() {
                     variant="outline"
                     size="sm"
                     className="gap-1.5 text-xs"
-                    onClick={() => window.open(provider.website, '_blank')}
+                    onClick={() => window.open(provider.website, '_blank', 'noopener,noreferrer')}
                   >
                     <ExternalLink className="h-3 w-3" />
                     Documentação

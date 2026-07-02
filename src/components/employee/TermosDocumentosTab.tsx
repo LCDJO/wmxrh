@@ -124,7 +124,7 @@ export function TermosDocumentosTab({ employeeId }: Props) {
       .from('signed-documents')
       .createSignedUrl(url, 3600);
     if (data?.signedUrl) {
-      window.open(data.signedUrl, '_blank');
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
     } else {
       toast({ title: 'Erro', description: 'Não foi possível abrir o documento.', variant: 'destructive' });
     }
@@ -262,7 +262,7 @@ export function TermosDocumentosTab({ employeeId }: Props) {
           )}
           {/* Open external signing */}
           {agr.external_signing_url && agr.status !== 'signed' && (
-            <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => window.open(agr.external_signing_url!, '_blank')}>
+            <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => window.open(agr.external_signing_url!, '_blank', 'noopener,noreferrer')}>
               <ExternalLink className="h-3.5 w-3.5" />
               Assinar
             </Button>

@@ -44,7 +44,7 @@ export function DocumentosTab({ employeeId }: Props) {
     try {
       const signedUrl = await documentVaultService.getSignedUrl(urlArquivo);
       if (signedUrl) {
-        window.open(signedUrl, '_blank');
+        window.open(signedUrl, '_blank', 'noopener,noreferrer');
       } else {
         toast({ title: 'Erro', description: 'Não foi possível gerar link para download.', variant: 'destructive' });
       }

@@ -374,7 +374,7 @@ export default function AgreementManagement() {
                           </TableCell>
                           <TableCell className="text-right">
                             {a.external_signing_url && (
-                              <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => window.open(a.external_signing_url!, '_blank')}>
+                              <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => window.open(a.external_signing_url!, '_blank', 'noopener,noreferrer')}>
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 Link
                               </Button>
