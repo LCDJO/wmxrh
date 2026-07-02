@@ -62,7 +62,16 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const signingKey = Deno.env.get("WORKTIME_SIGNING_KEY") || supabaseKey.slice(0, 64);
+    // Fail closed: the signing secret must be its own credential, never
+    // derived from the service role key.
+    const signingKey = Deno.env.get("WORKTIME_SIGNING_KEY");
+    if (!signingKey) {
+      console.error("[worktime-sign-entry] WORKTIME_SIGNING_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "Signing key not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 

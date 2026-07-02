@@ -206,7 +206,7 @@ export function SsoIdpTab() {
                     {idp.protocol === 'oidc' && idp.discovery_url && (
                       <span className="flex items-center gap-1">
                         Discovery: <code className="bg-muted px-1 rounded text-xs truncate max-w-xs">{idp.discovery_url}</code>
-                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => window.open(idp.discovery_url!, '_blank')}><ExternalLink className="h-3 w-3" /></Button>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => window.open(idp.discovery_url!, '_blank', 'noopener,noreferrer')}><ExternalLink className="h-3 w-3" /></Button>
                       </span>
                     )}
                     {idp.protocol === 'oauth2' && idp.client_id && (

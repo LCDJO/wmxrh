@@ -54,7 +54,7 @@ export function SystemAlertCard({
     onAction
       ? onAction(a.action_url)
       : a.action_url.startsWith('http')
-        ? window.open(a.action_url, '_blank')
+        ? window.open(a.action_url, '_blank', 'noopener,noreferrer')
         : (window.location.href = a.action_url);
   };
 
