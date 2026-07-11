@@ -13,6 +13,7 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
+import DOMPurify from 'dompurify';
 
 // ── Constants ──────────────────────────────────────────────
 // Paper size definitions (width x height in mm)
