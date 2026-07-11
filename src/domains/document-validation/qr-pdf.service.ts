@@ -13,6 +13,7 @@
  */
 
 import { jsPDF } from 'jspdf';
+import DOMPurify from 'dompurify';
 import html2canvas from 'html2canvas';
 import { supabase } from '@/integrations/supabase/client';
 import { generateDocumentHash } from '@/domains/employee-agreement/document-hash';
