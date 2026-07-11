@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
 
       for (const [tid, msgs] of byTenant) {
         const config = await getBotConfig(supabase, tid);
-        if (!config) {
+        if (!config?.bot_token) {
           // Mark all as failed
           await supabase
             .from("telegram_message_queue")
