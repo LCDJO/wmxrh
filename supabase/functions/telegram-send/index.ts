@@ -171,10 +171,12 @@ Deno.serve(async (req) => {
         .update({
           is_active: false,
           connection_status: "disconnected",
-          bot_token: null,
           bot_username: null,
         })
         .eq("tenant_id", tenant_id);
+
+      // Clear vault-stored token
+      await supabase.rpc("set_telegram_bot_token", { p_tenant_id: tenant_id, p_token: "" });
 
       return json({ success: true });
     }
@@ -194,7 +196,9 @@ async function getBotConfig(supabase: ReturnType<typeof createClient>, tenantId:
     .eq("tenant_id", tenantId)
     .eq("is_active", true)
     .single();
-  return data;
+  if (!data) return null;
+  const { data: token } = await supabase.rpc("get_telegram_bot_token", { p_tenant_id: tenantId });
+  return { ...data, bot_token: token as string | null };
 }
 
 function json(data: unknown, status = 200) {
