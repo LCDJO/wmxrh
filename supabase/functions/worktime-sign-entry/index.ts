@@ -345,6 +345,18 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // Authorization: caller must have manager/HR role in adj.tenant_id
+      const { data: canManage } = await supabase.rpc('can_manage_employees', {
+        _user_id: user.id,
+        _tenant_id: adj.tenant_id,
+      });
+      if (!canManage) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       if (adj.approval_status !== "pending") {
         return new Response(
           JSON.stringify({ error: `Adjustment already ${adj.approval_status}` }),
