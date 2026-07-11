@@ -280,7 +280,6 @@ Deno.serve(async (req) => {
     }
 
     // ── Fetch tenant credentials ──
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
     const { data: configRow, error: configError } = await supabaseAdmin
       .from('tenant_integration_configs')
       .select('config')
