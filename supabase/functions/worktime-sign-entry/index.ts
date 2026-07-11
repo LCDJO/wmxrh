@@ -91,6 +91,49 @@ Deno.serve(async (req: Request) => {
     if (action === "sign_entry") {
       const { entry } = body;
 
+      // ── Authorization: caller must belong to entry.tenant_id AND either
+      //     (a) be the employee's own user, or (b) be an HR/admin for that tenant ──
+      if (!entry?.tenant_id || !entry?.employee_id) {
+        return new Response(
+          JSON.stringify({ error: "entry.tenant_id and entry.employee_id are required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: membership } = await supabase
+        .from("tenant_memberships")
+        .select("role")
+        .eq("tenant_id", entry.tenant_id)
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .maybeSingle();
+      if (!membership) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify self-punch OR manager role
+      const { data: emp } = await supabase
+        .from("employees")
+        .select("id, user_id, tenant_id")
+        .eq("id", entry.employee_id)
+        .eq("tenant_id", entry.tenant_id)
+        .maybeSingle();
+
+      const isSelf = emp?.user_id === user.id;
+      const MANAGER_ROLES = new Set(["owner","admin","tenant_admin","superadmin","manager","gestor","rh","company_admin","group_admin"]);
+      const isManager = MANAGER_ROLES.has(String(membership.role));
+
+      if (!isSelf && !isManager) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: cannot punch for another employee" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+
       // 1. Build canonical payload for SHA-256
       const canonicalPayload = [
         entry.tenant_id,
