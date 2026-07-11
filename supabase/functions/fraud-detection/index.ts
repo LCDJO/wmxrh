@@ -12,10 +12,30 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
+      supabaseUrl,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // ── Auth: require platform admin (billing/security/super) ──
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return json({ success: false, error: "Unauthorized" }, 401);
+    }
+    const authClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authErr } = await authClient.auth.getUser();
+    if (authErr || !user) return json({ success: false, error: "Unauthorized" }, 401);
+
+    const { data: pu } = await supabase
+      .from("platform_users")
+      .select("id, role")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+    if (!pu) return json({ success: false, error: "Forbidden" }, 403);
 
     const { tenant_id, action } = await req.json();
 
