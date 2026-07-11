@@ -33,18 +33,19 @@ Deno.serve(async (req) => {
         return json({ success: false, error: data.description || "Invalid token" }, 400);
       }
 
-      // Store encrypted token and update config
+      // Store bot token in Vault, then update the config row (without plaintext token)
       await supabase
         .from("telegram_bot_configs")
         .upsert({
           tenant_id,
-          bot_token: bot_token,
           bot_username: data.result.username,
           is_active: true,
           connection_status: "connected",
           last_verified_at: new Date().toISOString(),
           error_message: null,
         }, { onConflict: "tenant_id" });
+
+      await supabase.rpc("set_telegram_bot_token", { p_tenant_id: tenant_id, p_token: bot_token });
 
       return json({
         success: true,
