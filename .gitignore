@@ -12,10 +12,11 @@ dist
 dist-ssr
 *.local
 
-# Variáveis de ambiente (use .env.example como referência)
-.env
-.env.*
-!.env.example
+# Variáveis de ambiente — .env é gerenciado pelo Lovable Cloud
+# e DEVE ser versionado para que VITE_SUPABASE_* cheguem ao build publicado.
+!.env
+.env.local
+.env.*.local
 
 # Editor directories and files
 .vscode/*
