@@ -13,6 +13,7 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
+import DOMPurify from 'dompurify';
 
 // ── Constants ──────────────────────────────────────────────
 // Paper size definitions (width x height in mm)
@@ -103,7 +104,7 @@ function generateValidatorCode(content: string): string {
 function createOffscreen(html: string, widthPx = 794): HTMLDivElement {
   const el = document.createElement('div');
   el.style.cssText = `position:fixed;left:-9999px;top:0;width:${widthPx}px;background:#fff;`;
-  el.innerHTML = html;
+  el.innerHTML = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
   document.body.appendChild(el);
   return el;
 }

@@ -13,6 +13,7 @@
  */
 
 import { jsPDF } from 'jspdf';
+import DOMPurify from 'dompurify';
 import html2canvas from 'html2canvas';
 import { supabase } from '@/integrations/supabase/client';
 import { generateDocumentHash } from '@/domains/employee-agreement/document-hash';
@@ -98,7 +99,7 @@ export const qrPdfService = {
 
       // Insert agreement content
       const contentDiv = document.createElement('div');
-      contentDiv.innerHTML = params.contentHtml;
+      contentDiv.innerHTML = DOMPurify.sanitize(params.contentHtml, { USE_PROFILES: { html: true } });
       container.appendChild(contentDiv);
 
       // Placeholder for QR — we'll add it after we get the token

@@ -22195,7 +22195,7 @@ export type Database = {
       }
       telegram_bot_configs: {
         Row: {
-          bot_token: string | null
+          bot_token_vault_id: string | null
           bot_username: string | null
           connection_status: string | null
           created_at: string | null
@@ -22209,7 +22209,7 @@ export type Database = {
           webhook_secret: string | null
         }
         Insert: {
-          bot_token?: string | null
+          bot_token_vault_id?: string | null
           bot_username?: string | null
           connection_status?: string | null
           created_at?: string | null
@@ -22223,7 +22223,7 @@ export type Database = {
           webhook_secret?: string | null
         }
         Update: {
-          bot_token?: string | null
+          bot_token_vault_id?: string | null
           bot_username?: string | null
           connection_status?: string | null
           created_at?: string | null
@@ -25993,6 +25993,7 @@ export type Database = {
       get_pccs_dashboard_stats: { Args: { p_tenant_id: string }; Returns: Json }
       get_platform_extended_metrics: { Args: never; Returns: Json }
       get_platform_metrics: { Args: never; Returns: Json }
+      get_telegram_bot_token: { Args: { p_tenant_id: string }; Returns: string }
       get_tenant_signature_provider_secret: {
         Args: { _provider_name: string; _tenant_id: string }
         Returns: {
@@ -26300,6 +26301,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      set_telegram_bot_token: {
+        Args: { p_tenant_id: string; p_token: string }
+        Returns: undefined
       }
       set_webhook_secret: {
         Args: { _secret: string; _webhook_id: string }

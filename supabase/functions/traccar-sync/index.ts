@@ -96,6 +96,37 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, serviceKey);
 
+  // ── Auth: require either the cron shared-secret OR a platform-admin JWT ──
+  const cronSecret = Deno.env.get('TRACCAR_SYNC_SECRET');
+  const providedCron = req.headers.get('x-cron-secret');
+  const authHeader = req.headers.get('Authorization');
+  let authorized = false;
+
+  if (cronSecret && providedCron && providedCron === cronSecret) {
+    authorized = true;
+  } else if (authHeader?.startsWith('Bearer ')) {
+    const authClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user } } = await authClient.auth.getUser();
+    if (user) {
+      const { data: pu } = await supabase
+        .from('platform_users')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (pu) authorized = true;
+    }
+  }
+
+  if (!authorized) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const url = new URL(req.url);
     let tenantId = url.searchParams.get('tenant_id');

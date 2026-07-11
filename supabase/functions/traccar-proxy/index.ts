@@ -259,8 +259,27 @@ Deno.serve(async (req) => {
     const actionDef = ACTION_MAP[action];
     if (!actionDef) return jsonResp({ error: `Ação desconhecida: ${action}` }, 400);
 
-    // ── Fetch tenant credentials ──
+    // ── Tenant membership check (prevents cross-tenant access) ──
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+    const { data: membership } = await supabaseAdmin
+      .from('tenant_memberships')
+      .select('role')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (!membership) return jsonResp({ error: 'Forbidden' }, 403);
+
+    // Mutating actions require admin/manager roles for the target tenant
+    if (actionDef.isMutation) {
+      const ADMIN_ROLES = new Set(['owner', 'admin', 'tenant_admin', 'superadmin', 'manager', 'gestor']);
+      if (!ADMIN_ROLES.has(String(membership.role))) {
+        return jsonResp({ error: 'Forbidden: insufficient role for mutation' }, 403);
+      }
+    }
+
+    // ── Fetch tenant credentials ──
     const { data: configRow, error: configError } = await supabaseAdmin
       .from('tenant_integration_configs')
       .select('config')

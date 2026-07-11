@@ -43,6 +43,11 @@ Deno.serve(async (req) => {
       return new Response("Invalid secret", { status: 403 });
     }
 
+    // Fetch decrypted bot token from vault via security-definer function
+    const { data: botToken } = await supabase.rpc("get_telegram_bot_token", { p_tenant_id: tenantId });
+
+
+
     const update = await req.json();
 
     // Extract message info
@@ -89,8 +94,8 @@ Deno.serve(async (req) => {
     }
 
     // Send response if applicable
-    if (responseText && config.bot_token) {
-      await fetch(`${TELEGRAM_API}${config.bot_token}/sendMessage`, {
+    if (responseText && botToken) {
+      await fetch(`${TELEGRAM_API}${botToken}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -86,19 +86,33 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    const { data: roles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id);
+    // For any action that references a specific tenant, verify the caller
+    // belongs to THAT tenant AND holds the required role scoped to it.
+    const targetTenantId: string | undefined = body?.tenant_id;
+    const requiredRoles = action === 'resolve_cpf' ? EMPLOYEE_MANAGER_ROLES : ADMIN_ROLES;
 
-    const roleList = (roles ?? []).map((row) => String(row.role));
-    const isAllowed = hasAnyRole(
-      roleList,
-      action === 'resolve_cpf' ? EMPLOYEE_MANAGER_ROLES : ADMIN_ROLES,
-    );
+    if (targetTenantId) {
+      const { data: scopedRoles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('tenant_id', targetTenantId);
 
-    if (!isAllowed) {
-      return json({ error: 'Forbidden' }, 403);
+      const scopedRoleList = (scopedRoles ?? []).map((row) => String(row.role));
+      if (!hasAnyRole(scopedRoleList, requiredRoles)) {
+        return json({ error: 'Forbidden: no matching role for target tenant' }, 403);
+      }
+    } else {
+      // Tenant-agnostic actions (lookup_cnae, check_nr_updates, resolve_cnpj without tenant)
+      // still require SOME admin/HR role somewhere.
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+      const roleList = (roles ?? []).map((row) => String(row.role));
+      if (!hasAnyRole(roleList, requiredRoles)) {
+        return json({ error: 'Forbidden' }, 403);
+      }
     }
 
     switch (action) {

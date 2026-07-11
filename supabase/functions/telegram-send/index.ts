@@ -33,18 +33,19 @@ Deno.serve(async (req) => {
         return json({ success: false, error: data.description || "Invalid token" }, 400);
       }
 
-      // Store encrypted token and update config
+      // Store bot token in Vault, then update the config row (without plaintext token)
       await supabase
         .from("telegram_bot_configs")
         .upsert({
           tenant_id,
-          bot_token: bot_token,
           bot_username: data.result.username,
           is_active: true,
           connection_status: "connected",
           last_verified_at: new Date().toISOString(),
           error_message: null,
         }, { onConflict: "tenant_id" });
+
+      await supabase.rpc("set_telegram_bot_token", { p_tenant_id: tenant_id, p_token: bot_token });
 
       return json({
         success: true,
@@ -55,7 +56,7 @@ Deno.serve(async (req) => {
     // ── Test send: send a single message directly ──
     if (action === "test_send") {
       const config = await getBotConfig(supabase, tenant_id);
-      if (!config) return json({ success: false, error: "Bot not configured" }, 400);
+      if (!config?.bot_token) return json({ success: false, error: "Bot not configured" }, 400);
 
       const res = await fetch(`${TELEGRAM_API}${config.bot_token}/sendMessage`, {
         method: "POST",
@@ -104,7 +105,7 @@ Deno.serve(async (req) => {
 
       for (const [tid, msgs] of byTenant) {
         const config = await getBotConfig(supabase, tid);
-        if (!config) {
+        if (!config?.bot_token) {
           // Mark all as failed
           await supabase
             .from("telegram_message_queue")
@@ -170,10 +171,12 @@ Deno.serve(async (req) => {
         .update({
           is_active: false,
           connection_status: "disconnected",
-          bot_token: null,
           bot_username: null,
         })
         .eq("tenant_id", tenant_id);
+
+      // Clear vault-stored token
+      await supabase.rpc("set_telegram_bot_token", { p_tenant_id: tenant_id, p_token: "" });
 
       return json({ success: true });
     }
@@ -193,7 +196,9 @@ async function getBotConfig(supabase: ReturnType<typeof createClient>, tenantId:
     .eq("tenant_id", tenantId)
     .eq("is_active", true)
     .single();
-  return data;
+  if (!data) return null;
+  const { data: token } = await supabase.rpc("get_telegram_bot_token", { p_tenant_id: tenantId });
+  return { ...data, bot_token: token as string | null };
 }
 
 function json(data: unknown, status = 200) {

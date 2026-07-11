@@ -30,6 +30,7 @@ serve(async (req) => {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
+
     const { tenantId } = await req.json();
     if (!tenantId) {
       return jsonResponse({ error: "tenantId required" }, 400);
