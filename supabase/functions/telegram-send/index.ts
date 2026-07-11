@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     // ── Test send: send a single message directly ──
     if (action === "test_send") {
       const config = await getBotConfig(supabase, tenant_id);
-      if (!config) return json({ success: false, error: "Bot not configured" }, 400);
+      if (!config?.bot_token) return json({ success: false, error: "Bot not configured" }, 400);
 
       const res = await fetch(`${TELEGRAM_API}${config.bot_token}/sendMessage`, {
         method: "POST",
