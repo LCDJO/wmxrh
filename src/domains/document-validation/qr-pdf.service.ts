@@ -99,7 +99,7 @@ export const qrPdfService = {
 
       // Insert agreement content
       const contentDiv = document.createElement('div');
-      contentDiv.innerHTML = params.contentHtml;
+      contentDiv.innerHTML = DOMPurify.sanitize(params.contentHtml, { USE_PROFILES: { html: true } });
       container.appendChild(contentDiv);
 
       // Placeholder for QR — we'll add it after we get the token
