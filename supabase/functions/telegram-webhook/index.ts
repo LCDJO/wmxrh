@@ -43,6 +43,11 @@ Deno.serve(async (req) => {
       return new Response("Invalid secret", { status: 403 });
     }
 
+    // Fetch decrypted bot token from vault via security-definer function
+    const { data: botToken } = await supabase.rpc("get_telegram_bot_token", { p_tenant_id: tenantId });
+
+
+
     const update = await req.json();
 
     // Extract message info
